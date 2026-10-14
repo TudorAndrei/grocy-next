@@ -87,13 +87,13 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
   return (
     <section className="panel" aria-labelledby="propose-heading">
       <div className="panel-inner">
-        <h2 id="propose-heading" className="page-title" style={{ fontSize: "1.25rem" }}>
+        <h2 id="propose-heading" className="panel-title">
           Propose nutrition update
         </h2>
-        <p className="muted" style={{ marginTop: "-0.25rem" }}>
-          Values stay staged until approved. Leave unknowns blank (null), never invent zero.
+        <p className="muted" style={{ marginTop: "-0.35rem", marginBottom: "1rem" }}>
+          Values stay staged until approved. Leave unknowns blank, never invent zero.
         </p>
-        <form className="stack" onSubmit={onSubmit}>
+        <form onSubmit={onSubmit}>
           <div className="field-row">
             <label>
               Basis quantity
@@ -113,22 +113,31 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
               </select>
             </label>
           </div>
-          <label>
-            Nutrients (one per line, `key: value`)
+          <div className="field">
+            <label htmlFor="nutrient-text">Nutrients (one per line, key: value)</label>
             <textarea
+              id="nutrient-text"
               rows={10}
               value={nutrientText}
               onChange={(e) => setNutrientText(e.target.value)}
             />
-          </label>
-          <label>
-            Note
-            <input value={note} onChange={(e) => setNote(e.target.value)} />
-          </label>
+          </div>
+          <div className="field">
+            <label htmlFor="proposal-note">Note</label>
+            <input
+              id="proposal-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
           <button type="submit" className="btn btn-primary" disabled={mutation.isPending}>
             {mutation.isPending ? "Submitting…" : "Submit proposal"}
           </button>
-          {feedback ? <p className="muted">{feedback}</p> : null}
+          {feedback ? (
+            <p className="muted" style={{ marginTop: "0.75rem" }} role="status">
+              {feedback}
+            </p>
+          ) : null}
         </form>
       </div>
     </section>

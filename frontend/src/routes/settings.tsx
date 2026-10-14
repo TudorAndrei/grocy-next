@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -23,12 +24,10 @@ function SettingsPage() {
 
   return (
     <>
-      <h1 className="page-title">Connection</h1>
-      <p className="page-lead">
-        Leave API base empty during local development to use the Vite proxy (
-        <code>/api</code> → backend). Set <code>VITE_API_BASE</code> and{" "}
-        <code>VITE_API_KEY</code> in <code>.env</code> for defaults.
-      </p>
+      <PageHeader
+        title="Settings"
+        lead="Point the UI at your Grocy Next API. Local demo key is dev-key; leave the base empty to use the Vite proxy."
+      />
       <section className="panel" style={{ maxWidth: "32rem" }}>
         <div className="panel-inner">
           <form onSubmit={onSubmit}>
@@ -51,6 +50,7 @@ function SettingsPage() {
                 id="api-key"
                 type="password"
                 autoComplete="off"
+                placeholder="dev-key"
                 value={apiKey}
                 onChange={(e) => {
                   setSaved(false);
@@ -59,7 +59,7 @@ function SettingsPage() {
               />
             </div>
             <button type="submit" className="btn btn-primary">
-              Save
+              Save connection
             </button>
             {saved ? (
               <p className="muted" style={{ marginTop: "1rem" }} role="status">

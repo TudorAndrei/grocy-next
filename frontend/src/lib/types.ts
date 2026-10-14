@@ -4,6 +4,7 @@ export type ProductSummary = {
   barcode?: string | null;
   description?: string | null;
   barcodes?: string[];
+  min_stock_amount?: number;
 };
 
 export type ProductListResponse = ProductSummary[];
@@ -85,6 +86,44 @@ export type StockProductDetails = ProductSummary & {
   location_id?: number;
 };
 
+export type StockOverviewItem = {
+  product_id: number;
+  amount: number;
+  amount_aggregated: number;
+  amount_opened: number;
+  amount_opened_aggregated: number;
+  best_before_date?: string | null;
+  is_aggregated_amount: boolean;
+  product: ProductSummary;
+};
+
+export type StockVolatile = {
+  due_products: StockOverviewItem[];
+  overdue_products: StockOverviewItem[];
+  expired_products: StockOverviewItem[];
+  missing_products: Array<{
+    id: number;
+    name: string;
+    amount_missing: number;
+    is_partly_in_stock: number;
+  }>;
+};
+
+export type ShoppingListItem = {
+  id: number;
+  product_id: number;
+  amount: number;
+  note?: string | null;
+  done: boolean;
+  qu_id?: number | null;
+};
+
+export type ShoppingList = {
+  id: number;
+  name: string;
+  items: ShoppingListItem[];
+};
+
 export type RecipePosition = {
   id: number;
   product_id: number;
@@ -113,4 +152,27 @@ export type RecipeFulfillment = {
     amount_available: number;
     fulfilled: boolean;
   }>;
+};
+
+export type Chore = {
+  id: number;
+  name: string;
+  period_type: string;
+  next_estimated_execution_time?: string | null;
+};
+
+export type Task = {
+  id: number;
+  name: string;
+  description?: string | null;
+  done?: number | boolean;
+  due_date?: string | null;
+};
+
+export type Battery = {
+  id: number;
+  name: string;
+  description?: string | null;
+  charge_interval_days?: number | null;
+  next_estimated_charge_time?: string | null;
 };

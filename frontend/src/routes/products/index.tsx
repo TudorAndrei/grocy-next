@@ -1,26 +1,54 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
 function ProductsPage() {
+  const [search, setSearch] = useState("");
   const query = useQuery({
     queryKey: queryKeys.products,
     queryFn: () => api.listProducts(),
   });
 
+  const products = useMemo(() => {
+    const items = query.data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (product) =>
+        product.name.toLowerCase().includes(q) ||
+        (product.description ?? "").toLowerCase().includes(q) ||
+        (product.barcode ?? "").toLowerCase().includes(q),
+    );
+  }, [query.data, search]);
+
   return (
     <>
-      <h1 className="page-title">Pantry catalog</h1>
-      <p className="page-lead">
-        Browse products from your Grocy instance. Open any item to inspect nutrition,
-        propose edits, and trace revision history.
-      </p>
+      <PageHeader
+        title="Products"
+        lead="Master catalog for everything you track — open an item for stock moves and nutrition."
+      />
+      <div className="toolbar">
+        <div className="search-field">
+          <label className="sr-only" htmlFor="product-search">
+            Search products
+          </label>
+          <input
+            id="product-search"
+            type="search"
+            placeholder="Search by name or barcode"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
       {query.isLoading ? <LoadingBlock label="Fetching products…" /> : null}
       {query.isError ? (
         <ErrorBlock
@@ -32,14 +60,15 @@ function ProductsPage() {
         />
       ) : null}
       {query.isSuccess ? (
-        query.data.length === 0 ? (
+        products.length === 0 ? (
           <p className="empty-state">
-            No products returned yet. Seed your backend or check the API key under
-            Connection.
+            {search
+              ? "No products match that search."
+              : "No products yet. Seed your backend or check the API key under Settings."}
           </p>
         ) : (
           <ul className="product-list">
-            {query.data.map((product) => (
+            {products.map((product) => (
               <li key={product.id}>
                 <Link
                   to="/products/$productId"
@@ -50,7 +79,9 @@ function ProductsPage() {
                     <h2>{product.name}</h2>
                     {product.description ? <p>{product.description}</p> : null}
                   </div>
-                  <span className="meta">#{product.id}</span>
+                  <span className="meta">
+                    {product.barcode ? product.barcode : `#${product.id}`}
+                  </span>
                 </Link>
               </li>
             ))}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, queryKeys } from "@/lib/api";
+import { formatAmount } from "@/lib/format";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 
@@ -20,6 +21,8 @@ export function StockActions({ productId }: StockActionsProps) {
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.stock(productId) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.stockOverview });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.stockVolatile });
     await queryClient.invalidateQueries({ queryKey: queryKeys.recipes });
   };
 
@@ -41,10 +44,19 @@ export function StockActions({ productId }: StockActionsProps) {
     onError: (err: Error) => setFeedback(err.message),
   });
 
+  const open = useMutation({
+    mutationFn: () => api.openStock(productId, Number(amount)),
+    onSuccess: async () => {
+      setFeedback("Opened.");
+      await invalidate();
+    },
+    onError: (err: Error) => setFeedback(err.message),
+  });
+
   return (
     <section className="panel" aria-labelledby="stock-heading">
       <div className="panel-inner">
-        <h2 id="stock-heading" className="page-title" style={{ fontSize: "1.25rem" }}>
+        <h2 id="stock-heading" className="panel-title">
           Stock
         </h2>
         {stockQuery.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
@@ -58,11 +70,20 @@ export function StockActions({ productId }: StockActionsProps) {
           />
         ) : null}
         {stockQuery.isSuccess ? (
-          <p className="muted">
-            On hand {stockQuery.data.stock_amount ?? 0}
-            {" · "}
-            Opened {stockQuery.data.stock_amount_opened ?? 0}
-          </p>
+          <div className="stat-strip" style={{ marginBottom: "1rem" }}>
+            <div className="stat-card" data-tone="accent">
+              <span className="label">On hand</span>
+              <span className="value">
+                {formatAmount(stockQuery.data.stock_amount ?? 0)}
+              </span>
+            </div>
+            <div className="stat-card">
+              <span className="label">Opened</span>
+              <span className="value">
+                {formatAmount(stockQuery.data.stock_amount_opened ?? 0)}
+              </span>
+            </div>
+          </div>
         ) : null}
         <div className="field-row">
           <label>
@@ -74,7 +95,7 @@ export function StockActions({ productId }: StockActionsProps) {
             />
           </label>
         </div>
-        <div className="field-row">
+        <div className="field-row" style={{ marginBottom: 0 }}>
           <button
             type="button"
             className="btn btn-primary"
@@ -88,7 +109,7 @@ export function StockActions({ productId }: StockActionsProps) {
           </button>
           <button
             type="button"
-            className="btn"
+            className="btn btn-ghost"
             disabled={consume.isPending}
             onClick={() => {
               setFeedback(null);
@@ -97,8 +118,23 @@ export function StockActions({ productId }: StockActionsProps) {
           >
             Consume
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={open.isPending}
+            onClick={() => {
+              setFeedback(null);
+              open.mutate();
+            }}
+          >
+            Open
+          </button>
         </div>
-        {feedback ? <p className="muted">{feedback}</p> : null}
+        {feedback ? (
+          <p className="muted" style={{ margin: "0.75rem 0 0" }} role="status">
+            {feedback}
+          </p>
+        ) : null}
       </div>
     </section>
   );

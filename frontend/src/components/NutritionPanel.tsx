@@ -23,14 +23,16 @@ export function NutritionPanel({ data }: NutritionPanelProps) {
   return (
     <section className="panel" aria-labelledby="nutrition-heading">
       <div className="panel-inner">
-        <h2 id="nutrition-heading" className="page-title" style={{ fontSize: "1.25rem" }}>
+        <h2 id="nutrition-heading" className="panel-title">
           Nutrition
         </h2>
-        <p className="muted" style={{ marginTop: "-0.25rem", marginBottom: "1rem" }}>
+        <p className="muted" style={{ marginTop: "-0.35rem", marginBottom: "1rem" }}>
           Per {data.basis_quantity} {data.basis_unit} · revision {data.revision}
         </p>
         {entries.length === 0 ? (
-          <p className="empty-state">No nutrient fields recorded yet.</p>
+          <p className="empty-state" style={{ padding: 0 }}>
+            No nutrient fields recorded yet.
+          </p>
         ) : (
           <dl className="nutrient-grid">
             {entries.map(([key, value]) => (

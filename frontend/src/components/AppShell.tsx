@@ -9,11 +9,11 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   return (
     <div className="app-shell">
-      <header className="site-header">
+      <aside className="site-rail">
         <Wordmark />
         <SiteNav />
-      </header>
-      <main>{children}</main>
+      </aside>
+      <main className="site-main">{children}</main>
     </div>
   );
 }
