@@ -15,4 +15,4 @@ Assistant --MCP--> FastMCP adapter \
 Web / integrations --REST--> FastAPI /
 ```
 
-See the project RFC for delivery phases, nutrition schema, MCP catalog, and compatibility policy.
+See `compatibility.md` for the API boundary, `migration.md` for database storage, and `mcp-tools.md` for tool access.

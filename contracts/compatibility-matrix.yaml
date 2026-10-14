@@ -7,55 +7,56 @@ baseline:
   mounted: 86
 
 notes:
-  - All Grocy v4.5.0 OpenAPI operations are mounted under /api.
-  - Print-label and thermal print endpoints return configured stubs (501-style payload).
-  - External barcode lookup returns a provider-none stub.
-  - User permissions are an in-memory admin-all stub.
-  - Meal plan is exposed via /api/objects/meal_plan and meal_plan_sections.
+  - All 86 Grocy v4.5.0 OpenAPI operations have routes under /api.
+  - All 34 ExposedEntity names support reads.
+  - Stock actions return booking arrays and empty actions return status 204.
+  - Permissions persist and follow the Grocy v4.5.0 permission hierarchy.
+  - PHP comparison tests require a disposable reference server.
+  - Route coverage does not establish full upstream behavior parity.
 
 coverage:
   - path: /api/objects/{entity}
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/stock/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/recipes/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/chores/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/tasks/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/batteries/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/system/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/user*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/users*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/userfields/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/files/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/calendar/*
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/print/*
     method: "*"
-    status: stubbed
+    status: implemented
   - path: /api/v2/products/{id}/nutrition
     method: "*"
-    status: verified
+    status: implemented
   - path: /api/v2/mcp/call
     method: POST
-    status: verified
+    status: implemented

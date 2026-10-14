@@ -1,6 +1,6 @@
 # Grocy Next frontend
 
-React + Vite + TypeScript UI for the Grocy Next nutrition extension. Uses TanStack Router and TanStack Query.
+React + Vite + TypeScript UI for Grocy Next household management. Uses TanStack Router and TanStack Query.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ React + Vite + TypeScript UI for the Grocy Next nutrition extension. Uses TanSta
 
 ```bash
 cd frontend
-pnpm install
+npm ci
 cp .env.example .env
 ```
 
@@ -20,7 +20,7 @@ Set `VITE_API_KEY` to match your backend API key. Leave `VITE_API_BASE` empty to
 ## Development
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173). Requests to `/api/*` are proxied to the backend.
@@ -28,8 +28,8 @@ Open [http://localhost:5173](http://localhost:5173). Requests to `/api/*` are pr
 ## Build
 
 ```bash
-pnpm build
-pnpm preview
+npm run build
+npm run preview
 ```
 
 ## Routes
@@ -40,3 +40,5 @@ pnpm preview
 | `/products/:id` | Nutrition, proposals, revisions |
 | `/reviews` | Approve pending nutrition proposals |
 | `/settings` | API base URL and `GROCY-API-KEY` (localStorage overrides env) |
+
+The web application also has Today, Shopping, Meals, Recipes, Household, Equipment, Calendar, and Manage screens. Manage includes locations, stores, units, conversions, groups, custom records, users, and API keys. Equipment supports manual uploads and downloads. Nutrition proposals have numeric inputs and optional label photos.
