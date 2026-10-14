@@ -89,10 +89,7 @@ class UnitsService:
         if product_id is not None:
             product = await self.session.get(Product, product_id)
             if product is not None:
-                if (
-                    from_qu_id == product.qu_id_purchase
-                    and to_qu_id == product.qu_id_stock
-                ):
+                if from_qu_id == product.qu_id_purchase and to_qu_id == product.qu_id_stock:
                     return Decimal(product.qu_factor_purchase_to_stock)
                 if (
                     from_qu_id == product.qu_id_stock
@@ -121,7 +118,7 @@ class UnitsService:
         product_id: int | None,
     ) -> dict[int, list[tuple[int, Decimal]]]:
         rows = await self.list_conversions(product_id=product_id)
-        product_rows = [r for r in rows if r.product_id is not None]
+        product_rows = [r for r in rows if product_id is not None and r.product_id == product_id]
         global_rows = [r for r in rows if r.product_id is None]
         preferred = product_rows + global_rows
         edges: dict[int, list[tuple[int, Decimal]]] = {}

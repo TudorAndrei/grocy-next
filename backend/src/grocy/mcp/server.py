@@ -1,186 +1,123 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+import inspect
+from contextlib import asynccontextmanager
+from functools import lru_cache
+from typing import Any, get_type_hints
+
+from pydantic import ConfigDict, ValidationError, create_model
 
 from grocy.core.actor import Actor
+from grocy.core.auth import authenticate_key
+from grocy.core.config import get_settings
+from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.session import get_session_factory
 from grocy.mcp import tools
 
+TOOL_PERMISSIONS = {
+    "products_search": "STOCK",
+    "products_get": "STOCK",
+    "inventory_list": "STOCK",
+    "inventory_purchase": "STOCK_PURCHASE",
+    "inventory_consume": "STOCK_CONSUME",
+    "shopping_list_get": "SHOPPINGLIST",
+    "shopping_list_add": "SHOPPINGLIST_ITEMS_ADD",
+    "recipes_search": "RECIPES",
+    "nutrition_get": "STOCK",
+    "nutrition_propose_update": "STOCK",
+    "nutrition_commit_update": "MASTER_DATA_EDIT",
+    "nutrition_upsert": "MASTER_DATA_EDIT",
+    "nutrition_attach_evidence": "STOCK",
+}
+TOOL_CATALOG = list(TOOL_PERMISSIONS)
 
-def _actor_from_meta(meta: dict[str, Any] | None) -> Actor:
-    meta = meta or {}
-    return Actor(
-        user_id=int(meta.get("user_id", 1)),
-        username=str(meta.get("username", "mcp")),
-        api_key=meta.get("api_key"),
-        is_admin=True,
-    )
+
+@lru_cache
+def _arguments_model(name: str):
+    fn = getattr(tools, name)
+    hints = get_type_hints(fn)
+    fields: dict[str, Any] = {
+        p.name: (hints[p.name], ... if p.default is inspect.Parameter.empty else p.default)
+        for p in inspect.signature(fn).parameters.values()
+        if p.name not in {"session", "actor"}
+    }
+    return create_model(f"{name}Arguments", __config__=ConfigDict(extra="forbid"), **fields)
 
 
-async def _with_session(fn: Callable, *args: Any, **kwargs: Any) -> Any:
-    factory = get_session_factory()
-    async with factory() as session:
-        return await fn(session, *args, **kwargs)
+async def dispatch(session, actor: Actor, name: str, arguments: dict[str, Any]) -> Any:
+    if not get_settings().mcp_enabled:
+        raise GrocyError("MCP is disabled", status_code=503)
+    if name not in TOOL_PERMISSIONS:
+        raise NotFoundError(f"Unknown MCP tool '{name}'")
+    actor.require(TOOL_PERMISSIONS[name])
+    try:
+        args = _arguments_model(name).model_validate(arguments).model_dump()
+    except ValidationError as exc:
+        raise GrocyError(str(exc), status_code=422, code="invalid_arguments") from exc
+    fn = getattr(tools, name)
+    if "actor" in inspect.signature(fn).parameters:
+        args["actor"] = actor
+    try:
+        if (
+            name
+            in {
+                "inventory_purchase",
+                "inventory_consume",
+                "shopping_list_add",
+                "nutrition_propose_update",
+                "nutrition_commit_update",
+                "nutrition_upsert",
+                "nutrition_attach_evidence",
+            }
+            and get_settings().database_url.startswith("sqlite")
+            and not session.info.get("write_lock")
+        ):
+            from sqlalchemy import text
+
+            await session.execute(text("BEGIN IMMEDIATE"))
+        return await fn(session, **args)
+    except (ValueError, TypeError) as exc:
+        raise GrocyError(str(exc), status_code=422, code="invalid_arguments") from exc
 
 
 def create_mcp_server():
     from fastmcp import FastMCP
 
-    mcp = FastMCP("grocy-next")
+    @asynccontextmanager
+    async def mcp_lifespan(_server):
+        from grocy.main import lifespan
 
-    @mcp.tool
-    async def products_search(query: str, limit: int = 25) -> list[dict]:
-        return await _with_session(tools.products_search, query, limit=limit)
+        async with lifespan(None):
+            yield {}
 
-    @mcp.tool
-    async def products_get(product_id: int) -> dict:
-        return await _with_session(tools.products_get, product_id)
+    mcp = FastMCP("grocy-next", lifespan=mcp_lifespan)
 
-    @mcp.tool
-    async def inventory_list(
-        product_id: int | None = None,
-        location_id: int | None = None,
-    ) -> list[dict]:
-        return await _with_session(
-            tools.inventory_list,
-            product_id=product_id,
-            location_id=location_id,
-        )
+    def register(name: str) -> None:
+        fn = getattr(tools, name)
+        hints = get_type_hints(fn)
+        parameters = [
+            p.replace(annotation=hints[p.name])
+            for p in inspect.signature(fn).parameters.values()
+            if p.name not in {"session", "actor"}
+        ]
+        signature = inspect.Signature(parameters, return_annotation=hints.get("return", Any))
 
-    @mcp.tool
-    async def inventory_purchase(
-        product_id: int,
-        amount: float,
-        best_before_date: str | None = None,
-        price: float | None = None,
-        location_id: int | None = None,
-        user_id: int = 1,
-        username: str = "mcp",
-    ) -> dict:
-        actor = Actor(user_id=user_id, username=username, is_admin=True)
-        return await _with_session(
-            tools.inventory_purchase,
-            actor,
-            product_id,
-            amount,
-            best_before_date=best_before_date,
-            price=price,
-            location_id=location_id,
-        )
+        async def invoke(*args, **kwargs):
+            bound = signature.bind(*args, **kwargs)
+            bound.apply_defaults()
+            settings = get_settings()
+            key = settings.mcp_api_key or settings.dev_open_api_key
+            async with get_session_factory()() as session:
+                actor = await authenticate_key(session, key)
+                return await dispatch(session, actor, name, dict(bound.arguments))
 
-    @mcp.tool
-    async def inventory_consume(
-        product_id: int,
-        amount: float,
-        spoiled: bool = False,
-        location_id: int | None = None,
-        user_id: int = 1,
-        username: str = "mcp",
-    ) -> dict:
-        actor = Actor(user_id=user_id, username=username, is_admin=True)
-        return await _with_session(
-            tools.inventory_consume,
-            actor,
-            product_id,
-            amount,
-            spoiled=spoiled,
-            location_id=location_id,
-        )
+        invoke.__name__ = name
+        invoke.__doc__ = fn.__doc__ or name.replace("_", " ").capitalize() + "."
+        invoke.__annotations__ = {p.name: p.annotation for p in parameters}
+        invoke.__annotations__["return"] = signature.return_annotation
+        invoke.__signature__ = signature
+        mcp.tool(invoke)
 
-    @mcp.tool
-    async def shopping_list_get(shopping_list_id: int = 1) -> dict:
-        return await _with_session(tools.shopping_list_get, shopping_list_id)
-
-    @mcp.tool
-    async def shopping_list_add(
-        product_id: int,
-        amount: float = 1,
-        shopping_list_id: int = 1,
-        note: str | None = None,
-    ) -> dict:
-        return await _with_session(
-            tools.shopping_list_add,
-            product_id,
-            amount=amount,
-            shopping_list_id=shopping_list_id,
-            note=note,
-        )
-
-    @mcp.tool
-    async def recipes_search(query: str) -> list[dict]:
-        return await _with_session(tools.recipes_search, query)
-
-    @mcp.tool
-    async def nutrition_get(product_id: int, barcode: str | None = None) -> dict | None:
-        return await _with_session(tools.nutrition_get, product_id, barcode=barcode)
-
-    @mcp.tool
-    async def nutrition_propose_update(
-        payload: dict,
-        user_id: int = 1,
-        username: str = "mcp",
-    ) -> dict:
-        actor = Actor(user_id=user_id, username=username, is_admin=True)
-        return await _with_session(tools.nutrition_propose_update, actor, payload)
-
-    @mcp.tool
-    async def nutrition_commit_update(
-        proposal_id: int,
-        user_id: int = 1,
-        username: str = "mcp",
-    ) -> dict:
-        actor = Actor(user_id=user_id, username=username, is_admin=True)
-        return await _with_session(tools.nutrition_commit_update, actor, proposal_id)
-
-    @mcp.tool
-    async def nutrition_upsert(
-        product_id: int,
-        payload: dict,
-        user_id: int = 1,
-        username: str = "mcp",
-    ) -> dict:
-        actor = Actor(user_id=user_id, username=username, is_admin=True)
-        return await _with_session(tools.nutrition_upsert, actor, product_id, payload)
-
-    @mcp.tool
-    async def nutrition_attach_evidence(
-        product_id: int,
-        source_type: str,
-        photo_path: str | None = None,
-        external_url: str | None = None,
-        barcode: str | None = None,
-        notes: str | None = None,
-        user_id: int = 1,
-        username: str = "mcp",
-    ) -> dict:
-        actor = Actor(user_id=user_id, username=username, is_admin=True)
-        return await _with_session(
-            tools.nutrition_attach_evidence,
-            actor,
-            product_id,
-            source_type,
-            photo_path=photo_path,
-            external_url=external_url,
-            barcode=barcode,
-            notes=notes,
-        )
-
+    for name in TOOL_CATALOG:
+        register(name)
     return mcp
-
-
-TOOL_CATALOG = [
-    "products_search",
-    "products_get",
-    "inventory_list",
-    "inventory_purchase",
-    "inventory_consume",
-    "shopping_list_get",
-    "shopping_list_add",
-    "recipes_search",
-    "nutrition_get",
-    "nutrition_propose_update",
-    "nutrition_commit_update",
-    "nutrition_upsert",
-    "nutrition_attach_evidence",
-]

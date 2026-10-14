@@ -1,8 +1,10 @@
 project: grocy/grocy
 release: v4.5.0
-commit: pending-verify
+commit: 21aa5eab218c8466f90729154cb293fffbe10c21
 pinned_at: 2026-10-14
 openapi: contracts/grocy.openapi.json
 notes: >
-  Compatibility baseline for Grocy Next Phase 0/1.
-  Full differential coverage is incomplete; products/stock/nutrition MVP is implemented first.
+  Grocy v4.5.0 API contract. Runtime response checks cover the local API.
+  Optional PHP state comparisons require a disposable reference server.
+
+openapi_sha256: 7d2480054d2bf98c8719d634b310b3e07a7c29a0b2a70045e9f34860e7362e64

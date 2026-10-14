@@ -33,7 +33,7 @@ def test_stock_transfer_inventory_open_undo(
         json={"amount": 4, "location_id": fridge["id"]},
     )
     assert purchased.status_code == 200
-    booking_id = purchased.json()["id"]
+    booking_id = purchased.json()[0]["id"]
 
     opened = client.post(
         f"/api/stock/products/{yogurt['id']}/open",
@@ -62,13 +62,13 @@ def test_stock_transfer_inventory_open_undo(
         json={"new_amount": 2},
     )
     assert inventory.status_code == 200
-    assert inventory.json()["amount"] == 2
+    assert sum(row["amount"] for row in inventory.json()) == -2
 
     undone = client.post(
         f"/api/stock/bookings/{booking_id}/undo",
         headers=api_headers,
     )
-    assert undone.status_code in {200, 400}
+    assert undone.status_code == 400
 
 
 def test_recipe_fulfillment_and_consume(
@@ -105,8 +105,11 @@ def test_recipe_fulfillment_and_consume(
         f"/api/recipes/{recipe['id']}/consume",
         headers=api_headers,
     )
-    assert consumed.status_code == 200
-    assert len(consumed.json()["bookings"]) == 3
+    assert consumed.status_code == 204
+    logs = client.get(
+        "/api/objects/stock_log?query[]=transaction_type=consume", headers=api_headers
+    ).json()
+    assert len(logs) == 3
 
 
 def test_household_chores_tasks_batteries(
@@ -124,7 +127,7 @@ def test_household_chores_tasks_batteries(
         f"/api/chores/executions/{executed.json()['id']}/undo",
         headers=api_headers,
     )
-    assert undone.status_code == 200
+    assert undone.status_code == 204
 
     tasks = client.get("/api/tasks", headers=api_headers).json()
     assert tasks
@@ -132,8 +135,10 @@ def test_household_chores_tasks_batteries(
         f"/api/tasks/{tasks[0]['id']}/complete",
         headers=api_headers,
     )
-    assert completed.status_code == 200
-    assert completed.json()["done"] == 1
+    assert completed.status_code == 204
+    assert (
+        client.get(f"/api/objects/tasks/{tasks[0]['id']}", headers=api_headers).json()["done"] == 1
+    )
 
     batteries = client.get("/api/batteries", headers=api_headers).json()
     assert batteries

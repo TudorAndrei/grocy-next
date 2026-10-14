@@ -134,8 +134,7 @@ class NutritionService:
             if proposal.expected_revision != current_revision:
                 status = ProposalStatus.CONFLICT
                 conflict_reason = (
-                    f"expected revision {proposal.expected_revision}, "
-                    f"current is {current_revision}"
+                    f"expected revision {proposal.expected_revision}, current is {current_revision}"
                 )
         row = NutritionProposal(
             product_id=proposal.product_id,
@@ -185,6 +184,7 @@ class NutritionService:
             note=payload.note,
             expected_revision=payload.expected_revision,
             origin=payload.origin,
+            commit=False,
         )
         row.status = ProposalStatus.APPROVED.value
         row.approved_by = actor.user_id
@@ -301,6 +301,7 @@ class NutritionService:
         note: str | None,
         expected_revision: int | None,
         origin: str,
+        commit: bool = True,
     ) -> NutritionRecord:
         await self._require_product(product_id)
         current = await self._current(
@@ -372,7 +373,10 @@ class NutritionService:
             evidence_id=evidence.id,
         )
         self.session.add(revision)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         await self.session.refresh(row)
         return _record_from_row(row)
 

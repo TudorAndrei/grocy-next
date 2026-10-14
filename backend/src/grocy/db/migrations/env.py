@@ -52,5 +52,7 @@ def run_migrations_online() -> None:
 
 if context.is_offline_mode():
     run_migrations_offline()
+elif connection := config.attributes.get("connection"):
+    do_run_migrations(connection)
 else:
     run_migrations_online()

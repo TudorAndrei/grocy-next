@@ -1,22 +1,30 @@
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import UnauthorizedError
-from grocy.db.models.users import ApiKey
+from grocy.core.permissions import resolve_permissions
+from grocy.db.models.users import ApiKey, UserPermission
 from grocy.db.session import get_session_factory
 
 
-async def get_db_session() -> AsyncIterator[AsyncSession]:
+async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
     factory = get_session_factory()
     async with factory() as session:
+        if request.method not in {
+            "GET",
+            "HEAD",
+            "OPTIONS",
+        } and get_settings().database_url.startswith("sqlite"):
+            await session.execute(text("BEGIN IMMEDIATE"))
+            session.info["write_lock"] = True
         yield session
 
 
@@ -27,26 +35,124 @@ async def require_api_key(
 ) -> Actor:
     settings = get_settings()
     key = grocy_api_key or request.headers.get(settings.api_key_header)
+    calendar_secret = (
+        request.query_params.get("secret") if request.url.path == "/api/calendar/ical" else None
+    )
+    use_calendar_secret = not key and bool(calendar_secret)
+    key = key or calendar_secret
     if not key:
         raise UnauthorizedError("Missing API key")
-    if settings.dev_open_api_key and key == settings.dev_open_api_key:
-        return Actor(user_id=1, username="admin", api_key=key, is_admin=True)
+    actor = await authenticate_key(
+        session, key, key_type="calendar" if use_calendar_secret else "default"
+    )
+    actor.require(request_permission(request))
+    return actor
+
+
+async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "default") -> Actor:
     stmt = (
         select(ApiKey)
         .options(selectinload(ApiKey.user))
-        .where(ApiKey.api_key == key)
+        .where(ApiKey.api_key == key, ApiKey.key_type == key_type)
     )
     row = (await session.execute(stmt)).scalars().first()
     if row is None:
         raise UnauthorizedError("Invalid API key")
-    if row.expires is not None and row.expires < datetime.now():
+    if row.expires is not None and row.expires < datetime.now(UTC).replace(tzinfo=None):
         raise UnauthorizedError("API key expired")
+    ids = set(
+        (
+            await session.execute(
+                select(UserPermission.permission_id).where(UserPermission.user_id == row.user_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
     return Actor(
         user_id=row.user_id,
         username=row.user.username,
         api_key=key,
-        is_admin=True,
+        is_admin=1 in ids,
+        permissions=resolve_permissions(ids),
     )
+
+
+def request_permission(request: Request) -> str:
+    path = request.url.path.removeprefix("/api/")
+    action = path.rsplit("/", 1)[-1]
+    write = request.method not in {"GET", "HEAD", "OPTIONS"}
+    if path.startswith("v2/mcp") or path == "user" or path.startswith("user/settings"):
+        return ""
+    if path.startswith("users") or path.startswith("v2/api-keys"):
+        return "USERS_READ" if not write else "USERS"
+    if write:
+        actions = {
+            ("chores", "execute"): "CHORE_TRACK_EXECUTION",
+            ("chores", "undo"): "CHORE_UNDO_EXECUTION",
+            ("batteries", "charge"): "BATTERIES_TRACK_CHARGE_CYCLE",
+            ("batteries", "undo"): "BATTERIES_UNDO_CHARGE_CYCLE",
+            ("tasks", "complete"): "TASKS_MARK_COMPLETED",
+            ("tasks", "undo"): "TASKS_UNDO_EXECUTION",
+        }
+        if permission := actions.get((path.split("/")[0], action)):
+            return permission
+    if path.startswith("recipes/") and write:
+        if action == "consume":
+            return "STOCK_CONSUME"
+        if action == "add-not-fulfilled-products-to-shoppinglist":
+            return "SHOPPINGLIST_ITEMS_ADD"
+    if path.startswith("stock/shoppinglist") or path.startswith("v2/shopping"):
+        return "SHOPPINGLIST"
+    if path.startswith("stock"):
+        actions = {
+            "add": "PURCHASE",
+            "consume": "CONSUME",
+            "open": "OPEN",
+            "inventory": "INVENTORY",
+            "transfer": "TRANSFER",
+        }
+        return f"STOCK_{actions[action]}" if write and action in actions else "STOCK"
+    if "nutrition" in path:
+        return "STOCK" if not write or action == "proposals" else "MASTER_DATA_EDIT"
+    if "meal-plan" in path:
+        return "RECIPES_MEALPLAN"
+    if path.startswith("objects/"):
+        entity = path.split("/")[1]
+        if entity == "api_keys":
+            return "ADMIN"
+        if entity == "permission_hierarchy":
+            return ""
+        groups = {
+            "meal_plan": "RECIPES_MEALPLAN",
+            "meal_plan_sections": "RECIPES_MEALPLAN",
+            "recipes": "RECIPES",
+            "recipes_pos": "RECIPES",
+            "recipes_nestings": "RECIPES",
+            "chores": "CHORES",
+            "chores_log": "CHORES",
+            "tasks": "TASKS",
+            "task_categories": "TASKS",
+            "batteries": "BATTERIES",
+            "battery_charge_cycles": "BATTERIES",
+            "equipment": "EQUIPMENT",
+            "shopping_list": "SHOPPINGLIST",
+            "shopping_lists": "SHOPPINGLIST",
+        }
+        return groups.get(entity, "MASTER_DATA_EDIT" if write else "STOCK")
+    for prefix, permission in (
+        ("recipes", "RECIPES"),
+        ("v2/recipes", "RECIPES"),
+        ("chores", "CHORES"),
+        ("tasks", "TASKS"),
+        ("batteries", "BATTERIES"),
+        ("calendar", "CALENDAR"),
+    ):
+        if path.startswith(prefix):
+            return permission
+    if path.startswith("system"):
+        return "ADMIN" if action == "config" else ""
+    return "MASTER_DATA_EDIT" if write else "STOCK"
 
 
 CurrentActor = Annotated[Actor, Depends(require_api_key)]

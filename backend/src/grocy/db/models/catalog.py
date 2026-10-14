@@ -22,6 +22,7 @@ class QuantityUnit(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     name_plural: Mapped[str | None] = mapped_column(String(255))
+    plural_forms: Mapped[str | None] = mapped_column(Text)
 
 
 class ProductGroup(Base, TimestampMixin):
@@ -52,8 +53,27 @@ class Product(Base, TimestampMixin):
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     picture_file_name: Mapped[str | None] = mapped_column(String(255))
 
+    parent_product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
+    shopping_location_id: Mapped[int | None] = mapped_column(Integer)
+    default_consume_location_id: Mapped[int | None] = mapped_column(ForeignKey("locations.id"))
+    tare_weight: Mapped[Decimal] = mapped_column(
+        Numeric(15, 6), nullable=False, default=Decimal("0")
+    )
+    default_best_before_days_after_open: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    enable_tare_weight_handling: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    not_check_stock_fulfillment_for_recipes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    treat_opened_as_out_of_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    auto_reprint_stock_label: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    no_own_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    should_not_be_frozen: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    move_on_open: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     barcodes: Mapped[list["ProductBarcode"]] = relationship(back_populates="product")
-    location: Mapped[Location] = relationship()
+    location: Mapped[Location] = relationship(foreign_keys=[location_id])
     product_group: Mapped[ProductGroup | None] = relationship()
 
 
@@ -67,5 +87,14 @@ class ProductBarcode(Base, TimestampMixin):
     qu_id: Mapped[int | None] = mapped_column(ForeignKey("quantity_units.id"))
     amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
     note: Mapped[str | None] = mapped_column(Text)
+    shopping_location_id: Mapped[int | None] = mapped_column(Integer)
+    last_price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
 
     product: Mapped[Product] = relationship(back_populates="barcodes")
+
+
+class ShoppingLocation(Base, TimestampMixin):
+    __tablename__ = "shopping_locations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)

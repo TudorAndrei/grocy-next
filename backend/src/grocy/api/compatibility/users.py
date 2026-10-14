@@ -1,18 +1,31 @@
+import hashlib
+import secrets
 from typing import Any
 
 from fastapi import APIRouter, Response
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
-from grocy.core.errors import NotFoundError
-from grocy.db.models.users import ApiKey, User
+from grocy.core.errors import GrocyError, NotFoundError
+from grocy.core.permissions import PERMISSIONS
 from grocy.db.models.settings import UserSetting
+from grocy.db.models.users import ApiKey, User, UserPermission
 
 router = APIRouter(tags=["users"])
 
-ALL_PERMISSION_IDS = list(range(1, 16))
-_user_permissions: dict[int, list[int]] = {}
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+    return f"scrypt${salt.hex()}${digest.hex()}"
+
+
+def _username(body: dict[str, Any]) -> str:
+    value = str(body.get("username", "")).strip()
+    if not value:
+        raise GrocyError("Username is required")
+    return value
 
 
 def _serialize_user(user: User) -> dict[str, Any]:
@@ -103,7 +116,7 @@ async def get_user_setting(
     }
 
 
-@router.put("/api/user/settings/{setting_key}")
+@router.put("/api/user/settings/{setting_key}", status_code=204)
 async def put_user_setting(
     setting_key: str,
     body: dict[str, Any],
@@ -125,7 +138,7 @@ async def put_user_setting(
     return Response(status_code=204)
 
 
-@router.delete("/api/user/settings/{setting_key}")
+@router.delete("/api/user/settings/{setting_key}", status_code=204)
 async def delete_user_setting(
     setting_key: str,
     actor: CurrentActor,
@@ -149,17 +162,17 @@ async def list_users(_actor: CurrentActor, session: DbSession) -> list[dict[str,
     return [_serialize_user(row) for row in rows]
 
 
-@router.post("/api/users")
+@router.post("/api/users", status_code=204)
 async def create_user(
     body: dict[str, Any],
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
     user = User(
-        username=str(body.get("username", "")),
+        username=_username(body),
         first_name=body.get("first_name"),
         last_name=body.get("last_name"),
-        password=str(body.get("password", "")),
+        password=_hash_password(str(body.get("password", ""))),
         picture_file_name=body.get("picture_file_name"),
     )
     session.add(user)
@@ -167,7 +180,7 @@ async def create_user(
     return Response(status_code=204)
 
 
-@router.put("/api/users/{user_id}")
+@router.put("/api/users/{user_id}", status_code=204)
 async def update_user(
     user_id: int,
     body: dict[str, Any],
@@ -176,20 +189,20 @@ async def update_user(
 ) -> Response:
     user = await _get_user_or_404(session, user_id)
     if "username" in body:
-        user.username = str(body["username"])
+        user.username = _username(body)
     if "first_name" in body:
         user.first_name = body["first_name"]
     if "last_name" in body:
         user.last_name = body["last_name"]
     if "password" in body:
-        user.password = str(body["password"])
+        user.password = _hash_password(str(body["password"]))
     if "picture_file_name" in body:
         user.picture_file_name = body["picture_file_name"]
     await session.commit()
     return Response(status_code=204)
 
 
-@router.delete("/api/users/{user_id}")
+@router.delete("/api/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
     actor: CurrentActor,
@@ -202,12 +215,14 @@ async def delete_user(
     for key in keys:
         await session.delete(key)
     settings = (
-        await session.execute(select(UserSetting).where(UserSetting.user_id == user_id))
-    ).scalars().all()
+        (await session.execute(select(UserSetting).where(UserSetting.user_id == user_id)))
+        .scalars()
+        .all()
+    )
     for setting in settings:
         await session.delete(setting)
     await session.delete(user)
-    _user_permissions.pop(user_id, None)
+    await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
     await session.commit()
     return Response(status_code=204)
 
@@ -217,36 +232,65 @@ def _permission_rows(user_id: int, permission_ids: list[int]) -> list[dict[str, 
 
 
 @router.get("/api/users/{user_id}/permissions")
-async def get_user_permissions(user_id: int, _actor: CurrentActor) -> list[dict[str, int]]:
-    stored = _user_permissions.get(user_id)
-    if stored is not None:
-        return _permission_rows(user_id, stored)
-    return _permission_rows(user_id, ALL_PERMISSION_IDS)
+async def get_user_permissions(
+    user_id: int, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, int]]:
+    await _get_user_or_404(session, user_id)
+    ids = list(
+        (
+            await session.execute(
+                select(UserPermission.permission_id)
+                .where(UserPermission.user_id == user_id)
+                .order_by(UserPermission.permission_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return _permission_rows(user_id, ids)
 
 
-@router.post("/api/users/{user_id}/permissions")
+@router.post("/api/users/{user_id}/permissions", status_code=204)
 async def add_user_permission(
-    user_id: int,
-    body: dict[str, Any],
-    _actor: CurrentActor,
+    user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
 ) -> Response:
-    permission_id = int(body.get("permission_id") or body.get("permissions_id") or 0)
-    current = _user_permissions.setdefault(user_id, list(ALL_PERMISSION_IDS))
-    if permission_id and permission_id not in current:
-        current.append(permission_id)
+    actor.require("ADMIN")
+    await _get_user_or_404(session, user_id)
+    try:
+        pid = int(body.get("permission_id", body.get("permissions_id", 0)))
+    except (TypeError, ValueError) as exc:
+        raise GrocyError("Invalid permission") from exc
+    if pid not in PERMISSIONS:
+        raise GrocyError("Unknown permission")
+    existing = await session.scalar(
+        select(UserPermission.id).where(
+            UserPermission.user_id == user_id, UserPermission.permission_id == pid
+        )
+    )
+    if existing is None:
+        session.add(UserPermission(user_id=user_id, permission_id=pid))
+        await session.commit()
     return Response(status_code=204)
 
 
-@router.put("/api/users/{user_id}/permissions")
+@router.put("/api/users/{user_id}/permissions", status_code=204)
 async def set_user_permissions(
-    user_id: int,
-    body: dict[str, Any],
-    _actor: CurrentActor,
-) -> list[dict[str, int]]:
-    raw = body.get("permissions") or body.get("permission_ids") or ALL_PERMISSION_IDS
-    if isinstance(raw, list):
-        ids = [int(item) for item in raw]
-    else:
-        ids = list(ALL_PERMISSION_IDS)
-    _user_permissions[user_id] = ids
-    return _permission_rows(user_id, ids)
+    user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
+) -> Response:
+    actor.require("ADMIN")
+    await _get_user_or_404(session, user_id)
+    raw = body.get("permissions", body.get("permission_ids", []))
+    if not isinstance(raw, list):
+        raise GrocyError("Permissions must be a list")
+    try:
+        ids = sorted({int(item) for item in raw})
+    except (TypeError, ValueError) as exc:
+        raise GrocyError("Invalid permission") from exc
+    if any(pid not in PERMISSIONS for pid in ids):
+        raise GrocyError("Unknown permission")
+    if user_id == actor.user_id and 1 not in ids:
+        raise GrocyError("Cannot remove your own administrator permission")
+    await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
+    session.add_all([UserPermission(user_id=user_id, permission_id=pid) for pid in ids])
+    await session.commit()
+    return Response(status_code=204)

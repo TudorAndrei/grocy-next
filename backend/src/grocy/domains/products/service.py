@@ -38,9 +38,7 @@ class ProductsService:
 
     async def get(self, product_id: int) -> Product:
         stmt = (
-            select(Product)
-            .options(selectinload(Product.barcodes))
-            .where(Product.id == product_id)
+            select(Product).options(selectinload(Product.barcodes)).where(Product.id == product_id)
         )
         product = (await self.session.execute(stmt)).scalars().first()
         if product is None:
@@ -104,6 +102,36 @@ class ProductsService:
             "barcode": barcodes[0] if barcodes else None,
             "barcodes": barcodes,
         }
+        for column in product.__table__.columns:
+            if column.name in payload:
+                continue
+            value = getattr(product, column.name)
+            payload[column.name] = (
+                value.isoformat()
+                if hasattr(value, "isoformat")
+                else float(value)
+                if isinstance(value, Decimal)
+                else value
+            )
         if stock_amount is not None:
             payload["stock_amount"] = float(stock_amount)
         return payload
+
+    async def child_ids(self, product_id: int) -> list[int]:
+        ids, pending = [], [product_id]
+        while pending:
+            current = pending.pop()
+            if current in ids:
+                continue
+            ids.append(current)
+            children = (
+                (
+                    await self.session.execute(
+                        select(Product.id).where(Product.parent_product_id == current)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            pending.extend(children)
+        return ids

@@ -172,6 +172,8 @@ async def nutrition_attach_evidence(
     stmt = select(ProductNutrition).where(
         ProductNutrition.product_id == product_id,
         ProductNutrition.is_current == 1,
+        ProductNutrition.revision == current.revision,
+        ProductNutrition.barcode == current.barcode,
     )
     row = (await session.execute(stmt)).scalars().first()
     if row is None:

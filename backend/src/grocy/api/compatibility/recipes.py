@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
 
 from grocy.core.auth import CurrentActor
@@ -36,24 +36,26 @@ async def recipe_fulfillment(
     return await recipes.fulfillment(recipe_id, servings=servings)
 
 
-@router.post("/api/recipes/{recipe_id}/consume")
+@router.post("/api/recipes/{recipe_id}/consume", status_code=204)
 async def recipe_consume(
     recipe_id: int,
     actor: CurrentActor,
     recipes: RecipesSvc,
     servings: Annotated[Decimal | None, Query()] = None,
-) -> dict[str, Any]:
-    return await recipes.consume(actor, recipe_id, servings=servings)
+) -> Response:
+    await recipes.consume(actor, recipe_id, servings=servings)
+    return Response(status_code=204)
 
 
-@router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist")
+@router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist", status_code=204)
 async def recipe_add_missing(
     recipe_id: int,
     _actor: CurrentActor,
     recipes: RecipesSvc,
     servings: Annotated[Decimal | None, Query()] = None,
-) -> dict[str, Any]:
-    return await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+) -> Response:
+    await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+    return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/copy")
@@ -63,7 +65,7 @@ async def recipe_copy(
     recipes: RecipesSvc,
 ) -> dict[str, Any]:
     recipe = await recipes.copy(recipe_id)
-    return recipes.serialize(recipe)
+    return {"created_object_id": recipe.id}
 
 
 @router.post("/api/v2/recipes")

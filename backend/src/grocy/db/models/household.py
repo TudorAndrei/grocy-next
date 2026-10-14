@@ -22,6 +22,11 @@ class Chore(Base, TimestampMixin):
     )
     assignment_config: Mapped[str | None] = mapped_column(Text)
     next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    start_date: Mapped[datetime | None] = mapped_column(DateTime)
+    rescheduled_date: Mapped[datetime | None] = mapped_column(DateTime)
+    rescheduled_next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id")
+    )
 
 
 class ChoreLog(Base):
@@ -32,6 +37,7 @@ class ChoreLog(Base):
     tracked_time: Mapped[datetime] = mapped_column(DateTime(timezone=False), nullable=False)
     done_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     undone: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     undone_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     row_created_timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),

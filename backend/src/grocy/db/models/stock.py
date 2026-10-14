@@ -21,6 +21,7 @@ class StockEntry(Base, TimestampMixin):
     opened_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     location_id: Mapped[int | None] = mapped_column(ForeignKey("locations.id"))
     shopping_location_id: Mapped[int | None] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text)
 
 
 class StockLog(Base):
@@ -45,6 +46,8 @@ class StockLog(Base):
     shopping_location_id: Mapped[int | None] = mapped_column(Integer)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, default=1)
     note: Mapped[str | None] = mapped_column(Text)
+    undo_data: Mapped[str | None] = mapped_column(Text)
+    recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id"))
     row_created_timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         server_default=func.datetime("now", "localtime"),

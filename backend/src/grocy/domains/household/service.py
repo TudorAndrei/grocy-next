@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import calendar
+import secrets
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
@@ -15,6 +17,7 @@ from grocy.db.models.household import (
     Task,
     TaskCategory,
 )
+from grocy.db.models.users import User
 
 
 class HouseholdService:
@@ -22,15 +25,18 @@ class HouseholdService:
         self.session = session
 
     async def list_chores(self) -> list[dict]:
-        rows = (
-            await self.session.execute(select(Chore).order_by(Chore.name))
-        ).scalars().all()
+        rows = (await self.session.execute(select(Chore).order_by(Chore.name))).scalars().all()
         result = []
         for chore in rows:
             last = await self._last_chore_execution(chore.id)
             result.append(
                 {
                     **self._serialize_chore(chore),
+                    "chore_id": chore.id,
+                    "chore_name": chore.name,
+                    "is_rescheduled": bool(chore.rescheduled_date),
+                    "is_reassigned": bool(chore.rescheduled_next_execution_assigned_to_user_id),
+                    "next_execution_assigned_user": None,
                     "last_tracked_time": last.isoformat() if last else None,
                     "next_estimated_execution_time": self._next_chore_time(chore, last),
                 }
@@ -48,14 +54,23 @@ class HouseholdService:
             "next_estimated_execution_time": self._next_chore_time(chore, last),
         }
 
-    async def execute_chore(self, actor: Actor, chore_id: int) -> dict:
+    async def execute_chore(
+        self,
+        actor: Actor,
+        chore_id: int,
+        *,
+        tracked_time: datetime | None = None,
+        done_by: int | None = None,
+        skipped: bool = False,
+    ) -> dict:
         chore = await self.session.get(Chore, chore_id)
         if chore is None:
             raise NotFoundError(f"Chore {chore_id} not found")
         log = ChoreLog(
             chore_id=chore_id,
-            tracked_time=datetime.now(),
-            done_by_user_id=actor.user_id,
+            tracked_time=tracked_time or datetime.now(),
+            done_by_user_id=done_by or actor.user_id,
+            skipped=int(skipped),
         )
         self.session.add(log)
         await self.session.commit()
@@ -104,16 +119,16 @@ class HouseholdService:
         return self._serialize_task(task)
 
     async def list_batteries(self) -> list[dict]:
-        rows = (
-            await self.session.execute(select(Battery).order_by(Battery.name))
-        ).scalars().all()
+        rows = (await self.session.execute(select(Battery).order_by(Battery.name))).scalars().all()
         result = []
         for battery in rows:
             last = await self._last_battery_charge(battery.id)
             result.append(
                 {
                     **self._serialize_battery(battery),
+                    "battery_id": battery.id,
                     "last_tracked_time": last.isoformat() if last else None,
+                    "next_estimated_charge_time": self._next_battery_time(battery, last),
                 }
             )
         return result
@@ -139,8 +154,10 @@ class HouseholdService:
         if keep_id == remove_id:
             raise GrocyError("cannot merge chore into itself", code="invalid_merge")
         logs = (
-            await self.session.execute(select(ChoreLog).where(ChoreLog.chore_id == remove_id))
-        ).scalars().all()
+            (await self.session.execute(select(ChoreLog).where(ChoreLog.chore_id == remove_id)))
+            .scalars()
+            .all()
+        )
         for log in logs:
             log.chore_id = keep_id
         await self.session.delete(remove)
@@ -148,14 +165,55 @@ class HouseholdService:
         return {"kept_chore_id": keep_id, "removed_chore_id": remove_id}
 
     async def calculate_next_assignments(self) -> dict:
-        chores = await self.list_chores()
-        return {"assignments": chores, "calculated": True}
+        chores = (await self.session.execute(select(Chore))).scalars().all()
+        users = (await self.session.execute(select(User))).scalars().all()
+        for chore in chores:
+            ids = {
+                int(part)
+                for part in (chore.assignment_config or "").split(",")
+                if part.strip().isdigit()
+            }
+            candidates = sorted(
+                (u for u in users if u.id in ids),
+                key=lambda u: f"{u.first_name or ''} {u.last_name or ''}".strip() or u.username,
+            )
+            assigned = None
+            if candidates and chore.assignment_type != "no-assignment":
+                if chore.assignment_type == "random":
+                    assigned = secrets.choice(candidates).id
+                elif chore.assignment_type == "who-least-did-first":
+                    counts = dict(
+                        (
+                            await self.session.execute(
+                                select(ChoreLog.done_by_user_id, func.count())
+                                .where(ChoreLog.chore_id == chore.id, ChoreLog.undone == 0)
+                                .group_by(ChoreLog.done_by_user_id)
+                            )
+                        ).all()
+                    )
+                    assigned = min(candidates, key=lambda u: counts.get(u.id, 0)).id
+                else:
+                    last_user = await self.session.scalar(
+                        select(ChoreLog.done_by_user_id)
+                        .where(ChoreLog.chore_id == chore.id, ChoreLog.undone == 0)
+                        .order_by(ChoreLog.tracked_time.desc(), ChoreLog.id.desc())
+                        .limit(1)
+                    )
+                    index = next((i for i, u in enumerate(candidates) if u.id == last_user), -1)
+                    assigned = candidates[(index + 1) % len(candidates)].id
+            chore.next_execution_assigned_to_user_id = assigned
+        await self.session.commit()
+        return {"assignments": await self.list_chores(), "calculated": True}
 
-    async def charge_battery(self, battery_id: int) -> dict:
+    async def charge_battery(
+        self, battery_id: int, *, tracked_time: datetime | None = None
+    ) -> dict:
         battery = await self.session.get(Battery, battery_id)
         if battery is None:
             raise NotFoundError(f"Battery {battery_id} not found")
-        cycle = BatteryChargeCycle(battery_id=battery_id, tracked_time=datetime.now())
+        cycle = BatteryChargeCycle(
+            battery_id=battery_id, tracked_time=tracked_time or datetime.now()
+        )
         self.session.add(cycle)
         await self.session.commit()
         await self.session.refresh(cycle)
@@ -184,7 +242,7 @@ class HouseholdService:
     async def _last_chore_execution(self, chore_id: int) -> datetime | None:
         stmt = (
             select(ChoreLog.tracked_time)
-            .where(ChoreLog.chore_id == chore_id, ChoreLog.undone == 0)
+            .where(ChoreLog.chore_id == chore_id, ChoreLog.undone == 0, ChoreLog.skipped == 0)
             .order_by(ChoreLog.tracked_time.desc())
             .limit(1)
         )
@@ -203,10 +261,25 @@ class HouseholdService:
         return await self.session.scalar(stmt)
 
     def _next_chore_time(self, chore: Chore, last: datetime | None) -> str | None:
-        if chore.period_type == "manually" or not chore.period_days:
+        if chore.rescheduled_date:
+            return chore.rescheduled_date.isoformat()
+        if chore.period_type == "manually":
             return None
-        base = last or datetime.now()
-        return (base + timedelta(days=int(chore.period_days))).isoformat()
+        base = last or chore.start_date or datetime.now()
+        days = int(chore.period_days or 1)
+        if chore.period_type in {"monthly", "yearly"}:
+            months = days * (12 if chore.period_type == "yearly" else 1)
+            index = base.year * 12 + base.month - 1 + months
+            year, month = divmod(index, 12)
+            month += 1
+            due = base.replace(
+                year=year, month=month, day=min(base.day, calendar.monthrange(year, month)[1])
+            )
+        elif chore.period_type == "hourly":
+            due = base + timedelta(hours=days)
+        else:
+            due = base + timedelta(days=days * (7 if chore.period_type == "weekly" else 1))
+        return due.isoformat()
 
     def _next_battery_time(self, battery: Battery, last: datetime | None) -> str | None:
         if not battery.charge_interval_days:
@@ -225,6 +298,8 @@ class HouseholdService:
             "track_date_only": bool(chore.track_date_only),
             "rollover": bool(chore.rollover),
             "assignment_type": chore.assignment_type,
+            "assignment_config": chore.assignment_config,
+            "next_execution_assigned_to_user_id": chore.next_execution_assigned_to_user_id,
         }
 
     def _serialize_task(self, task: Task) -> dict:
