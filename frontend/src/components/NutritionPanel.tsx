@@ -1,10 +1,13 @@
-import type { NutritionRecord } from "@/lib/types";
+import { nutrientLabels } from "./ProposalForm";
+import type { Nutrients, NutritionRecord } from "@/lib/types";
 
 type NutritionPanelProps = {
   data: NutritionRecord;
 };
 
-function formatNutrientValue(value: number | string | null | undefined): string {
+function formatNutrientValue(
+  value: number | string | null | undefined,
+): string {
   if (value === null || value === undefined) {
     return "—";
   }
@@ -23,10 +26,17 @@ export function NutritionPanel({ data }: NutritionPanelProps) {
   return (
     <section className="panel" aria-labelledby="nutrition-heading">
       <div className="panel-inner">
-        <h2 id="nutrition-heading" className="page-title" style={{ fontSize: "1.25rem" }}>
+        <h2
+          id="nutrition-heading"
+          className="page-title"
+          style={{ fontSize: "1.25rem" }}
+        >
           Nutrition
         </h2>
-        <p className="muted" style={{ marginTop: "-0.25rem", marginBottom: "1rem" }}>
+        <p
+          className="muted"
+          style={{ marginTop: "-0.25rem", marginBottom: "1rem" }}
+        >
           Per {data.basis_quantity} {data.basis_unit} · revision {data.revision}
         </p>
         {entries.length === 0 ? (
@@ -35,7 +45,7 @@ export function NutritionPanel({ data }: NutritionPanelProps) {
           <dl className="nutrient-grid">
             {entries.map(([key, value]) => (
               <div key={key}>
-                <dt>{key.replace(/_/g, " ")}</dt>
+                <dt>{nutrientLabels[key as keyof Nutrients] ?? key}</dt>
                 <dd>{formatNutrientValue(value)}</dd>
               </div>
             ))}

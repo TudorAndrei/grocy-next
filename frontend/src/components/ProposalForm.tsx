@@ -1,136 +1,149 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { api, queryKeys } from "@/lib/api";
+import { api, request } from "@/lib/api";
 import type { Nutrients, NutritionRecord } from "@/lib/types";
-
-type ProposalFormProps = {
+import { ErrorBlock } from "./ErrorBlock";
+export const nutrientLabels: Record<keyof Nutrients, string> = {
+  energy_kj: "Energy (kJ)",
+  energy_kcal: "Energy (kcal)",
+  protein_g: "Protein (g)",
+  carbohydrates_g: "Carbohydrates (g)",
+  sugars_g: "Sugars (g)",
+  fat_g: "Fat (g)",
+  saturated_fat_g: "Saturated fat (g)",
+  fiber_g: "Fibre (g)",
+  salt_g: "Salt (g)",
+};
+export function ProposalForm({
+  productId,
+  nutrition,
+}: {
   productId: number;
   nutrition: NutritionRecord | null;
-};
-
-const DEFAULT_NUTRIENT_KEYS = [
-  "energy_kcal",
-  "protein_g",
-  "carbohydrates_g",
-  "sugars_g",
-  "fat_g",
-  "saturated_fat_g",
-  "fiber_g",
-  "salt_g",
-] as const;
-
-function parseNutrients(text: string): Nutrients {
-  const out: Nutrients = {};
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const [key, rawValue] = trimmed.split(/[:=]/).map((s) => s.trim());
-    if (!key) continue;
-    if (!rawValue) {
-      (out as Record<string, number | null>)[key] = null;
-      continue;
-    }
-    const num = Number(rawValue);
-    (out as Record<string, number | null>)[key] = Number.isFinite(num) ? num : null;
-  }
-  return out;
-}
-
-export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
-  const queryClient = useQueryClient();
-  const [basisQuantity, setBasisQuantity] = useState(
-    nutrition?.basis_quantity?.toString() ?? "100",
+}) {
+  const client = useQueryClient();
+  const [quantity, setQuantity] = useState(
+    String(nutrition?.basis_quantity ?? 100),
   );
-  const [basisUnit, setBasisUnit] = useState(nutrition?.basis_unit ?? "g");
-  const [nutrientText, setNutrientText] = useState(() => {
-    if (nutrition?.nutrients && Object.keys(nutrition.nutrients).length > 0) {
-      return Object.entries(nutrition.nutrients)
-        .map(([k, v]) => `${k}: ${v ?? ""}`)
-        .join("\n");
-    }
-    return DEFAULT_NUTRIENT_KEYS.map((key) => `${key}: `).join("\n");
-  });
+  const [unit, setUnit] = useState(nutrition?.basis_unit ?? "g");
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      Object.keys(nutrientLabels).map((key) => [
+        key,
+        String(nutrition?.nutrients[key as keyof Nutrients] ?? ""),
+      ]),
+    ),
+  );
   const [note, setNote] = useState("");
-  const [feedback, setFeedback] = useState<string | null>(null);
-
+  const [photo, setPhoto] = useState<File | null>(null);
   const mutation = useMutation({
-    mutationFn: () =>
-      api.createProposal({
+    mutationFn: async () => {
+      const nutrients: Nutrients = {};
+      for (const key of Object.keys(nutrientLabels) as (keyof Nutrients)[])
+        nutrients[key] = values[key] ? Number(values[key]) : null;
+      let photoPath: string | undefined;
+      if (photo) {
+        const name = `${productId}-${Date.now()}-${photo.name}`;
+        await request(`/api/files/nutrition/${encodeURIComponent(name)}`, {
+          method: "PUT",
+          body: photo,
+        });
+        photoPath = `nutrition/${name}`;
+      }
+      return api.createProposal({
         product_id: productId,
         expected_revision: nutrition?.revision ?? 0,
-        basis: {
-          quantity: Number(basisQuantity),
-          unit: basisUnit,
+        basis: { quantity: Number(quantity), unit },
+        nutrients,
+        source: {
+          type: "packaging_label",
+          note: note || null,
+          photo_path: photoPath,
         },
-        nutrients: parseNutrients(nutrientText),
-        source: { type: "packaging_label", note: note.trim() || null },
-        note: note.trim() || null,
+        note: note || null,
         origin: "web",
-      }),
-    onSuccess: async () => {
-      setFeedback("Proposal submitted for review.");
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.proposalsPending,
       });
     },
-    onError: (err: Error) => {
-      setFeedback(err.message);
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["proposals", "pending"] });
     },
   });
-
-  function onSubmit(e: FormEvent) {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    setFeedback(null);
     mutation.mutate();
-  }
-
+  };
   return (
-    <section className="panel" aria-labelledby="propose-heading">
-      <div className="panel-inner">
-        <h2 id="propose-heading" className="page-title" style={{ fontSize: "1.25rem" }}>
-          Propose nutrition update
-        </h2>
-        <p className="muted" style={{ marginTop: "-0.25rem" }}>
-          Values stay staged until approved. Leave unknowns blank (null), never invent zero.
-        </p>
-        <form className="stack" onSubmit={onSubmit}>
-          <div className="field-row">
-            <label>
-              Basis quantity
-              <input
-                value={basisQuantity}
-                onChange={(e) => setBasisQuantity(e.target.value)}
-                inputMode="decimal"
-                required
-              />
-            </label>
-            <label>
-              Basis unit
-              <select value={basisUnit} onChange={(e) => setBasisUnit(e.target.value)}>
-                <option value="g">g</option>
-                <option value="ml">ml</option>
-                <option value="serving">serving</option>
-              </select>
-            </label>
-          </div>
-          <label>
-            Nutrients (one per line, `key: value`)
-            <textarea
-              rows={10}
-              value={nutrientText}
-              onChange={(e) => setNutrientText(e.target.value)}
+    <section className="panel panel-inner" aria-labelledby="propose-heading">
+      <h2 id="propose-heading">Propose nutrition update</h2>
+      <p className="muted">
+        Enter the values on the label. Leave unknown values blank. Review the
+        proposal before approval.
+      </p>
+      <form onSubmit={submit}>
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="nutrition-quantity">Label quantity</label>
+            <input
+              id="nutrition-quantity"
+              type="number"
+              min="0.000001"
+              step="any"
+              required
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
             />
-          </label>
-          <label>
-            Note
-            <input value={note} onChange={(e) => setNote(e.target.value)} />
-          </label>
-          <button type="submit" className="btn btn-primary" disabled={mutation.isPending}>
-            {mutation.isPending ? "Submitting…" : "Submit proposal"}
-          </button>
-          {feedback ? <p className="muted">{feedback}</p> : null}
-        </form>
-      </div>
+          </div>
+          <div className="field">
+            <label htmlFor="nutrition-unit">Label unit</label>
+            <select
+              id="nutrition-unit"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+            >
+              <option value="g">Grams</option>
+              <option value="ml">Millilitres</option>
+              <option value="serving">Servings</option>
+            </select>
+          </div>
+          {(Object.keys(nutrientLabels) as (keyof Nutrients)[]).map((key) => (
+            <div className="field" key={key}>
+              <label htmlFor={`nutrient-${key}`}>{nutrientLabels[key]}</label>
+              <input
+                id={`nutrient-${key}`}
+                type="number"
+                min="0"
+                step="any"
+                value={values[key]}
+                onChange={(e) =>
+                  setValues({ ...values, [key]: e.target.value })
+                }
+              />
+            </div>
+          ))}
+        </div>
+        <div className="field">
+          <label htmlFor="nutrition-photo">Label photo</label>
+          <input
+            id="nutrition-photo"
+            type="file"
+            accept="image/*"
+            onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="nutrition-note">Note</label>
+          <input
+            id="nutrition-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+        <button className="btn btn-primary" disabled={mutation.isPending}>
+          {mutation.isPending ? "Saving proposal..." : "Submit proposal"}
+        </button>
+        {mutation.error && <ErrorBlock message={mutation.error.message} />}
+        {mutation.isSuccess && <p role="status">Proposal saved for review.</p>}
+      </form>
     </section>
   );
 }

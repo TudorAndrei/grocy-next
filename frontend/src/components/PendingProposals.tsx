@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
 import { Link } from "@tanstack/react-router";
+import { nutrientLabels } from "./ProposalForm";
+import type { Nutrients } from "@/lib/types";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 
@@ -12,9 +14,12 @@ export function PendingProposals() {
   });
 
   const approve = useMutation({
-    mutationFn: (id: number) => api.approveProposal(id),
+    mutationFn: ({ id, reject }: { id: number; reject?: boolean }) =>
+      reject ? api.rejectProposal(id) : api.approveProposal(id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.proposalsPending });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.proposalsPending,
+      });
       await queryClient.invalidateQueries({ queryKey: ["nutrition"] });
       await queryClient.invalidateQueries({ queryKey: ["revisions"] });
     },
@@ -41,48 +46,66 @@ export function PendingProposals() {
   if (items.length === 0) {
     return (
       <p className="empty-state">
-        Nothing waiting for approval. Proposals appear here after submission from a
-        product page.
+        Nothing waiting for approval. Proposals appear here after submission
+        from a product page.
       </p>
     );
   }
 
   return (
-    <ul className="product-list">
-      {items.map((item) => (
-        <li
-          key={item.id}
-          className="product-row"
-          style={{ gridTemplateColumns: "1fr auto auto" }}
-        >
-          <div>
-            <h2>
-              <Link
-                to="/products/$productId"
-                params={{ productId: String(item.product_id) }}
-              >
-                Product #{item.product_id}
-              </Link>
-            </h2>
-            <p>
-              Proposal #{item.id}
-              {item.payload.note ? ` · ${item.payload.note}` : ""}
-            </p>
-            <p className="muted">
-              Basis {item.payload.basis.quantity} {item.payload.basis.unit}
-            </p>
-          </div>
-          <span className="status-pill">{item.status}</span>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={approve.isPending}
-            onClick={() => approve.mutate(item.id)}
+    <>
+      {approve.error && <ErrorBlock message={approve.error.message} />}
+      <ul className="product-list">
+        {items.map((item) => (
+          <li
+            key={item.id}
+            className="product-row"
+            style={{ gridTemplateColumns: "1fr auto auto" }}
           >
-            Approve
-          </button>
-        </li>
-      ))}
-    </ul>
+            <div>
+              <h2>
+                <Link
+                  to="/products/$productId"
+                  params={{ productId: String(item.product_id) }}
+                >
+                  Product #{item.product_id}
+                </Link>
+              </h2>
+              <p>
+                Proposal #{item.id}
+                {item.payload.note ? ` · ${item.payload.note}` : ""}
+              </p>
+              <p className="muted">
+                Basis {item.payload.basis.quantity} {item.payload.basis.unit}
+              </p>
+              <dl className="nutrient-grid">
+                {Object.entries(item.payload.nutrients).map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{nutrientLabels[key as keyof Nutrients]}</dt>
+                    <dd>{value == null ? "Unknown" : String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <span className="status-pill">{item.status}</span>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={approve.isPending}
+              onClick={() => approve.mutate({ id: item.id })}
+            >
+              Approve
+            </button>
+            <button
+              className="btn btn-ghost"
+              disabled={approve.isPending}
+              onClick={() => approve.mutate({ id: item.id, reject: true })}
+            >
+              Reject
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

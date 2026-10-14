@@ -25,18 +25,19 @@ function ProductDetailPage() {
     queryKey: queryKeys.nutrition(id),
     queryFn: () => api.getProductNutrition(id),
     enabled: Number.isFinite(id),
-    retry: (_, error) => {
+    retry: (failureCount, error) => {
       if (error instanceof ApiError && error.status === 404) {
         return false;
       }
-      return true;
+      return failureCount < 2;
     },
   });
 
   const product = productsQuery.data?.find((p) => p.id === id);
   const title = product?.name ?? `Product #${productId}`;
   const nutritionMissing =
-    nutritionQuery.error instanceof ApiError && nutritionQuery.error.status === 404;
+    nutritionQuery.error instanceof ApiError &&
+    nutritionQuery.error.status === 404;
 
   return (
     <>
@@ -47,7 +48,9 @@ function ProductDetailPage() {
       {product?.barcode ? (
         <p className="page-lead">Barcode {product.barcode}</p>
       ) : (
-        <p className="page-lead">Nutrition details and staged updates for this item.</p>
+        <p className="page-lead">
+          Nutrition details and staged updates for this item.
+        </p>
       )}
 
       <div className="stack" style={{ marginTop: "1.5rem" }}>
@@ -65,7 +68,9 @@ function ProductDetailPage() {
           />
         ) : null}
         {nutritionMissing ? (
-          <p className="empty-state">No nutrition saved yet for this product.</p>
+          <p className="empty-state">
+            No nutrition saved yet for this product.
+          </p>
         ) : null}
         {nutritionQuery.isSuccess ? (
           <NutritionPanel data={nutritionQuery.data} />
@@ -73,6 +78,7 @@ function ProductDetailPage() {
 
         <div className="split">
           <ProposalForm
+            key={`${id}-${nutritionQuery.data?.revision ?? 0}`}
             productId={id}
             nutrition={nutritionQuery.data ?? null}
           />

@@ -10,8 +10,8 @@ function ReviewsPage() {
     <>
       <h1 className="page-title">Review queue</h1>
       <p className="page-lead">
-        Approve pending nutrition proposals before they become the canonical record
-        for a product.
+        Approve pending nutrition proposals before they become the canonical
+        record for a product.
       </p>
       <PendingProposals />
     </>
