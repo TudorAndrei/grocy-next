@@ -1,0 +1,63 @@
+[project]
+name = "grocy"
+version = "0.1.0"
+description = "Grocy-compatible household management with FastAPI, FastMCP, and nutrition extensions"
+readme = "README.md"
+authors = [
+    { name = "TudorAndrei", email = "tudorandrei.dumitrascu@gmail.com" },
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.136.0",
+    "uvicorn[standard]>=0.53.0",
+    "pydantic>=2.13.0",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy[asyncio]>=2.0.53",
+    "greenlet>=3.0.0",
+    "aiosqlite>=0.22.0",
+    "alembic>=1.20.0",
+    "httpx>=0.28.0",
+    "fastmcp>=2.0.0",
+]
+
+[project.scripts]
+grocy = "grocy.main:run"
+grocy-cli = "grocy.cli:main"
+grocy-mcp = "grocy.cli:cmd_mcp_entry"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.25.0",
+    "hypothesis>=6.0.0",
+    "ruff>=0.11.0",
+    "basedpyright>=1.28.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.basedpyright]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+include = ["src", "tests"]
+venvPath = "."
+venv = ".venv"

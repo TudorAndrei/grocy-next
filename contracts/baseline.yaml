@@ -1,0 +1,8 @@
+project: grocy/grocy
+release: v4.5.0
+commit: pending-verify
+pinned_at: 2026-10-14
+openapi: contracts/grocy.openapi.json
+notes: >
+  Compatibility baseline for Grocy Next Phase 0/1.
+  Full differential coverage is incomplete; products/stock/nutrition MVP is implemented first.

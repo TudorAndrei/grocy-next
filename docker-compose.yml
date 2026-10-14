@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      GROCY_HOST: "0.0.0.0"
+      GROCY_PORT: "8000"
+      GROCY_DATABASE_URL: "sqlite+aiosqlite:///data/grocy.db"
+    volumes:
+      - grocy-data:/data
+
+volumes:
+  grocy-data:

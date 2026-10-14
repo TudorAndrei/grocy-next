@@ -1,0 +1,61 @@
+baseline:
+  project: grocy/grocy
+  release: v4.5.0
+  openapi: contracts/grocy.openapi.json
+  pinned_at: 2026-10-14
+  operations: 86
+  mounted: 86
+
+notes:
+  - All Grocy v4.5.0 OpenAPI operations are mounted under /api.
+  - Print-label and thermal print endpoints return configured stubs (501-style payload).
+  - External barcode lookup returns a provider-none stub.
+  - User permissions are an in-memory admin-all stub.
+  - Meal plan is exposed via /api/objects/meal_plan and meal_plan_sections.
+
+coverage:
+  - path: /api/objects/{entity}
+    method: "*"
+    status: verified
+  - path: /api/stock/*
+    method: "*"
+    status: verified
+  - path: /api/recipes/*
+    method: "*"
+    status: verified
+  - path: /api/chores/*
+    method: "*"
+    status: verified
+  - path: /api/tasks/*
+    method: "*"
+    status: verified
+  - path: /api/batteries/*
+    method: "*"
+    status: verified
+  - path: /api/system/*
+    method: "*"
+    status: verified
+  - path: /api/user*
+    method: "*"
+    status: verified
+  - path: /api/users*
+    method: "*"
+    status: verified
+  - path: /api/userfields/*
+    method: "*"
+    status: verified
+  - path: /api/files/*
+    method: "*"
+    status: verified
+  - path: /api/calendar/*
+    method: "*"
+    status: verified
+  - path: /api/print/*
+    method: "*"
+    status: stubbed
+  - path: /api/v2/products/{id}/nutrition
+    method: "*"
+    status: verified
+  - path: /api/v2/mcp/call
+    method: POST
+    status: verified

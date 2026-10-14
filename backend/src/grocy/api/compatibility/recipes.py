@@ -1,0 +1,81 @@
+from decimal import Decimal
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
+
+from grocy.core.auth import CurrentActor
+from grocy.core.deps import RecipesSvc
+
+router = APIRouter(tags=["recipes"])
+
+
+class RecipeCreateBody(BaseModel):
+    name: str
+    description: str | None = None
+    base_servings: Decimal = Field(default=Decimal("1"), gt=0)
+    positions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+@router.get("/api/recipes/fulfillment")
+async def recipes_fulfillment(
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+) -> list[dict[str, Any]]:
+    rows = await recipes.list_recipes()
+    return [await recipes.fulfillment(row.id) for row in rows]
+
+
+@router.get("/api/recipes/{recipe_id}/fulfillment")
+async def recipe_fulfillment(
+    recipe_id: int,
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+    servings: Annotated[Decimal | None, Query()] = None,
+) -> dict[str, Any]:
+    return await recipes.fulfillment(recipe_id, servings=servings)
+
+
+@router.post("/api/recipes/{recipe_id}/consume")
+async def recipe_consume(
+    recipe_id: int,
+    actor: CurrentActor,
+    recipes: RecipesSvc,
+    servings: Annotated[Decimal | None, Query()] = None,
+) -> dict[str, Any]:
+    return await recipes.consume(actor, recipe_id, servings=servings)
+
+
+@router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist")
+async def recipe_add_missing(
+    recipe_id: int,
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+    servings: Annotated[Decimal | None, Query()] = None,
+) -> dict[str, Any]:
+    return await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+
+
+@router.post("/api/recipes/{recipe_id}/copy")
+async def recipe_copy(
+    recipe_id: int,
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+) -> dict[str, Any]:
+    recipe = await recipes.copy(recipe_id)
+    return recipes.serialize(recipe)
+
+
+@router.post("/api/v2/recipes")
+async def create_recipe(
+    body: RecipeCreateBody,
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+) -> dict[str, Any]:
+    recipe = await recipes.create(
+        body.name,
+        description=body.description,
+        base_servings=body.base_servings,
+        positions=body.positions,
+    )
+    return recipes.serialize(recipe)
