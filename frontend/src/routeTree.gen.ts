@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as HouseholdRouteImport } from './routes/household'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ShoppingRouteImport } from './routes/shopping'
+import { Route as StockRouteImport } from './routes/stock'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
@@ -36,6 +38,16 @@ const ReviewsRoute = ReviewsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShoppingRoute = ShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockRoute = StockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
@@ -64,6 +76,8 @@ export interface FileRoutesByFullPath {
   '/household': typeof HouseholdRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
+  '/shopping': typeof ShoppingRoute
+  '/stock': typeof StockRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -74,6 +88,8 @@ export interface FileRoutesByTo {
   '/household': typeof HouseholdRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
+  '/shopping': typeof ShoppingRoute
+  '/stock': typeof StockRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products': typeof ProductsIndexRoute
@@ -85,6 +101,8 @@ export interface FileRoutesById {
   '/household': typeof HouseholdRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
+  '/shopping': typeof ShoppingRoute
+  '/stock': typeof StockRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -97,6 +115,8 @@ export interface FileRouteTypes {
     | '/household'
     | '/reviews'
     | '/settings'
+    | '/shopping'
+    | '/stock'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -107,6 +127,8 @@ export interface FileRouteTypes {
     | '/household'
     | '/reviews'
     | '/settings'
+    | '/shopping'
+    | '/stock'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products'
@@ -117,6 +139,8 @@ export interface FileRouteTypes {
     | '/household'
     | '/reviews'
     | '/settings'
+    | '/shopping'
+    | '/stock'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -128,6 +152,8 @@ export interface RootRouteChildren {
   HouseholdRoute: typeof HouseholdRoute
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
+  ShoppingRoute: typeof ShoppingRoute
+  StockRoute: typeof StockRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
@@ -162,6 +188,20 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shopping': {
+      id: '/shopping'
+      path: '/shopping'
+      fullPath: '/shopping'
+      preLoaderRoute: typeof ShoppingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stock': {
+      id: '/stock'
+      path: '/stock'
+      fullPath: '/stock'
+      preLoaderRoute: typeof StockRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/': {
@@ -200,6 +240,8 @@ const rootRouteChildren: RootRouteChildren = {
   HouseholdRoute: HouseholdRoute,
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,
+  ShoppingRoute: ShoppingRoute,
+  StockRoute: StockRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
   ProductsIndexRoute: ProductsIndexRoute,

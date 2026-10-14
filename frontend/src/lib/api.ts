@@ -1,5 +1,7 @@
 import { readApiConfig } from "./config";
 import type {
+  Battery,
+  Chore,
   CreateProposalPayload,
   NutritionProposalList,
   NutritionRecord,
@@ -7,7 +9,11 @@ import type {
   ProductListResponse,
   Recipe,
   RecipeFulfillment,
+  ShoppingList,
+  StockOverviewItem,
   StockProductDetails,
+  StockVolatile,
+  Task,
 } from "./types";
 
 export class ApiError extends Error {
@@ -62,11 +68,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
   }
   if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      errorMessage(body, response.statusText || "Request failed"),
-      body,
-    );
+    const fallback =
+      response.status === 401
+        ? "Unauthorized — set GROCY-API-KEY to dev-key under Settings."
+        : response.statusText || "Request failed";
+    throw new ApiError(response.status, errorMessage(body, fallback), body);
   }
   return body as T;
 }
@@ -94,6 +100,11 @@ export const api = {
   listNutritionRevisions: (productId: number) =>
     request<NutritionRevisionList>(`/api/v2/products/${productId}/nutrition/revisions`),
 
+  listStock: () => request<StockOverviewItem[]>("/api/stock"),
+
+  getStockVolatile: (dueSoonDays = 5) =>
+    request<StockVolatile>(`/api/stock/volatile?due_soon_days=${dueSoonDays}`),
+
   getStockProduct: (productId: number) =>
     request<StockProductDetails>(`/api/stock/products/${productId}`),
 
@@ -109,6 +120,47 @@ export const api = {
       body: JSON.stringify({ amount }),
     }),
 
+  openStock: (productId: number, amount: number) =>
+    request<unknown>(`/api/stock/products/${productId}/open`, {
+      method: "POST",
+      body: JSON.stringify({ amount }),
+    }),
+
+  getShoppingList: (listId = 1) =>
+    request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
+
+  addShoppingProduct: (productId: number, amount: number, listId = 1) =>
+    request<unknown>("/api/stock/shoppinglist/add-product", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: productId,
+        product_amount: amount,
+        list_id: listId,
+      }),
+    }),
+
+  removeShoppingProduct: (productId: number, amount: number, listId = 1) =>
+    request<unknown>("/api/stock/shoppinglist/remove-product", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: productId,
+        product_amount: amount,
+        list_id: listId,
+      }),
+    }),
+
+  clearShoppingList: (listId = 1) =>
+    request<unknown>("/api/stock/shoppinglist/clear", {
+      method: "POST",
+      body: JSON.stringify({ list_id: listId }),
+    }),
+
+  addMissingToShoppingList: (listId = 1) =>
+    request<unknown>("/api/stock/shoppinglist/add-missing-products", {
+      method: "POST",
+      body: JSON.stringify({ list_id: listId }),
+    }),
+
   listRecipes: () => request<Recipe[]>("/api/objects/recipes"),
 
   getRecipeFulfillment: (recipeId: number) =>
@@ -117,10 +169,30 @@ export const api = {
   consumeRecipe: (recipeId: number) =>
     request<unknown>(`/api/recipes/${recipeId}/consume`, { method: "POST" }),
 
-  listChores: () => request<Array<{ id: number; name: string; period_type: string }>>("/api/chores"),
+  addRecipeMissingToShopping: (recipeId: number) =>
+    request<unknown>(
+      `/api/recipes/${recipeId}/add-not-fulfilled-products-to-shoppinglist`,
+      { method: "POST" },
+    ),
+
+  listChores: () => request<Chore[]>("/api/chores"),
 
   executeChore: (choreId: number) =>
     request<unknown>(`/api/chores/${choreId}/execute`, { method: "POST" }),
+
+  listTasks: (includeDone = false) =>
+    request<Task[]>(`/api/tasks?include_done=${includeDone ? "true" : "false"}`),
+
+  completeTask: (taskId: number) =>
+    request<unknown>(`/api/tasks/${taskId}/complete`, { method: "POST" }),
+
+  undoTask: (taskId: number) =>
+    request<unknown>(`/api/tasks/${taskId}/undo`, { method: "POST" }),
+
+  listBatteries: () => request<Battery[]>("/api/batteries"),
+
+  chargeBattery: (batteryId: number) =>
+    request<unknown>(`/api/batteries/${batteryId}/charge`, { method: "POST" }),
 };
 
 export const queryKeys = {
@@ -129,7 +201,12 @@ export const queryKeys = {
   proposalsPending: ["proposals", "pending"] as const,
   revisions: (id: number) => ["revisions", id] as const,
   stock: (id: number) => ["stock", id] as const,
+  stockOverview: ["stock", "overview"] as const,
+  stockVolatile: ["stock", "volatile"] as const,
+  shopping: (id = 1) => ["shopping", id] as const,
   recipes: ["recipes"] as const,
   recipeFulfillment: (id: number) => ["recipe-fulfillment", id] as const,
   chores: ["chores"] as const,
+  tasks: ["tasks"] as const,
+  batteries: ["batteries"] as const,
 };
