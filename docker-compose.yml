@@ -1,16 +1,28 @@
 services:
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       GROCY_HOST: "0.0.0.0"
       GROCY_PORT: "8000"
-      GROCY_DATABASE_URL: "sqlite+aiosqlite:///data/grocy.db"
+      GROCY_DATABASE_URL: "sqlite+aiosqlite:////data/grocy.db"
+      GROCY_FILES_ROOT: "/data/files"
+      GROCY_SEED_DEMO_DATA: "${GROCY_SEED_DEMO_DATA:-true}"
+      GROCY_DEV_OPEN_API_KEY: "${GROCY_DEV_OPEN_API_KEY:-dev-key}"
     volumes:
       - grocy-data:/data
-
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
 volumes:
   grocy-data:
