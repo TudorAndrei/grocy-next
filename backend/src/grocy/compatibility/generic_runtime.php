@@ -104,7 +104,7 @@ class NativeStatement
             $this->database->insertId = (string)$result['insert_id'];
         }
         $this->rows = array_map(
-            fn($row) => array_map('nativeDecodeValue', $row), $result['rows']
+            fn($row) => array_map('nativeFetchedValue', $row), $result['rows']
         );
         if ($this->columns !== null) {
             $keys = array_flip($this->columns);
@@ -184,6 +184,13 @@ function nativeEncodeValue($value)
         return ['binary' => base64_encode($value)];
     }
     return $value;
+}
+
+function nativeFetchedValue($value)
+{
+    // PDO::NULL_EMPTY_STRING also converts a zero-length BLOB after fetching.
+    $value = nativeDecodeValue($value);
+    return $value === '' ? null : $value;
 }
 
 // These are DatabaseService's SQLite callbacks, evaluated by PHP itself.

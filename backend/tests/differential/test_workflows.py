@@ -2844,7 +2844,7 @@ def test_native_nonfinite_number_returns_a_serialization_error(api, catalog):
         assert api.delete(f"/api/objects/products/{product}").status_code == 204
 
 
-@pytest.mark.parametrize("value,valid", [(b"Saved/\xc3\x84", True), (b"\xff", False)])
+@pytest.mark.parametrize("value,valid", [(b"Saved/\xc3\x84", True), (b"", True), (b"\xff", False)])
 def test_native_generic_reads_keep_saved_blob_bytes(api, value, valid):
     record = create(api, "locations", name=uuid4().hex)
     statement = "UPDATE locations SET description=? WHERE id=?"
@@ -2866,12 +2866,12 @@ def test_native_generic_reads_keep_saved_blob_bytes(api, value, valid):
     response = api.get(f"/api/objects/locations/{record}")
     if valid:
         assert response.status_code == 200, response.text
-        assert response.json()["description"] == "Saved/Ä"
+        assert response.json()["description"] == ("Saved/Ä" if value else None)
         matching = api.get(
             "/api/objects/locations",
             params=[
                 ("query[]", f"id={record}"),
-                ("query[]", "description§^Saved"),
+                ("query[]", "description§^Saved" if value else "description§^$"),
             ],
         )
         assert matching.status_code == 200, matching.text
