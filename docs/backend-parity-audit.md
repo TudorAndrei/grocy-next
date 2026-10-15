@@ -194,7 +194,7 @@ uv run --project backend python scripts/check-reference.py --timezone Europe/Buc
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
 
-The remaining audit must cover more input coercion, validation, and combined error cases. Some domain date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. More nested relationships, scalar and binary inputs, ID gaps from complex failed writes, combined permission errors, response edge cases, and further partial failures still need checks. These gaps prevent a claim of full runtime parity.
+The remaining audit must cover more input coercion, validation, and combined error cases. Some domain date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Native file processing now uses PHP GD; the versioned extension keeps Pillow. Printer error text uses the local HTTP library and differs from Guzzle. More nested relationships, scalar and binary inputs, ID gaps from complex failed writes, combined permission errors, response edge cases, and further partial failures still need checks. These gaps prevent a claim of full runtime parity.
 
 Field response types and namespace selection now follow the native API. A field named `0` can return `["Saved"]`. Sequential numeric names produce an array only when their PHP key order permits it. Sparse keys remain an object. The native loose comparison can give fields `0` and `00` the same value. Generic lists also use loose object-key comparisons. Their reads can differ from direct field reads for a key with a leading zero.
 
@@ -268,4 +268,22 @@ A separate disposable experiment ran the complete pinned PHP API on a copy of th
 
 An empty saved BLOB now reads as null, matching native PDO. The nullable conversion runs after a SQL fetch. Function arguments retain their raw values. The extended saved-BLOB case checks both the null response and its regular expression match. Before the repair, that case failed on the backend and passed on Grocy. The five existing controls passed. After the repair, 120 focused comparison cases passed in each time zone. The final Linux image passed the empty-BLOB, UTF-8 BLOB, invalid BLOB, regular expression, CLI initialization, import, saved trigger, and package checksum checks. The final wheel retains all 459 vendor checksums and all four adapter files. That image is `sha256:4447b68e57d48bbe240821bc18e74875ae57a693642dba651987187be0e7353a`.
 
-Other write parsing, domain dates, file handling, image bytes, printer errors, and combined permission cases still require work. Full runtime parity remains incomplete.
+Other write parsing, domain dates, printer errors, and combined permission cases still require work. Full runtime parity remains incomplete.
+
+## Native files and image bytes
+
+File requests now execute the unchanged Grocy 4.5.0 `FilesApiController` and `FilesService`. The pinned Gumlet PHP Image Resize 2.0.4 code uses PHP GD. The adapter selects the configured storage root and supplies request and response streams. Each request owns its PHP process. Completed responses, client disconnects, and application shutdown release that process.
+
+The native endpoint retains Base64 file names, the five native groups, name validation, error details, MIME detection, CORS headers, inline disposition, and cache duration. It also retains the native single-byte `0` upload chunk behavior and image parameter errors. Generated cache files can be read by their native names. Deleting an original image removes its cached sizes. HEAD sends no body. Range requests return the complete file.
+
+The versioned file extension keeps plain names, bounded uploads, and Pillow processing. Nutrition photos use `/api/v2/files`. Equipment uploads use the native `equipmentmanuals` group. Downloads can also read old saved manuals through the versioned `equipment` group.
+
+Before the repair, 24 of the 25 new local workflow cases failed. The accepted array-width control passed. All four image byte cases also failed. After the repair, all 50 workflow comparisons passed. PNG, JPEG, GIF, and WebP bytes matched the PHP reference for original-size processing and two resize forms. A separate public stream check passed with a large binary file, a client disconnect, a later successful read, an invalid image, deletion, and application shutdown. All recorded PHP processes stopped.
+
+The full local suite passed 635 tests and skipped 561 cases that need a reference server or another feature profile. The full comparison suite passed 1,084 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest. The disabled-feature profile passed both cases in each zone. Ruff, basedpyright, and the frontend build passed.
+
+The Linux image passed 69 HTTP cases on each of a new database and a saved revision 0020 database. These include file workflows, native list reads, and combined-purchase undo. All 45 source views and 54 source triggers retained their definitions and creation order. The upgrade retained every original core row and allocation counter. Restart retained the complete saved state. A rejected upgrade restored the full original database. CLI initialization, import, saved custom triggers, BLOB reads, and all 466 vendor checksums passed in Linux.
+
+The final image is `sha256:4d8cf9e5b0c960f7c0e8f10c5542aaea883df8d03fb35777e45f580fb0612139`. The wheel retains all 466 vendor files, all 22 Grocy core files from the release archive, and all five PHP adapter files. PHP syntax checks passed. Separate route declarations remove duplicate API operation IDs. The final route and file selection passed 31 tests and skipped 25 reference-only cases. Browser checks confirmed native manual upload, saved file bytes, native manual download, and download from the old equipment group without an error.
+
+This batch needs no database revision. Other write parsing, domain dates, printer errors, and combined permission cases still require work. Full runtime parity remains incomplete.

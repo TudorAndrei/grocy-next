@@ -2,7 +2,7 @@
 
 The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21`. The OpenAPI file and its hash are in `contracts/`. Permission IDs and their parent relationships follow upstream migration 0110.
 
-The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, and LessQL runtime. It also requires the PDO SQLite extension. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
+The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, LessQL, and Gumlet runtime. It also requires the PDO SQLite and GD extensions. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
 
 Generic object reads and custom field operations now use the original pinned Grocy classes. Native
 SQLite queries apply PHP query parsing, filters, order, limits, and offsets. The read adapter returns
@@ -10,7 +10,7 @@ PHP response bytes and native column order. SQLite regular expressions use PHP `
 its rules for nulls, invalid patterns, and long patterns. A separate PHP worker answers SQLite function
 calls while the main worker waits for the database. The native `ceil` function also uses PHP.
 
-The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The generic `§` operator uses the native PHP regular expression function. Other list endpoints still use the Python filter and its match timeout.
+The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. Filtered list reads use the native Grocy controllers. The `§` operator uses the native PHP regular expression function.
 
 The database uses all 45 pinned Grocy views and all 54 native triggers in their original creation order. Quantity conversion and recipe views read current records. Native triggers maintain the internal caches and inverse conversions. The permission hierarchy stores the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
 
@@ -83,9 +83,9 @@ Calculated view fields and row IDs follow the pinned SQLite definitions. Generic
 
 Imports retain the 33 modeled native tables and their allocation history. The runtime also creates the native conversion cache, permission hierarchy, session table, and migration table. Source session and migration records are not imported. Authentication remains an application extension.
 
-File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
+File requests use the original Grocy controller, file service, and Gumlet image code with PHP GD. The application selects the storage root. Uploads and downloads use streams through a separate PHP process for each request. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 
-File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
+Native file paths require Base64 file names and the five Grocy storage groups: `equipmentmanuals`, `recipepictures`, `productpictures`, `userfiles`, and `userpictures`. Plain file names, bounded uploads, and Pillow image processing remain available through `/api/v2/files/{group}/{file_name}`. Nutrition photos use that extension. The equipment page uploads native manuals and can also download saved manuals from the old `equipment` group through the extension. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
 User deletion removes only the user row, including when the current user deletes their own row. Saved keys, settings, permissions, assignments, and history keep their user IDs. A key for a deleted user returns 401. A retained header key whose user was deleted also prevents a query key from replacing it. A missing user delete returns 500. New user IDs do not reuse deleted IDs. Upgrades and imports preserve these records and the user ID sequence. The last user stays deleted after restart.
 
@@ -127,7 +127,7 @@ Chore execution filters input before its permission check. Missing chore executi
 
 Request filtering uses the pinned Grocy HTML, CSS, URI, and entity settings. PHP parses the original JSON bytes. Top-level scalar values pass through HTMLPurifier; booleans and arrays remain intact. Empty optional numeric and date values use the handler defaults. Filtered routes require the exact `application/json` content type. The backend keeps the upstream rules for null bodies, PHP array keys, and large numeric exponents. Empty database text is read as null, as in PDO.
 
-A file upload cannot replace an existing file. Reads use the inline disposition and upstream cache duration. Only `force_serve_as=picture` enables image resizing. Resizing keeps the image format. List filters support SQLite wildcards, ASCII case matching, text values with leading zeros, and upstream null rules. The query parser also copies ignored operators and value truncation. Invalid generic object queries return the upstream status 500.
+A file upload cannot replace an existing file. Reads use the inline disposition and upstream cache duration. Only `force_serve_as=picture` enables image processing. PHP GD keeps the native image format and encoded bytes. Native image errors and cache names follow Grocy, including the height-only error. Native uploads omit a chunk whose complete content is the single byte `0`. Range headers do not change the complete response. List filters support SQLite wildcards, ASCII case matching, text values with leading zeros, and upstream null rules. The query parser also copies ignored operators and value truncation. Invalid generic object queries return the upstream status 500.
 
 Stock label modes follow the Grocy 4.5.0 runtime: 0 for no label, 1 for one label, and 2 for one label per whole unit. The pinned OpenAPI file lists 1, 2, and 3. The runtime values take precedence for compatibility. Per-unit bookings share a transaction ID. As in PHP, mode 2 omits a fractional remainder. Stock counts accept a purchase date. They count the product across all locations and use the last price and store when these values are omitted.
 
