@@ -52,7 +52,9 @@ class StockHistory:
             (
                 purchase
                 for purchase in self.purchases
-                if purchase.log.price is not None and purchase.log.price > 0 and purchase.amount > 0
+                if purchase.log.price is not None
+                and purchase.log.price > 0
+                and purchase.log.amount > 0
             ),
             key=lambda purchase: (purchase.log.purchased_date or date.min, -purchase.log.id),
             reverse=True,

@@ -39,6 +39,7 @@ class StockLog(Base):
     price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
     undone: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     undone_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
+    opened_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     location_id: Mapped[int | None] = mapped_column(ForeignKey("locations.id"))
     correlation_id: Mapped[str | None] = mapped_column(String(64))
     transaction_id: Mapped[str | None] = mapped_column(String(64))
@@ -53,3 +54,24 @@ class StockLog(Base):
         server_default=func.datetime("now", "localtime"),
         nullable=False,
     )
+
+
+class CachedAveragePrice(Base):
+    __tablename__ = "cache__products_average_price"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    product_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
+
+
+class CachedLastPurchase(Base):
+    __tablename__ = "cache__products_last_purchased"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    product_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
+    best_before_date: Mapped[date | None] = mapped_column(Date)
+    purchased_date: Mapped[date | None] = mapped_column(Date)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
+    location_id: Mapped[int | None] = mapped_column(Integer)
+    shopping_location_id: Mapped[int | None] = mapped_column(Integer)

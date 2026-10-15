@@ -267,3 +267,68 @@ def test_reference_purchase_prices_and_catalog_views(
         )
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+def test_reference_stock_entry_edit_and_undo(client: TestClient, api_headers: dict, reference):
+    client.headers.update(api_headers)
+    name = f"Entry edit {uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {"name": name, "location_id": location, "qu_id_stock": unit, "qu_id_purchase": unit},
+        )
+        base = f"/api/stock/products/{product}"
+        assert (
+            app.post(
+                f"{base}/add",
+                json={
+                    "amount": 4,
+                    "price": 2.5,
+                    "purchased_date": "2027-01-01",
+                    "best_before_date": "2027-02-01",
+                    "note": "original",
+                },
+            ).status_code
+            == 200
+        )
+        assert app.post(f"{base}/consume", json={"amount": 1}).status_code == 200
+        entry = app.get(f"{base}/entries").json()[0]
+        edited = app.put(
+            f"/api/stock/entry/{entry['id']}",
+            json={
+                "amount": 5,
+                "price": 3.25,
+                "open": False,
+                "purchased_date": "2027-01-04",
+                "best_before_date": "2027-02-14",
+                "location_id": location,
+                "note": "corrected",
+            },
+        )
+        assert edited.status_code == 200, edited.text
+        states: list[object] = [
+            [(row["transaction_type"], row["amount"], row["price"]) for row in edited.json()]
+        ]
+        for undo in (False, True):
+            if undo:
+                response = app.post(f"/api/stock/bookings/{edited.json()[0]['id']}/undo")
+                assert response.status_code == 204, response.text
+            details = app.get(base).json()
+            rows = app.get(f"{base}/entries").json()
+            states.append(
+                (
+                    details["stock_amount"],
+                    details["avg_price"],
+                    details["last_price"],
+                    [
+                        (row["amount"], row["price"], row["purchased_date"], row["note"])
+                        for row in rows
+                    ],
+                )
+            )
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]

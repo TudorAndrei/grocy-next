@@ -16,7 +16,7 @@ from grocy.db.models.mealplan import MealPlanEntry
 from grocy.db.models.nutrition import NutritionProposal, NutritionRevision, ProductNutrition
 from grocy.db.models.recipes import RecipePosition
 from grocy.db.models.shopping import ShoppingListItem
-from grocy.db.models.stock import StockEntry, StockLog
+from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.domains.products.service import ProductsService
 from grocy.domains.stock.history import StockHistory
@@ -541,10 +541,12 @@ class StockService:
         related = (
             (
                 await self.session.execute(
-                    select(StockLog).where(
+                    select(StockLog)
+                    .where(
                         StockLog.transaction_id == log.transaction_id,
                         StockLog.undone == 0,
                     )
+                    .order_by(StockLog.id.desc())
                 )
             )
             .scalars()
@@ -579,10 +581,23 @@ class StockService:
             .all()
         )
         history = StockHistory(logs)
-        last_purchase = history.last.log if history.last else None
+        last_purchase = await self.session.scalar(
+            select(CachedLastPurchase).where(CachedLastPurchase.product_id == product_id)
+        )
+        if last_purchase is None:
+            last_purchase = history.last.log if history.last else None
+        cached_average = await self.session.scalar(
+            select(CachedAveragePrice).where(CachedAveragePrice.product_id == product_id)
+        )
         uses = [log for log in logs if log.transaction_type == "consume" and not log.undone]
-        last_price = history.last_price
-        average_price = history.average_price
+        last_price = (
+            last_purchase.price
+            if isinstance(last_purchase, CachedLastPurchase)
+            else history.last_price
+        )
+        average_price = (
+            cached_average.price if cached_average is not None else history.average_price
+        )
         current_price = entries[0].price if entries and entries[0].price is not None else last_price
         dates = [e.best_before_date for e in entries if e.best_before_date]
         units = {}
@@ -657,47 +672,74 @@ class StockService:
         if entry is None:
             raise NotFoundError(f"Stock entry {entry_id} not found")
         actor = actor or Actor(user_id=1, username="system")
-        logs: list[dict] = []
+        before = self._serialize_entry(entry)
+        transaction_id, correlation_id = uuid.uuid4().hex, uuid.uuid4().hex
         amount = fields.get("amount")
         if amount is not None:
-            new_amount = Decimal(str(amount))
-            if not new_amount.is_finite() or new_amount < 0:
+            amount = Decimal(str(amount))
+            if not amount.is_finite() or amount < 0:
                 raise GrocyError("amount must be non-negative", code="invalid_amount")
-            delta = new_amount - entry.amount
-            if delta != 0:
-                entry.amount = new_amount
-                log = await self._add_log(
-                    actor=actor,
-                    product_id=entry.product_id,
-                    amount=delta,
-                    transaction_type="inventory-correction",
-                    stock_id=entry.stock_id,
-                    best_before_date=entry.best_before_date,
-                    purchased_date=entry.purchased_date,
-                    location_id=entry.location_id,
-                    stock_row_id=entry.id,
-                )
-                logs.append(self._serialize_log(log))
-        if "best_before_date" in fields:
-            entry.best_before_date = fields["best_before_date"]
-        if "purchased_date" in fields:
-            entry.purchased_date = fields["purchased_date"]
-        if fields.get("price") is not None:
-            entry.price = Decimal(str(fields["price"]))
-        if fields.get("location_id") is not None:
-            entry.location_id = fields["location_id"]
-        if fields.get("shopping_location_id") is not None:
-            entry.shopping_location_id = fields["shopping_location_id"]
+        price = fields.get("price")
+        if price is not None and (not Decimal(str(price)).is_finite() or price < 0):
+            raise GrocyError("price must be non-negative", code="invalid_amount")
+        old = await self._add_log(
+            actor=actor,
+            product_id=entry.product_id,
+            amount=entry.amount,
+            transaction_type="stock-edit-old",
+            stock_id=entry.stock_id,
+            best_before_date=entry.best_before_date,
+            purchased_date=entry.purchased_date,
+            price=entry.price,
+            location_id=entry.location_id,
+            shopping_location_id=entry.shopping_location_id,
+            note=entry.note,
+            stock_row_id=entry.id,
+            transaction_id=transaction_id,
+            correlation_id=correlation_id,
+            opened_date=entry.opened_date,
+            undo_data=json.dumps({"before": before}),
+        )
+        if amount is not None:
+            entry.amount = amount
+        for key in (
+            "best_before_date",
+            "purchased_date",
+            "price",
+            "location_id",
+            "shopping_location_id",
+            "note",
+        ):
+            if key in fields:
+                setattr(entry, key, fields[key])
         if fields.get("open") is not None:
-            entry.open = 1 if fields["open"] else 0
-            if entry.open and entry.opened_date is None:
-                entry.opened_date = datetime.now()
-            if not entry.open:
-                entry.opened_date = None
-        if "note" in fields:
-            entry.note = fields["note"]
+            entry.open = int(fields["open"])
+            entry.opened_date = (
+                (entry.opened_date or datetime.combine(date.today(), datetime.min.time()))
+                if entry.open
+                else None
+            )
+        new = await self._add_log(
+            actor=actor,
+            product_id=entry.product_id,
+            amount=entry.amount,
+            transaction_type="stock-edit-new",
+            stock_id=entry.stock_id,
+            best_before_date=entry.best_before_date,
+            purchased_date=entry.purchased_date,
+            price=entry.price,
+            location_id=entry.location_id,
+            shopping_location_id=entry.shopping_location_id,
+            note=entry.note,
+            stock_row_id=entry.id,
+            transaction_id=transaction_id,
+            correlation_id=correlation_id,
+            opened_date=entry.opened_date,
+        )
+        if entry.amount == 0:
+            await self.session.delete(entry)
         await self.session.commit()
-        return logs
+        return [self._serialize_log(old), self._serialize_log(new)]
 
     async def volatile(self, due_soon_days: int = 5) -> dict:
         today = date.today()
@@ -860,6 +902,7 @@ class StockService:
                 update(model).where(model.product_id == remove.id).values(product_id=keep.id)
             )
         await self.session.delete(remove)
+        await self._update_price_cache(keep.id)
         await self.session.commit()
 
     async def product_by_barcode(self, barcode: str) -> dict:
@@ -1019,7 +1062,32 @@ class StockService:
         )
         if raw_snapshot:
             snapshot = json.loads(raw_snapshot).get("before", {})
-        if (
+        if log.transaction_type in {"stock-edit-new", "stock-edit-old"}:
+            later = await self.session.scalar(
+                select(StockLog.id)
+                .where(
+                    StockLog.stock_id == log.stock_id,
+                    StockLog.id > log.id,
+                    StockLog.undone == 0,
+                    StockLog.transaction_id != log.transaction_id,
+                )
+                .limit(1)
+            )
+            if later is not None:
+                raise GrocyError("Undo later stock changes first", code="dependent_booking")
+            if log.transaction_type == "stock-edit-old":
+                entry = await self.session.get(StockEntry, log.stock_row_id)
+                if entry is None:
+                    raise GrocyError("Stock entry no longer exists", code="dependent_booking")
+                entry.amount = log.amount
+                entry.price = log.price
+                entry.best_before_date = log.best_before_date
+                entry.purchased_date = log.purchased_date
+                entry.location_id = log.location_id
+                entry.opened_date = log.opened_date
+                entry.open = int(log.opened_date is not None)
+                entry.note = log.note
+        elif (
             log.transaction_type in {"purchase", "inventory-correction", "self-production"}
             and log.amount > 0
         ):
@@ -1074,6 +1142,7 @@ class StockService:
         log.undone = 1
         log.undone_timestamp = datetime.now()
         await self.session.flush()
+        await self._update_price_cache(log.product_id)
 
     async def _restore_amount(self, log: StockLog, snapshot: dict, amount: Decimal) -> None:
         stock_id = snapshot.get("stock_id") or log.stock_id or uuid.uuid4().hex
@@ -1143,7 +1212,13 @@ class StockService:
         undo_data: str | None = None,
         shopping_location_id: int | None = None,
         recipe_id: int | None = None,
+        correlation_id: str | None = None,
+        opened_date: datetime | None = None,
     ) -> StockLog:
+        if opened_date is None and stock_row_id is not None:
+            entry = await self.session.get(StockEntry, stock_row_id)
+            if entry is not None:
+                opened_date = entry.opened_date
         log = StockLog(
             product_id=product_id,
             amount=amount,
@@ -1154,6 +1229,8 @@ class StockService:
             stock_id=stock_id,
             transaction_type=transaction_type,
             price=price,
+            opened_date=opened_date,
+            correlation_id=correlation_id,
             location_id=location_id,
             transaction_id=transaction_id or uuid.uuid4().hex,
             stock_row_id=stock_row_id,
@@ -1165,7 +1242,46 @@ class StockService:
         )
         self.session.add(log)
         await self.session.flush()
+        await self._update_price_cache(product_id)
         return log
+
+    async def _update_price_cache(self, product_id: int) -> None:
+        logs = list(
+            (
+                await self.session.execute(
+                    select(StockLog).where(StockLog.product_id == product_id).order_by(StockLog.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        history = StockHistory(logs)
+        if history.average_price is not None:
+            average = await self.session.scalar(
+                select(CachedAveragePrice).where(CachedAveragePrice.product_id == product_id)
+            )
+            if average is None:
+                average = CachedAveragePrice(product_id=product_id)
+                self.session.add(average)
+            average.price = history.average_price
+        if history.last is not None:
+            last = await self.session.scalar(
+                select(CachedLastPurchase).where(CachedLastPurchase.product_id == product_id)
+            )
+            if last is None:
+                last = CachedLastPurchase(product_id=product_id)
+                self.session.add(last)
+            log = history.last.log
+            for key in (
+                "amount",
+                "best_before_date",
+                "purchased_date",
+                "location_id",
+                "shopping_location_id",
+            ):
+                setattr(last, key, getattr(log, key))
+            last.price = history.last_price
+        await self.session.flush()
 
     def _stock_overview_row(
         self,
@@ -1186,24 +1302,23 @@ class StockService:
         }
 
     def _serialize_log(self, log: StockLog) -> dict:
-        return {
-            "id": log.id,
-            "product_id": log.product_id,
-            "amount": float(log.amount),
-            "best_before_date": (
-                log.best_before_date.isoformat() if log.best_before_date else None
-            ),
-            "purchased_date": (log.purchased_date.isoformat() if log.purchased_date else None),
-            "used_date": log.used_date.isoformat() if log.used_date else None,
-            "spoiled": bool(log.spoiled),
-            "stock_id": log.stock_id,
-            "transaction_id": log.transaction_id,
-            "transaction_type": log.transaction_type,
-            "note": log.note,
-            "row_created_timestamp": log.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
-        }
+        result = {}
+        for column in log.__table__.columns:
+            if column.name == "undo_data":
+                continue
+            value = getattr(log, column.name)
+            if isinstance(value, Decimal):
+                value = float(value)
+            elif isinstance(value, datetime):
+                value = (
+                    value.date().isoformat()
+                    if column.name == "opened_date"
+                    else value.isoformat(sep=" ", timespec="seconds")
+                )
+            elif isinstance(value, date):
+                value = value.isoformat()
+            result[column.name] = value
+        return result
 
     def _serialize_entry(self, row: StockEntry) -> dict:
         return {

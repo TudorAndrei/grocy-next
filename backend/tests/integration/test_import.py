@@ -118,5 +118,5 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
     with sqlite3.connect(database) as connection:
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0004"
+            == "20261015_0005"
         )

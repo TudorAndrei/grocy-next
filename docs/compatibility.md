@@ -33,11 +33,13 @@ Grocy 4.5.0 uses the last logged execution in its weekly schedule query, includi
 
 Purchase comparisons cover supplied purchase dates, price history, weighted prices, stock value, average shelf life, and calculated price and barcode records. Grocy's average price view uses integer division when all amounts and prices are integers. This API uses that same rule. Decimal input keeps decimal division.
 
+Stock entry edits return an old booking and a new booking. Undo restores the prior entry. Later stock changes must be undone first. Price caches keep their last value when an undo leaves no calculated price row, as in Grocy 4.5.0.
+
 ## Boundaries
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.
 
-Calculated views come from application services. Their extra fields and row IDs can differ from upstream SQLite views. Internal recipe cache records and upstream triggers are not imported as active behavior.
+Calculated views come from application services. Some extra fields and row IDs can differ from upstream SQLite views. Purchase price caches are stored and imported. Internal recipe cache records and other upstream triggers are not imported as active behavior.
 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 
