@@ -15,13 +15,10 @@ class ProductsService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_products(self) -> list[Product]:
-        stmt = (
-            select(Product)
-            .options(selectinload(Product.barcodes))
-            .where(Product.active == 1)
-            .order_by(Product.name)
-        )
+    async def list_products(self, *, include_inactive: bool = False) -> list[Product]:
+        stmt = select(Product).options(selectinload(Product.barcodes)).order_by(Product.name)
+        if not include_inactive:
+            stmt = stmt.where(Product.active == 1)
         return list((await self.session.execute(stmt)).scalars().all())
 
     async def get_by_barcode(self, barcode: str) -> Product:

@@ -332,3 +332,60 @@ def test_reference_stock_entry_edit_and_undo(client: TestClient, api_headers: di
             )
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize(
+    "entity,fields",
+    [
+        (
+            "products",
+            {
+                "due_type": 2,
+                "default_best_before_days_after_freezing": 90,
+                "default_best_before_days_after_thawing": 3,
+                "calories": 120,
+                "cumulate_min_stock_amount_of_sub_products": 1,
+                "quick_consume_amount": 2.5,
+                "quick_open_amount": 2,
+                "hide_on_stock_overview": 1,
+                "default_stock_label_type": 2,
+                "disable_open": 1,
+                "default_purchase_price_type": 2,
+            },
+        ),
+        ("locations", {"active": 0}),
+        ("quantity_units", {"active": 0, "plural_forms": "one;many"}),
+        ("shopping_locations", {"active": 0}),
+        ("product_groups", {"active": 0}),
+        ("recipes", {"picture_file_name": "recipe.jpg", "not_check_shoppinglist": 1}),
+        ("meal_plan_sections", {"time_info": "Breakfast"}),
+        (
+            "userfields",
+            {
+                "entity": "products",
+                "caption": "Origin",
+                "type": "text",
+                "input_required": 1,
+                "default_value": "Farm",
+            },
+        ),
+    ],
+)
+def test_reference_catalog_options(
+    client: TestClient, api_headers: dict, reference, entity, fields
+):
+    client.headers.update(api_headers)
+    name = f"Catalog {uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        body = {"name": name, **fields}
+        if entity == "products":
+            unit = create(app, "quantity_units", {"name": name})
+            location = create(app, "locations", {"name": name})
+            body.update(location_id=location, qu_id_purchase=unit, qu_id_stock=unit)
+        record_id = create(app, entity, body)
+        record = app.get(f"/api/objects/{entity}/{record_id}").json()
+        snapshots.append({key: record[key] for key in fields})
+        listed = app.get(f"/api/objects/{entity}").json()
+        assert any(int(row["id"]) == record_id for row in listed)
+    assert snapshots[0] == snapshots[1] == fields

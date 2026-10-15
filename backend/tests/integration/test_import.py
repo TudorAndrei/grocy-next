@@ -30,6 +30,13 @@ def source_database(path: Path, *, bad_reference: bool = False):
             INSERT INTO products VALUES (1, 'Milk', 1, 1, 1, 'keep this');
             INSERT INTO stock VALUES (1, 1, 3, 'imported-stock', 1, '2027-01-01');
             INSERT INTO legacy_data VALUES ('archive me');
+            ALTER TABLE products ADD due_type INTEGER NOT NULL DEFAULT 1;
+            ALTER TABLE products ADD default_best_before_days_after_freezing INTEGER DEFAULT 0;
+            ALTER TABLE products ADD quick_consume_amount REAL DEFAULT 1;
+            ALTER TABLE quantity_units ADD active INTEGER NOT NULL DEFAULT 1;
+            UPDATE products SET due_type=2, default_best_before_days_after_freezing=90,
+                                quick_consume_amount=2.5;
+            UPDATE quantity_units SET active=0;
         """)
         if bad_reference:
             conn.execute("UPDATE products SET location_id=999")
@@ -46,6 +53,11 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
     assert source.read_bytes() == original
     with sqlite3.connect(target) as conn:
         assert conn.execute("SELECT amount FROM stock").fetchone()[0] == 3
+        assert conn.execute(
+            "SELECT due_type, default_best_before_days_after_freezing, quick_consume_amount "
+            "FROM products"
+        ).fetchone() == (2, 90, 2.5)
+        assert conn.execute("SELECT active FROM quantity_units").fetchone()[0] == 0
         assert conn.execute("SELECT permission_id FROM user_permissions").fetchone()[0] == 1
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
         assert conn.execute("SELECT entity, name, value FROM userfield_values").fetchone() == (
@@ -118,5 +130,5 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
     with sqlite3.connect(database) as connection:
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0005"
+            == "20261015_0006"
         )

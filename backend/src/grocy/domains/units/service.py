@@ -136,6 +136,9 @@ class UnitsService:
             "name": unit.name,
             "name_plural": unit.name_plural,
             "description": unit.description,
+            "active": unit.active,
+            "plural_forms": unit.plural_forms,
+            "row_created_timestamp": unit.row_created_timestamp.isoformat(),
         }
 
     def serialize_conversion(self, row: QuantityUnitConversion) -> dict:

@@ -33,6 +33,8 @@ class UserfieldDefinition(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     caption: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(64), nullable=False, default="text")
+    input_required: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    default_value: Mapped[str | None] = mapped_column(Text)
     show_as_column_in_tables: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     config: Mapped[str | None] = mapped_column(Text)
     sort_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

@@ -25,6 +25,7 @@ class ApiKey(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    last_used: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     key_type: Mapped[str] = mapped_column(String(64), nullable=False, default="default")
     description: Mapped[str | None] = mapped_column(Text)

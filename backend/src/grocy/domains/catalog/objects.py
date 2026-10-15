@@ -92,7 +92,7 @@ class GenericObjectsService:
         if entity in VIEW_ENTITIES:
             return await list_view(self.session, entity)
         if entity == "products":
-            rows = await self.products.list_products()
+            rows = await self.products.list_products(include_inactive=True)
             return [self.products.serialize(row) for row in rows]
         if entity == "quantity_units":
             rows = await self.units.list_units()
@@ -276,6 +276,11 @@ class GenericObjectsService:
             and row.charge_interval_days < 0
         ):
             raise GrocyError("Charge interval cannot be negative")
+        if isinstance(row, Product):
+            if not row.qu_id_consume:
+                row.qu_id_consume = row.qu_id_stock
+            if not row.qu_id_price:
+                row.qu_id_price = row.qu_id_purchase
         if isinstance(row, Product) and row.parent_product_id:
             pending = row.parent_product_id
             seen = {row.id} if row.id else set()

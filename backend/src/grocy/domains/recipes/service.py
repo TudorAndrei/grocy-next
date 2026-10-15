@@ -229,6 +229,9 @@ class RecipesService:
             base_servings=recipe.base_servings,
             desired_servings=recipe.desired_servings,
             type=recipe.type,
+            picture_file_name=recipe.picture_file_name,
+            not_check_shoppinglist=recipe.not_check_shoppinglist,
+            product_id=recipe.product_id,
             not_check_stock_fulfillment=recipe.not_check_stock_fulfillment,
         )
         self.session.add(clone)
@@ -245,6 +248,8 @@ class RecipesService:
                     note=pos.note,
                     not_check_stock_fulfillment=pos.not_check_stock_fulfillment,
                     variable_amount=pos.variable_amount,
+                    price_factor=pos.price_factor,
+                    round_up=pos.round_up,
                 )
             )
         for nesting in nestings:
@@ -279,6 +284,10 @@ class RecipesService:
             "base_servings": float(recipe.base_servings),
             "desired_servings": float(recipe.desired_servings),
             "type": recipe.type,
+            "picture_file_name": recipe.picture_file_name,
+            "not_check_shoppinglist": recipe.not_check_shoppinglist,
+            "product_id": recipe.product_id,
+            "row_created_timestamp": recipe.row_created_timestamp.isoformat(),
             "not_check_stock_fulfillment": bool(recipe.not_check_stock_fulfillment),
             "positions": [
                 {
