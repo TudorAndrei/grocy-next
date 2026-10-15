@@ -1050,6 +1050,95 @@ def test_generic_field_lists_use_numeric_object_comparison(api, custom_field):
     assert rows(api, "userobjects", id=record)[0]["userfields"] == {"saved": "Leading zero"}
 
 
+@pytest.mark.parametrize("entity", ["locations", "products", "recipes"])
+@pytest.mark.parametrize("format_id", ["0{}", "{}.0", "{}e0", "+{}", " {} "])
+def test_generic_object_text_ids_keep_field_keys_and_allow_writes(
+    api, custom_field, catalog, entity, format_id
+):
+    record = catalog[0] if entity == "products" else create(api, entity, name=uuid4().hex)
+    key = format_id.format(record)
+    field = "key_" + uuid4().hex
+    custom_field(entity=entity, name=field, caption=field, type="text-single-line")
+    assert (
+        api.put(f"/api/userfields/{entity}/{record}", json={field: "Canonical"}).status_code == 204
+    )
+    assert api.put(f"/api/userfields/{entity}/{key}", json={field: "Text key"}).status_code == 204
+    path = f"/api/objects/{entity}/{key}"
+    fetched = api.get(path)
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.json()["id"] == record
+    assert fetched.json()["userfields"][field] == "Text key"
+    assert api.put(path, json={"description": "Updated by text key"}).status_code == 204
+    assert api.get(f"/api/objects/{entity}/{record}").json()["description"] == "Updated by text key"
+    assert api.get(f"/api/userfields/{entity}/{record}").json()[field] == "Canonical"
+    assert api.delete(path).status_code == 204
+    missing = api.get(f"/api/objects/{entity}/{record}")
+    assert missing.status_code == 404
+    assert missing.json() == {"error_message": "Object not found"}
+
+
+@pytest.mark.parametrize(
+    "key", ["text-id", "9223372036854775808", "1.5", "999999999999999999999e999"]
+)
+def test_generic_missing_text_ids_return_native_errors(api, key):
+    path = f"/api/objects/locations/{key}"
+    for method, status, kwargs in [
+        ("get", 404, {}),
+        ("put", 400, {"json": {"description": "Rejected"}}),
+        ("delete", 400, {}),
+    ]:
+        response = getattr(api, method)(path, **kwargs)
+        assert response.status_code == status, response.text
+        assert response.json() == {"error_message": "Object not found"}
+
+
+@pytest.mark.parametrize(
+    "entity", ["stock_current_locations", "products_last_purchased", "products_average_price"]
+)
+def test_generic_view_dummy_ids_keep_sqlite_comparison_rules(api, catalog, entity):
+    product = catalog[0]
+    purchased = api.post(
+        f"/api/stock/products/{product}/add",
+        json={"amount": 1, "best_before_date": "2999-12-31", "price": 2},
+    )
+    assert purchased.status_code == 200, purchased.text
+    listed = rows(api, entity, product_id=product)
+    assert listed and listed[0]["id"] == 1
+    for key in ("1", "01", "1e0"):
+        response = api.get(f"/api/objects/{entity}/{key}")
+        assert response.status_code == 404, response.text
+        assert response.json() == {"error_message": "Object not found"}
+
+
+@pytest.mark.parametrize("key", ["1", "01", "1e0", "+1", "1.0", " 1 "])
+def test_generic_permission_ids_use_native_integer_affinity(api, key):
+    response = api.get(f"/api/objects/permission_hierarchy/{key}")
+    assert response.status_code == 200, response.text
+    assert response.json() == {"id": 1, "name": "ADMIN", "parent": None, "userfields": None}
+
+
+@pytest.mark.parametrize(
+    "method,entity,suffix,message",
+    [
+        ("get", "unknown_entity", "", "Entity does not exist or is not exposed"),
+        ("get", "unknown_entity", "/text-id", "Entity does not exist or is not exposed"),
+        ("post", "unknown_entity", "", "Entity does not exist or is not exposed"),
+        ("put", "unknown_entity", "/text-id", "Entity does not exist or is not exposed"),
+        ("delete", "unknown_entity", "/text-id", "Invalid entity"),
+        ("get", "api_keys", "", "Entity does not exist or is not exposed"),
+        ("get", "api_keys", "/text-id", "Entity does not exist or is not exposed"),
+        ("post", "stock", "", "Entity does not exist or is not exposed"),
+        ("put", "stock", "/text-id", "Entity does not exist or is not exposed"),
+        ("delete", "stock", "/text-id", "Invalid entity"),
+    ],
+)
+def test_generic_entity_operation_guards_return_native_errors(api, method, entity, suffix, message):
+    kwargs = {"json": {"name": "Rejected"}} if method in {"post", "put"} else {}
+    response = getattr(api, method)(f"/api/objects/{entity}{suffix}", **kwargs)
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": message}
+
+
 def test_custom_field_failed_definition_change_keeps_both_values(api, custom_field, catalog):
     _product, _unit, _other, location = catalog
     names = ["field" + uuid4().hex, "field" + uuid4().hex]

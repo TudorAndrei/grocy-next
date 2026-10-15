@@ -58,7 +58,7 @@ async def create_object(
 @router.get("/api/objects/{entity}/{object_id}")
 async def get_object(
     entity: str,
-    object_id: int,
+    object_id: str,
     request: Request,
     _actor: CurrentActor,
     session: DbSession,
@@ -79,7 +79,7 @@ async def get_object(
 @filtered_body()
 async def update_object(
     entity: str,
-    object_id: int,
+    object_id: str,
     body: dict[str, Any],
     _actor: CurrentActor,
     session: DbSession,
@@ -101,7 +101,7 @@ def _database_error(error: DBAPIError) -> GrocyError:
 @router.delete("/api/objects/{entity}/{object_id}", status_code=204)
 async def delete_object(
     entity: str,
-    object_id: int,
+    object_id: str,
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:

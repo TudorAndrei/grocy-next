@@ -11,8 +11,8 @@ class GrocyError(Exception):
 
 
 class NotFoundError(GrocyError):
-    def __init__(self, message: str = "Not found") -> None:
-        super().__init__(message, status_code=404, code="not_found")
+    def __init__(self, message: str = "Not found", *, code: str | None = "not_found") -> None:
+        super().__init__(message, status_code=404, code=code)
 
 
 class UnauthorizedError(GrocyError):

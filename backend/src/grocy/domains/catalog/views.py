@@ -16,16 +16,30 @@ VIEW_ENTITIES = {
 }
 
 
-async def list_view(session, entity: str) -> list[dict]:
+async def list_view(session, entity: str, *, object_id: int | str | None = None) -> list[dict]:
     if entity == "permission_hierarchy":
+        numeric_id = None
+        if object_id is not None:
+            # The native permission IDs are INTEGER columns. Apply the same
+            # affinity to this in-memory hierarchy through SQLite.
+            numeric_id = await session.scalar(
+                text("SELECT CAST(:key AS NUMERIC) WHERE CAST(:key AS NUMERIC) = :key"),
+                {"key": str(object_id)},
+            )
         return [
             {"id": pid, "name": name, "parent": parent}
             for pid, (name, parent) in PERMISSIONS.items()
+            if object_id is None or pid == numeric_id
         ]
     if entity not in VIEW_ENTITIES:
         return []
     await configure_compatibility_queries(session)
-    rows = (await session.execute(text(f'SELECT * FROM "{entity}"'))).mappings().all()
+    query = f'SELECT * FROM "{entity}"'
+    parameters = {}
+    if object_id is not None:
+        query += " WHERE id = :object_id LIMIT 1"
+        parameters["object_id"] = str(object_id)
+    rows = (await session.execute(text(query), parameters)).mappings().all()
     result = [dict(row) for row in rows]
     if entity == "products_average_price":
         for row in result:

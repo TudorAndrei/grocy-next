@@ -85,16 +85,14 @@ class GenericObjectsService:
         return sorted(set(ENTITY_MODELS) | VIEW_ENTITIES)
 
     def _require_writable(self, entity: str, *, deleting: bool = False) -> type:
-        if entity in READ_ONLY_ENTITIES or (entity == "api_keys" and not deleting):
-            raise GrocyError(f"Entity '{entity}' is read-only", code="read_only")
         model = ENTITY_MODELS.get(entity)
-        if model is None:
-            raise NotFoundError(f"Entity '{entity}' is not implemented yet")
+        if model is None or entity in READ_ONLY_ENTITIES or (entity == "api_keys" and not deleting):
+            message = "Invalid entity" if deleting else "Entity does not exist or is not exposed"
+            raise GrocyError(message, code=None)
         return model
 
     async def list_entity(self, entity: str) -> list[dict[str, Any]]:
-        if entity == "api_keys":
-            raise GrocyError("API keys cannot be read through generic objects", code="no_listing")
+        self._require_readable(entity)
         if entity in VIEW_ENTITIES:
             return await list_view(self.session, entity)
         if entity == "products":
@@ -111,33 +109,40 @@ class GenericObjectsService:
             return [self.recipes.serialize(row) for row in rows]
         model = ENTITY_MODELS.get(entity)
         if model is None:
-            raise NotFoundError(f"Entity '{entity}' is not implemented yet")
+            raise GrocyError("Entity does not exist or is not exposed", code=None)
         rows = (await self.session.execute(select(model).order_by(model.id))).scalars().all()
         return [self._serialize_row(entity, row) for row in rows]
 
-    async def get_entity(self, entity: str, object_id: int) -> dict[str, Any]:
-        if entity == "api_keys":
-            raise GrocyError("API keys cannot be read through generic objects", code="no_listing")
+    def _require_readable(self, entity: str) -> None:
+        if entity == "api_keys" or entity not in self.supported_entities():
+            raise GrocyError("Entity does not exist or is not exposed", code=None)
+
+    async def _object_row(
+        self, model: type, object_id: int | str, *, status_code: int = 400
+    ) -> Any:
+        # Bind URL text unchanged. SQLite applies the native column's affinity,
+        # including numeric exponents, instead of a Python integer conversion.
+        row = await self.session.scalar(select(model).where(model.id == str(object_id)))
+        if row is None:
+            if status_code == 404:
+                raise NotFoundError("Object not found", code=None)
+            raise GrocyError("Object not found", status_code=status_code, code=None)
+        return row
+
+    async def get_entity(self, entity: str, object_id: int | str) -> dict[str, Any]:
+        self._require_readable(entity)
         if entity in VIEW_ENTITIES:
-            row = next(
-                (row for row in await list_view(self.session, entity) if row["id"] == object_id),
-                None,
-            )
-            if row is None:
-                raise NotFoundError(f"{entity} {object_id} not found")
-            return row
+            rows = await list_view(self.session, entity, object_id=object_id)
+            if not rows:
+                raise NotFoundError("Object not found", code=None)
+            return rows[0]
+        row = await self._object_row(ENTITY_MODELS[entity], object_id, status_code=404)
         if entity == "products":
-            product = await self.products.get(object_id)
+            product = await self.products.get(row.id)
             return self.products.serialize(product)
         if entity == "recipes":
-            recipe = await self.recipes.get(object_id)
+            recipe = await self.recipes.get(row.id)
             return self.recipes.serialize(recipe)
-        model = ENTITY_MODELS.get(entity)
-        if model is None:
-            raise NotFoundError(f"Entity '{entity}' is not implemented yet")
-        row = await self.session.get(model, object_id)
-        if row is None:
-            raise NotFoundError(f"{entity} {object_id} not found")
         return self._serialize_row(entity, row)
 
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -179,13 +184,11 @@ class GenericObjectsService:
     async def update_entity(
         self,
         entity: str,
-        object_id: int,
+        object_id: int | str,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         model = self._require_writable(entity)
-        row = await self.session.get(model, object_id)
-        if row is None:
-            raise GrocyError("Object not found")
+        row = await self._object_row(model, object_id)
         old_unit = row.qu_id_stock if isinstance(row, Product) else None
         old_day = row.day if isinstance(row, MealPlanEntry) else None
         old_conversion = (
@@ -216,11 +219,9 @@ class GenericObjectsService:
         await self.session.refresh(row)
         return self._serialize_row(entity, row)
 
-    async def delete_entity(self, entity: str, object_id: int) -> None:
+    async def delete_entity(self, entity: str, object_id: int | str) -> None:
         model = self._require_writable(entity, deleting=True)
-        row = await self.session.get(model, object_id)
-        if row is None:
-            raise GrocyError("Object not found")
+        row = await self._object_row(model, object_id)
         await self.effects.delete(entity, row)
         await self.session.commit()
 
