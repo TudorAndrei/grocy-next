@@ -41,10 +41,7 @@ class HouseholdService:
         for chore in rows:
             logs = await self._chore_logs(chore.id)
             last = logs[-1].tracked_time if logs else None
-            assigned = (
-                chore.rescheduled_next_execution_assigned_to_user_id
-                or chore.next_execution_assigned_to_user_id
-            )
+            assigned = chore.next_execution_assigned_to_user_id
             result.append(
                 {
                     **self._serialize_chore(chore),
@@ -65,10 +62,7 @@ class HouseholdService:
         logs = await self._chore_logs(chore_id)
         completed = [log for log in logs if not log.skipped]
         last = completed[-1] if completed else None
-        assigned = (
-            chore.rescheduled_next_execution_assigned_to_user_id
-            or chore.next_execution_assigned_to_user_id
-        )
+        assigned = chore.next_execution_assigned_to_user_id
         return {
             "chore": self._serialize_chore(chore),
             "last_tracked": last.tracked_time.isoformat() if last else None,
@@ -110,8 +104,9 @@ class HouseholdService:
             scheduled_execution_time=datetime.fromisoformat(due) if due else None,
         )
         self.session.add(log)
+        # Grocy saves the execution before it attempts the separate stock booking.
+        await self.session.commit()
         try:
-            await self.session.flush()
             if chore.consume_product_on_execution and chore.product_id and chore.product_amount:
                 await StockService(self.session).consume(
                     actor,

@@ -210,6 +210,20 @@ def test_chore_consumption_uses_gross_tare_amount(api, catalog):
     response = api.post(f"/api/chores/{chore}/execute", json={})
     assert response.status_code == 200, response.text
     assert api.get(path).json()["stock_amount"] == 500
+    assert (
+        api.put(
+            f"/api/objects/chores/{chore}",
+            json={"product_amount": 2000, "rescheduled_date": "2030-02-03 14:15:16"},
+        ).status_code
+        == 204
+    )
+    failed = api.post(f"/api/chores/{chore}/execute", json={})
+    assert failed.status_code == 400, failed.text
+    assert len(rows(api, "chores_log", chore_id=chore)) == 2
+    assert api.get(path).json()["stock_amount"] == 500
+    assert (
+        api.get(f"/api/objects/chores/{chore}").json()["rescheduled_date"].startswith("2030-02-03")
+    )
 
 
 @pytest.mark.parametrize(
@@ -262,6 +276,19 @@ def test_least_done_assignment_breaks_ties_by_user_id(api):
     assert assigned["id"] == ids[0]
     users = api.get("/api/users", params={"query[]": f"id={ids[0]}"}).json()
     assert assigned == users[0]
+    assert (
+        api.put(
+            f"/api/objects/chores/{chore}",
+            json={"rescheduled_next_execution_assigned_to_user_id": ids[1]},
+        ).status_code
+        == 204
+    )
+    assert api.get(f"/api/chores/{chore}").json()["next_execution_assigned_user"]["id"] == ids[0]
+    response = api.post(
+        "/api/chores/executions/calculate-next-assignments", json={"chore_id": chore}
+    )
+    assert response.status_code == 204, response.text
+    assert api.get(f"/api/chores/{chore}").json()["next_execution_assigned_user"]["id"] == ids[1]
 
 
 def test_stock_unit_change_converts_history_and_undo(api, catalog):
