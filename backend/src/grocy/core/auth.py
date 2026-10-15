@@ -97,6 +97,16 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
         if request.method == "PUT" and action == str(user_id):
             return "USERS_EDIT_SELF"
         return "USERS_EDIT"
+    if not path.startswith("v2/"):
+        if "/external-lookup/" in path:
+            return "MASTER_DATA_EDIT"
+        if not write:
+            return ""
+        if (path.startswith("recipes/") and action == "copy") or (
+            path.startswith("chores/")
+            and (action == "calculate-next-assignments" or "/merge/" in path)
+        ):
+            return ""
     if write:
         actions = {
             ("chores", "execute"): "CHORE_TRACK_EXECUTION",

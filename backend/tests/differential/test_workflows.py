@@ -3,6 +3,7 @@
 import base64
 import os
 import re
+import sqlite3
 from io import BytesIO
 from uuid import uuid4
 
@@ -161,6 +162,60 @@ def test_user_dto_shapes_and_permission_row_ids(api):
     assert permissions[0]["permission_id"] == 1
     assert permissions[0]["user_id"] == user["id"]
     assert isinstance(permissions[0]["id"], int)
+
+
+def test_authenticated_access_without_module_permissions(api, catalog):
+    product, *_ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex)
+    chore = create(api, "chores", name=uuid4().hex, period_type="manually")
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    assert api.put(f"/api/users/{user}/permissions", json={"permissions": []}).status_code == 204
+    reference_url = os.getenv("GROCY_REFERENCE_URL")
+    if reference_url and api.base_url == httpx.URL(reference_url):
+        key = uuid4().hex
+        with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
+            database.execute(
+                "INSERT INTO api_keys (api_key, user_id, expires) "
+                "VALUES (?, ?, '2999-12-31 23:59:59')",
+                (key, user),
+            )
+    else:
+        key = api.post("/api/v2/api-keys", json={"user_id": user}).json()["api_key"]
+    original = api.headers["GROCY-API-KEY"]
+    api.headers["GROCY-API-KEY"] = key
+    try:
+        for path in (
+            "/api/stock",
+            "/api/stock/volatile",
+            f"/api/stock/products/{product}",
+            "/api/chores",
+            f"/api/chores/{chore}",
+            "/api/tasks",
+            "/api/batteries",
+            f"/api/recipes/{recipe}/fulfillment",
+            "/api/recipes/fulfillment",
+            "/api/objects/products",
+            f"/api/userfields/products/{product}",
+            "/api/calendar/ical",
+            "/api/calendar/ical/sharing-link",
+            "/api/system/config",
+        ):
+            response = api.get(path)
+            assert response.status_code == 200, (path, response.text)
+        assert api.get("/api/users").status_code == 403
+        assert api.post(f"/api/stock/products/{product}/add", json={"amount": 1}).status_code == 403
+        assert api.post("/api/objects/products", json={"name": uuid4().hex}).status_code == 403
+        assert api.post(f"/api/recipes/{recipe}/copy").status_code == 200
+        response = api.post(
+            "/api/chores/executions/calculate-next-assignments", json={"chore_id": chore}
+        )
+        assert response.status_code == 204, response.text
+    finally:
+        api.headers["GROCY-API-KEY"] = original
 
 
 @pytest.mark.parametrize(

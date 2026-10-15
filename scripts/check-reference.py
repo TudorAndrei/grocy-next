@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -155,6 +156,18 @@ def run_reference(
                     GROCY_REFERENCE_URL=base_url,
                     GROCY_REFERENCE_API_KEY="disposable-reference",
                     GROCY_REFERENCE_DISPOSABLE="1",
+                    GROCY_REFERENCE_DATABASE=str(data / "grocy.db"),
+                )
+                with sqlite3.connect(data / "grocy.db") as database:
+                    database.execute(
+                        "INSERT INTO api_keys (api_key, user_id, expires) VALUES (?, 1, '2999-12-31 23:59:59')",
+                        (environment["GROCY_REFERENCE_API_KEY"],),
+                    )
+                config = data / "config.php"
+                config.write_text(
+                    config.read_text().replace(
+                        "'DISABLE_AUTH', true", "'DISABLE_AUTH', false"
+                    )
                 )
                 return subprocess.run(
                     [
@@ -231,7 +244,12 @@ def main() -> int:
                 php, release, json_output=args.output == "json", timezone=args.timezone
             )
             result.update(ok=code == 0, exit_code=code)
-    except (OSError, ValueError, ZoneInfoNotFoundError, subprocess.SubprocessError) as error:
+    except (
+        OSError,
+        ValueError,
+        ZoneInfoNotFoundError,
+        subprocess.SubprocessError,
+    ) as error:
         code = 2
         result["error"] = str(error)
     if args.output == "json":

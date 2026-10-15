@@ -17,7 +17,11 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     user_id = next(u["id"] for u in users if u["username"] == "Reader")
     key = client.post("/api/v2/api-keys", headers=api_headers, json={"user_id": user_id}).json()
     headers = {"GROCY-API-KEY": key["api_key"]}
-    assert client.get("/api/stock", headers=headers).status_code == 403
+    assert client.get("/api/stock", headers=headers).status_code == 200
+    assert (
+        client.post("/api/stock/products/1/add", headers=headers, json={"amount": 1}).status_code
+        == 403
+    )
     assert client.get("/api/system/config", headers=headers).status_code == 200
     import base64
 
@@ -57,7 +61,10 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": []}
     )
-    assert client.get("/api/stock", headers=headers).status_code == 403
+    assert (
+        client.post("/api/stock/products/1/add", headers=headers, json={"amount": 1}).status_code
+        == 403
+    )
     client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": [24]}
     )
