@@ -38,24 +38,38 @@ function resolveUrl(path: string): string {
 
 function errorMessage(body: unknown, fallback: string): string {
   if (typeof body === "object" && body !== null) {
-    if ("error_message" in body && typeof (body as { error_message: unknown }).error_message === "string") {
+    if (
+      "error_message" in body &&
+      typeof (body as { error_message: unknown }).error_message === "string"
+    ) {
       return (body as { error_message: string }).error_message;
     }
-    if ("detail" in body && typeof (body as { detail: unknown }).detail === "string") {
+    if (
+      "detail" in body &&
+      typeof (body as { detail: unknown }).detail === "string"
+    ) {
       return (body as { detail: string }).detail;
     }
   }
   return fallback;
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function request<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const { apiKey } = readApiConfig();
   const headers = new Headers(init.headers);
   if (apiKey) {
     headers.set("GROCY-API-KEY", apiKey);
   }
   if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+    headers.set(
+      "Content-Type",
+      init.body instanceof Blob
+        ? init.body.type || "application/octet-stream"
+        : "application/json",
+    );
   }
   const response = await fetch(resolveUrl(path), { ...init, headers });
   const text = await response.text();
@@ -78,18 +92,51 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  objects: (entity: string) =>
+    request<import("./entities").EntityRow[]>(`/api/objects/${entity}`),
+  createObject: (entity: string, body: Record<string, unknown>) =>
+    request<import("./entities").EntityRow>(`/api/objects/${entity}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateObject: (entity: string, id: number, body: Record<string, unknown>) =>
+    request<void>(`/api/objects/${entity}/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  deleteObject: (entity: string, id: number) =>
+    request<void>(`/api/objects/${entity}/${id}`, { method: "DELETE" }),
+  action: <T = unknown>(path: string, body?: Record<string, unknown>) =>
+    request<T>(path, {
+      method: "POST",
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    }),
+  rejectProposal: (id: number) =>
+    request<unknown>(`/api/v2/nutrition/proposals/${id}/reject`, {
+      method: "POST",
+    }),
+  restoreRevision: (id: number, revision: number) =>
+    request<unknown>(
+      `/api/v2/products/${id}/nutrition/revisions/${revision}/restore`,
+      { method: "POST" },
+    ),
   listProducts: () => request<ProductListResponse>("/api/objects/products"),
 
   getProductNutrition: (productId: number) =>
     request<NutritionRecord>(`/api/v2/products/${productId}/nutrition`),
 
   listPendingProposals: () =>
-    request<NutritionProposalList>("/api/v2/nutrition/proposals?status=pending"),
+    request<NutritionProposalList>(
+      "/api/v2/nutrition/proposals?status=pending",
+    ),
 
   approveProposal: (proposalId: number) =>
-    request<NutritionRecord>(`/api/v2/nutrition/proposals/${proposalId}/approve`, {
-      method: "POST",
-    }),
+    request<NutritionRecord>(
+      `/api/v2/nutrition/proposals/${proposalId}/approve`,
+      {
+        method: "POST",
+      },
+    ),
 
   createProposal: (payload: CreateProposalPayload) =>
     request<unknown>("/api/v2/nutrition/proposals", {
@@ -98,7 +145,9 @@ export const api = {
     }),
 
   listNutritionRevisions: (productId: number) =>
-    request<NutritionRevisionList>(`/api/v2/products/${productId}/nutrition/revisions`),
+    request<NutritionRevisionList>(
+      `/api/v2/products/${productId}/nutrition/revisions`,
+    ),
 
   listStock: () => request<StockOverviewItem[]>("/api/stock"),
 
@@ -181,7 +230,9 @@ export const api = {
     request<unknown>(`/api/chores/${choreId}/execute`, { method: "POST" }),
 
   listTasks: (includeDone = false) =>
-    request<Task[]>(`/api/tasks?include_done=${includeDone ? "true" : "false"}`),
+    request<Task[]>(
+      `/api/tasks?include_done=${includeDone ? "true" : "false"}`,
+    ),
 
   completeTask: (taskId: number) =>
     request<unknown>(`/api/tasks/${taskId}/complete`, { method: "POST" }),
@@ -210,3 +261,21 @@ export const queryKeys = {
   tasks: ["tasks"] as const,
   batteries: ["batteries"] as const,
 };
+
+export async function downloadFile(group: string, name: string): Promise<void> {
+  const { apiKey } = readApiConfig();
+  const response = await fetch(
+    resolveUrl(
+      `/api/files/${encodeURIComponent(group)}/${encodeURIComponent(name)}`,
+    ),
+    { headers: { "GROCY-API-KEY": apiKey } },
+  );
+  if (!response.ok)
+    throw new ApiError(response.status, "Could not download the file.", null);
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

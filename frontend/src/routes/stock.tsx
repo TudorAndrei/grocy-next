@@ -51,11 +51,17 @@ function StockPage() {
   });
 
   const dueIds = useMemo(
-    () => new Set((volatileQuery.data?.due_products ?? []).map((i) => i.product_id)),
+    () =>
+      new Set(
+        (volatileQuery.data?.due_products ?? []).map((i) => i.product_id),
+      ),
     [volatileQuery.data],
   );
   const overdueIds = useMemo(
-    () => new Set((volatileQuery.data?.overdue_products ?? []).map((i) => i.product_id)),
+    () =>
+      new Set(
+        (volatileQuery.data?.overdue_products ?? []).map((i) => i.product_id),
+      ),
     [volatileQuery.data],
   );
   const missing = volatileQuery.data?.missing_products ?? [];
@@ -94,11 +100,15 @@ function StockPage() {
         </div>
         <div className="stat-card" data-tone="warn">
           <span className="label">Due soon</span>
-          <span className="value">{volatileQuery.data?.due_products.length ?? "—"}</span>
+          <span className="value">
+            {volatileQuery.data?.due_products.length ?? "—"}
+          </span>
         </div>
         <div className="stat-card" data-tone="danger">
           <span className="label">Overdue</span>
-          <span className="value">{volatileQuery.data?.overdue_products.length ?? "—"}</span>
+          <span className="value">
+            {volatileQuery.data?.overdue_products.length ?? "—"}
+          </span>
         </div>
         <div className="stat-card" data-tone="ok">
           <span className="label">Below minimum</span>
@@ -156,7 +166,9 @@ function StockPage() {
 
       {filter === "missing" ? (
         filteredMissing.length === 0 ? (
-          <p className="empty-state">Nothing is below its minimum stock level.</p>
+          <p className="empty-state">
+            Nothing is below its minimum stock level.
+          </p>
         ) : (
           <section className="panel">
             <div className="panel-inner" style={{ padding: 0 }}>
@@ -180,7 +192,9 @@ function StockPage() {
                           {item.name}
                         </Link>
                       </td>
-                      <td className="amount-cell">{formatAmount(item.amount_missing)}</td>
+                      <td className="amount-cell">
+                        {formatAmount(item.amount_missing)}
+                      </td>
                       <td>
                         <div className="actions">
                           <button
@@ -233,8 +247,12 @@ function StockPage() {
                           {item.product.name}
                         </Link>
                       </td>
-                      <td className="amount-cell">{formatAmount(item.amount)}</td>
-                      <td className="muted">{formatAmount(item.amount_opened)}</td>
+                      <td className="amount-cell">
+                        {formatAmount(item.amount)}
+                      </td>
+                      <td className="muted">
+                        {formatAmount(item.amount_opened)}
+                      </td>
                       <td>
                         {tone ? (
                           <span className={`badge badge-${tone}`}>
@@ -257,7 +275,9 @@ function StockPage() {
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            disabled={busyId === item.product_id || item.amount <= 0}
+                            disabled={
+                              busyId === item.product_id || item.amount <= 0
+                            }
                             onClick={() => consume.mutate(item.product_id)}
                           >
                             Consume

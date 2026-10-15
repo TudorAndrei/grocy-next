@@ -114,6 +114,25 @@ const groups: NavGroup[] = [
   },
 ];
 
+groups.splice(1, 0, {
+  label: "Planning and records",
+  links: [
+    ["/meal-plan", "Meals", "M4 5h16v16H4zM8 3v4m8-4v4M4 11h16"],
+    ["/equipment", "Equipment", "m14 6 4-4 4 4-4 4-3-1-9 12-4-4 12-9Z"],
+    ["/calendar", "Calendar", "M4 5h16v16H4zM8 3v4m8-4v4M4 11h16M8 15h2m4 0h2"],
+    ["/manage", "Manage", "M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z"],
+  ].map(([to, label, path]) => ({
+    to,
+    label,
+    match: (pathname: string) => pathname.startsWith(to),
+    icon: (
+      <svg {...iconProps}>
+        <path d={path} />
+      </svg>
+    ),
+  })),
+});
+
 export function SiteNav() {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
@@ -125,7 +144,12 @@ export function SiteNav() {
         <div key={group.label} className="nav-group">
           <div className="nav-group-label">{group.label}</div>
           {group.links.map(({ to, label, match, icon }) => (
-            <Link key={to} to={to} data-active={match(pathname) ? "true" : "false"}>
+            <Link
+              key={to}
+              to={to}
+              data-active={match(pathname) ? "true" : "false"}
+              aria-current={match(pathname) ? "page" : undefined}
+            >
               {icon}
               {label}
             </Link>

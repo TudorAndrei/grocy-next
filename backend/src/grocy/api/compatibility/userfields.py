@@ -1,11 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter
-from sqlalchemy import select
+from fastapi import APIRouter, Response
 
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
-from grocy.db.models.settings import UserfieldValue
+from grocy.domains.catalog.objects import GenericObjectsService
 
 router = APIRouter(tags=["userfields"])
 
@@ -16,48 +15,22 @@ async def get_userfields(
     object_id: int,
     _actor: CurrentActor,
     session: DbSession,
-) -> dict[str, str]:
-    stmt = select(UserfieldValue).where(
-        UserfieldValue.entity == entity,
-        UserfieldValue.object_id == object_id,
-    )
-    rows = (await session.execute(stmt)).scalars().all()
-    return {row.name: row.value for row in rows}
+) -> dict[str, str | None]:
+    service = GenericObjectsService(session)
+    await service.validate_userfield_object(entity, object_id)
+    return await service.userfields(entity, object_id)
 
 
-@router.put("/api/userfields/{entity}/{object_id}")
+@router.put("/api/userfields/{entity}/{object_id}", status_code=204)
 async def put_userfields(
     entity: str,
     object_id: int,
     body: dict[str, Any],
     _actor: CurrentActor,
     session: DbSession,
-) -> dict[str, str]:
-    stmt = select(UserfieldValue).where(
-        UserfieldValue.entity == entity,
-        UserfieldValue.object_id == object_id,
-    )
-    existing = {
-        row.name: row for row in (await session.execute(stmt)).scalars().all()
-    }
-    for name, value in body.items():
-        text = "" if value is None else str(value)
-        row = existing.get(name)
-        if row is None:
-            session.add(
-                UserfieldValue(
-                    entity=entity,
-                    object_id=object_id,
-                    name=name,
-                    value=text,
-                )
-            )
-        else:
-            row.value = text
+) -> Response:
+    service = GenericObjectsService(session)
+    await service.validate_userfield_object(entity, object_id)
+    await service.write_userfields(entity, object_id, body)
     await session.commit()
-    stmt = select(UserfieldValue).where(
-        UserfieldValue.entity == entity,
-        UserfieldValue.object_id == object_id,
-    )
-    rows = (await session.execute(stmt)).scalars().all()
-    return {row.name: row.value for row in rows}
+    return Response(status_code=204)

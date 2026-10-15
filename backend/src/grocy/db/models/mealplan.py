@@ -13,6 +13,7 @@ class MealPlanSection(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     sort_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    time_info: Mapped[str | None] = mapped_column(String(255))
     time_hms: Mapped[str | None] = mapped_column(String(16))
 
 

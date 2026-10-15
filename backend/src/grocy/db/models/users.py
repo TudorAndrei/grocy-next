@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from grocy.db.models.base import Base, TimestampMixin
@@ -25,8 +25,18 @@ class ApiKey(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    last_used: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     key_type: Mapped[str] = mapped_column(String(64), nullable=False, default="default")
     description: Mapped[str | None] = mapped_column(Text)
 
     user: Mapped[User] = relationship(back_populates="api_keys")
+
+
+class UserPermission(Base):
+    __tablename__ = "user_permissions"
+    __table_args__ = (UniqueConstraint("user_id", "permission_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    permission_id: Mapped[int] = mapped_column(Integer, nullable=False)

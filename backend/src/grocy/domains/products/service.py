@@ -2,34 +2,38 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from grocy.core.errors import NotFoundError
 from grocy.db.models.catalog import Product, ProductBarcode
 from grocy.db.models.stock import StockEntry
+from grocy.domains.products.barcodes import parse_product_code
 
 
 class ProductsService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_products(self) -> list[Product]:
-        stmt = (
-            select(Product)
-            .options(selectinload(Product.barcodes))
-            .where(Product.active == 1)
-            .order_by(Product.name)
-        )
+    async def list_products(self, *, include_inactive: bool = False) -> list[Product]:
+        stmt = select(Product).options(selectinload(Product.barcodes)).order_by(Product.name)
+        if not include_inactive:
+            stmt = stmt.where(Product.active == 1)
         return list((await self.session.execute(stmt)).scalars().all())
 
     async def get_by_barcode(self, barcode: str) -> Product:
+        code = parse_product_code(barcode)
+        if code:
+            product = await self.get(code[0])
+            if not product.active:
+                raise NotFoundError("Product is inactive")
+            return product
         stmt = (
             select(Product)
             .join(ProductBarcode, ProductBarcode.product_id == Product.id)
             .options(selectinload(Product.barcodes))
-            .where(ProductBarcode.barcode == barcode, Product.active == 1)
+            .where(func.lower(ProductBarcode.barcode) == barcode.lower(), Product.active == 1)
         )
         product = (await self.session.execute(stmt)).scalars().first()
         if product is None:
@@ -38,9 +42,7 @@ class ProductsService:
 
     async def get(self, product_id: int) -> Product:
         stmt = (
-            select(Product)
-            .options(selectinload(Product.barcodes))
-            .where(Product.id == product_id)
+            select(Product).options(selectinload(Product.barcodes)).where(Product.id == product_id)
         )
         product = (await self.session.execute(stmt)).scalars().first()
         if product is None:
@@ -104,6 +106,36 @@ class ProductsService:
             "barcode": barcodes[0] if barcodes else None,
             "barcodes": barcodes,
         }
+        for column in product.__table__.columns:
+            if column.name in payload:
+                continue
+            value = getattr(product, column.name)
+            payload[column.name] = (
+                value.isoformat()
+                if hasattr(value, "isoformat")
+                else float(value)
+                if isinstance(value, Decimal)
+                else value
+            )
         if stock_amount is not None:
             payload["stock_amount"] = float(stock_amount)
         return payload
+
+    async def child_ids(self, product_id: int) -> list[int]:
+        ids, pending = [], [product_id]
+        while pending:
+            current = pending.pop()
+            if current in ids:
+                continue
+            ids.append(current)
+            children = (
+                (
+                    await self.session.execute(
+                        select(Product.id).where(Product.parent_product_id == current)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            pending.extend(children)
+        return ids

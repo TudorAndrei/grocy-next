@@ -1,50 +1,74 @@
 # Grocy Next
 
-Grocy-compatible household management reimplementation: FastAPI + FastMCP + React/TanStack, with a nutrition extension. Intelligence stays in external MCP-connected assistants — this server has no embedded agent, OCR, or vision model.
+Household management with FastAPI, SQLite, FastMCP, and React. The compatibility API uses the pinned Grocy v4.5.0 contract. The nutrition API adds proposals, review, evidence, and revision history. External assistants can use MCP. The server does not run an agent, OCR, or a vision model.
 
-**Baseline:** Grocy `v4.5.0` OpenAPI pinned in `contracts/grocy.openapi.json`.
+## Functions
 
-## What works now
+- Product catalog, barcodes, locations, stores, groups, units, and conversions.
+- Stock purchases, consumption, open state, transfer, counts, entry edits, and undo.
+- Recipe ingredients, included recipes, stock checks, partial consumption, and shopping quantities.
+- Meal plans with recipes, products, notes, and meal sections.
+- Shopping lists with purchased items and printable output.
+- Chores, assignments, tasks, batteries, equipment, and instruction manuals.
+- Custom entity definitions, custom records, and custom field values.
+- Stored user permissions, API key creation and removal, and calendar subscriptions.
+- Nutrition proposals, approval, rejection, revision restore, and label photos.
+- Database import with a source snapshot and a separate destination database.
 
-### Phase 1–2 (MVP)
-- API-key auth (`GROCY-API-KEY`, demo key `dev-key`)
-- Products, stock purchase/consume, shopping lists
-- Nutrition propose → review → commit + revisions
-- MCP tools (FastMCP + HTTP bridge)
+All 86 contract operations have routes. All 34 contract entities support reads. Contract response tests and workflow tests run locally. PHP state comparison tests are available for a disposable Grocy v4.5.0 server. This does not establish complete behavior parity with every upstream client. See [compatibility](docs/compatibility.md).
 
-### Phase 3 (in progress)
-- Quantity unit conversions (direct + inverse + product purchase/stock factor)
-- Stock open / transfer / inventory correction / booking undo
-- Recipes: list, fulfillment, consume, missing → shopping list, nestings with cycle detection
-- Household: chores (+ execute/undo), tasks (+ complete), batteries (+ charge/undo)
-- Expanded `/api/objects/{entity}` coverage for core entities
-- Frontend: pantry stock actions, recipes, household chores
-
-Still later: meal plans, equipment/calendar/files, full differential PHP golden tests, complete client parity.
-
-## Quick start
+## Local development
 
 ```bash
 cd backend
-uv sync
+uv sync --frozen
+cd ../frontend
+npm ci
+cd ..
+./scripts/dev.sh
+```
+
+Open http://127.0.0.1:5173. The development API key is `dev-key`. The script sets this key for the web application. It does not replace existing environment files.
+
+To run the services separately:
+
+```bash
+cd backend
 uv run grocy
 ```
 
 ```bash
 cd frontend
-pnpm install
-pnpm dev
+VITE_API_KEY=dev-key npm run dev
 ```
 
-- API: http://127.0.0.1:8000/api/health
-- UI: http://127.0.0.1:5173
-- Demo API key: `dev-key`
+Use Connection to set another server URL or API key. Use Manage to create the first location and quantity unit in an empty database. The application applies schema upgrades at startup when `GROCY_AUTO_CREATE_SCHEMA=true`.
+
+## Containers
+
+```bash
+docker compose up --build
+```
+
+Open http://127.0.0.1:8080. The API is also available at http://127.0.0.1:8000. The volume stores the database and files under `/data`.
+
+For a new installation without demo records, set `GROCY_SEED_DEMO_DATA=false` and `GROCY_DEV_OPEN_API_KEY=` before startup. Create an administrator and a random API key:
+
+```bash
+docker compose run --rm api uv run --no-dev grocy-cli init --username admin
+```
+
+Save the returned key and enter it in Connection. `init` refuses a database that already has users.
+
+## Verification
 
 ```bash
 cd backend
 uv run pytest
 uv run ruff check src tests
-uv run grocy-mcp
+uv run basedpyright
+cd ../frontend
+npm run build
 ```
 
-If you just pulled dependency changes, re-run `uv sync` (needs `greenlet` via `sqlalchemy[asyncio]`).
+The PHP comparison suite is skipped unless a reference server is configured. See [compatibility](docs/compatibility.md) for the command. See [migration](docs/migration.md) for database import and recovery, and [MCP tools](docs/mcp-tools.md) for assistant access.

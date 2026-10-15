@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.errors import GrocyError, NotFoundError
@@ -87,12 +87,19 @@ class UnitsService:
         product_id: int | None,
     ) -> Decimal | None:
         if product_id is not None:
+            resolved = await self.session.scalar(
+                text(
+                    "SELECT factor FROM quantity_unit_conversions_resolved "
+                    "WHERE product_id = :product_id AND from_qu_id = :from_id "
+                    "AND to_qu_id = :to_id LIMIT 1"
+                ),
+                {"product_id": product_id, "from_id": from_qu_id, "to_id": to_qu_id},
+            )
+            if resolved is not None:
+                return Decimal(str(resolved))
             product = await self.session.get(Product, product_id)
             if product is not None:
-                if (
-                    from_qu_id == product.qu_id_purchase
-                    and to_qu_id == product.qu_id_stock
-                ):
+                if from_qu_id == product.qu_id_purchase and to_qu_id == product.qu_id_stock:
                     return Decimal(product.qu_factor_purchase_to_stock)
                 if (
                     from_qu_id == product.qu_id_stock
@@ -115,13 +122,40 @@ class UnitsService:
                 queue.append(nxt)
         return None
 
+    async def ensure_product_conversions(self, product: Product) -> None:
+        for source, factor in (
+            (product.qu_id_purchase, product.qu_factor_purchase_to_stock),
+            (product.qu_id_consume, Decimal("1")),
+            (product.qu_id_price, Decimal("1")),
+        ):
+            if not source or source == product.qu_id_stock:
+                continue
+            existing = await self.session.scalar(
+                text(
+                    "SELECT factor FROM quantity_unit_conversions_resolved "
+                    "WHERE product_id = :product_id AND from_qu_id = :from_id "
+                    "AND to_qu_id = :to_id LIMIT 1"
+                ),
+                {"product_id": product.id, "from_id": source, "to_id": product.qu_id_stock},
+            )
+            if existing is None:
+                self.session.add(
+                    QuantityUnitConversion(
+                        from_qu_id=source,
+                        to_qu_id=product.qu_id_stock,
+                        product_id=product.id,
+                        factor=factor,
+                    )
+                )
+                await self.session.flush()
+
     async def _conversion_edges(
         self,
         *,
         product_id: int | None,
     ) -> dict[int, list[tuple[int, Decimal]]]:
         rows = await self.list_conversions(product_id=product_id)
-        product_rows = [r for r in rows if r.product_id is not None]
+        product_rows = [r for r in rows if product_id is not None and r.product_id == product_id]
         global_rows = [r for r in rows if r.product_id is None]
         preferred = product_rows + global_rows
         edges: dict[int, list[tuple[int, Decimal]]] = {}
@@ -139,6 +173,9 @@ class UnitsService:
             "name": unit.name,
             "name_plural": unit.name_plural,
             "description": unit.description,
+            "active": unit.active,
+            "plural_forms": unit.plural_forms,
+            "row_created_timestamp": unit.row_created_timestamp.isoformat(),
         }
 
     def serialize_conversion(self, row: QuantityUnitConversion) -> dict:

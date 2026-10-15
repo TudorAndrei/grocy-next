@@ -1,18 +1,36 @@
+import hashlib
+import json
+import math
+import secrets
+from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Response
-from sqlalchemy import select
+from fastapi import APIRouter, Request, Response
+from sqlalchemy import delete, select
 
+from grocy.api.compatibility.filtering import filter_rows
+from grocy.compatibility import client_defaults
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
-from grocy.core.errors import NotFoundError
-from grocy.db.models.users import ApiKey, User
+from grocy.core.errors import GrocyError, NotFoundError
+from grocy.core.permissions import PERMISSIONS
 from grocy.db.models.settings import UserSetting
+from grocy.db.models.users import ApiKey, User, UserPermission
 
 router = APIRouter(tags=["users"])
 
-ALL_PERMISSION_IDS = list(range(1, 16))
-_user_permissions: dict[int, list[int]] = {}
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+    return f"scrypt${salt.hex()}${digest.hex()}"
+
+
+def _username(body: dict[str, Any]) -> str:
+    value = str(body.get("username", "")).strip()
+    if not value:
+        raise GrocyError("Username is required")
+    return value
 
 
 def _serialize_user(user: User) -> dict[str, Any]:
@@ -36,10 +54,24 @@ async def _get_user_or_404(session: DbSession, user_id: int) -> User:
     return user
 
 
-async def _settings_map(session: DbSession, user_id: int) -> dict[str, str]:
+async def _settings_map(session: DbSession, user_id: int) -> dict[str, Any]:
     stmt = select(UserSetting).where(UserSetting.user_id == user_id)
     rows = (await session.execute(stmt)).scalars().all()
-    return {row.key: row.value for row in rows}
+    return {**client_defaults()["user_settings"], **{row.key: row.value for row in rows}}
+
+
+def _setting_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise GrocyError("A setting number must be finite")
+        return format(value, ".14g")
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
 
 
 @router.get("/api/user")
@@ -49,7 +81,7 @@ async def get_current_user(actor: CurrentActor, session: DbSession) -> dict[str,
 
 
 @router.get("/api/user/settings")
-async def get_user_settings(actor: CurrentActor, session: DbSession) -> dict[str, str]:
+async def get_user_settings(actor: CurrentActor, session: DbSession) -> dict[str, Any]:
     return await _settings_map(session, actor.user_id)
 
 
@@ -58,16 +90,17 @@ async def put_user_settings(
     body: dict[str, Any],
     actor: CurrentActor,
     session: DbSession,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     stmt = select(UserSetting).where(UserSetting.user_id == actor.user_id)
     existing = {row.key: row for row in (await session.execute(stmt)).scalars().all()}
     for key, value in body.items():
-        text = "" if value is None else str(value)
+        text = _setting_text(value)
         row = existing.get(key)
         if row is None:
             session.add(UserSetting(user_id=actor.user_id, key=key, value=text))
         else:
             row.value = text
+            row.row_updated_timestamp = datetime.now()
     await session.commit()
     return await _settings_map(session, actor.user_id)
 
@@ -93,73 +126,71 @@ async def get_user_setting(
         UserSetting.key == setting_key,
     )
     row = (await session.execute(stmt)).scalars().first()
-    if row is None:
-        raise NotFoundError(f"Setting '{setting_key}' not found")
     return {
-        "id": row.id,
-        "user_id": row.user_id,
-        "key": row.key,
-        "value": row.value,
+        "value": row.value
+        if row is not None
+        else client_defaults()["user_settings"].get(setting_key)
     }
 
 
-@router.put("/api/user/settings/{setting_key}")
+@router.put("/api/user/settings/{setting_key}", status_code=204)
 async def put_user_setting(
     setting_key: str,
     body: dict[str, Any],
     actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    value = body.get("value", "")
+    value = body.get("value")
     stmt = select(UserSetting).where(
         UserSetting.user_id == actor.user_id,
         UserSetting.key == setting_key,
     )
     row = (await session.execute(stmt)).scalars().first()
-    text = "" if value is None else str(value)
+    text = _setting_text(value)
     if row is None:
         session.add(UserSetting(user_id=actor.user_id, key=setting_key, value=text))
     else:
         row.value = text
+        row.row_updated_timestamp = datetime.now()
     await session.commit()
     return Response(status_code=204)
 
 
-@router.delete("/api/user/settings/{setting_key}")
+@router.delete("/api/user/settings/{setting_key}", status_code=204)
 async def delete_user_setting(
     setting_key: str,
     actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    stmt = select(UserSetting).where(
-        UserSetting.user_id == actor.user_id,
-        UserSetting.key == setting_key,
+    await session.execute(
+        delete(UserSetting).where(
+            UserSetting.user_id == actor.user_id,
+            UserSetting.key == setting_key,
+        )
     )
-    row = (await session.execute(stmt)).scalars().first()
-    if row is None:
-        raise NotFoundError(f"Setting '{setting_key}' not found")
-    await session.delete(row)
     await session.commit()
     return Response(status_code=204)
 
 
 @router.get("/api/users")
-async def list_users(_actor: CurrentActor, session: DbSession) -> list[dict[str, Any]]:
+async def list_users(
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, Any]]:
     rows = (await session.execute(select(User).order_by(User.id))).scalars().all()
-    return [_serialize_user(row) for row in rows]
+    return filter_rows([_serialize_user(row) for row in rows], request.query_params)
 
 
-@router.post("/api/users")
+@router.post("/api/users", status_code=204)
 async def create_user(
     body: dict[str, Any],
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
     user = User(
-        username=str(body.get("username", "")),
+        username=_username(body),
         first_name=body.get("first_name"),
         last_name=body.get("last_name"),
-        password=str(body.get("password", "")),
+        password=_hash_password(str(body.get("password", ""))),
         picture_file_name=body.get("picture_file_name"),
     )
     session.add(user)
@@ -167,7 +198,7 @@ async def create_user(
     return Response(status_code=204)
 
 
-@router.put("/api/users/{user_id}")
+@router.put("/api/users/{user_id}", status_code=204)
 async def update_user(
     user_id: int,
     body: dict[str, Any],
@@ -176,20 +207,20 @@ async def update_user(
 ) -> Response:
     user = await _get_user_or_404(session, user_id)
     if "username" in body:
-        user.username = str(body["username"])
+        user.username = _username(body)
     if "first_name" in body:
         user.first_name = body["first_name"]
     if "last_name" in body:
         user.last_name = body["last_name"]
     if "password" in body:
-        user.password = str(body["password"])
+        user.password = _hash_password(str(body["password"]))
     if "picture_file_name" in body:
         user.picture_file_name = body["picture_file_name"]
     await session.commit()
     return Response(status_code=204)
 
 
-@router.delete("/api/users/{user_id}")
+@router.delete("/api/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
     actor: CurrentActor,
@@ -202,12 +233,14 @@ async def delete_user(
     for key in keys:
         await session.delete(key)
     settings = (
-        await session.execute(select(UserSetting).where(UserSetting.user_id == user_id))
-    ).scalars().all()
+        (await session.execute(select(UserSetting).where(UserSetting.user_id == user_id)))
+        .scalars()
+        .all()
+    )
     for setting in settings:
         await session.delete(setting)
     await session.delete(user)
-    _user_permissions.pop(user_id, None)
+    await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
     await session.commit()
     return Response(status_code=204)
 
@@ -217,36 +250,65 @@ def _permission_rows(user_id: int, permission_ids: list[int]) -> list[dict[str, 
 
 
 @router.get("/api/users/{user_id}/permissions")
-async def get_user_permissions(user_id: int, _actor: CurrentActor) -> list[dict[str, int]]:
-    stored = _user_permissions.get(user_id)
-    if stored is not None:
-        return _permission_rows(user_id, stored)
-    return _permission_rows(user_id, ALL_PERMISSION_IDS)
+async def get_user_permissions(
+    user_id: int, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, int]]:
+    await _get_user_or_404(session, user_id)
+    ids = list(
+        (
+            await session.execute(
+                select(UserPermission.permission_id)
+                .where(UserPermission.user_id == user_id)
+                .order_by(UserPermission.permission_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return _permission_rows(user_id, ids)
 
 
-@router.post("/api/users/{user_id}/permissions")
+@router.post("/api/users/{user_id}/permissions", status_code=204)
 async def add_user_permission(
-    user_id: int,
-    body: dict[str, Any],
-    _actor: CurrentActor,
+    user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
 ) -> Response:
-    permission_id = int(body.get("permission_id") or body.get("permissions_id") or 0)
-    current = _user_permissions.setdefault(user_id, list(ALL_PERMISSION_IDS))
-    if permission_id and permission_id not in current:
-        current.append(permission_id)
+    actor.require("ADMIN")
+    await _get_user_or_404(session, user_id)
+    try:
+        pid = int(body.get("permission_id", body.get("permissions_id", 0)))
+    except (TypeError, ValueError) as exc:
+        raise GrocyError("Invalid permission") from exc
+    if pid not in PERMISSIONS:
+        raise GrocyError("Unknown permission")
+    existing = await session.scalar(
+        select(UserPermission.id).where(
+            UserPermission.user_id == user_id, UserPermission.permission_id == pid
+        )
+    )
+    if existing is None:
+        session.add(UserPermission(user_id=user_id, permission_id=pid))
+        await session.commit()
     return Response(status_code=204)
 
 
-@router.put("/api/users/{user_id}/permissions")
+@router.put("/api/users/{user_id}/permissions", status_code=204)
 async def set_user_permissions(
-    user_id: int,
-    body: dict[str, Any],
-    _actor: CurrentActor,
-) -> list[dict[str, int]]:
-    raw = body.get("permissions") or body.get("permission_ids") or ALL_PERMISSION_IDS
-    if isinstance(raw, list):
-        ids = [int(item) for item in raw]
-    else:
-        ids = list(ALL_PERMISSION_IDS)
-    _user_permissions[user_id] = ids
-    return _permission_rows(user_id, ids)
+    user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
+) -> Response:
+    actor.require("ADMIN")
+    await _get_user_or_404(session, user_id)
+    raw = body.get("permissions", body.get("permission_ids", []))
+    if not isinstance(raw, list):
+        raise GrocyError("Permissions must be a list")
+    try:
+        ids = sorted({int(item) for item in raw})
+    except (TypeError, ValueError) as exc:
+        raise GrocyError("Invalid permission") from exc
+    if any(pid not in PERMISSIONS for pid in ids):
+        raise GrocyError("Unknown permission")
+    if user_id == actor.user_id and 1 not in ids:
+        raise GrocyError("Cannot remove your own administrator permission")
+    await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
+    session.add_all([UserPermission(user_id=user_id, permission_id=pid) for pid in ids])
+    await session.commit()
+    return Response(status_code=204)

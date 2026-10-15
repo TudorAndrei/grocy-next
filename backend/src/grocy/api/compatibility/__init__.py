@@ -6,12 +6,14 @@ from grocy.api.compatibility import (
     health,
     household,
     objects,
-    print as print_api,
     recipes,
     stock,
     system,
     userfields,
     users,
+)
+from grocy.api.compatibility import (
+    print as print_api,
 )
 
 router = APIRouter()

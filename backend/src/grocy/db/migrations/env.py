@@ -7,6 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from grocy.core.config import get_settings
+from grocy.db.compatibility_views import register_compatibility_functions
 from grocy.db.models import Base
 
 config = context.config
@@ -30,6 +31,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    register_compatibility_functions(connection)
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
@@ -52,5 +54,7 @@ def run_migrations_online() -> None:
 
 if context.is_offline_mode():
     run_migrations_offline()
+elif connection := config.attributes.get("connection"):
+    do_run_migrations(connection)
 else:
     run_migrations_online()

@@ -1,4 +1,6 @@
-export function formatAmount(value: number | string | null | undefined): string {
+export function formatAmount(
+  value: number | string | null | undefined,
+): string {
   if (value === null || value === undefined) {
     return "0";
   }
@@ -6,7 +8,9 @@ export function formatAmount(value: number | string | null | undefined): string 
   if (!Number.isFinite(num)) {
     return String(value);
   }
-  return Number.isInteger(num) ? String(num) : num.toFixed(2).replace(/\.?0+$/, "");
+  return Number.isInteger(num)
+    ? String(num)
+    : num.toFixed(2).replace(/\.?0+$/, "");
 }
 
 export function formatDate(value: string | null | undefined): string | null {
@@ -22,11 +26,16 @@ export function formatDate(value: string | null | undefined): string | null {
 
 export type DueTone = "ok" | "warn" | "danger" | null;
 
-export function dueTone(bestBefore: string | null | undefined, soonDays = 5): DueTone {
+export function dueTone(
+  bestBefore: string | null | undefined,
+  soonDays = 5,
+): DueTone {
   if (!bestBefore) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(bestBefore.includes("T") ? bestBefore : `${bestBefore}T00:00:00`);
+  const due = new Date(
+    bestBefore.includes("T") ? bestBefore : `${bestBefore}T00:00:00`,
+  );
   if (Number.isNaN(due.getTime())) return null;
   const diffDays = Math.floor((due.getTime() - today.getTime()) / 86_400_000);
   if (diffDays < 0) return "danger";
@@ -34,7 +43,10 @@ export function dueTone(bestBefore: string | null | undefined, soonDays = 5): Du
   return "ok";
 }
 
-export function dueLabel(bestBefore: string | null | undefined, soonDays = 5): string {
+export function dueLabel(
+  bestBefore: string | null | undefined,
+  soonDays = 5,
+): string {
   const tone = dueTone(bestBefore, soonDays);
   const formatted = formatDate(bestBefore);
   if (!formatted || !tone) return "No date";

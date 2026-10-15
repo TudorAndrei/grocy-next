@@ -10,7 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as HouseholdRouteImport } from './routes/household'
+import { Route as ManageRouteImport } from './routes/manage'
+import { Route as MealPlanRouteImport } from './routes/meal-plan'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
@@ -25,9 +29,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipmentRoute = EquipmentRouteImport.update({
+  id: '/equipment',
+  path: '/equipment',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HouseholdRoute = HouseholdRouteImport.update({
   id: '/household',
   path: '/household',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageRoute = ManageRouteImport.update({
+  id: '/manage',
+  path: '/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MealPlanRoute = MealPlanRouteImport.update({
+  id: '/meal-plan',
+  path: '/meal-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReviewsRoute = ReviewsRouteImport.update({
@@ -73,7 +97,11 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calendar': typeof CalendarRoute
+  '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/manage': typeof ManageRoute
+  '/meal-plan': typeof MealPlanRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
@@ -85,7 +113,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/calendar': typeof CalendarRoute
+  '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/manage': typeof ManageRoute
+  '/meal-plan': typeof MealPlanRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
@@ -98,7 +130,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/calendar': typeof CalendarRoute
+  '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/manage': typeof ManageRoute
+  '/meal-plan': typeof MealPlanRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
@@ -112,7 +148,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/calendar'
+    | '/equipment'
     | '/household'
+    | '/manage'
+    | '/meal-plan'
     | '/reviews'
     | '/settings'
     | '/shopping'
@@ -124,7 +164,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/calendar'
+    | '/equipment'
     | '/household'
+    | '/manage'
+    | '/meal-plan'
     | '/reviews'
     | '/settings'
     | '/shopping'
@@ -136,7 +180,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/calendar'
+    | '/equipment'
     | '/household'
+    | '/manage'
+    | '/meal-plan'
     | '/reviews'
     | '/settings'
     | '/shopping'
@@ -149,7 +197,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CalendarRoute: typeof CalendarRoute
+  EquipmentRoute: typeof EquipmentRoute
   HouseholdRoute: typeof HouseholdRoute
+  ManageRoute: typeof ManageRoute
+  MealPlanRoute: typeof MealPlanRoute
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
@@ -169,11 +221,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipment': {
+      id: '/equipment'
+      path: '/equipment'
+      fullPath: '/equipment'
+      preLoaderRoute: typeof EquipmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/household': {
       id: '/household'
       path: '/household'
       fullPath: '/household'
       preLoaderRoute: typeof HouseholdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manage': {
+      id: '/manage'
+      path: '/manage'
+      fullPath: '/manage'
+      preLoaderRoute: typeof ManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meal-plan': {
+      id: '/meal-plan'
+      path: '/meal-plan'
+      fullPath: '/meal-plan'
+      preLoaderRoute: typeof MealPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reviews': {
@@ -237,7 +317,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CalendarRoute: CalendarRoute,
+  EquipmentRoute: EquipmentRoute,
   HouseholdRoute: HouseholdRoute,
+  ManageRoute: ManageRoute,
+  MealPlanRoute: MealPlanRoute,
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,

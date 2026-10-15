@@ -32,6 +32,8 @@ export type NutritionRecord = {
     type: string;
     barcode?: string | null;
     note?: string | null;
+    photo_path?: string;
+    external_url?: string;
   } | null;
   updated_by?: number | null;
 };
@@ -75,6 +77,8 @@ export type CreateProposalPayload = {
     type?: string;
     barcode?: string | null;
     note?: string | null;
+    photo_path?: string;
+    external_url?: string;
   };
   note?: string | null;
   origin?: string;

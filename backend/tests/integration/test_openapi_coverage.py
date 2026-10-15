@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 CONTRACT = Path(__file__).resolve().parents[3] / "contracts" / "grocy.openapi.json"
@@ -25,6 +26,7 @@ def _spec_operations() -> set[tuple[str, str]]:
 
 
 def _app_operations(client: TestClient) -> set[tuple[str, str]]:
+    assert isinstance(client.app, FastAPI)
     paths = client.app.openapi()["paths"]
     ops: set[tuple[str, str]] = set()
     for path, methods in paths.items():
@@ -62,8 +64,11 @@ def test_core_object_crud_roundtrip(client: TestClient, api_headers: dict[str, s
         headers=api_headers,
         json={"name": "Coverage Pantry Updated"},
     )
-    assert updated.status_code == 200
-    assert updated.json()["name"] == "Coverage Pantry Updated"
+    assert updated.status_code == 204
+    assert (
+        client.get(f"/api/objects/locations/{object_id}", headers=api_headers).json()["name"]
+        == "Coverage Pantry Updated"
+    )
 
     deleted = client.delete(f"/api/objects/locations/{object_id}", headers=api_headers)
     assert deleted.status_code == 204
@@ -87,7 +92,7 @@ def test_system_and_user_surface(client: TestClient, api_headers: dict[str, str]
         assert response.status_code == 200, path
 
     missing = client.post("/api/system/log-missing-localization", headers=api_headers, json={})
-    assert missing.status_code == 200
+    assert missing.status_code == 204
 
     setting = client.put(
         "/api/user/settings/locale",
@@ -114,7 +119,7 @@ def test_recipe_copy_and_task_undo(client: TestClient, api_headers: dict[str, st
 
     copied = client.post(f"/api/recipes/{recipe_id}/copy", headers=api_headers)
     assert copied.status_code == 200
-    assert copied.json()["id"] != recipe_id
+    assert copied.json()["created_object_id"] != recipe_id
 
     task = client.post(
         "/api/objects/tasks",
@@ -124,7 +129,7 @@ def test_recipe_copy_and_task_undo(client: TestClient, api_headers: dict[str, st
     assert task.status_code == 200
     task_id = task.json().get("created_object_id") or task.json()["id"]
     done = client.post(f"/api/tasks/{task_id}/complete", headers=api_headers)
-    assert done.status_code == 200
+    assert done.status_code == 204
     undone = client.post(f"/api/tasks/{task_id}/undo", headers=api_headers)
-    assert undone.status_code == 200
-    assert undone.json()["done"] == 0
+    assert undone.status_code == 204
+    assert client.get(f"/api/objects/tasks/{task_id}", headers=api_headers).json()["done"] == 0

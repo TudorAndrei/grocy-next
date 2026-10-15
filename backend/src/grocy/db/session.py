@@ -1,5 +1,7 @@
 from collections.abc import AsyncIterator
+from typing import Any
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -37,6 +39,15 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
             **engine_kwargs,
         )
         _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
+        if cfg.database_url.startswith("sqlite"):
+
+            @event.listens_for(_engine.sync_engine, "connect")
+            def configure_connection(connection: Any, _record: Any) -> None:
+                cursor = connection.cursor()
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.execute(f"PRAGMA busy_timeout={cfg.database_busy_timeout_ms}")
+                cursor.close()
+
     return _engine
 
 
@@ -69,3 +80,21 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
     factory = get_session_factory()
     async with factory() as session:
         yield session
+
+
+async def upgrade_schema(engine: AsyncEngine | None = None) -> None:
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    eng = engine or get_engine()
+    async with eng.begin() as connection:
+
+        def upgrade(sync_connection):
+            config.attributes["connection"] = sync_connection
+            command.upgrade(config, "head")
+
+        await connection.run_sync(upgrade)

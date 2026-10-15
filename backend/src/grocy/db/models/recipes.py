@@ -10,7 +10,7 @@ class Recipe(Base, TimestampMixin):
     __tablename__ = "recipes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     base_servings: Mapped[Decimal] = mapped_column(
         Numeric(15, 6), nullable=False, default=Decimal("1")
@@ -20,6 +20,10 @@ class Recipe(Base, TimestampMixin):
     )
     not_check_stock_fulfillment: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     type: Mapped[str] = mapped_column(String(32), nullable=False, default="normal")
+
+    picture_file_name: Mapped[str | None] = mapped_column(String(255))
+    not_check_shoppinglist: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
 
     positions: Mapped[list["RecipePosition"]] = relationship(
         back_populates="recipe",
@@ -40,6 +44,11 @@ class RecipePosition(Base, TimestampMixin):
     note: Mapped[str | None] = mapped_column(Text)
     not_check_stock_fulfillment: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     variable_amount: Mapped[str | None] = mapped_column(String(255))
+
+    price_factor: Mapped[Decimal] = mapped_column(
+        Numeric(15, 6), nullable=False, default=Decimal("1")
+    )
+    round_up: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     recipe: Mapped[Recipe] = relationship(back_populates="positions")
 

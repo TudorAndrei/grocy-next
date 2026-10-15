@@ -23,9 +23,7 @@ export function readApiConfig(): ApiConfig {
   const baseUrl =
     readStored(STORAGE_BASE) ?? import.meta.env.VITE_API_BASE ?? "";
   const apiKey =
-    readStored(STORAGE_KEY) ??
-    import.meta.env.VITE_API_KEY ??
-    DEFAULT_API_KEY;
+    readStored(STORAGE_KEY) ?? import.meta.env.VITE_API_KEY ?? DEFAULT_API_KEY;
   return { baseUrl, apiKey };
 }
 

@@ -27,18 +27,21 @@ class ImportValidationResult:
 def validate_grocy_sqlite(path: str | Path) -> ImportValidationResult:
     db_path = Path(path)
     result = ImportValidationResult(path=str(db_path), ok=False)
-    if not db_path.exists():
+    if not db_path.is_file():
         result.errors.append("database file does not exist")
         return result
     if db_path.stat().st_size == 0:
         result.errors.append("database file is empty")
         return result
     try:
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)
     except sqlite3.Error as exc:
         result.errors.append(f"cannot open database: {exc}")
         return result
     try:
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()
+        if integrity is None or integrity[0] != "ok":
+            result.errors.append("database integrity check failed")
         tables = {
             row[0]
             for row in conn.execute(
@@ -48,21 +51,20 @@ def validate_grocy_sqlite(path: str | Path) -> ImportValidationResult:
         result.tables = sorted(tables)
         result.missing_tables = [name for name in REQUIRED_TABLES if name not in tables]
         if result.missing_tables:
-            result.errors.append(
-                "missing required tables: " + ", ".join(result.missing_tables)
-            )
+            result.errors.append("missing required tables: " + ", ".join(result.missing_tables))
         if "products" in tables:
             result.product_count = int(conn.execute("SELECT COUNT(*) FROM products").fetchone()[0])
         if "migrations" in tables:
             try:
-                version = conn.execute(
-                    "SELECT MAX(migration) FROM migrations"
-                ).fetchone()
+                version = conn.execute("SELECT MAX(migration) FROM migrations").fetchone()
                 if version and version[0] is not None:
                     result.grocy_version = str(version[0])
             except sqlite3.Error:
                 pass
         result.ok = not result.errors
+        return result
+    except sqlite3.Error as exc:
+        result.errors.append(f"invalid database: {exc}")
         return result
     finally:
         conn.close()

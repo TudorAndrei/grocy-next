@@ -15,18 +15,19 @@ function SettingsPage() {
   const [apiKey, setApiKey] = useState(initial.apiKey);
   const [saved, setSaved] = useState(false);
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    await queryClient.cancelQueries();
+    queryClient.clear();
     writeApiConfig({ baseUrl, apiKey });
     setSaved(true);
-    void queryClient.invalidateQueries();
   }
 
   return (
     <>
       <PageHeader
-        title="Settings"
-        lead="Point the UI at your Grocy Next API. Local demo key is dev-key; leave the base empty to use the Vite proxy."
+        title="Connection"
+        lead="Enter your server address and API key. Leave the address blank when the web application and API use the same server."
       />
       <section className="panel" style={{ maxWidth: "32rem" }}>
         <div className="panel-inner">
@@ -45,7 +46,7 @@ function SettingsPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="api-key">GROCY-API-KEY</label>
+              <label htmlFor="api-key">API key</label>
               <input
                 id="api-key"
                 type="password"
@@ -63,7 +64,7 @@ function SettingsPage() {
             </button>
             {saved ? (
               <p className="muted" style={{ marginTop: "1rem" }} role="status">
-                Saved. Cached queries will refresh.
+                Connection saved.
               </p>
             ) : null}
           </form>

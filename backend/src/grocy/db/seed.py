@@ -9,7 +9,7 @@ from grocy.db.models.household import Battery, Chore, Task, TaskCategory
 from grocy.db.models.recipes import Recipe, RecipePosition
 from grocy.db.models.shopping import ShoppingList
 from grocy.db.models.units import QuantityUnitConversion
-from grocy.db.models.users import ApiKey, User
+from grocy.db.models.users import ApiKey, User, UserPermission
 
 
 async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> None:
@@ -20,6 +20,7 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
     admin = User(username="admin", first_name="Admin", last_name="User", password="")
     session.add(admin)
     await session.flush()
+    session.add(UserPermission(user_id=admin.id, permission_id=1))
     session.add(
         ApiKey(
             api_key=api_key,
@@ -138,7 +139,9 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
                 name="Clean fridge",
                 description="Wipe shelves",
                 period_type="weekly",
-                period_days=7,
+                period_interval=1,
+                period_config="sunday",
+                start_date=datetime.now(),
             ),
             Battery(
                 name="Kitchen scale",

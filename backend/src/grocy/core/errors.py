@@ -25,7 +25,8 @@ class ConflictError(GrocyError):
         super().__init__(message, status_code=409, code="conflict")
 
 
-async def grocy_error_handler(_request: Request, exc: GrocyError) -> JSONResponse:
+async def grocy_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, GrocyError)
     return JSONResponse(
         status_code=exc.status_code,
         content={"error_message": exc.message, "error_code": exc.code},

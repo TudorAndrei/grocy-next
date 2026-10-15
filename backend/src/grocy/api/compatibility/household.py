@@ -1,16 +1,31 @@
+from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Response
+from pydantic import BaseModel
 
+from grocy.api.compatibility.filtering import filter_rows
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import HouseholdSvc
 
 router = APIRouter(tags=["household"])
 
 
+class TaskCompletionBody(BaseModel):
+    done_time: datetime | None = None
+
+
+class TrackingBody(BaseModel):
+    tracked_time: datetime | None = None
+    done_by: int | None = None
+    skipped: bool = False
+
+
 @router.get("/api/chores")
-async def list_chores(_actor: CurrentActor, household: HouseholdSvc) -> list[dict[str, Any]]:
-    return await household.list_chores()
+async def list_chores(
+    request: Request, _actor: CurrentActor, household: HouseholdSvc
+) -> list[dict[str, Any]]:
+    return filter_rows(await household.list_chores(), request.query_params)
 
 
 @router.get("/api/chores/{chore_id}")
@@ -27,67 +42,78 @@ async def execute_chore(
     chore_id: int,
     actor: CurrentActor,
     household: HouseholdSvc,
+    body: TrackingBody | None = None,
 ) -> dict[str, Any]:
-    return await household.execute_chore(actor, chore_id)
+    return await household.execute_chore(actor, chore_id, **(body.model_dump() if body else {}))
 
 
-@router.post("/api/chores/executions/{execution_id}/undo")
+@router.post("/api/chores/executions/{execution_id}/undo", status_code=204)
 async def undo_chore(
     execution_id: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.undo_chore_execution(execution_id)
+) -> Response:
+    await household.undo_chore_execution(execution_id)
+    return Response(status_code=204)
 
 
-@router.post("/api/chores/executions/calculate-next-assignments")
+@router.post("/api/chores/executions/calculate-next-assignments", status_code=204)
 async def calculate_next_assignments(
     _actor: CurrentActor,
     household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.calculate_next_assignments()
+    body: dict[str, int] | None = None,
+) -> Response:
+    await household.calculate_next_assignments((body or {}).get("chore_id"))
+    return Response(status_code=204)
 
 
-@router.post("/api/chores/{chore_id_to_keep}/merge/{chore_id_to_remove}")
+@router.post("/api/chores/{chore_id_to_keep}/merge/{chore_id_to_remove}", status_code=204)
 async def merge_chores(
     chore_id_to_keep: int,
     chore_id_to_remove: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.merge_chores(chore_id_to_keep, chore_id_to_remove)
+) -> Response:
+    await household.merge_chores(chore_id_to_keep, chore_id_to_remove)
+    return Response(status_code=204)
 
 
 @router.get("/api/tasks")
 async def list_tasks(
+    request: Request,
     _actor: CurrentActor,
     household: HouseholdSvc,
     include_done: Annotated[bool, Query()] = False,
 ) -> list[dict[str, Any]]:
-    return await household.list_tasks(include_done=include_done)
+    return filter_rows(await household.list_tasks(include_done=include_done), request.query_params)
 
 
-@router.post("/api/tasks/{task_id}/complete")
+@router.post("/api/tasks/{task_id}/complete", status_code=204)
 async def complete_task(
     task_id: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.complete_task(task_id)
+    body: TaskCompletionBody | None = None,
+) -> Response:
+    await household.complete_task(task_id, done_time=body.done_time if body else None)
+    return Response(status_code=204)
 
 
-@router.post("/api/tasks/{task_id}/undo")
+@router.post("/api/tasks/{task_id}/undo", status_code=204)
 async def undo_task(
     task_id: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.undo_task(task_id)
+) -> Response:
+    await household.undo_task(task_id)
+    return Response(status_code=204)
 
 
 @router.get("/api/batteries")
-async def list_batteries(_actor: CurrentActor, household: HouseholdSvc) -> list[dict[str, Any]]:
-    return await household.list_batteries()
+async def list_batteries(
+    request: Request, _actor: CurrentActor, household: HouseholdSvc
+) -> list[dict[str, Any]]:
+    return filter_rows(await household.list_batteries(), request.query_params)
 
 
 @router.get("/api/batteries/{battery_id}")
@@ -104,14 +130,18 @@ async def charge_battery(
     battery_id: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
+    body: TrackingBody | None = None,
 ) -> dict[str, Any]:
-    return await household.charge_battery(battery_id)
+    return await household.charge_battery(
+        battery_id, tracked_time=body.tracked_time if body else None
+    )
 
 
-@router.post("/api/batteries/charge-cycles/{charge_cycle_id}/undo")
+@router.post("/api/batteries/charge-cycles/{charge_cycle_id}/undo", status_code=204)
 async def undo_battery_charge(
     charge_cycle_id: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.undo_battery_charge(charge_cycle_id)
+) -> Response:
+    await household.undo_battery_charge(charge_cycle_id)
+    return Response(status_code=204)

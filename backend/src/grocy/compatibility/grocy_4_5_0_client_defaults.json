@@ -1,0 +1,413 @@
+{
+  "baseline": "v4.5.0",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "grocy_version": {
+    "Version": "4.5.0",
+    "ReleaseDate": "2025-03-28"
+  },
+  "config": {
+    "DEFAULT_LOCALE": "en",
+    "BASE_URL": "/",
+    "CALENDAR_FIRST_DAY_OF_WEEK": "",
+    "CALENDAR_SHOW_WEEK_OF_YEAR": true,
+    "MEAL_PLAN_FIRST_DAY_OF_WEEK": "",
+    "CURRENCY": "USD",
+    "ENERGY_UNIT": "kcal",
+    "BASE_PATH": "",
+    "GROCYCODE_TYPE": "2D",
+    "FEATURE_FLAG_STOCK": true,
+    "FEATURE_FLAG_SHOPPINGLIST": true,
+    "FEATURE_FLAG_RECIPES": true,
+    "FEATURE_FLAG_CHORES": true,
+    "FEATURE_FLAG_TASKS": true,
+    "FEATURE_FLAG_BATTERIES": true,
+    "FEATURE_FLAG_EQUIPMENT": true,
+    "FEATURE_FLAG_CALENDAR": true,
+    "FEATURE_FLAG_LABEL_PRINTER": false,
+    "FEATURE_FLAG_STOCK_PRICE_TRACKING": true,
+    "FEATURE_FLAG_STOCK_LOCATION_TRACKING": true,
+    "FEATURE_FLAG_STOCK_BEST_BEFORE_DATE_TRACKING": true,
+    "FEATURE_FLAG_STOCK_PRODUCT_OPENED_TRACKING": true,
+    "FEATURE_FLAG_STOCK_PRODUCT_FREEZING": true,
+    "FEATURE_FLAG_STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD": true,
+    "FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS": true,
+    "FEATURE_FLAG_RECIPES_MEALPLAN": true,
+    "FEATURE_FLAG_CHORES_ASSIGNMENTS": true,
+    "FEATURE_FLAG_THERMAL_PRINTER": false,
+    "FEATURE_FLAG_DISABLE_BROWSER_BARCODE_CAMERA_SCANNING": false,
+    "FEATURE_FLAG_AUTO_TORCH_ON_WITH_CAMERA": true,
+    "LOCALE": "en"
+  },
+  "localization": {
+    "domain": "grocy/strings",
+    "plural-forms": null,
+    "messages": {
+      "": {
+        "no-assignment": [
+          "No assignment"
+        ],
+        "who-least-did-first": [
+          "Who least did first"
+        ],
+        "random": [
+          "Random"
+        ],
+        "in-alphabetical-order": [
+          "In alphabetical order"
+        ],
+        "timeago_locale": [
+          "en"
+        ],
+        "timeago_nan": [
+          "NaN years ago"
+        ],
+        "moment_locale": [
+          "x"
+        ],
+        "datatables_localization": [
+          "{\"sEmptyTable\":\"No data available in table\",\"sInfo\":\"Showing _START_ to _END_ of _TOTAL_ entries\",\"sInfoEmpty\":\"Showing 0 to 0 of 0 entries\",\"sInfoFiltered\":\"(filtered from _MAX_ total entries)\",\"sInfoPostFix\":\"\",\"sInfoThousands\":\",\",\"sLengthMenu\":\"Show _MENU_ entries\",\"sLoadingRecords\":\"Loading...\",\"sProcessing\":\"Processing...\",\"sSearch\":\"Search:\",\"sZeroRecords\":\"No matching records found\",\"oPaginate\":{\"sFirst\":\"First\",\"sLast\":\"Last\",\"sNext\":\"Next\",\"sPrevious\":\"Previous\"},\"oAria\":{\"sSortAscending\":\": activate to sort column ascending\",\"sSortDescending\":\": activate to sort column descending\"}}"
+        ],
+        "summernote_locale": [
+          "x"
+        ],
+        "fullcalendar_locale": [
+          "x"
+        ],
+        "bootstrap-select_locale": [
+          "x"
+        ],
+        "purchase": [
+          "Purchase"
+        ],
+        "transfer_to": [
+          "Transfer To"
+        ],
+        "transfer_from": [
+          "Transfer From"
+        ],
+        "consume": [
+          "Consume"
+        ],
+        "inventory-correction": [
+          "Inventory correction"
+        ],
+        "product-opened": [
+          "Product opened"
+        ],
+        "stock-edit-old": [
+          "Stock entry edited (old values)"
+        ],
+        "stock-edit-new": [
+          "Stock entry edited (new values)"
+        ],
+        "self-production": [
+          "Self-production"
+        ],
+        "manually": [
+          "Manually"
+        ],
+        "daily": [
+          "Daily"
+        ],
+        "weekly": [
+          "Weekly"
+        ],
+        "monthly": [
+          "Monthly"
+        ],
+        "yearly": [
+          "Yearly"
+        ],
+        "hourly": [
+          "Hourly"
+        ],
+        "adaptive": [
+          "Adaptive"
+        ],
+        "text-single-line": [
+          "Text (single line)"
+        ],
+        "text-multi-line": [
+          "Text (multi line)"
+        ],
+        "number-integral": [
+          "Number (integral)"
+        ],
+        "number-decimal": [
+          "Number (decimal)"
+        ],
+        "number-currency": [
+          "Number (currency)"
+        ],
+        "date": [
+          "Date (without time)"
+        ],
+        "datetime": [
+          "Date & time"
+        ],
+        "checkbox": [
+          "Checkbox"
+        ],
+        "preset-list": [
+          "Select list (a single item can be selected)"
+        ],
+        "preset-checklist": [
+          "Select list (multiple items can be selected)"
+        ],
+        "link": [
+          "Link"
+        ],
+        "link-with-title": [
+          "Link (with title)"
+        ],
+        "file": [
+          "File"
+        ],
+        "image": [
+          "Image"
+        ],
+        "ADMIN": [
+          "All permissions"
+        ],
+        "USERS_CREATE": [
+          "Create users"
+        ],
+        "USERS_EDIT": [
+          "Edit users (including passwords)"
+        ],
+        "USERS_READ": [
+          "Show users"
+        ],
+        "USERS_EDIT_SELF": [
+          "Edit own user data / change own password"
+        ],
+        "BATTERIES_UNDO_CHARGE_CYCLE": [
+          "Undo charge cycle"
+        ],
+        "BATTERIES_TRACK_CHARGE_CYCLE": [
+          "Track charge cycle"
+        ],
+        "CHORE_TRACK_EXECUTION": [
+          "Track execution"
+        ],
+        "CHORE_UNDO_EXECUTION": [
+          "Undo execution"
+        ],
+        "MASTER_DATA_EDIT": [
+          "Edit master data"
+        ],
+        "TASKS_UNDO_EXECUTION": [
+          "Undo execution"
+        ],
+        "TASKS_MARK_COMPLETED": [
+          "Mark completed"
+        ],
+        "STOCK_EDIT": [
+          "Edit stock entries"
+        ],
+        "STOCK_TRANSFER": [
+          "Transfer"
+        ],
+        "STOCK_INVENTORY": [
+          "Inventory"
+        ],
+        "STOCK_CONSUME": [
+          "Consume"
+        ],
+        "STOCK_OPEN": [
+          "Open products"
+        ],
+        "STOCK_PURCHASE": [
+          "Purchase"
+        ],
+        "SHOPPINGLIST_ITEMS_ADD": [
+          "Add items"
+        ],
+        "SHOPPINGLIST_ITEMS_DELETE": [
+          "Remove items"
+        ],
+        "USERS": [
+          "User management"
+        ],
+        "STOCK": [
+          "Stock"
+        ],
+        "SHOPPINGLIST": [
+          "Shopping list"
+        ],
+        "CHORES": [
+          "Chores"
+        ],
+        "BATTERIES": [
+          "Batteries"
+        ],
+        "TASKS": [
+          "Tasks"
+        ],
+        "RECIPES": [
+          "Recipes"
+        ],
+        "EQUIPMENT": [
+          "Equipment"
+        ],
+        "CALENDAR": [
+          "Calendar"
+        ],
+        "RECIPES_MEALPLAN": [
+          "Meal plan"
+        ],
+        "cs": [
+          "Czech"
+        ],
+        "da": [
+          "Danish"
+        ],
+        "de": [
+          "German"
+        ],
+        "el_GR": [
+          "Greek"
+        ],
+        "en": [
+          "English"
+        ],
+        "en_GB": [
+          "English (Great Britain)"
+        ],
+        "es": [
+          "Spanish"
+        ],
+        "fr": [
+          "French"
+        ],
+        "hu": [
+          "Hungarian"
+        ],
+        "it": [
+          "Italian"
+        ],
+        "ja": [
+          "Japanese"
+        ],
+        "ko_KR": [
+          "Korean"
+        ],
+        "nl": [
+          "Dutch"
+        ],
+        "no": [
+          "Norwegian"
+        ],
+        "pl": [
+          "Polish"
+        ],
+        "pt_BR": [
+          "Portuguese (Brazil)"
+        ],
+        "pt_PT": [
+          "Portuguese (Portugal)"
+        ],
+        "ru": [
+          "Russian"
+        ],
+        "sk_SK": [
+          "Slovak"
+        ],
+        "sl": [
+          "Slovenian"
+        ],
+        "sv_SE": [
+          "Swedish"
+        ],
+        "tr": [
+          "Turkish"
+        ],
+        "zh_TW": [
+          "Chinese (Taiwan)"
+        ],
+        "zh_CN": [
+          "Chinese (China)"
+        ],
+        "he_IL": [
+          "Hebrew (Israel)"
+        ],
+        "ta": [
+          "Tamil"
+        ],
+        "fi": [
+          "Finnish"
+        ],
+        "ca": [
+          "Catalan"
+        ],
+        "lt": [
+          "Lithuanian"
+        ],
+        "uk": [
+          "Ukrainian"
+        ],
+        "ro_RO": [
+          "Romanian"
+        ],
+        "et_EE": [
+          "Estonian"
+        ],
+        "bg_BG": [
+          "Bulgarian"
+        ]
+      }
+    }
+  },
+  "user_settings": {
+    "night_mode": "follow-system",
+    "auto_night_mode_enabled": false,
+    "auto_night_mode_time_range_from": "20:00",
+    "auto_night_mode_time_range_to": "07:00",
+    "auto_night_mode_time_range_goes_over_midnight": true,
+    "night_mode_enabled_internal": false,
+    "auto_reload_on_db_change": false,
+    "show_clock_in_header": false,
+    "keep_screen_on": false,
+    "keep_screen_on_when_fullscreen_card": false,
+    "product_presets_location_id": -1,
+    "product_presets_product_group_id": -1,
+    "product_presets_qu_id": -1,
+    "product_presets_default_due_days": 0,
+    "product_presets_treat_opened_as_out_of_stock": true,
+    "product_presets_default_stock_label_type": 0,
+    "stock_decimal_places_amounts": 4,
+    "stock_decimal_places_prices_input": 2,
+    "stock_decimal_places_prices_display": 2,
+    "stock_auto_decimal_separator_prices": false,
+    "stock_due_soon_days": 5,
+    "stock_default_purchase_amount": 0,
+    "stock_default_consume_amount": 1,
+    "stock_default_consume_amount_use_quick_consume_amount": false,
+    "scan_mode_consume_enabled": false,
+    "scan_mode_purchase_enabled": false,
+    "show_icon_on_stock_overview_page_when_product_is_on_shopping_list": true,
+    "stock_overview_show_all_out_of_stock_products": false,
+    "show_purchased_date_on_purchase": false,
+    "show_warning_on_purchase_when_due_date_is_earlier_than_next": true,
+    "shopping_list_to_stock_workflow_auto_submit_when_prefilled": false,
+    "shopping_list_show_calendar": false,
+    "shopping_list_round_up": false,
+    "shopping_list_auto_add_below_min_stock_amount": false,
+    "shopping_list_auto_add_below_min_stock_amount_list_id": 1,
+    "shopping_list_print_show_header": true,
+    "shopping_list_print_group_by_product_group": true,
+    "shopping_list_print_layout_type": "table",
+    "recipe_ingredients_group_by_product_group": false,
+    "recipes_show_list_side_by_side": true,
+    "recipes_show_ingredient_checkbox": false,
+    "chores_due_soon_days": 5,
+    "chores_overview_swap_tracking_buttons": false,
+    "batteries_due_soon_days": 5,
+    "tasks_due_soon_days": 5,
+    "calendar_color_products": "#007bff",
+    "calendar_color_tasks": "#28a745",
+    "calendar_color_chores": "#ffc107",
+    "calendar_color_batteries": "#17a2b8",
+    "calendar_color_meal_plan": "#6c757d"
+  }
+}

@@ -2,7 +2,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-printf 'VITE_API_BASE=\nVITE_API_KEY=dev-key\n' > "$ROOT/frontend/.env"
+export VITE_API_BASE="${VITE_API_BASE:-}"
+export VITE_API_KEY="${VITE_API_KEY:-dev-key}"
 mkdir -p "$ROOT/backend/data"
 
 cd "$ROOT/backend"
