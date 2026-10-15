@@ -38,6 +38,14 @@ class NativeDatabase extends LessQL\Database
         return parent::select($table, $options);
     }
 
+    public function readQuery(string $query)
+    {
+        $this->context = ['action' => 'select', 'table' => ''];
+        $statement = $this->prepare($query);
+        $statement->execute();
+        return $statement;
+    }
+
     public function insert($table, $rows, $method = null)
     {
         $this->context = ['action' => 'insert', 'table' => $table];
@@ -114,9 +122,22 @@ class NativeStatement
         return true;
     }
 
-    public function fetchAll()
+    public function fetchAll($mode = PDO::FETCH_ASSOC)
     {
-        return $this->rows;
+        $rows = array_slice($this->rows, $this->position);
+        $this->position = count($this->rows);
+        $group = ($mode & PDO::FETCH_GROUP) !== 0;
+        $object = ($mode & ~PDO::FETCH_GROUP) === PDO::FETCH_OBJ;
+        $result = [];
+        foreach ($rows as $row) {
+            if ($group) {
+                $key = array_shift($row);
+                $result[$key][] = $object ? (object)$row : $row;
+            } else {
+                $result[] = $object ? (object)$row : $row;
+            }
+        }
+        return $result;
     }
 
     public function fetch()
@@ -228,16 +249,26 @@ function nativeWriteBody(array $request, NativeDatabase $database)
     return (new NativeGenericController($database))->parseBody(new Slim\Http\ServerRequest($http));
 }
 
-function nativeGenericRead(array $request, NativeDatabase $database): array
+function nativeGetRequest(array $request)
 {
-    $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
-        'GET', 'http://localhost/api/objects/?' . base64_decode($request['query_string'], true)
+    return (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
+        'GET', 'http://localhost/api/?' . base64_decode($request['query_string'], true)
     );
+}
+
+function nativeApiResponse()
+{
     $response = new Slim\Http\Response(
         (new Slim\Psr7\Factory\ResponseFactory())->createResponse(),
         new Slim\Psr7\Factory\StreamFactory()
     );
-    $response = $response->withHeader('Content-Type', 'application/json');
+    return $response->withHeader('Content-Type', 'application/json');
+}
+
+function nativeGenericRead(array $request, NativeDatabase $database): array
+{
+    $http = nativeGetRequest($request);
+    $response = nativeApiResponse();
     $controller = new NativeGenericController($database);
     $args = ['entity' => $request['entity']];
     if ($request['operation'] === 'field_read') {
@@ -249,9 +280,25 @@ function nativeGenericRead(array $request, NativeDatabase $database): array
         $args['objectId'] = $request['object_id'];
         $response = $controller->GetObject($http, $response, $args);
     }
-    // JsonMiddleware applies these headers after a handled controller response.
+    return nativeEncodedResponse($response);
+}
+
+function nativeCorsHeaders(): array
+{
+    return [
+        'Access-Control-Allow-Origin' => ['*'],
+        'Access-Control-Allow-Methods' => ['GET, POST, PUT, DELETE, OPTIONS'],
+        'Access-Control-Allow-Headers' => ['*'],
+    ];
+}
+
+function nativeEncodedResponse($response): array
+{
+    // Keep JsonMiddleware and the outer CorsMiddleware headers.
     $response = $response->withHeader('Content-Type', 'application/json');
-    $response = $response->withHeader('Access-Control-Allow-Origin', '*');
+    foreach (nativeCorsHeaders() as $name => $values) {
+        $response = $response->withHeader($name, $values);
+    }
     return [
         'response' => base64_encode((string)$response->getBody()),
         'status' => $response->getStatusCode(),
@@ -275,6 +322,9 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
     $fiber = new Fiber(function () use ($request, $database) {
         $parsing = false;
         try {
+            if ($request['operation'] === 'list_read') {
+                return nativeListRead($request, $database);
+            }
             if (in_array($request['operation'], ['generic_read', 'field_read'], true)) {
                 return nativeGenericRead($request, $database);
             }
@@ -311,7 +361,7 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
             $data = [
                 'error_message' => $error->getMessage(),
             ];
-            $read = in_array($request['operation'], ['generic_read', 'field_read'], true);
+            $read = in_array($request['operation'], ['generic_read', 'field_read', 'list_read'], true);
             $uncaught = $parsing || $read || ($request['method'] ?? 'PUT') === 'DELETE' || $error instanceof Error;
             if ($uncaught) {
                 $data['error_details'] = nativeErrorDetails($error);
@@ -319,7 +369,7 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
             if ($read) {
                 return [
                     'response' => base64_encode(json_encode($data)), 'status' => 500,
-                    'headers' => ['Content-Type' => ['application/json']],
+                    'headers' => ['Content-Type' => ['application/json']] + nativeCorsHeaders(),
                 ];
             }
             $status = $error instanceof Slim\Exception\HttpException ? $error->getCode() : ($uncaught ? 500 : 400);

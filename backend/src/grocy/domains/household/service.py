@@ -153,33 +153,6 @@ class HouseholdService:
         await self.session.commit()
         return {"id": execution_id, "undone": True}
 
-    async def list_tasks(self, *, include_done: bool = False) -> list[dict]:
-        stmt = select(Task).order_by(Task.due_date.is_(None), Task.due_date.asc(), Task.id)
-        if not include_done:
-            stmt = stmt.where(Task.done == 0)
-        rows = (await self.session.execute(stmt)).scalars().all()
-        result = []
-        for row in rows:
-            category = (
-                await self.session.get(TaskCategory, row.category_id) if row.category_id else None
-            )
-            result.append(
-                {
-                    **self._serialize_task(row),
-                    "assigned_to_user": await self._user(row.assigned_to_user_id),
-                    "category": {
-                        "id": category.id,
-                        "name": category.name,
-                        "description": category.description,
-                        "active": category.active,
-                        "row_created_timestamp": database_time(category.row_created_timestamp),
-                    }
-                    if category and category.active
-                    else None,
-                }
-            )
-        return result
-
     async def complete_task(self, task_id: int, *, done_time: datetime | None = None) -> dict:
         task = await self.session.get(Task, task_id)
         if task is None:

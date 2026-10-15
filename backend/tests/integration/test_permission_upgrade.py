@@ -51,7 +51,9 @@ def test_existing_permission_rows_keep_their_counter_after_replacement(tmp_path:
             old.post("/api/users", json={"username": "Legacy", "password": "test"}).status_code
             == 204
         )
-        user = old.get("/api/users", params={"query[]": "username=Legacy"}).json()[0]["id"]
+        # Read fixture identity without the users_dto view added by the later upgrade.
+        with sqlite3.connect(database) as connection:
+            user = connection.execute("SELECT id FROM users WHERE username='Legacy'").fetchone()[0]
         path = f"/api/users/{user}/permissions"
         previous = old.get(path).json()[0]["id"]
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "true")

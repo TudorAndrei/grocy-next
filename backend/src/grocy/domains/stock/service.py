@@ -973,19 +973,30 @@ class StockService:
         return [self._serialize_log(old), self._serialize_log(new)]
 
     async def volatile(self, due_soon_days: int = 5) -> dict:
-        today = date.today()
-        due_limit = today + timedelta(days=due_soon_days)
+        current = await self.current_stock()
+        states = (
+            await self.session.execute(
+                text(
+                    "SELECT product_id, "
+                    "best_before_date <= date('now', :days) "
+                    "AND best_before_date >= date() AS due, "
+                    "best_before_date <= date('now', '-1 days') AS overdue, "
+                    "best_before_date < date() AND due_type = 2 AS expired "
+                    "FROM stock_current"
+                ),
+                {"days": f"{due_soon_days} days"},
+            )
+        ).mappings()
+        by_product = {row["product_id"]: row for row in states}
         due_products, overdue_products, expired_products = [], [], []
-        for row in await self.current_stock():
-            if not row["best_before_date"]:
-                continue
-            due = date.fromisoformat(row["best_before_date"])
-            if due < today:
-                overdue_products.append(row)
-                if row["due_type"] == 2:
-                    expired_products.append(row)
-            elif due <= due_limit:
+        for row in current:
+            state = by_product[row["product_id"]]
+            if state["due"]:
                 due_products.append(row)
+            if state["overdue"]:
+                overdue_products.append(row)
+            if state["expired"]:
+                expired_products.append(row)
         missing = (
             (await self.session.execute(text("SELECT * FROM stock_missing_products")))
             .mappings()
@@ -1001,27 +1012,6 @@ class StockService:
             "expired_products": expired_products,
             "missing_products": missing_products,
         }
-
-    async def product_locations(
-        self, product_id: int, *, include_sub_products: bool = False
-    ) -> list[dict]:
-        ids = await self.products.child_ids(product_id) if include_sub_products else [product_id]
-        result = []
-        for identifier in ids:
-            rows = (
-                (
-                    await self.session.execute(
-                        text(
-                            "SELECT * FROM stock_current_locations WHERE product_id = :product_id"
-                        ),
-                        {"product_id": identifier},
-                    )
-                )
-                .mappings()
-                .all()
-            )
-            result.extend(dict(row) for row in rows)
-        return result
 
     async def price_history(self, product_id: int) -> list[dict]:
         from grocy.db.models.catalog import ShoppingLocation
@@ -1206,12 +1196,6 @@ class StockService:
     ) -> dict:
         product = await self.products.get_by_barcode(barcode)
         return await self.inventory(actor, product.id, new_amount, **kwargs)
-
-    async def location_entries(self, location_id: int) -> list[dict]:
-        location = await self.session.get(Location, location_id)
-        if location is None or not location.active:
-            raise GrocyError("Location does not exist", status_code=500)
-        return await self.list_inventory(location_id=location_id)
 
     async def get_booking(self, booking_id: int) -> dict:
         log = await self.session.get(StockLog, booking_id)

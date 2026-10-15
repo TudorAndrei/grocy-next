@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from typing import Any
 from uuid import uuid4
@@ -2831,14 +2831,17 @@ def test_native_generic_json_uses_php_encoding(api):
 
 def test_native_nonfinite_number_returns_a_serialization_error(api, catalog):
     product, *_ = catalog
-    saved = api.put(f"/api/objects/products/{product}", json={"min_stock_amount": "1e9999"})
-    assert saved.status_code == 204, saved.text
-    response = api.get(f"/api/objects/products/{product}")
-    assert response.status_code == 500
-    assert response.json()["error_message"] == (
-        "fwrite(): Argument #2 ($data) must be of type string, false given"
-    )
-    assert "error_details" in response.json()
+    try:
+        saved = api.put(f"/api/objects/products/{product}", json={"min_stock_amount": "1e9999"})
+        assert saved.status_code == 204, saved.text
+        response = api.get(f"/api/objects/products/{product}")
+        assert response.status_code == 500
+        assert response.json()["error_message"] == (
+            "fwrite(): Argument #2 ($data) must be of type string, false given"
+        )
+        assert "error_details" in response.json()
+    finally:
+        assert api.delete(f"/api/objects/products/{product}").status_code == 204
 
 
 @pytest.mark.parametrize("value,valid", [(b"Saved/\xc3\x84", True), (b"\xff", False)])
@@ -2912,3 +2915,303 @@ def test_native_nested_nonfinite_numbers_use_lessql_storage(api, method, number)
         assert response.json() == {"created_object_id": str(saved[0]["id"])}
     else:
         assert parent[0]["id"] == root
+
+
+@pytest.fixture(
+    params=[
+        "tasks",
+        "chores",
+        "batteries",
+        "users",
+        "recipes",
+        "product_entries",
+        "product_locations",
+        "location_entries",
+    ]
+)
+def native_filtered_list(api, request):
+    kind = request.param
+    marker = "list_" + uuid4().hex
+    key = "id"
+    if kind in {"product_entries", "product_locations", "location_entries"}:
+        product, _unit, _other, location = request.getfixturevalue("catalog")
+        locations = [location, location]
+        if kind == "product_locations":
+            locations[1] = create(api, "locations", name=marker + "_other")
+            key = "location_id"
+        for index, place in enumerate(locations):
+            response = api.post(
+                f"/api/stock/products/{product}/add",
+                json={
+                    "amount": index + 2,
+                    "location_id": place,
+                    "best_before_date": f"2037-01-0{index + 1}",
+                    "note": marker,
+                },
+            )
+            assert response.status_code == 200, response.text
+        path = (
+            f"/api/stock/locations/{location}/entries"
+            if kind == "location_entries"
+            else f"/api/stock/products/{product}/"
+            + ("entries" if kind == "product_entries" else "locations")
+        )
+        ids = (
+            locations
+            if kind == "product_locations"
+            else [row["id"] for row in rows(api, "stock", product_id=product)]
+        )
+    elif kind == "users":
+        for index in range(2):
+            response = api.post(
+                "/api/users", json={"username": marker + str(index), "password": "secret"}
+            )
+            assert response.status_code == 204, response.text
+        path = "/api/users"
+        response = api.get(path, params={"query[]": f"username~{marker}"})
+        assert response.status_code == 200, response.text
+        ids = [row["id"] for row in response.json()]
+    else:
+        options = {"period_type": "daily"} if kind == "chores" else {}
+        ids = [create(api, kind, name=marker + str(index), **options) for index in range(2)]
+        path = "/api/recipes/fulfillment" if kind == "recipes" else f"/api/{kind}"
+        if kind == "recipes":
+            key = "recipe_id"
+    ids = sorted(ids)
+    assert len(ids) == 2 and ids[0] != ids[1]
+    return kind, path, key, ids
+
+
+@pytest.mark.parametrize("profile", ["numbers", "arrays", "errors"])
+def test_native_filtered_lists_use_php_and_sql_rules(api, native_filtered_list, profile):
+    kind, path, key, ids = native_filtered_list
+    base = [("query[]", f"{key}>={ids[0]}"), ("query[]", f"{key}<={ids[1]}"), ("order", key)]
+    caught = 400 if kind in {"recipes", "users"} else 500
+    if profile == "numbers":
+        cases = [
+            ([("limit", "-2")], 200, ids),
+            ([("limit", "1.9")], 200, ids[:1]),
+            ([("limit", "1e1")], 200, ids),
+            ([("limit", "bad")], 200, []),
+            ([("offset", "-2"), ("limit", "1")], 200, ids[:1]),
+            ([("offset", "1tail"), ("limit", "1")], 200, ids[1:]),
+            ([("order", key + ":asc:ignored")], 200, ids),
+        ]
+    elif profile == "arrays":
+        cases = [
+            ([("limit[]", "1")], 200, ids[:1]),
+            ([("offset[]", "1")], 200, ids[1:]),
+            ([("query[one]", f"{key}={ids[0]}")], 200, ids[:1]),
+            (
+                [("query", f"{key}={ids[0]}")],
+                500,
+                "Grocy\\Controllers\\BaseApiController::filter():",
+            ),
+            ([("query[one][two]", "value")], 500, "preg_match(): Argument #2"),
+            ([("order[]", key)], 500, "explode(): Argument #2"),
+        ]
+    else:
+        cases = [
+            (
+                [("order", "missingSort")],
+                caught,
+                "SQLSTATE[HY000]: General error: 1 no such column: missingSort",
+            ),
+            ([("order", key + ":DESC")], caught, "Invalid sort order DESC"),
+            (
+                [("query[]", "missingField=1")],
+                caught,
+                "SQLSTATE[HY000]: General error: 1 no such column: missingField",
+            ),
+            ([("query[]", "???")], caught, "Invalid query"),
+        ]
+    for extra, status, expected in cases:
+        response = api.get(path, params=base + extra)
+        assert response.status_code == status, (extra, response.text)
+        assert response.headers["content-type"] == "application/json"
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-headers"] == "*"
+        assert response.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, OPTIONS"
+        body = response.json()
+        if status == 200:
+            assert [row[key] for row in body] == expected, extra
+        else:
+            assert body["error_message"].startswith(expected), (extra, body)
+            assert set(body) == (
+                {"error_message", "error_details"} if status == 500 else {"error_message"}
+            )
+            if status == 500:
+                assert set(body["error_details"]) == {"stack_trace", "file", "line"}
+
+
+def test_native_current_tasks_ignore_include_done_and_keep_php_json(api):
+    marker = "current_" + uuid4().hex
+    pending = create(api, "tasks", name=marker + "Ä/", done=0)
+    create(api, "tasks", name=marker + "_done", done=1)
+    for parameter in [("include_done", "true"), ("include_done", "bad"), ("include_done[]", "1")]:
+        response = api.get("/api/tasks", params=[("query[]", "name~" + marker), parameter])
+        assert response.status_code == 200, response.text
+        assert [row["id"] for row in response.json()] == [pending]
+        assert b"\\u00c4\\/" in response.content
+        assert response.headers["content-type"] == "application/json"
+
+
+@pytest.mark.parametrize("action", ["entries", "locations"])
+def test_native_stock_lists_parse_subproduct_flags_in_php(api, catalog, action):
+    product, unit, _other, location = catalog
+    child = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        parent_product_id=product,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    for identity in [product, child]:
+        response = api.post(
+            f"/api/stock/products/{identity}/add",
+            json={"amount": 2, "best_before_date": "2037-01-01"},
+        )
+        assert response.status_code == 200, response.text
+    for name, value, included in [
+        ("include_sub_products", "yes", True),
+        ("include_sub_products", "off", False),
+        ("include_sub_products", "bad", False),
+        ("include_sub_products[]", "1", False),
+    ]:
+        response = api.get(f"/api/stock/products/{product}/{action}", params=[(name, value)])
+        assert response.status_code == 200, response.text
+        assert {row["product_id"] for row in response.json()} == (
+            {product, child} if included else {product}
+        )
+
+
+@pytest.mark.parametrize("action", ["entries", "locations", "location_entries"])
+def test_native_stock_list_ids_keep_php_and_sql_conversion(api, catalog, action):
+    product, _unit, _other, location = catalog
+    assert (
+        api.post(
+            f"/api/stock/products/{product}/add",
+            json={"amount": 2, "best_before_date": "2037-01-01"},
+        ).status_code
+        == 200
+    )
+    for suffix in [".0", "e0"]:
+        path = (
+            f"/api/stock/locations/{location}{suffix}/entries"
+            if action == "location_entries"
+            else f"/api/stock/products/{product}{suffix}/{action}"
+        )
+        response = api.get(path)
+        assert response.status_code == 200, response.text
+        assert len(response.json()) == 1 and response.json()[0]["product_id"] == product
+    path = (
+        "/api/stock/locations/invalid/entries"
+        if action == "location_entries"
+        else f"/api/stock/products/invalid/{action}"
+    )
+    response = api.get(path)
+    assert response.status_code == 500, response.text
+    message = response.json()["error_message"]
+    if action == "location_entries":
+        assert message == "Location does not exist"
+    else:
+        assert message.startswith("Grocy\\Services\\StockService::GetProductStock")
+        assert "must be of type int, string given" in message
+
+
+def test_native_filtered_lists_keep_saved_dates_and_related_rows(api):
+    category = create(api, "task_categories", name=uuid4().hex)
+    task = create(
+        api,
+        "tasks",
+        name=uuid4().hex,
+        due_date="0000-01-01",
+        row_created_timestamp="0000-01-01 00:00:00.123456",
+        assigned_to_user_id=1,
+        category_id=category,
+    )
+    response = api.get("/api/tasks")
+    assert response.status_code == 200, response.text
+    saved = next(row for row in response.json() if row["id"] == task)
+    assert saved["due_date"] == "0000-01-01"
+    assert saved["row_created_timestamp"] == "0000-01-01 00:00:00.123456"
+    assert saved["assigned_to_user"]["id"] == 1
+    assert saved["category"]["id"] == category
+
+
+def test_native_volatile_stock_uses_sqlite_dates_and_php_days(api, catalog):
+    product, unit, _other, location = catalog
+    today = datetime.now(UTC).date()
+    products = {}
+    for offset in [-1, 0, 1, 2, 6]:
+        identity = (
+            product
+            if offset == -1
+            else create(
+                api,
+                "products",
+                name=uuid4().hex,
+                location_id=location,
+                qu_id_stock=unit,
+                qu_id_purchase=unit,
+                due_type=2,
+            )
+        )
+        assert api.put(f"/api/objects/products/{identity}", json={"due_type": 2}).status_code == 204
+        response = api.post(
+            f"/api/stock/products/{identity}/add",
+            json={"amount": 1, "best_before_date": (today + timedelta(days=offset)).isoformat()},
+        )
+        assert response.status_code == 200, response.text
+        products[offset] = identity
+    own = set(products.values())
+    for key, value, days in [
+        ("due_soon_days", "0", 5),
+        ("due_soon_days", "1.9", 1),
+        ("due_soon_days", "1e1", 10),
+        ("due_soon_days", "bad", 5),
+        ("due_soon_days", "-2", -2),
+        ("due_soon_days[]", "2", 5),
+    ]:
+        response = api.get("/api/stock/volatile", params=[(key, value)])
+        assert response.status_code == 200, response.text
+        selected = {
+            kind: {row.get("product_id", row.get("id")) for row in group} & own
+            for kind, group in response.json().items()
+        }
+        assert selected == {
+            "due_products": {
+                identity for offset, identity in products.items() if 0 <= offset <= days
+            },
+            "overdue_products": {products[-1]},
+            "expired_products": {products[-1]},
+            "missing_products": set(),
+        }
+
+
+def test_shopping_expiry_uses_the_same_sqlite_day_as_stock(api, catalog):
+    product, unit, _other, location = catalog
+    today = datetime.now(UTC).date()
+    expired = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+        due_type=2,
+    )
+    assert api.put(f"/api/objects/products/{product}", json={"due_type": 2}).status_code == 204
+    for identity, day in [(product, today), (expired, today - timedelta(days=1))]:
+        response = api.post(
+            f"/api/stock/products/{identity}/add",
+            json={"amount": 1, "best_before_date": day.isoformat()},
+        )
+        assert response.status_code == 200, response.text
+    response = api.post("/api/stock/shoppinglist/add-expired-products", json={})
+    assert response.status_code == 204, response.text
+    assert rows(api, "shopping_list", product_id=product) == []
+    saved = rows(api, "shopping_list", product_id=expired)
+    assert len(saved) == 1 and saved[0]["amount"] == 1

@@ -9,8 +9,8 @@ from fastapi import APIRouter, Request, Response
 from sqlalchemy import delete, select
 from sqlalchemy.exc import DBAPIError
 
-from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
+from grocy.api.compatibility.responses import native_list_response
 from grocy.compatibility import client_defaults
 from grocy.compatibility.users import user_dto
 from grocy.core.auth import CurrentActor
@@ -166,9 +166,8 @@ async def delete_user_setting(
 @router.get("/api/users")
 async def list_users(
     request: Request, _actor: CurrentActor, session: DbSession
-) -> list[dict[str, Any]]:
-    rows = (await session.execute(select(User).order_by(User.id))).scalars().all()
-    return filter_rows([user_dto(row) for row in rows], request.query_params)
+) -> Response:
+    return await native_list_response(request, session, "users")
 
 
 @router.post("/api/users", status_code=204)

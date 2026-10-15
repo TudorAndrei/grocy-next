@@ -15,6 +15,18 @@
     "helpers/extensions.php": "cadcba6d35641d4457d26e6b4e4d31f1e97308c1173ce5cd95ba33115440c3d4",
     "controllers/BaseController.php": "4bcbbdf153c142e7e70d3ef388a5e7d048db80dda11343fb6e8c1841d56c9135",
     "controllers/BaseApiController.php": "cffbf4424d8b31d2bb251f9553f7be88788ebcb9b44b8c10393f0b04aba5df99",
-    "controllers/GenericEntityApiController.php": "7213c41d783aac8f36e5a39ed5e242fa0ab1b050dc7cfd7fb2cab6c63e0722b0"
+    "controllers/GenericEntityApiController.php": "7213c41d783aac8f36e5a39ed5e242fa0ab1b050dc7cfd7fb2cab6c63e0722b0",
+    "services/TasksService.php": "562231f5827153f3a8e7a7a8bfbdc513afa40ed12184c164e2580c88290aea66",
+    "services/ChoresService.php": "0aebc0dbfc0b9c1654dc961eb2f4444704dbe7e752efb4d80fe3f1267a8f6ed1",
+    "services/BatteriesService.php": "8ee0944fbf50bd3f014ba7045eec8e66c707f230ca1624410282a6de13a9971b",
+    "services/StockService.php": "23ef8c978a89f795233a7ddfa596a77de475a2f928c7314baf08a96007d2756b",
+    "services/RecipesService.php": "323a0dc6b4caf645be6430b89ecf2f3386235a87e93cad3e0c2c906b041c4832",
+    "services/UsersService.php": "3fa2ba19e5b3e4a5eb06b36d0b2a8ccb6218c4ef08d0e916fcababb2fb5d0989",
+    "controllers/TasksApiController.php": "f525fd7f1a0d63b227a8028ef3ea62b4bba8ded70d45fa546f67ad6df8533548",
+    "controllers/ChoresApiController.php": "c2bedbd52d67d47523672c8677b406f0799f150b726bfb5698c483175ae62456",
+    "controllers/BatteriesApiController.php": "9f2e4fc6dabe6a90ebd7a0c94640cd1043b008d639e974eecee6e93ee94bb8c2",
+    "controllers/StockApiController.php": "c655e7ca1a908aa544ade70074aff090338cd1595a246964f266afe800d444a6",
+    "controllers/RecipesApiController.php": "20be4e5414808312cdb4175820e3403c6acafe0c8f23903acf62227419066bdc",
+    "services/DatabaseService.php": "0720507d05a4207f21ddca2c536fe6c02d48af06edfe3e56debb6fdfc49d4d97"
   }
 }

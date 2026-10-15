@@ -5,8 +5,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query, Request, Response
 from pydantic import Field
 
-from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
+from grocy.api.compatibility.responses import native_list_response
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
 from grocy.domains.printing import label
@@ -90,19 +90,20 @@ class ShoppingRemoveProductBody(CompatibilityBody):
 
 @router.get("/api/stock")
 async def stock_overview(
+    request: Request,
     _actor: CurrentActor,
-    stock: StockSvc,
-) -> list[dict[str, Any]]:
-    return await stock.current_stock()
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "stock")
 
 
 @router.get("/api/stock/volatile")
 async def stock_volatile(
+    request: Request,
     _actor: CurrentActor,
-    stock: StockSvc,
-    due_soon_days: Annotated[int, Query()] = 5,
-) -> dict[str, Any]:
-    return await stock.volatile(due_soon_days=due_soon_days)
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "volatile")
 
 
 @router.get("/api/stock/entry/{entry_id}")
@@ -144,30 +145,22 @@ async def stock_product(
 
 @router.get("/api/stock/products/{product_id}/locations")
 async def stock_product_locations(
-    product_id: int,
+    product_id: str,
     request: Request,
     _actor: CurrentActor,
-    stock: StockSvc,
-    include_sub_products: Annotated[bool | None, Query()] = None,
-) -> list[dict[str, Any]]:
-    rows = await stock.product_locations(
-        product_id, include_sub_products=bool(include_sub_products)
-    )
-    return filter_rows(rows, request.query_params)
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "product_locations", product_id)
 
 
 @router.get("/api/stock/products/{product_id}/entries")
 async def stock_entries(
-    product_id: int,
+    product_id: str,
     request: Request,
     _actor: CurrentActor,
-    stock: StockSvc,
-    include_sub_products: Annotated[bool | None, Query()] = None,
-) -> list[dict[str, Any]]:
-    rows = await stock.list_inventory(
-        product_id=product_id, include_sub_products=bool(include_sub_products)
-    )
-    return filter_rows(rows, request.query_params)
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "product_entries", product_id)
 
 
 @router.get("/api/stock/products/{product_id}/price-history")
@@ -424,12 +417,12 @@ async def stock_inventory_by_barcode(
 
 @router.get("/api/stock/locations/{location_id}/entries")
 async def stock_location_entries(
-    location_id: int,
+    location_id: str,
     request: Request,
     _actor: CurrentActor,
-    stock: StockSvc,
-) -> list[dict[str, Any]]:
-    return filter_rows(await stock.location_entries(location_id), request.query_params)
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "location_entries", location_id)
 
 
 @router.post("/api/stock/shoppinglist/add-missing-products", status_code=204)

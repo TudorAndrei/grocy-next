@@ -24,3 +24,7 @@ Generic object and custom field writes pass raw request bodies to Grocy's
 unchanged `BaseApiController`. It parses and filters each body before LessQL
 uses its PHP values. `slim-framework` contains the pinned `HttpException` class
 and its license. This class keeps native Content-Type errors and status codes.
+
+List and stock reads also use the pinned Grocy controllers and services. The
+adapter supplies the application connection. The original database service
+retains its raw SQL calls and grouped object fetches for stock responses.

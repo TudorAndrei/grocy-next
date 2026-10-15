@@ -1,12 +1,12 @@
 from datetime import date, datetime
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, Request, Response
 
-from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
+from grocy.api.compatibility.responses import native_list_response
 from grocy.core.auth import CurrentActor
-from grocy.core.deps import HouseholdSvc
+from grocy.core.deps import DbSession, HouseholdSvc
 from grocy.core.errors import GrocyError
 
 router = APIRouter(tags=["household"], route_class=CompatibilityRoute)
@@ -51,9 +51,9 @@ def _chore_time(value: Any) -> date | datetime | None:
 
 @router.get("/api/chores")
 async def list_chores(
-    request: Request, _actor: CurrentActor, household: HouseholdSvc
-) -> list[dict[str, Any]]:
-    return filter_rows(await household.list_chores(), request.query_params)
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return await native_list_response(request, session, "chores")
 
 
 @router.get("/api/chores/{chore_id}")
@@ -114,10 +114,9 @@ async def merge_chores(
 async def list_tasks(
     request: Request,
     _actor: CurrentActor,
-    household: HouseholdSvc,
-    include_done: Annotated[bool, Query()] = False,
-) -> list[dict[str, Any]]:
-    return filter_rows(await household.list_tasks(include_done=include_done), request.query_params)
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "tasks")
 
 
 @router.post("/api/tasks/{task_id}/complete", status_code=204)
@@ -144,9 +143,9 @@ async def undo_task(
 
 @router.get("/api/batteries")
 async def list_batteries(
-    request: Request, _actor: CurrentActor, household: HouseholdSvc
-) -> list[dict[str, Any]]:
-    return filter_rows(await household.list_batteries(), request.query_params)
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return await native_list_response(request, session, "batteries")
 
 
 @router.get("/api/batteries/{battery_id}")

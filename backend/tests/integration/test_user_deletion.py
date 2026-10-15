@@ -53,7 +53,9 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
             old.post("/api/users", json={"username": "Former", "password": "test"}).status_code
             == 204
         )
-        user = old.get("/api/users", params={"query[]": "username=Former"}).json()[0]["id"]
+        # Read fixture identity without the users_dto view added by the later upgrade.
+        with sqlite3.connect(database) as connection:
+            user = connection.execute("SELECT id FROM users WHERE username='Former'").fetchone()[0]
         key = old.post("/api/v2/api-keys", json={"user_id": user}).json()["api_key"]
         old.headers["GROCY-API-KEY"] = key
         assert old.put("/api/user/settings/kept", json={"value": "saved"}).status_code == 204

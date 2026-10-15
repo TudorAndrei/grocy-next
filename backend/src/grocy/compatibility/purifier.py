@@ -148,6 +148,25 @@ class InputPurifier:
             execute=execute,
         )
 
+    async def native_list(
+        self,
+        *,
+        route: str,
+        object_id: str | None,
+        query_string: bytes,
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        return await self._request(
+            b"",
+            {
+                "operation": "list_read",
+                "route": route,
+                "object_id": object_id,
+                "query_string": base64.b64encode(query_string).decode("ascii"),
+            },
+            execute=execute,
+        )
+
     async def sqlite_function(self, name: str, arguments: tuple) -> dict[str, Any]:
         # A separate worker can answer while the main worker waits for SQLite.
         if self._functions is None:

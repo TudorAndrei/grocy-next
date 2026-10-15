@@ -4,10 +4,10 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
-from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
+from grocy.api.compatibility.responses import native_list_response
 from grocy.core.auth import CurrentActor
-from grocy.core.deps import RecipesSvc
+from grocy.core.deps import DbSession, RecipesSvc
 
 router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
@@ -27,10 +27,9 @@ class RecipeCreateBody(BaseModel):
 async def recipes_fulfillment(
     request: Request,
     _actor: CurrentActor,
-    recipes: RecipesSvc,
-) -> list[dict[str, Any]]:
-    rows = await recipes.list_recipes()
-    return filter_rows([await recipes.fulfillment(row.id) for row in rows], request.query_params)
+    session: DbSession,
+) -> Response:
+    return await native_list_response(request, session, "recipes")
 
 
 @router.get("/api/recipes/{recipe_id}/fulfillment")

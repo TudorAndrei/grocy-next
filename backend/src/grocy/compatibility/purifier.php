@@ -22,7 +22,9 @@ try {
     require __DIR__ . '/../_vendor/htmlpurifier/library/HTMLPurifier.auto.php';
     require __DIR__ . '/request_runtime.php';
     require __DIR__ . '/generic_runtime.php';
+    require __DIR__ . '/list_runtime.php';
     define('GROCY_DATAPATH', $argv[1]);
+    define('GROCY_MODE', 'production');
     if (!is_dir(GROCY_DATAPATH . '/viewcache')) {
         mkdir(GROCY_DATAPATH . '/viewcache', 0700, true);
     }
@@ -59,7 +61,7 @@ while (($line = fgets(STDIN)) !== false) {
             reply(['id' => $id, 'ok' => true, 'body' => $body]);
             continue;
         }
-        if (in_array($request['operation'] ?? 'purify', ['generic', 'field_write', 'field_read', 'generic_read'], true)) {
+        if (in_array($request['operation'] ?? 'purify', ['generic', 'field_write', 'field_read', 'generic_read', 'list_read'], true)) {
             reply(['id' => $id, 'ok' => true, 'body' => nativeDatabaseRequest($request, $nativeSchema)]);
             continue;
         }
