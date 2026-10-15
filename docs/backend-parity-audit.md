@@ -40,13 +40,41 @@ Sources: [recipe service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f9
 
 New users receive configured default permissions. The pinned default is `ADMIN`. An empty or null password update keeps the existing password. User creation, profile changes, and permission reads now use their specific permission checks. Shopping item and list writes use the add or delete permission. External barcode lookup requires master data access.
 
+The current-user response is an array with one user. User fields keep null values. Permission responses include their row IDs. Password value `"0"` also keeps the stored password, as in PHP. Authentication accepts the API key query parameter and checks it when the header key is invalid.
+
+Authenticated clients can read stock, household, recipe, generic object, custom field, and calendar data without a module permission. User list and permission reads retain their specific checks. File requests and public configuration reads also require authentication only. Recipe copy and chore assignment calculation follow the same upstream access rules. MCP and v2 access use the application permission rules.
+
 Sources: [user service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/UsersService.php), [user API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/UsersApiController.php), and [default permissions](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/config-dist.php).
+
+API key source: [authentication middleware](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/middleware/ApiKeyAuthMiddleware.php). User field source: [user DTO view](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0125.sql).
+
+## Files, filters, and response formats
+
+File upload creates a new file. A second upload with the same name returns 400 and preserves the original data. File reads use an inline disposition and the upstream cache duration. Image resizing requires `force_serve_as=picture` and keeps the image format. Size parameters alone return the original data.
+
+List filters use the upstream query grammar. LIKE matching supports `%` and `_` wildcards and folds ASCII letters only. Text comparisons preserve leading zeros. Null comparisons and sort order follow SQLite. The parser also keeps the upstream rules for ignored operators and characters that end a value. Invalid generic object queries return 500, as in Grocy.
+
+Stored record timestamps use spaces and whole seconds. Missing object reads return 404, but missing object updates and deletes return 400. Many missing stock and household actions also return 400. A missing stock entry read returns null. Missing product stock lists are empty. A missing location entry list returns 500, as in PHP.
+
+Sources: [file API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/FilesApiController.php), [image service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/FilesService.php), [query parser](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/BaseApiController.php), and [object API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/GenericEntityApiController.php).
+
+## Household, stock checks, and time zones
+
+Chore stock consumption uses the configured gross tare amount. Chore and battery actions return the full log record. When users have equal execution counts, the least-done assignment uses user ID order. Assignment reads use the stored assignee until calculation runs. Grocy saves a chore log before stock consumption. The backend now keeps that log if consumption fails. The PHP comparison covers this state change. It replaces the former test for atomic chore execution.
+
+Stock actions reject inactive products. Purchase, consumption, transfer, and inventory checks also follow the upstream rules for an explicitly supplied inactive location. Barcode reads use SQLite case rules and return the upstream error status for missing or inactive products.
+
+Child stock opening follows the PHP conversion loop. The remaining amount is converted again for each child entry. This can open more stock than requested. A missing conversion uses factor 1. These behaviors are deliberate runtime compatibility rules.
+
+System times and database change times use the server time zone. Timed calendar events include a time zone and an equal start and end time. Calendar exports include time zone transitions for their event range. System metadata reports the pinned database version, 253. The `php_version` field is `"not applicable"` because this server uses Python.
+
+Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/ChoresService.php), [battery API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/BatteriesApiController.php), [stock service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/StockService.php), [system service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/ApplicationService.php), and [calendar API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/CalendarApiController.php).
 
 ## Verification
 
-The final local suite passed 91 tests. The comparison suite passed 80 test cases. Ruff, basedpyright, and the frontend build also passed.
+The local suite passed 146 tests. It skipped 107 reference cases. All 184 comparison cases passed in UTC and Europe/Bucharest. Ruff, basedpyright, and the frontend build also passed.
 
-The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses UTC, English, default feature flags, and no physical label printer.
+The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest.
 
 Run the full local checks:
 
@@ -61,6 +89,9 @@ Run the PHP comparisons:
 
 ```bash
 uv run --project backend python scripts/check-reference.py
+uv run --project backend python scripts/check-reference.py --timezone Europe/Bucharest
 ```
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
+
+The remaining audit must cover upstream HTML and CSS request purification, all optional feature flags, and more input parser cases. The current datetime input models accept forms that some PHP handlers ignore. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. These gaps prevent a claim of full runtime parity.

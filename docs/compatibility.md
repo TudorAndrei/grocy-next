@@ -10,6 +10,8 @@ The `/api/v2` API adds nutrition, API key management, and meal completion. MCP a
 
 System information reports the pinned Grocy API version and a separate application version. Configuration exposes public Grocy feature flags and the display currency. Localization strings use the pinned English defaults. System time supports offsets in seconds. Database change time includes SQLite WAL writes.
 
+System information includes the pinned database version, 253. Its `php_version` field is `"not applicable"` because this server uses Python. System and database change times use the server time zone. Record timestamps use spaces and whole seconds. Timed calendar events include the time zone, equal start and end times, and time zone transitions for the event range.
+
 User preferences include the pinned defaults. Stored values can be null. Deleting a preference restores its default. Database upgrades preserve existing values and add update timestamps.
 
 Custom field reads include declared fields with null values when no value is stored. Writes reject unknown field names and preserve null values. Named custom record types use `userentity-{name}`. The web forms use field types, defaults, required inputs, and preset options from their definitions.
@@ -25,6 +27,8 @@ uv run --project backend python scripts/check-reference.py
 ```
 
 This command requires PHP and the modules that Grocy lists as required. It downloads the v4.5.0 release, verifies its SHA-256 checksum, starts a local reference server, and runs the comparison suite. It removes the temporary database and stops the server after the run. The `php-reference` CI job uses the same command.
+
+The reference server has authentication enabled and uses disposable API keys. Use `--timezone Europe/Bucharest` to run both servers in that zone. CI checks UTC and Europe/Bucharest. The test for access without module permissions needs a local reference database to create its key. The script supplies this path. For a separate reference server, set `GROCY_REFERENCE_DATABASE` to its disposable SQLite file or that test will be skipped.
 
 Use `--php /path/to/php` to select another PHP executable. Use `--release /path/to/grocy_4.5.0.zip` to use an existing archive. `--dry-run` checks local inputs. `--output json` writes a machine-readable result to standard output and sends test output to standard error.
 
@@ -69,6 +73,8 @@ File image requests support bounded resizing. Generic queries support the upstre
 
 File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
+A file upload cannot replace an existing file. Reads use the inline disposition and upstream cache duration. Only `force_serve_as=picture` enables image resizing. Resizing keeps the image format. List filters support SQLite wildcards, ASCII case matching, text values with leading zeros, and upstream null rules. The query parser also copies ignored operators and value truncation. Invalid generic object queries return the upstream status 500.
+
 Stock label modes follow the Grocy 4.5.0 runtime: 0 for no label, 1 for one label, and 2 for one label per whole unit. The pinned OpenAPI file lists 1, 2, and 3. The runtime values take precedence for compatibility. Per-unit bookings share a transaction ID. As in PHP, mode 2 omits a fractional remainder. Stock counts accept a purchase date. They count the product across all locations and use the last price and store when these values are omitted.
 
 Calendar subscription keys grant calendar access only. Revoke a subscription key through API key management. Server configuration responses omit API keys and the database URL.
@@ -84,5 +90,11 @@ Meal plan writes maintain day, week, and individual meal recipes. Startup restor
 Shopping writes keep the requested unit, or use the purchase unit. Minimum stock settings can add missing items after product changes, consumption, or opening. Shopping removal uses the configured decimal threshold and the first matching product entry across lists, as in Grocy 4.5.0.
 
 New users receive `GROCY_DEFAULT_PERMISSIONS`, whose default is `["ADMIN"]`. An empty password update keeps the stored password. User writes and permission reads apply the operation-specific permission checks.
+
+Null and `"0"` password updates also keep the stored password. The current-user response is an array. User fields keep null values, and permission responses include row IDs. Authentication accepts the API key query parameter, including fallback from an invalid header key. Many compatibility reads require authentication only, as in Grocy. User reads, external barcode lookup, and writes retain their specific permission checks. MCP and v2 keep their application access rules.
+
+Chore consumption uses the gross tare amount. Chore tracking saves its log before stock consumption, so a failed stock booking leaves that execution in the log. Assignment reads use the stored assignee until assignment calculation runs. Equal least-done counts use user ID order. Child stock opening copies PHP's repeated conversion of the remaining amount. This can open more stock than requested.
+
+The audit still needs full HTML and CSS input purification, optional feature flag behavior, and more input parser cases. Encoded image bytes can differ between Pillow and PHP GD. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
