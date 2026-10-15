@@ -38,6 +38,43 @@ def create(client, entity: str, body: dict) -> int:
     return int(response.json()["created_object_id"])
 
 
+def test_reference_custom_fields_declared_values_and_record_types(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    snapshots = []
+    for app in (reference, client):
+        name = f"record{uuid4().hex[:8]}"
+        entity_id = create(app, "userentities", {"name": name, "caption": name})
+        entity = f"userentity-{name}"
+        create(
+            app,
+            "userfields",
+            {"entity": entity, "name": "serial", "caption": "Serial", "type": "text-single-line"},
+        )
+        record = create(app, "userobjects", {"userentity_id": entity_id})
+        path = f"/api/userfields/{entity}/{record}"
+        states = [app.get(path).json()]
+        for value in ("ABC123", None, 0):
+            response = app.put(path, json={"serial": value})
+            assert response.status_code == 204, response.text
+            states.append(app.get(path).json())
+        assert app.put(path, json={"unknown": "invalid"}).status_code == 400
+        states.append(app.get(path).json())
+        snapshots.append(states)
+    assert (
+        snapshots[0]
+        == snapshots[1]
+        == [
+            {"serial": None},
+            {"serial": "ABC123"},
+            {"serial": None},
+            {"serial": "0"},
+            {"serial": "0"},
+        ]
+    )
+
+
 @pytest.mark.parametrize("move_on_open", [0, 1])
 def test_reference_partial_open_keeps_scanned_entry_and_metadata(
     client: TestClient, api_headers: dict, reference, move_on_open: int

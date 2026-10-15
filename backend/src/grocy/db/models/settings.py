@@ -27,7 +27,7 @@ class UserfieldValue(Base, TimestampMixin):
     entity: Mapped[str] = mapped_column(String(128), nullable=False)
     object_id: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    value: Mapped[str | None] = mapped_column(Text)
 
 
 class UserfieldDefinition(Base, TimestampMixin):

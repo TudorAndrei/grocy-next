@@ -116,7 +116,7 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
             conn.exec_driver_sql(
                 "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"
             )
-            conn.exec_driver_sql("INSERT INTO alembic_version VALUES ('20261015_0008')")
+            conn.exec_driver_sql("INSERT INTO alembic_version VALUES ('20261015_0009')")
             if conn.exec_driver_sql("PRAGMA foreign_key_check").fetchone():
                 raise ValueError("Imported database has invalid references")
         engine.dispose()

@@ -12,6 +12,8 @@ System information reports the pinned Grocy API version and a separate applicati
 
 User preferences include the pinned defaults. Stored values can be null. Deleting a preference restores its default. Database upgrades preserve existing values and add update timestamps.
 
+Custom field reads include declared fields with null values when no value is stored. Writes reject unknown field names and preserve null values. Named custom record types use `userentity-{name}`. The web forms use field types, defaults, required inputs, and preset options from their definitions.
+
 ## Verification
 
 The normal test suite checks API routes, response types, storage, stock quantities, recipe units, undo, permissions, files, calendars, import, and MCP startup.

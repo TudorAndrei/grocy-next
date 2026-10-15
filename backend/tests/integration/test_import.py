@@ -112,7 +112,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
                                                '2026-01-01 12:00:00');
             DROP TABLE userfield_values;
             CREATE TABLE userfield_values (id INTEGER PRIMARY KEY, entity TEXT,
-                                          object_id INTEGER, name TEXT, value TEXT);
+                                          object_id INTEGER, name TEXT, value TEXT NOT NULL);
             INSERT INTO userfield_values VALUES (1, 'products', 1, 'origin', 'Farm');
         """)
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
@@ -129,6 +129,18 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         assert chore.json()["tracked_count"] == 1
         assert chore.json()["next_estimated_execution_time"] == "2027-01-07T15:00:00"
         assert upgraded.get("/api/objects/equipment", headers=headers).status_code == 200
+        assert upgraded.get("/api/userfields/products/1", headers=headers).json() == {
+            "origin": "Farm"
+        }
+        assert (
+            upgraded.put(
+                "/api/userfields/products/1", headers=headers, json={"origin": None}
+            ).status_code
+            == 204
+        )
+        assert upgraded.get("/api/userfields/products/1", headers=headers).json() == {
+            "origin": None
+        }
         assert upgraded.get("/api/user/settings/legacy-setting", headers=headers).json() == {
             "value": "kept"
         }
@@ -151,7 +163,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == (None, "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0008"
+            == "20261015_0009"
         )
 
 
