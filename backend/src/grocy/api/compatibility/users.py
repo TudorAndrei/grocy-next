@@ -303,8 +303,6 @@ async def set_user_permissions(
         raise GrocyError("Invalid permission") from exc
     if any(pid not in PERMISSIONS for pid in ids):
         raise GrocyError("Unknown permission")
-    if user_id == actor.user_id and 1 not in ids:
-        raise GrocyError("Cannot remove your own administrator permission")
     await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
     session.add_all([UserPermission(user_id=user_id, permission_id=pid) for pid in ids])
     await session.commit()

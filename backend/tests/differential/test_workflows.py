@@ -52,6 +52,25 @@ def rows(api, entity, **filters):
     return response.json()
 
 
+def user_key(api, user):
+    reference_url = os.getenv("GROCY_REFERENCE_URL")
+    if reference_url and api.base_url == httpx.URL(reference_url):
+        database_path = os.getenv("GROCY_REFERENCE_DATABASE")
+        if not database_path:
+            pytest.skip("Set GROCY_REFERENCE_DATABASE to create a reference user key")
+        key = uuid4().hex
+        with sqlite3.connect(database_path) as database:
+            database.execute(
+                "INSERT INTO api_keys (api_key, user_id, expires) "
+                "VALUES (?, ?, '2999-12-31 23:59:59')",
+                (key, user),
+            )
+        return key
+    response = api.post("/api/v2/api-keys", json={"user_id": user})
+    assert response.status_code == 200, response.text
+    return response.json()["api_key"]
+
+
 @pytest.fixture
 def catalog(api):
     name = f"Parity {uuid4().hex}"
@@ -256,16 +275,7 @@ def test_authenticated_access_without_module_permissions(api, catalog):
     )
     user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
     assert api.put(f"/api/users/{user}/permissions", json={"permissions": []}).status_code == 204
-    if is_reference:
-        key = uuid4().hex
-        with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
-            database.execute(
-                "INSERT INTO api_keys (api_key, user_id, expires) "
-                "VALUES (?, ?, '2999-12-31 23:59:59')",
-                (key, user),
-            )
-    else:
-        key = api.post("/api/v2/api-keys", json={"user_id": user}).json()["api_key"]
+    key = user_key(api, user)
     original = api.headers["GROCY-API-KEY"]
     api.headers["GROCY-API-KEY"] = key
     try:
@@ -324,7 +334,9 @@ def test_authenticated_access_without_module_permissions(api, catalog):
         ):
             response = api.request(method, path, json=body)
             assert response.status_code == (400 if permission != "ADMIN" else 403), (
-                method, path, response.text
+                method,
+                path,
+                response.text,
             )
             assert response.json() == {"error_message": f"Permission missing: {permission}"}
         assert rows(api, "chores_log", chore_id=chore) == []
@@ -337,6 +349,63 @@ def test_authenticated_access_without_module_permissions(api, catalog):
         assert response.status_code == 204, response.text
     finally:
         api.headers["GROCY-API-KEY"] = original
+
+
+@pytest.mark.parametrize("permissions", [[], [5]])
+def test_user_can_replace_own_administrator_permission(api, permissions):
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    key = user_key(api, user)
+    owner = api.headers["GROCY-API-KEY"]
+    api.headers["GROCY-API-KEY"] = key
+    try:
+        response = api.put(f"/api/users/{user}/permissions", json={"permissions": permissions})
+        assert response.status_code == 204, response.text
+        assert api.get("/api/user").json()[0]["id"] == user
+        assert api.get("/api/users").status_code == (200 if 5 in permissions else 403)
+        response = api.put(f"/api/users/{user}/permissions", json={"permissions": [1]})
+        assert response.status_code == 403, response.text
+    finally:
+        api.headers["GROCY-API-KEY"] = owner
+    assert [row["permission_id"] for row in api.get(f"/api/users/{user}/permissions").json()] == (
+        permissions
+    )
+
+
+@pytest.mark.parametrize("permissions", [[], [10], [30]])
+def test_chore_merge_requires_master_data_permission(api, permissions):
+    keep = create(api, "chores", name=uuid4().hex, period_type="manually")
+    remove = create(api, "chores", name=uuid4().hex, period_type="manually")
+    execution = api.post(f"/api/chores/{remove}/execute", json={})
+    assert execution.status_code == 200, execution.text
+    log = execution.json()["id"]
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    key = user_key(api, user)
+    assert (
+        api.put(f"/api/users/{user}/permissions", json={"permissions": permissions}).status_code
+        == 204
+    )
+    owner = api.headers["GROCY-API-KEY"]
+    api.headers["GROCY-API-KEY"] = key
+    try:
+        response = api.post(f"/api/chores/{keep}/merge/{remove}")
+        assert response.status_code == (204 if 30 in permissions else 403), response.text
+    finally:
+        api.headers["GROCY-API-KEY"] = owner
+    assert api.get(f"/api/objects/chores/{keep}").status_code == 200
+    assert api.get(f"/api/objects/chores/{remove}").status_code == (
+        404 if 30 in permissions else 200
+    )
+    assert api.get(f"/api/objects/chores_log/{log}").json()["chore_id"] == (
+        keep if 30 in permissions else remove
+    )
 
 
 def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):

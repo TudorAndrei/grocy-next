@@ -140,10 +140,11 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
         if not write:
             return ""
         if (path.startswith("recipes/") and action == "copy") or (
-            path.startswith("chores/")
-            and (action == "calculate-next-assignments" or "/merge/" in path)
+            path.startswith("chores/") and action == "calculate-next-assignments"
         ):
             return ""
+        if path.startswith("chores/") and "/merge/" in path:
+            return "MASTER_DATA_EDIT"
     if write:
         actions = {
             ("chores", "execute"): "CHORE_TRACK_EXECUTION",
