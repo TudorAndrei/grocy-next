@@ -43,6 +43,10 @@ while (($line = fgets(STDIN)) !== false) {
     try {
         $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
         $id = $request['id'];
+        if (($request['operation'] ?? 'purify') === 'userfields') {
+            reply(['id' => $id, 'ok' => true, 'body' => userfieldResponses($request)]);
+            continue;
+        }
         $raw = base64_decode($request['json'], true);
         if (($request['operation'] ?? 'purify') === 'permissions') {
             reply(['id' => $id, 'ok' => true, 'body' => permissionQuery($request, $raw, $purifier, $pdo)]);

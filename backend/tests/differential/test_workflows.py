@@ -973,6 +973,83 @@ def test_custom_field_definition_changes_keep_saved_values(
     assert api.get(f"/api/userfields/{target}/{reference}").json()[new_name] == "Updated"
 
 
+@pytest.mark.parametrize(
+    "names,expected",
+    [
+        (["0"], ["Saved 0"]),
+        (["1", "0"], ["Saved 0", "Saved 1"]),
+        (["0", "2"], {"0": "Saved 0", "2": "Saved 2"}),
+        (["00", "0"], {"0": "Saved 0", "00": "Saved 0"}),
+        (["z", "a", "B"], {"a": "Saved a", "B": "Saved B", "z": "Saved z"}),
+    ],
+)
+def test_custom_field_response_shape_and_order(api, custom_field, names, expected):
+    name = "fields_" + uuid4().hex
+    create(api, "userentities", name=name, caption=name)
+    namespace = "userentity-" + name
+    for field in names:
+        custom_field(
+            entity=namespace, name=field, caption=field, type="text-single-line", sort_number=0
+        )
+    path = f"/api/userfields/{namespace}/text-key"
+    assert api.put(path, json={field: f"Saved {field}" for field in names}).status_code == 204
+    response = api.get(path)
+    assert response.status_code == 200
+    assert response.json() == expected
+    if isinstance(expected, dict):
+        assert list(response.json()) == list(expected)
+
+
+def test_custom_record_field_namespaces_and_generic_response_shapes(api, custom_field):
+    name = "fields_" + uuid4().hex
+    entity = create(api, "userentities", name=name, caption=name)
+    record = create(api, "userobjects", userentity_id=entity)
+    namespace = "userentity-" + name
+    custom_field(entity=namespace, name="saved", caption="Saved", type="text-single-line")
+    path = f"/api/userfields/{namespace}/{record}"
+    assert api.put(path, json={"saved": "Namespace value"}).status_code == 204
+    alias = f"/api/userfields/userobjects/{record}"
+    assert api.get(alias).json() == []
+    assert api.get(f"/api/objects/userobjects/{record}").json()["userfields"] is None
+    listed = rows(api, "userobjects", id=record)
+    assert len(listed) == 1 and "userfields" not in listed[0]
+    rejected = api.put(alias, json={"saved": "Wrong namespace"})
+    assert rejected.status_code == 400
+    assert rejected.json()["error_message"] == (
+        "Field saved is not a valid userfield of the given entity"
+    )
+    assert api.get(path).json() == {"saved": "Namespace value"}
+    custom_field(entity="userobjects", name="0", caption="Direct", type="text-single-line")
+    assert api.get(f"/api/objects/userobjects/{record}").json()["userfields"] == [None]
+    assert rows(api, "userobjects", id=record)[0]["userfields"] == [None]
+    assert api.put(alias, json={"0": "Direct value"}).status_code == 204
+    assert api.get(alias).json() == ["Direct value"]
+    assert api.get(f"/api/objects/userobjects/{record}").json()["userfields"] == ["Direct value"]
+    assert rows(api, "userobjects", id=record)[0]["userfields"] == ["Direct value"]
+    assert api.get(path).json() == {"saved": "Namespace value"}
+    custom_field(entity="userobjects", name="saved", caption="Direct", type="text-single-line")
+    assert api.put(alias, json={"saved": "Hidden direct value"}).status_code == 204
+    expected = {"0": "Direct value", "saved": "Namespace value"}
+    assert api.get(alias).json() == expected
+    assert api.get(f"/api/objects/userobjects/{record}").json()["userfields"] == expected
+    assert rows(api, "userobjects", id=record)[0]["userfields"] == expected
+
+
+def test_generic_field_lists_use_numeric_object_comparison(api, custom_field):
+    name = "fields_" + uuid4().hex
+    entity = create(api, "userentities", name=name, caption=name)
+    record = create(api, "userobjects", userentity_id=entity)
+    custom_field(entity="userobjects", name="saved", caption="Saved", type="text-single-line")
+    assert (
+        api.put(f"/api/userfields/userobjects/0{record}", json={"saved": "Leading zero"})
+        .status_code
+        == 204
+    )
+    assert api.get(f"/api/userfields/userobjects/{record}").json() == {"saved": None}
+    assert api.get(f"/api/objects/userobjects/{record}").json()["userfields"] == {"saved": None}
+    assert rows(api, "userobjects", id=record)[0]["userfields"] == {"saved": "Leading zero"}
+
+
 def test_custom_field_failed_definition_change_keeps_both_values(api, custom_field, catalog):
     _product, _unit, _other, location = catalog
     names = ["field" + uuid4().hex, "field" + uuid4().hex]

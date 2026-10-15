@@ -22,10 +22,16 @@ async def list_objects(
 ) -> list[dict[str, Any]]:
     service = GenericObjectsService(session)
     rows = await service.list_entity(entity)
-    for row in rows:
-        row["userfields"] = await service.userfields(
-            entity, row["stock_id"] if entity == "stock" else row["id"]
+    fields, values = await service.userfield_data(entity)
+    if fields:
+        responses = await request.app.state.input_purifier.userfield_responses(
+            fields,
+            values,
+            [row["stock_id"] if entity == "stock" else row["id"] for row in rows],
+            listing=True,
         )
+        for row, response in zip(rows, responses, strict=True):
+            row["userfields"] = response
     try:
         return filter_rows(rows, request.query_params)
     except GrocyError as exc:
@@ -53,14 +59,19 @@ async def create_object(
 async def get_object(
     entity: str,
     object_id: int,
+    request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> dict[str, Any]:
     service = GenericObjectsService(session)
     row = await service.get_entity(entity, object_id)
-    row["userfields"] = await service.userfields(
+    fields, values = await service.userfield_data(
         entity, row["stock_id"] if entity == "stock" else object_id
     )
+    responses = await request.app.state.input_purifier.userfield_responses(
+        fields, values, [object_id]
+    )
+    row["userfields"] = responses[0] or None
     return row
 
 

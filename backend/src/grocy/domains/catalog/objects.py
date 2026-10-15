@@ -230,7 +230,7 @@ class GenericObjectsService:
         if not isinstance(values, dict):
             raise GrocyError("Userfields must be an object")
         definitions = {
-            row.name or "": row for row in await self._userfield_definitions(entity, object_id)
+            row.name or "": row for row in await self._userfield_definitions(entity)
         }
         for name, value in values.items():
             if name not in definitions:
@@ -272,37 +272,50 @@ class GenericObjectsService:
             return
         raise GrocyError("Entity does not exist or is not exposed", code=None)
 
-    async def _userfield_definitions(
-        self, entity: str, object_id: int | str
-    ) -> list[UserfieldDefinition]:
-        entities = [entity]
-        if entity == "userobjects":
-            row = await self.session.get(UserObject, object_id)
-            definition = await self.session.get(UserEntity, row.userentity_id) if row else None
-            if definition:
-                entities.append(f"userentity-{definition.name}")
+    async def _userfield_definitions(self, entity: str) -> list[UserfieldDefinition]:
         return list(
             (
                 await self.session.scalars(
                     select(UserfieldDefinition)
-                    .where(UserfieldDefinition.entity.in_(entities))
-                    .order_by(UserfieldDefinition.sort_number, UserfieldDefinition.name)
+                    .where(UserfieldDefinition.entity == entity)
+                    .order_by(
+                        UserfieldDefinition.sort_number,
+                        UserfieldDefinition.name.collate("NOCASE"),
+                    )
                 )
             ).all()
         )
 
-    async def userfields(self, entity: str, object_id: int | str) -> dict[str, str | None]:
-        definitions = await self._userfield_definitions(entity, object_id)
-        rows = (
-            await self.session.scalars(
-                select(UserfieldValue).where(
-                    UserfieldValue.field_id.in_([row.id for row in definitions]),
-                    UserfieldValue.object_id == str(object_id),
-                )
+    async def userfield_data(
+        self, entity: str, object_id: int | str | None = None
+    ) -> tuple[list[str | None], list[dict[str, Any]]]:
+        definitions = await self._userfield_definitions(entity)
+        if not definitions:
+            return [], []
+        # The native resolved view aliases namespace values to userobjects.
+        # Definitions still belong to the exact requested entity.
+        condition = UserfieldDefinition.entity == entity
+        if entity == "userobjects":
+            condition |= UserfieldDefinition.entity.like("userentity-%")
+        query = (
+            select(
+                UserfieldDefinition.name,
+                UserfieldValue.object_id,
+                UserfieldValue.value,
             )
-        ).all()
-        values = {row.field_id: row.value for row in rows}
-        return {row.name or "": values.get(row.id) for row in definitions}
+            .join(UserfieldValue, UserfieldValue.field_id == UserfieldDefinition.id)
+            .where(condition)
+            .order_by(
+                UserfieldDefinition.name.collate("NOCASE"),
+                UserfieldDefinition.id,
+                UserfieldValue.object_id,
+                UserfieldValue.value,
+            )
+        )
+        if object_id is not None:
+            query = query.where(UserfieldValue.object_id == str(object_id))
+        values = [dict(row) for row in (await self.session.execute(query)).mappings()]
+        return [row.name for row in definitions], values
 
     def _apply_payload(self, row: Any, payload: dict[str, Any]) -> None:
         columns = {column.name: column for column in row.__table__.columns}

@@ -82,6 +82,25 @@ class InputPurifier:
             },
         )
 
+    async def userfield_responses(
+        self,
+        fields: list[str | None],
+        values: list[dict[str, Any]],
+        references: list[int | str],
+        *,
+        listing: bool = False,
+    ) -> list[dict[str, str | None] | list[str | None]]:
+        return await self._request(
+            b"",
+            {
+                "operation": "userfields",
+                "fields": fields,
+                "values": values,
+                "references": references,
+                "listing": listing,
+            },
+        )
+
     async def _request(self, body: bytes, fields: dict[str, Any]) -> Any:
         async with self._lock:
             self._sequence += 1

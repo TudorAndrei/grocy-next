@@ -26,7 +26,7 @@ type Props = {
 function customField(row: EntityRow): EntityField {
   const kind = String(row.type);
   return {
-    key: `custom:${row.name}`,
+    key: `custom:${row.entity}:${row.name}`,
     label: String(row.caption),
     required: Boolean(row.input_required),
     value: row.default_value == null ? "" : String(row.default_value),
@@ -111,8 +111,33 @@ export function EntityManager({
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const query = useQuery({
-    queryKey: ["objects", entity],
-    queryFn: () => api.objects(entity),
+    queryKey: ["entity-manager", entity],
+    queryFn: async () => {
+      const [rows, types] = await Promise.all([
+        api.objects(entity),
+        entity === "userobjects" ? api.objects("userentities") : [],
+      ]);
+      return Promise.all(
+        rows.map(async (row): Promise<EntityRow> => {
+          const fields: Record<string, unknown> = Object.fromEntries(
+            Object.entries(row.userfields ?? {}).map(([key, value]) => [
+              `custom:${entity}:${key}`,
+              value,
+            ]),
+          );
+          const type = types.find((type) => type.id === row.userentity_id);
+          if (type) {
+            const namespace = `userentity-${type.name}`;
+            const values = await request<Record<string, string | null>>(
+              `/api/userfields/${encodeURIComponent(namespace)}/${row.id}`,
+            );
+            for (const [key, value] of Object.entries(values))
+              fields[`custom:${namespace}:${key}`] = value;
+          }
+          return { ...row, custom_values: fields };
+        }),
+      );
+    },
   });
   const refs = [...new Set(spec.fields.flatMap((f) => (f.ref ? [f.ref] : [])))];
   const options = useQueries({
@@ -127,13 +152,22 @@ export function EntityManager({
     mutationFn: async (operation: {
       kind: "save" | "delete";
       body?: Record<string, unknown>;
+      fields?: Record<string, Record<string, string>>;
       id?: number;
     }) => {
       if (operation.kind === "delete")
         return api.deleteObject(entity, operation.id!);
-      return editing === null
-        ? api.createObject(entity, operation.body!)
-        : api.updateObject(entity, editing!, operation.body!);
+      let id = editing!;
+      if (editing === null) {
+        const created = await api.createObject(entity, operation.body!);
+        id = Number(created.created_object_id);
+        setEditing(id);
+      } else await api.updateObject(entity, id, operation.body!);
+      for (const [namespace, values] of Object.entries(operation.fields ?? {}))
+        await request(`/api/userfields/${encodeURIComponent(namespace)}/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(values),
+        });
     },
     onSuccess: async () => {
       setEditing(undefined);
@@ -163,17 +197,15 @@ export function EntityManager({
             ? f.type === "checkbox"
               ? Number(
                   f.key.startsWith("custom:")
-                    ? (row.userfields as Record<string, unknown>)?.[
-                        f.key.slice(7)
-                      ]
+                    ? (row.custom_values as Record<string, unknown>)?.[f.key]
                     : row[f.key],
                 )
                 ? "1"
                 : "0"
               : String(
                   f.key.startsWith("custom:")
-                    ? ((row.userfields as Record<string, string> | undefined)?.[
-                        f.key.slice(7)
+                    ? ((row.custom_values as Record<string, string> | undefined)?.[
+                        f.key
                       ] ?? "")
                     : (row[f.key] ?? ""),
                 )
@@ -185,15 +217,18 @@ export function EntityManager({
   const save = (event: FormEvent) => {
     event.preventDefault();
     const body: Record<string, unknown> = { ...fixed };
+    const fields: Record<string, Record<string, string>> = {};
     for (const field of spec.fields) {
       if (fixed && field.key in fixed) continue;
       if (field.when && !field.when.values.includes(values[field.when.key]))
         continue;
       const value = values[field.key] ?? field.value ?? "";
       if (field.key.startsWith("custom:")) {
-        const fields = (body.userfields ?? {}) as Record<string, string>;
-        fields[field.key.slice(7)] = value;
-        body.userfields = fields;
+        const definition = customFields.find(
+          (definition) => customField(definition).key === field.key,
+        )!;
+        const namespace = String(definition.entity);
+        (fields[namespace] ??= {})[String(definition.name)] = value;
       } else if (field.type === "checkbox")
         body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
@@ -206,7 +241,7 @@ export function EntityManager({
               ? Number(value)
               : value;
     }
-    mutate.mutate({ kind: "save", body });
+    mutate.mutate({ kind: "save", body, fields });
   };
   const rows = (query.data ?? []).filter(
     (row) =>

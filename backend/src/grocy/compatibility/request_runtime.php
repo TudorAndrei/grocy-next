@@ -97,3 +97,25 @@ function permissionQuery(array $request, string $raw, HTMLPurifier $purifier, PD
         ];
     }
 }
+
+// Grocy 4.5.0 UserfieldsService and GenericEntityApiController use PHP's
+// loose comparisons and array keys when they assemble field responses.
+function userfieldResponses(array $request): array
+{
+    $responses = [];
+    foreach ($request['references'] as $reference) {
+        $pairs = [];
+        foreach ($request['fields'] as $name) {
+            $value = null;
+            foreach ($request['values'] as $row) {
+                if ((!$request['listing'] || $row['object_id'] == $reference) && $row['name'] == $name) {
+                    $value = $row['value'];
+                    break;
+                }
+            }
+            $pairs[$name] = $value;
+        }
+        $responses[] = $pairs;
+    }
+    return $responses;
+}

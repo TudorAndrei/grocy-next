@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 
 from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
 from grocy.core.auth import CurrentActor
@@ -14,12 +14,17 @@ router = APIRouter(tags=["userfields"], route_class=CompatibilityRoute)
 async def get_userfields(
     entity: str,
     object_id: str,
+    request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> dict[str, str | None] | list:
     service = GenericObjectsService(session)
     await service.validate_userfield_entity(entity)
-    return await service.userfields(entity, object_id) or []
+    fields, values = await service.userfield_data(entity, object_id)
+    responses = await request.app.state.input_purifier.userfield_responses(
+        fields, values, [object_id]
+    )
+    return responses[0]
 
 
 @router.put("/api/userfields/{entity}/{object_id}", status_code=204)
