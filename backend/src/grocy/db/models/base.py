@@ -9,8 +9,8 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
-    row_created_timestamp: Mapped[datetime] = mapped_column(
+    row_created_timestamp: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False),
         server_default=func.datetime("now", "localtime"),
-        nullable=False,
+        nullable=True,
     )

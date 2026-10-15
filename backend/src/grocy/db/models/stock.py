@@ -58,10 +58,10 @@ class StockLog(Base):
     note: Mapped[str | None] = mapped_column(Text)
     undo_data: Mapped[str | None] = mapped_column(Text)
     recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id"))
-    row_created_timestamp: Mapped[datetime] = mapped_column(
+    row_created_timestamp: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False),
         server_default=func.datetime("now", "localtime"),
-        nullable=False,
+        nullable=True,
     )
 
 

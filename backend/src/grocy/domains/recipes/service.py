@@ -13,6 +13,7 @@ from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.mealplan import MealPlanEntry
 from grocy.db.models.recipes import Recipe, RecipeNesting, RecipePosition
 from grocy.db.models.shopping import ShoppingListItem
+from grocy.db.types import database_time
 from grocy.domains.products.service import ProductsService
 from grocy.domains.shopping.service import ShoppingService
 from grocy.domains.stock.service import StockService
@@ -420,9 +421,7 @@ class RecipesService:
             "picture_file_name": recipe.picture_file_name,
             "not_check_shoppinglist": recipe.not_check_shoppinglist,
             "product_id": recipe.product_id,
-            "row_created_timestamp": recipe.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(recipe.row_created_timestamp),
             "not_check_stock_fulfillment": bool(recipe.not_check_stock_fulfillment),
             "positions": [
                 {

@@ -7,7 +7,9 @@ from sqlalchemy.engine import Dialect
 from sqlalchemy.types import TypeDecorator
 
 
-def database_time(value: date | datetime) -> str:
+def database_time(value: date | datetime | None) -> str | None:
+    if value is None:
+        return None
     if isinstance(value, datetime):
         return value.isoformat(sep=" ", timespec="seconds")
     return value.isoformat()

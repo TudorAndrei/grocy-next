@@ -137,9 +137,7 @@ class HouseholdService:
             "undone": log.undone,
             "undone_timestamp": None,
             "scheduled_execution_time": due,
-            "row_created_timestamp": log.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(log.row_created_timestamp),
         }
 
     async def undo_chore_execution(self, execution_id: int) -> dict:
@@ -174,9 +172,7 @@ class HouseholdService:
                         "name": category.name,
                         "description": category.description,
                         "active": category.active,
-                        "row_created_timestamp": category.row_created_timestamp.isoformat(
-                            sep=" ", timespec="seconds"
-                        ),
+                        "row_created_timestamp": database_time(category.row_created_timestamp),
                     }
                     if category and category.active
                     else None,
@@ -321,12 +317,10 @@ class HouseholdService:
         return {
             "id": cycle.id,
             "battery_id": battery_id,
-            "tracked_time": cycle.tracked_time.isoformat(sep=" ", timespec="seconds"),
+            "tracked_time": database_time(cycle.tracked_time),
             "undone": cycle.undone,
             "undone_timestamp": None,
-            "row_created_timestamp": cycle.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(cycle.row_created_timestamp),
         }
 
     async def undo_battery_charge(self, charge_cycle_id: int) -> dict:
@@ -459,9 +453,7 @@ class HouseholdService:
             else None,
             "category_id": task.category_id,
             "assigned_to_user_id": task.assigned_to_user_id,
-            "row_created_timestamp": task.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(task.row_created_timestamp),
         }
 
     def _serialize_battery(self, battery: Battery) -> dict:
@@ -472,7 +464,5 @@ class HouseholdService:
             "used_in": battery.used_in,
             "charge_interval_days": battery.charge_interval_days,
             "active": battery.active,
-            "row_created_timestamp": battery.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(battery.row_created_timestamp),
         }

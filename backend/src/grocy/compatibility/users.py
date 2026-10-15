@@ -3,6 +3,7 @@
 from typing import Any
 
 from grocy.db.models.users import User
+from grocy.db.types import database_time
 
 
 def user_dto(user: User) -> dict[str, Any]:
@@ -14,5 +15,5 @@ def user_dto(user: User) -> dict[str, Any]:
         "last_name": user.last_name,
         "display_name": " ".join(part for part in parts if part) or user.username,
         "picture_file_name": user.picture_file_name,
-        "row_created_timestamp": user.row_created_timestamp.isoformat(sep=" ", timespec="seconds"),
+        "row_created_timestamp": database_time(user.row_created_timestamp),
     }

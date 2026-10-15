@@ -36,8 +36,10 @@ from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.db.models.users import ApiKey, User, UserPermission
+from grocy.db.native_columns import configure_native_columns
 
 configure_native_references(Base.metadata)
+configure_native_columns(Base.metadata)
 
 __all__ = [
     "ApiKey",

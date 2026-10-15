@@ -1,0 +1,1244 @@
+{
+  "baseline": "Grocy 4.5.0",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "license": "See ../../compatibility/LICENSE.grocy",
+  "columns": {
+    "api_keys": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "api_key": {
+        "nullable": false,
+        "default": null
+      },
+      "user_id": {
+        "nullable": false,
+        "default": null
+      },
+      "expires": {
+        "nullable": true,
+        "default": null
+      },
+      "last_used": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "key_type": {
+        "nullable": false,
+        "default": "'default'"
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "batteries": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "used_in": {
+        "nullable": true,
+        "default": null
+      },
+      "charge_interval_days": {
+        "nullable": false,
+        "default": "0"
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "battery_charge_cycles": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "battery_id": {
+        "nullable": false,
+        "default": null
+      },
+      "tracked_time": {
+        "nullable": true,
+        "default": null
+      },
+      "undone": {
+        "nullable": false,
+        "default": "0"
+      },
+      "undone_timestamp": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "cache__products_average_price": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "price": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "cache__products_last_purchased": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "amount": {
+        "nullable": true,
+        "default": null
+      },
+      "best_before_date": {
+        "nullable": true,
+        "default": null
+      },
+      "purchased_date": {
+        "nullable": true,
+        "default": null
+      },
+      "price": {
+        "nullable": true,
+        "default": null
+      },
+      "location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "shopping_location_id": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "chores": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "period_type": {
+        "nullable": false,
+        "default": null
+      },
+      "period_days": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "period_config": {
+        "nullable": true,
+        "default": null
+      },
+      "track_date_only": {
+        "nullable": true,
+        "default": "0"
+      },
+      "rollover": {
+        "nullable": true,
+        "default": "0"
+      },
+      "assignment_type": {
+        "nullable": true,
+        "default": null
+      },
+      "assignment_config": {
+        "nullable": true,
+        "default": null
+      },
+      "next_execution_assigned_to_user_id": {
+        "nullable": true,
+        "default": null
+      },
+      "consume_product_on_execution": {
+        "nullable": false,
+        "default": "0"
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "product_amount": {
+        "nullable": true,
+        "default": null
+      },
+      "period_interval": {
+        "nullable": false,
+        "default": "1"
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      },
+      "start_date": {
+        "nullable": true,
+        "default": null
+      },
+      "rescheduled_date": {
+        "nullable": true,
+        "default": null
+      },
+      "rescheduled_next_execution_assigned_to_user_id": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "chores_log": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "chore_id": {
+        "nullable": false,
+        "default": null
+      },
+      "tracked_time": {
+        "nullable": true,
+        "default": null
+      },
+      "done_by_user_id": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "undone": {
+        "nullable": false,
+        "default": "0"
+      },
+      "undone_timestamp": {
+        "nullable": true,
+        "default": null
+      },
+      "skipped": {
+        "nullable": false,
+        "default": "0"
+      },
+      "scheduled_execution_time": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "equipment": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "instruction_manual_file_name": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "locations": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "is_freezer": {
+        "nullable": false,
+        "default": "0"
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "meal_plan": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "day": {
+        "nullable": false,
+        "default": null
+      },
+      "type": {
+        "nullable": true,
+        "default": "'recipe'"
+      },
+      "recipe_id": {
+        "nullable": true,
+        "default": null
+      },
+      "recipe_servings": {
+        "nullable": true,
+        "default": "1"
+      },
+      "note": {
+        "nullable": true,
+        "default": null
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "product_amount": {
+        "nullable": true,
+        "default": "0"
+      },
+      "product_qu_id": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "done": {
+        "nullable": false,
+        "default": "0"
+      },
+      "section_id": {
+        "nullable": false,
+        "default": "-1"
+      }
+    },
+    "meal_plan_sections": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "sort_number": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "time_info": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "product_barcodes": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": false,
+        "default": null
+      },
+      "barcode": {
+        "nullable": false,
+        "default": null
+      },
+      "qu_id": {
+        "nullable": true,
+        "default": null
+      },
+      "amount": {
+        "nullable": true,
+        "default": null
+      },
+      "shopping_location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "last_price": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "note": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "product_groups": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "products": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "product_group_id": {
+        "nullable": true,
+        "default": null
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      },
+      "location_id": {
+        "nullable": false,
+        "default": null
+      },
+      "shopping_location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "qu_id_purchase": {
+        "nullable": false,
+        "default": null
+      },
+      "qu_id_stock": {
+        "nullable": false,
+        "default": null
+      },
+      "min_stock_amount": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_best_before_days": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_best_before_days_after_open": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_best_before_days_after_freezing": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_best_before_days_after_thawing": {
+        "nullable": false,
+        "default": "0"
+      },
+      "picture_file_name": {
+        "nullable": true,
+        "default": null
+      },
+      "enable_tare_weight_handling": {
+        "nullable": false,
+        "default": "0"
+      },
+      "tare_weight": {
+        "nullable": false,
+        "default": "0"
+      },
+      "not_check_stock_fulfillment_for_recipes": {
+        "nullable": true,
+        "default": "0"
+      },
+      "parent_product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "calories": {
+        "nullable": true,
+        "default": null
+      },
+      "cumulate_min_stock_amount_of_sub_products": {
+        "nullable": true,
+        "default": "0"
+      },
+      "due_type": {
+        "nullable": false,
+        "default": "1"
+      },
+      "quick_consume_amount": {
+        "nullable": false,
+        "default": "1"
+      },
+      "hide_on_stock_overview": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_stock_label_type": {
+        "nullable": false,
+        "default": "0"
+      },
+      "should_not_be_frozen": {
+        "nullable": false,
+        "default": "0"
+      },
+      "treat_opened_as_out_of_stock": {
+        "nullable": false,
+        "default": "1"
+      },
+      "no_own_stock": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_consume_location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "move_on_open": {
+        "nullable": false,
+        "default": "0"
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "qu_id_consume": {
+        "nullable": true,
+        "default": null
+      },
+      "auto_reprint_stock_label": {
+        "nullable": false,
+        "default": "0"
+      },
+      "quick_open_amount": {
+        "nullable": false,
+        "default": "1"
+      },
+      "qu_id_price": {
+        "nullable": true,
+        "default": null
+      },
+      "disable_open": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_purchase_price_type": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "quantity_unit_conversions": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "from_qu_id": {
+        "nullable": false,
+        "default": null
+      },
+      "to_qu_id": {
+        "nullable": false,
+        "default": null
+      },
+      "factor": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "quantity_units": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "name_plural": {
+        "nullable": true,
+        "default": null
+      },
+      "plural_forms": {
+        "nullable": true,
+        "default": null
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "recipes": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "picture_file_name": {
+        "nullable": true,
+        "default": null
+      },
+      "base_servings": {
+        "nullable": true,
+        "default": "1"
+      },
+      "desired_servings": {
+        "nullable": true,
+        "default": "1"
+      },
+      "not_check_shoppinglist": {
+        "nullable": false,
+        "default": "0"
+      },
+      "type": {
+        "nullable": true,
+        "default": "'normal'"
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "recipes_nestings": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "recipe_id": {
+        "nullable": false,
+        "default": null
+      },
+      "includes_recipe_id": {
+        "nullable": false,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "servings": {
+        "nullable": true,
+        "default": "1"
+      }
+    },
+    "recipes_pos": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "recipe_id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": false,
+        "default": null
+      },
+      "amount": {
+        "nullable": false,
+        "default": "0"
+      },
+      "note": {
+        "nullable": true,
+        "default": null
+      },
+      "qu_id": {
+        "nullable": true,
+        "default": null
+      },
+      "only_check_single_unit_in_stock": {
+        "nullable": false,
+        "default": "0"
+      },
+      "ingredient_group": {
+        "nullable": true,
+        "default": null
+      },
+      "not_check_stock_fulfillment": {
+        "nullable": false,
+        "default": "0"
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "variable_amount": {
+        "nullable": true,
+        "default": null
+      },
+      "price_factor": {
+        "nullable": false,
+        "default": "1"
+      },
+      "round_up": {
+        "nullable": false,
+        "default": "0"
+      }
+    },
+    "shopping_list": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": true,
+        "default": null
+      },
+      "note": {
+        "nullable": true,
+        "default": null
+      },
+      "amount": {
+        "nullable": false,
+        "default": "0"
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "shopping_list_id": {
+        "nullable": true,
+        "default": "1"
+      },
+      "done": {
+        "nullable": true,
+        "default": "0"
+      },
+      "qu_id": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "shopping_lists": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "shopping_locations": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "stock": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": false,
+        "default": null
+      },
+      "amount": {
+        "nullable": false,
+        "default": null
+      },
+      "best_before_date": {
+        "nullable": true,
+        "default": null
+      },
+      "purchased_date": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "stock_id": {
+        "nullable": false,
+        "default": null
+      },
+      "price": {
+        "nullable": true,
+        "default": null
+      },
+      "open": {
+        "nullable": false,
+        "default": "0"
+      },
+      "opened_date": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "shopping_location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "note": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "stock_log": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "product_id": {
+        "nullable": false,
+        "default": null
+      },
+      "amount": {
+        "nullable": false,
+        "default": null
+      },
+      "best_before_date": {
+        "nullable": true,
+        "default": null
+      },
+      "purchased_date": {
+        "nullable": true,
+        "default": null
+      },
+      "used_date": {
+        "nullable": true,
+        "default": null
+      },
+      "spoiled": {
+        "nullable": false,
+        "default": "0"
+      },
+      "stock_id": {
+        "nullable": false,
+        "default": null
+      },
+      "transaction_type": {
+        "nullable": false,
+        "default": null
+      },
+      "price": {
+        "nullable": true,
+        "default": null
+      },
+      "undone": {
+        "nullable": false,
+        "default": "0"
+      },
+      "undone_timestamp": {
+        "nullable": true,
+        "default": null
+      },
+      "opened_date": {
+        "nullable": true,
+        "default": null
+      },
+      "location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "recipe_id": {
+        "nullable": true,
+        "default": null
+      },
+      "correlation_id": {
+        "nullable": true,
+        "default": null
+      },
+      "transaction_id": {
+        "nullable": true,
+        "default": null
+      },
+      "stock_row_id": {
+        "nullable": true,
+        "default": null
+      },
+      "shopping_location_id": {
+        "nullable": true,
+        "default": null
+      },
+      "user_id": {
+        "nullable": false,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "note": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "task_categories": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "active": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "tasks": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "due_date": {
+        "nullable": true,
+        "default": null
+      },
+      "done": {
+        "nullable": false,
+        "default": "0"
+      },
+      "done_timestamp": {
+        "nullable": true,
+        "default": null
+      },
+      "category_id": {
+        "nullable": true,
+        "default": null
+      },
+      "assigned_to_user_id": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "user_permissions": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "permission_id": {
+        "nullable": false,
+        "default": null
+      },
+      "user_id": {
+        "nullable": false,
+        "default": null
+      }
+    },
+    "user_settings": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "user_id": {
+        "nullable": false,
+        "default": null
+      },
+      "key": {
+        "nullable": false,
+        "default": null
+      },
+      "value": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "row_updated_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "userentities": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "caption": {
+        "nullable": false,
+        "default": null
+      },
+      "description": {
+        "nullable": true,
+        "default": null
+      },
+      "show_in_sidebar_menu": {
+        "nullable": false,
+        "default": "1"
+      },
+      "icon_css_class": {
+        "nullable": true,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "userfield_values": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "field_id": {
+        "nullable": false,
+        "default": null
+      },
+      "object_id": {
+        "nullable": false,
+        "default": null
+      },
+      "value": {
+        "nullable": false,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "userfields": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "entity": {
+        "nullable": false,
+        "default": null
+      },
+      "name": {
+        "nullable": false,
+        "default": null
+      },
+      "caption": {
+        "nullable": false,
+        "default": null
+      },
+      "type": {
+        "nullable": false,
+        "default": null
+      },
+      "show_as_column_in_tables": {
+        "nullable": false,
+        "default": "0"
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "config": {
+        "nullable": true,
+        "default": null
+      },
+      "sort_number": {
+        "nullable": true,
+        "default": null
+      },
+      "input_required": {
+        "nullable": false,
+        "default": "0"
+      },
+      "default_value": {
+        "nullable": true,
+        "default": null
+      }
+    },
+    "userobjects": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "userentity_id": {
+        "nullable": false,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      }
+    },
+    "users": {
+      "id": {
+        "nullable": false,
+        "default": null
+      },
+      "username": {
+        "nullable": false,
+        "default": null
+      },
+      "first_name": {
+        "nullable": true,
+        "default": null
+      },
+      "last_name": {
+        "nullable": true,
+        "default": null
+      },
+      "password": {
+        "nullable": false,
+        "default": null
+      },
+      "row_created_timestamp": {
+        "nullable": true,
+        "default": "datetime('now', 'localtime')"
+      },
+      "picture_file_name": {
+        "nullable": true,
+        "default": null
+      }
+    }
+  },
+  "extensions": {
+    "products": {
+      "qu_factor_purchase_to_stock": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "recipes": {
+      "not_check_stock_fulfillment": {
+        "nullable": false,
+        "default": "0"
+      }
+    }
+  }
+}

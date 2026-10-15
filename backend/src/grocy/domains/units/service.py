@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.models.catalog import Product, QuantityUnit
 from grocy.db.models.units import QuantityUnitConversion
+from grocy.db.types import database_time
 
 
 class UnitsService:
@@ -198,9 +199,7 @@ class UnitsService:
             "description": unit.description,
             "active": unit.active,
             "plural_forms": unit.plural_forms,
-            "row_created_timestamp": unit.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(unit.row_created_timestamp),
         }
 
     def serialize_conversion(self, row: QuantityUnitConversion) -> dict:

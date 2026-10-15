@@ -21,6 +21,7 @@ from grocy.db.models.settings import UserfieldDefinition, UserfieldValue
 from grocy.db.models.shopping import ShoppingListItem
 from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
+from grocy.db.types import database_time
 from grocy.domains.printing import automatic_stock_labels_enabled, stock_label
 from grocy.domains.products.barcodes import parse_product_code
 from grocy.domains.products.service import ProductsService
@@ -825,9 +826,7 @@ class StockService:
                     if barcode.last_price is not None
                     else None,
                     "shopping_location_id": barcode.shopping_location_id,
-                    "row_created_timestamp": barcode.row_created_timestamp.isoformat(
-                        sep=" ", timespec="seconds"
-                    ),
+                    "row_created_timestamp": database_time(barcode.row_created_timestamp),
                 }
                 for barcode in product.barcodes
             ],
@@ -1054,9 +1053,7 @@ class StockService:
                         "id": store.id,
                         "name": store.name,
                         "description": store.description,
-                        "row_created_timestamp": store.row_created_timestamp.isoformat(
-                            sep=" ", timespec="seconds"
-                        ),
+                        "row_created_timestamp": database_time(store.row_created_timestamp),
                     }
                     if store
                     else None,
@@ -1689,7 +1686,5 @@ class StockService:
             "stock_id": row.stock_id,
             "price": float(row.price) if row.price is not None else None,
             "note": row.note,
-            "row_created_timestamp": row.row_created_timestamp.isoformat(
-                sep=" ", timespec="seconds"
-            ),
+            "row_created_timestamp": database_time(row.row_created_timestamp),
         }

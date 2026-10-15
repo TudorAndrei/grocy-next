@@ -345,7 +345,6 @@ class GenericObjectsService:
             "desired_servings",
             "qu_factor_purchase_to_stock",
             "recipe_servings",
-            "product_amount",
         ):
             value = getattr(row, field, None)
             zero_allowed = field == "amount" and isinstance(row, (ShoppingListItem, RecipePosition))
