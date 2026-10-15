@@ -20,6 +20,7 @@ class User(Base, TimestampMixin):
 
 class ApiKey(Base, TimestampMixin):
     __tablename__ = "api_keys"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)

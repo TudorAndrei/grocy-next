@@ -44,7 +44,7 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
         async with get_session_factory(settings)() as session:
             days = (await session.scalars(select(MealPlanEntry.day).distinct())).all()
             if days:
-                await sync_meal_plan_recipes(session, *days)
+                await sync_meal_plan_recipes(session, *days, preserve_matching=True)
                 await session.commit()
     purifier = InputPurifier(settings.php_executable)
     try:

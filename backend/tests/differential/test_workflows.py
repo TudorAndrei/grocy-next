@@ -681,6 +681,133 @@ def test_permission_add_bad_content_type_keeps_the_existing_permissions(api):
     assert api.get(path).json() == before
 
 
+@pytest.mark.parametrize(
+    "entity",
+    [
+        "locations",
+        "quantity_units",
+        "product_groups",
+        "shopping_locations",
+        "shopping_lists",
+        "task_categories",
+        "tasks",
+        "batteries",
+        "chores",
+        "equipment",
+        "userentities",
+        "userfields",
+        "userobjects",
+        "meal_plan_sections",
+        "products",
+        "product_barcodes",
+        "quantity_unit_conversions",
+        "shopping_list",
+        "recipes",
+        "recipes_pos",
+        "recipes_nestings",
+        "meal_plan",
+    ],
+)
+def test_deleted_catalog_ids_are_not_reused(api, catalog, entity):
+    product, unit, other, location = catalog
+    name = uuid4().hex
+    body = {"name": name}
+    if entity == "products":
+        body.update(location_id=location, qu_id_stock=unit, qu_id_purchase=unit)
+    elif entity == "product_barcodes":
+        body = {"product_id": product, "barcode": name}
+    elif entity == "quantity_unit_conversions":
+        body = {"from_qu_id": unit, "to_qu_id": other, "factor": 2, "product_id": product}
+    elif entity == "shopping_list":
+        body = {"product_id": product, "amount": 1, "shopping_list_id": 1}
+    elif entity == "userfields":
+        body.update(entity="locations", caption=name, type="text-single-line")
+    elif entity == "userentities":
+        body["caption"] = name
+    elif entity == "userobjects":
+        body = {"userentity_id": create(api, "userentities", name=name, caption=name)}
+    elif entity in {"recipes_pos", "recipes_nestings"}:
+        recipe = create(api, "recipes", name=name)
+        body = {"recipe_id": recipe}
+        if entity == "recipes_pos":
+            body.update(product_id=product, amount=1, qu_id=unit)
+        else:
+            body.update(
+                includes_recipe_id=create(api, "recipes", name=name + " included"), servings=1
+            )
+    elif entity == "meal_plan":
+        body = {
+            "day": "2027-01-04",
+            "type": "note",
+            "note": name,
+            "section_id": create(api, "meal_plan_sections", name=name),
+        }
+    elif entity == "chores":
+        body["period_type"] = "manually"
+    first = create(api, entity, **body)
+    deleted = api.delete(f"/api/objects/{entity}/{first}")
+    assert deleted.status_code == 204, deleted.text
+    second = create(api, entity, **body)
+    step = 2 if entity == "quantity_unit_conversions" else 1
+    assert second == first + step, (entity, first, second)
+
+
+def test_consumed_stock_entry_id_is_not_reused(api, catalog):
+    product, *_ = catalog
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 1}).status_code == 200
+    first = api.get(f"/api/stock/products/{product}/entries").json()[0]["id"]
+    assert api.post(f"/api/stock/products/{product}/consume", json={"amount": 1}).status_code == 200
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 1}).status_code == 200
+    second = api.get(f"/api/stock/products/{product}/entries").json()[0]["id"]
+    assert second == first + 1
+
+
+@pytest.mark.parametrize(
+    "resource,action,entity",
+    [
+        ("chores", "execute", "chores_log"),
+        ("batteries", "charge", "battery_charge_cycles"),
+    ],
+)
+def test_deleted_parent_history_ids_are_not_reused(api, resource, action, entity):
+    body = {"name": uuid4().hex}
+    if resource == "chores":
+        body["period_type"] = "manually"
+    first_parent = create(api, resource, **body)
+    first = api.post(f"/api/{resource}/{first_parent}/{action}", json={})
+    assert first.status_code == 200, first.text
+    first_id = first.json()["id"]
+    assert api.delete(f"/api/objects/{resource}/{first_parent}").status_code == 204
+    second_parent = create(api, resource, **body)
+    second = api.post(f"/api/{resource}/{second_parent}/{action}", json={})
+    assert second.status_code == 200, second.text
+    assert second.json()["id"] == first_id + 1
+    assert (
+        rows(
+            api, entity, **{("chore_id" if resource == "chores" else "battery_id"): second_parent}
+        )[0]["id"]
+        == second.json()["id"]
+    )
+
+
+def test_deleted_product_stock_history_id_is_not_reused(api, catalog):
+    product, unit, _other, location = catalog
+    first = api.post(f"/api/stock/products/{product}/add", json={"amount": 1})
+    assert first.status_code == 200, first.text
+    assert api.delete(f"/api/objects/products/{product}").status_code == 204
+    product = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    second = api.post(f"/api/stock/products/{product}/add", json={"amount": 1})
+    assert second.status_code == 200, second.text
+    assert second.json()[0]["id"] == first.json()[0]["id"] + 1
+
+
 def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):
     from datetime import date, timedelta
 

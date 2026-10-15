@@ -8,6 +8,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class Recipe(Base, TimestampMixin):
     __tablename__ = "recipes"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -33,6 +34,7 @@ class Recipe(Base, TimestampMixin):
 
 class RecipePosition(Base, TimestampMixin):
     __tablename__ = "recipes_pos"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"), nullable=False)
@@ -55,6 +57,7 @@ class RecipePosition(Base, TimestampMixin):
 
 class RecipeNesting(Base, TimestampMixin):
     __tablename__ = "recipes_nestings"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"), nullable=False)

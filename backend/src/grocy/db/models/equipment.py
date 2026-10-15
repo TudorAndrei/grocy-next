@@ -6,6 +6,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class Equipment(Base, TimestampMixin):
     __tablename__ = "equipment"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

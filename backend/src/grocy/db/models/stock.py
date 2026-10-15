@@ -9,6 +9,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class StockEntry(Base, TimestampMixin):
     __tablename__ = "stock"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
@@ -26,6 +27,7 @@ class StockEntry(Base, TimestampMixin):
 
 class StockLog(Base):
     __tablename__ = "stock_log"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
@@ -58,6 +60,7 @@ class StockLog(Base):
 
 class CachedAveragePrice(Base):
     __tablename__ = "cache__products_average_price"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
@@ -66,6 +69,7 @@ class CachedAveragePrice(Base):
 
 class CachedLastPurchase(Base):
     __tablename__ = "cache__products_last_purchased"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)

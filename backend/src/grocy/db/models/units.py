@@ -15,6 +15,7 @@ class QuantityUnitConversion(Base, TimestampMixin):
             "product_id",
             name="uq_qu_conversion_scope",
         ),
+        {"sqlite_autoincrement": True},
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

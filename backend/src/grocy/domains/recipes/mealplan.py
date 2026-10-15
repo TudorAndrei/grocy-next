@@ -1,5 +1,6 @@
 """Build Grocy's day, week, and individual meal recipes from meal plan records."""
 
+from collections import Counter
 from datetime import date
 from decimal import Decimal
 
@@ -10,7 +11,9 @@ from grocy.db.models.mealplan import MealPlanEntry
 from grocy.db.models.recipes import Recipe, RecipeNesting, RecipePosition
 
 
-async def sync_meal_plan_recipes(session: AsyncSession, *days: date) -> None:
+async def sync_meal_plan_recipes(
+    session: AsyncSession, *days: date, preserve_matching: bool = False
+) -> None:
     entries = list((await session.scalars(select(MealPlanEntry).order_by(MealPlanEntry.id))).all())
     for day in set(days):
         for kind, name, meals in (
@@ -22,7 +25,7 @@ async def sync_meal_plan_recipes(session: AsyncSession, *days: date) -> None:
             ),
         ):
             recipe = await _internal_recipe(session, kind, name)
-            await _replace_contents(session, recipe, meals)
+            await _replace_contents(session, recipe, meals, preserve_matching=preserve_matching)
     shadows = list(
         (await session.scalars(select(Recipe).where(Recipe.type == "mealplan-shadow"))).all()
     )
@@ -41,7 +44,7 @@ async def sync_meal_plan_recipes(session: AsyncSession, *days: date) -> None:
     for name, meal in active.items():
         if meal.day in days:
             shadow = await _internal_recipe(session, "mealplan-shadow", name)
-            await _replace_contents(session, shadow, [meal])
+            await _replace_contents(session, shadow, [meal], preserve_matching=preserve_matching)
     await session.flush()
 
 
@@ -58,10 +61,8 @@ async def _internal_recipe(session: AsyncSession, kind: str, name: str) -> Recip
 
 
 async def _replace_contents(
-    session: AsyncSession, recipe: Recipe, meals: list[MealPlanEntry]
+    session: AsyncSession, recipe: Recipe, meals: list[MealPlanEntry], *, preserve_matching: bool
 ) -> None:
-    await session.execute(delete(RecipeNesting).where(RecipeNesting.recipe_id == recipe.id))
-    await session.execute(delete(RecipePosition).where(RecipePosition.recipe_id == recipe.id))
     nestings: dict[int, Decimal] = {}
     products: dict[tuple[int, int], Decimal] = {}
     for meal in meals:
@@ -76,6 +77,23 @@ async def _replace_contents(
         ):
             key = (meal.product_id, meal.product_qu_id)
             products[key] = products.get(key, Decimal("0")) + (meal.product_amount or Decimal("0"))
+    if preserve_matching:
+        stored_nestings = await session.execute(
+            select(RecipeNesting.includes_recipe_id, RecipeNesting.servings).where(
+                RecipeNesting.recipe_id == recipe.id
+            )
+        )
+        stored_products = await session.execute(
+            select(RecipePosition.product_id, RecipePosition.qu_id, RecipePosition.amount).where(
+                RecipePosition.recipe_id == recipe.id
+            )
+        )
+        if Counter(tuple(row) for row in stored_nestings) == Counter(nestings.items()) and Counter(
+            tuple(row) for row in stored_products
+        ) == Counter((product, unit, amount) for (product, unit), amount in products.items()):
+            return
+    await session.execute(delete(RecipeNesting).where(RecipeNesting.recipe_id == recipe.id))
+    await session.execute(delete(RecipePosition).where(RecipePosition.recipe_id == recipe.id))
     for recipe_id, servings in nestings.items():
         session.add(
             RecipeNesting(recipe_id=recipe.id, includes_recipe_id=recipe_id, servings=servings)

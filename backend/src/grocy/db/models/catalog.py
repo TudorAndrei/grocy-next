@@ -8,6 +8,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class Location(Base, TimestampMixin):
     __tablename__ = "locations"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -19,6 +20,7 @@ class Location(Base, TimestampMixin):
 
 class QuantityUnit(Base, TimestampMixin):
     __tablename__ = "quantity_units"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -31,6 +33,7 @@ class QuantityUnit(Base, TimestampMixin):
 
 class ProductGroup(Base, TimestampMixin):
     __tablename__ = "product_groups"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -41,6 +44,7 @@ class ProductGroup(Base, TimestampMixin):
 
 class Product(Base, TimestampMixin):
     __tablename__ = "products"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -109,7 +113,10 @@ class Product(Base, TimestampMixin):
 
 class ProductBarcode(Base, TimestampMixin):
     __tablename__ = "product_barcodes"
-    __table_args__ = (UniqueConstraint("barcode", name="uq_product_barcodes_barcode"),)
+    __table_args__ = (
+        UniqueConstraint("barcode", name="uq_product_barcodes_barcode"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
@@ -125,6 +132,7 @@ class ProductBarcode(Base, TimestampMixin):
 
 class ShoppingLocation(Base, TimestampMixin):
     __tablename__ = "shopping_locations"
+    __table_args__ = ({"sqlite_autoincrement": True},)
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

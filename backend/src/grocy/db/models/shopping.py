@@ -8,6 +8,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class ShoppingList(Base, TimestampMixin):
     __tablename__ = "shopping_lists"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, default="Shopping list")
@@ -16,6 +17,7 @@ class ShoppingList(Base, TimestampMixin):
 
 class ShoppingListItem(Base, TimestampMixin):
     __tablename__ = "shopping_list"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))

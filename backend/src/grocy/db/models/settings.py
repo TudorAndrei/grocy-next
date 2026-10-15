@@ -8,7 +8,10 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class UserSetting(Base, TimestampMixin):
     __tablename__ = "user_settings"
-    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_setting"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "key", name="uq_user_setting"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -21,7 +24,10 @@ class UserSetting(Base, TimestampMixin):
 
 class UserfieldValue(Base, TimestampMixin):
     __tablename__ = "userfield_values"
-    __table_args__ = (UniqueConstraint("entity", "object_id", "name", name="uq_userfield_value"),)
+    __table_args__ = (
+        UniqueConstraint("entity", "object_id", "name", name="uq_userfield_value"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     entity: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -32,7 +38,7 @@ class UserfieldValue(Base, TimestampMixin):
 
 class UserfieldDefinition(Base, TimestampMixin):
     __tablename__ = "userfields"
-    __table_args__ = (UniqueConstraint("entity", "name"),)
+    __table_args__ = (UniqueConstraint("entity", "name"), {"sqlite_autoincrement": True})
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     entity: Mapped[str] = mapped_column(String(128), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -47,6 +53,7 @@ class UserfieldDefinition(Base, TimestampMixin):
 
 class UserEntity(Base, TimestampMixin):
     __tablename__ = "userentities"
+    __table_args__ = ({"sqlite_autoincrement": True},)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     caption: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -57,5 +64,6 @@ class UserEntity(Base, TimestampMixin):
 
 class UserObject(Base, TimestampMixin):
     __tablename__ = "userobjects"
+    __table_args__ = ({"sqlite_autoincrement": True},)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     userentity_id: Mapped[int] = mapped_column(ForeignKey("userentities.id"), nullable=False)

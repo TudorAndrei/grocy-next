@@ -9,6 +9,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class MealPlanSection(Base, TimestampMixin):
     __tablename__ = "meal_plan_sections"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -19,6 +20,7 @@ class MealPlanSection(Base, TimestampMixin):
 
 class MealPlanEntry(Base, TimestampMixin):
     __tablename__ = "meal_plan"
+    __table_args__ = ({"sqlite_autoincrement": True},)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     day: Mapped[date] = mapped_column(Date, nullable=False)
