@@ -34,6 +34,23 @@ const description: EntityField = {
   type: "textarea",
 };
 const named = [name, description];
+const active: EntityField = {
+  key: "active",
+  label: "Active",
+  type: "checkbox",
+  value: "1",
+};
+const flag = (key: string, label: string): EntityField => ({
+  key,
+  label,
+  type: "checkbox",
+});
+const numeric = (
+  key: string,
+  label: string,
+  value = "0",
+  min = 0,
+): EntityField => ({ key, label, type: "number", value, min });
 const ref = (
   key: string,
   label: string,
@@ -76,12 +93,58 @@ export const entities: Record<string, EntitySpec> = {
         label: "Days before expiry",
         type: "number",
         value: "0",
-        min: 0,
+        min: -1,
       },
       ref("product_group_id", "Group", "product_groups", false),
+      active,
+      ref("parent_product_id", "Parent product", "products", false),
+      ref(
+        "default_consume_location_id",
+        "Default consume location",
+        "locations",
+        false,
+      ),
+      ref("shopping_location_id", "Default store", "shopping_locations", false),
+      ref("qu_id_consume", "Consume unit", "quantity_units", false),
+      ref("qu_id_price", "Price unit", "quantity_units", false),
+      numeric("default_best_before_days_after_open", "Days after opening"),
+      numeric(
+        "default_best_before_days_after_freezing",
+        "Days after freezing",
+        "0",
+        -1,
+      ),
+      numeric("default_best_before_days_after_thawing", "Days after thawing"),
+      {
+        key: "due_type",
+        label: "Due date type",
+        choices: ["1", "2"],
+        value: "1",
+      },
+      numeric("quick_consume_amount", "Quick consume amount", "1"),
+      numeric("quick_open_amount", "Quick open amount", "1"),
+      numeric("calories", "Calories per stock unit"),
+      numeric("tare_weight", "Container weight"),
+      flag("enable_tare_weight_handling", "Use container weight"),
+      flag("move_on_open", "Move opened stock to the consume location"),
+      flag("disable_open", "Disable opening"),
+      flag("no_own_stock", "Use child product stock only"),
+      flag(
+        "cumulate_min_stock_amount_of_sub_products",
+        "Sum child product minimum stock",
+      ),
+      flag(
+        "not_check_stock_fulfillment_for_recipes",
+        "Skip recipe stock checks",
+      ),
+      flag("hide_on_stock_overview", "Hide on stock overview"),
     ],
   },
-  shopping_locations: { label: "Stores", singular: "store", fields: named },
+  shopping_locations: {
+    label: "Stores",
+    singular: "store",
+    fields: [...named, active],
+  },
   userfields: {
     label: "Custom fields",
     singular: "custom field",
@@ -105,10 +168,30 @@ export const entities: Record<string, EntitySpec> = {
       {
         key: "type",
         label: "Field type",
-        choices: ["text", "number", "checkbox", "date"],
-        value: "text",
+        choices: [
+          "text-single-line",
+          "text-multi-line",
+          "number-integral",
+          "number-decimal",
+          "number-currency",
+          "checkbox",
+          "date",
+          "datetime",
+          "preset-list",
+          "preset-checklist",
+          "link",
+          "link-with-title",
+          "file",
+          "image",
+        ],
+        value: "text-single-line",
         required: true,
       },
+      flag("input_required", "Required input"),
+      { key: "default_value", label: "Default value" },
+      { key: "config", label: "List options, one per line", type: "textarea" },
+      flag("show_as_column_in_tables", "Show as a table column"),
+      numeric("sort_number", "Order"),
     ],
   },
   userentities: {
@@ -131,12 +214,13 @@ export const entities: Record<string, EntitySpec> = {
     fields: [
       ...named,
       { key: "is_freezer", label: "Freezer", type: "checkbox" },
+      active,
     ],
   },
   quantity_units: {
     label: "Units",
     singular: "unit",
-    fields: [...named, { key: "name_plural", label: "Plural name" }],
+    fields: [...named, { key: "name_plural", label: "Plural name" }, active],
   },
   quantity_unit_conversions: {
     label: "Unit conversions",
@@ -154,7 +238,11 @@ export const entities: Record<string, EntitySpec> = {
       ref("product_id", "Product", "products", false),
     ],
   },
-  product_groups: { label: "Product groups", singular: "group", fields: named },
+  product_groups: {
+    label: "Product groups",
+    singular: "group",
+    fields: [...named, active],
+  },
   product_barcodes: {
     label: "Barcodes",
     singular: "barcode",
@@ -187,6 +275,11 @@ export const entities: Record<string, EntitySpec> = {
         value: "1",
         required: true,
       },
+      ref("product_id", "Product produced by this recipe", "products", false),
+      flag(
+        "not_check_shoppinglist",
+        "Ignore shopping list quantities in stock checks",
+      ),
     ],
   },
   recipes_pos: {
@@ -204,6 +297,13 @@ export const entities: Record<string, EntitySpec> = {
         label: "Skip stock check",
         type: "checkbox",
       },
+      flag(
+        "only_check_single_unit_in_stock",
+        "Only check if any amount is in stock",
+      ),
+      flag("round_up", "Round ingredient amount up"),
+      numeric("price_factor", "Price factor", "1"),
+      { key: "variable_amount", label: "Variable amount description" },
     ],
   },
   recipes_nestings: {

@@ -6,7 +6,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
-import { entities, type EntityRow, type EntitySpec } from "@/lib/entities";
+import {
+  entities,
+  type EntityField,
+  type EntityRow,
+  type EntitySpec,
+} from "@/lib/entities";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 
@@ -17,6 +22,34 @@ type Props = {
   fixed?: Record<string, unknown>;
   title?: string;
 };
+
+function customField(row: EntityRow): EntityField {
+  const kind = String(row.type);
+  return {
+    key: `custom:${row.name}`,
+    label: String(row.caption),
+    required: Boolean(row.input_required),
+    value: row.default_value == null ? "" : String(row.default_value),
+    type: kind.startsWith("number")
+      ? "number"
+      : kind === "datetime"
+        ? "datetime-local"
+        : kind === "date"
+          ? "date"
+          : kind === "checkbox"
+            ? "checkbox"
+            : kind === "preset-checklist"
+              ? "multiple"
+              : ["text", "text-multi-line"].includes(kind)
+                ? "textarea"
+                : undefined,
+    choices: kind.startsWith("preset-")
+      ? String(row.config ?? "")
+          .split(/\r\n|\r|\n/)
+          .filter(Boolean)
+      : undefined,
+  };
+}
 export function EntityManager({
   entity,
   detail,
@@ -25,34 +58,46 @@ export function EntityManager({
   title,
 }: Props) {
   const baseSpec = entities[entity];
+  const [values, setValues] = useState<Record<string, string>>({});
+  const recordTypes = useQuery({
+    queryKey: ["objects", "userentities"],
+    queryFn: () => api.objects("userentities"),
+    enabled: ["userfields", "userobjects"].includes(entity),
+  });
   const custom = useQuery({
     queryKey: ["objects", "userfields"],
     queryFn: () => api.objects("userfields"),
     enabled: !["userfields", "userentities"].includes(entity),
   });
   const customFields = (custom.data ?? []).filter(
-    (row) => row.entity === entity,
+    (row) =>
+      row.entity === entity ||
+      (entity === "userobjects" &&
+        row.entity ===
+          `userentity-${recordTypes.data?.find((type) => type.id === Number(values.userentity_id))?.name}`),
   );
   const spec: EntitySpec = {
     ...baseSpec,
     fields: [
-      ...baseSpec.fields,
-      ...customFields.map((row) => ({
-        key: `custom:${row.name}`,
-        label: String(row.caption),
-        type:
-          row.type === "number"
-            ? ("number" as const)
-            : row.type === "date"
-              ? ("date" as const)
-              : ("textarea" as const),
-      })),
+      ...baseSpec.fields.map((field) =>
+        entity === "userfields" && field.key === "entity"
+          ? {
+              ...field,
+              choices: [
+                ...(field.choices ?? []),
+                ...(recordTypes.data ?? []).map(
+                  (type) => `userentity-${type.name}`,
+                ),
+              ],
+            }
+          : field,
+      ),
+      ...customFields.map(customField),
     ],
   };
   const prefix = useId();
   const client = useQueryClient();
   const [editing, setEditing] = useState<number | null | undefined>(undefined);
-  const [values, setValues] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const query = useQuery({
@@ -91,11 +136,28 @@ export function EntityManager({
     setEditing(row?.id ?? null);
     setValues(
       Object.fromEntries(
-        spec.fields.map((f) => [
+        [
+          ...baseSpec.fields,
+          ...(custom.data ?? [])
+            .filter(
+              (field) =>
+                field.entity === entity ||
+                (entity === "userobjects" &&
+                  field.entity ===
+                    `userentity-${recordTypes.data?.find((type) => type.id === Number(row?.userentity_id))?.name}`),
+            )
+            .map(customField),
+        ].map((f) => [
           f.key,
           row
             ? f.type === "checkbox"
-              ? row[f.key]
+              ? Number(
+                  f.key.startsWith("custom:")
+                    ? (row.userfields as Record<string, unknown>)?.[
+                        f.key.slice(7)
+                      ]
+                    : row[f.key],
+                )
                 ? "1"
                 : "0"
               : String(
@@ -117,7 +179,7 @@ export function EntityManager({
       if (fixed && field.key in fixed) continue;
       if (field.when && !field.when.values.includes(values[field.when.key]))
         continue;
-      const value = values[field.key] ?? "";
+      const value = values[field.key] ?? field.value ?? "";
       if (field.key.startsWith("custom:")) {
         const fields = (body.userfields ?? {}) as Record<string, string>;
         fields[field.key.slice(7)] = value;
@@ -184,7 +246,11 @@ export function EntityManager({
                         aria-label={field.label}
                         className="weekday-options"
                       >
-                        {optionsQuery?.data?.map((row) => {
+                        {(
+                          field.choices?.map((name) => ({ id: name, name })) ??
+                          optionsQuery?.data ??
+                          []
+                        ).map((row) => {
                           const selected = (values[field.key] ?? "")
                             .split(",")
                             .filter(Boolean);
@@ -207,10 +273,11 @@ export function EntityManager({
                                 }
                               />{" "}
                               {String(
-                                row.display_name ??
-                                  row.name ??
-                                  row.username ??
-                                  row.id,
+                                "display_name" in row
+                                  ? row.display_name
+                                  : "username" in row
+                                    ? row.username
+                                    : (row.name ?? row.id),
                               )}
                             </label>
                           );
@@ -263,10 +330,19 @@ export function EntityManager({
                     ) : field.ref || field.choices ? (
                       <select
                         id={id}
-                        value={values[field.key] ?? ""}
+                        value={values[field.key] ?? field.value ?? ""}
                         required={field.required}
                         onChange={(e) =>
-                          setValues({ ...values, [field.key]: e.target.value })
+                          setValues({
+                            ...(field.key === "userentity_id"
+                              ? Object.fromEntries(
+                                  Object.entries(values).filter(
+                                    ([key]) => !key.startsWith("custom:"),
+                                  ),
+                                )
+                              : values),
+                            [field.key]: e.target.value,
+                          })
                         }
                       >
                         <option value="">
@@ -289,7 +365,8 @@ export function EntityManager({
                     ) : field.type === "textarea" ? (
                       <textarea
                         id={id}
-                        value={values[field.key] ?? ""}
+                        value={values[field.key] ?? field.value ?? ""}
+                        required={field.required}
                         onChange={(e) =>
                           setValues({ ...values, [field.key]: e.target.value })
                         }
@@ -301,11 +378,11 @@ export function EntityManager({
                         value={
                           field.type === "checkbox"
                             ? undefined
-                            : (values[field.key] ?? "")
+                            : (values[field.key] ?? field.value ?? "")
                         }
                         checked={
                           field.type === "checkbox"
-                            ? values[field.key] === "1"
+                            ? (values[field.key] ?? field.value) === "1"
                             : undefined
                         }
                         required={field.required}
