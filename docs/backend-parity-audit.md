@@ -68,11 +68,13 @@ Child stock opening follows the PHP conversion loop. The remaining amount is con
 
 System times and database change times use the server time zone. Timed calendar events include a time zone and an equal start and end time. Calendar exports include time zone transitions for their event range. System metadata reports the pinned database version, 253. The `php_version` field is `"not applicable"` because this server uses Python.
 
+Feature flag environment values now follow Grocy's conversion rules. `true` and `false` become booleans. Other values stay strings. Thus, `0` disables a flag, but `off` is a nonempty true string. The configuration response preserves these types. Disabled calendar groups produce no events. Disabled freezing keeps the normal purchase and transfer due dates. Disabled due-date tracking omits label due dates. Disabled location tracking creates location ID 1 when it is absent, including for existing users. Printer requests follow the feature flag and server execution setting.
+
 Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/ChoresService.php), [battery API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/BatteriesApiController.php), [stock service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/StockService.php), [system service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/ApplicationService.php), and [calendar API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/CalendarApiController.php).
 
 ## Verification
 
-The local suite passed 146 tests. It skipped 107 reference cases. All 184 comparison cases passed in UTC and Europe/Bucharest. Ruff, basedpyright, and the frontend build also passed.
+The local suite passed 148 tests. It skipped 108 reference cases. The default comparison suite passed 185 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff, basedpyright, and the frontend build passed.
 
 The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest.
 
@@ -94,4 +96,4 @@ uv run --project backend python scripts/check-reference.py --timezone Europe/Buc
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
 
-The remaining audit must cover upstream HTML and CSS request purification, all optional feature flags, and more input parser cases. The current datetime input models accept forms that some PHP handlers ignore. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. These gaps prevent a claim of full runtime parity.
+The remaining audit must cover upstream HTML and CSS request purification, more input parser cases, and automatic label reprints. The current datetime input models accept forms that some PHP handlers ignore. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. These gaps prevent a claim of full runtime parity.

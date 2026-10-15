@@ -30,6 +30,8 @@ This command requires PHP and the modules that Grocy lists as required. It downl
 
 The reference server has authentication enabled and uses disposable API keys. Use `--timezone Europe/Bucharest` to run both servers in that zone. CI checks UTC and Europe/Bucharest. The test for access without module permissions needs a local reference database to create its key. The script supplies this path. For a separate reference server, set `GROCY_REFERENCE_DATABASE` to its disposable SQLite file or that test will be skipped.
 
+Use repeated `--feature-flag NAME=VALUE` options to set the same flag values on both servers. CI also runs the `disabled_feature_flags` case with tasks, chores, batteries, meals, due-date tracking, and freezing disabled. That profile uses `PYTEST_ADDOPTS='-k disabled_feature_flags'` because other scenarios assume the default flags.
+
 Use `--php /path/to/php` to select another PHP executable. Use `--release /path/to/grocy_4.5.0.zip` to use an existing archive. `--dry-run` checks local inputs. `--output json` writes a machine-readable result to standard output and sends test output to standard error.
 
 To compare state with upstream PHP, start a disposable Grocy v4.5.0 instance and supply its key:
@@ -95,6 +97,8 @@ Null and `"0"` password updates also keep the stored password. The current-user 
 
 Chore consumption uses the gross tare amount. Chore tracking saves its log before stock consumption, so a failed stock booking leaves that execution in the log. Assignment reads use the stored assignee until assignment calculation runs. Equal least-done counts use user ID order. Child stock opening copies PHP's repeated conversion of the remaining amount. This can open more stock than requested.
 
-The audit still needs full HTML and CSS input purification, optional feature flag behavior, and more input parser cases. Encoded image bytes can differ between Pillow and PHP GD. These gaps remain outside the verified behavior.
+Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
+
+The audit still needs full HTML and CSS input purification, more input parser cases, and automatic label reprints. Encoded image bytes can differ between Pillow and PHP GD. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
