@@ -1,6 +1,6 @@
 # Backend parity audit
 
-Audit date: 2026-10-15. Baseline: Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`.
+Audit date: 2026-10-16. Baseline: Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`.
 
 The backend has routes for all 86 contract operations. The audit found missing state changes despite that route coverage. The repairs below address those findings. Full behavior parity for every client and input is not established by these checks.
 
@@ -132,7 +132,7 @@ Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90
 
 ## Verification
 
-The full local run passed 575 tests and skipped 498 cases that need the reference server or another feature profile. The default comparison suite passed 962 cases and skipped the disabled-flag case in both UTC and Europe/Bucharest. The disabled-flag profile passed both cases in both zones. All 144 focused native body comparison cases passed. Ruff, basedpyright, and PHP syntax checks passed.
+The full local run passed 608 tests and skipped 531 cases that need the reference server or another feature profile. The default comparison suite passed 1,028 cases and skipped the disabled-flag case in both UTC and Europe/Bucharest. The disabled-flag profile passed both cases in both zones. The final 67-case native read comparison passed. Ruff, basedpyright, and PHP syntax checks passed.
 
 The 51 new input cases also passed through HTTP against the built Docker image with PHP 8.4.26. The local reference checks used PHP 8.3.31. The current built wheel contains all 437 vendor files with their original checksums and all three worker files. Two local checks cover worker failure, recovery, shutdown, and startup without PHP. User deletion checks cover both startup and CLI upgrades from the saved revision 0011 schema, import of deleted-user records, and restart after last-user deletion. Six permission workflows also passed through HTTP in Docker. The three user deletion cases and a last-user restart check also passed in Docker.
 
@@ -249,3 +249,21 @@ A nested infinite number no longer causes a transport error with status 503. Nat
 The previous backend failed 35 of the selected cases. All 72 PHP reference cases passed before the repair. After the repair, all 144 selected comparison cases passed. The Linux image passed 73 HTTP cases on each of a fresh database and a saved revision 0020 database. Those cases include deletion of the full combined stock entry when one purchase is undone. The upgrade retained all original rows and allocation counters. Restart retained the complete state. A rejected upgrade restored the full saved database. The image is `sha256:6e4a8871e9b50ed2155beb7ac2d9a278f1a70ffa9bc5f053ff2ae3145ac33ece`.
 
 This batch needs no database revision. Parsing in other write handlers, the Python filters on other list endpoints, domain date limits, image bytes, printer errors, and combined permission errors still require work. Full runtime parity is not yet established.
+
+All eight formerly filtered list handlers now use native SQL results. Five original controllers and six read services are included unchanged. The user list uses the original users service and base filter, with its original exception boundary. Python checks its permission before that call. The former Python filter and three unused domain read methods are removed.
+
+Tasks, chores, batteries, users, recipe fulfillment, product stock entries, product locations, and location stock entries now use Slim's raw query parsing. Numeric limits, offsets, array parameters, field errors, sort errors, and native JSON bytes follow Grocy. The current task list ignores `include_done`, as in Grocy. Stock list IDs retain PHP's numeric conversion or SQLite's column affinity. Subproduct flags use PHP's boolean conversion. Native read responses include the three source CORS headers, including uncaught read errors.
+
+Task lists retain year 0000 and fractional timestamp text. An unfiltered task list also retains its native user and category records. The previous backend failed all 30 initial list cases. A further saved-date case failed with `ValueError: year 0 is out of range`. The source recipe view uses `recipe_id` as its record key; the first test setup was corrected to use that key.
+
+The first full Bucharest run exposed a stock selection error after midnight. Grocy uses SQLite's UTC day for due and expiry selection. The Python code used the local day. Stock overview and volatile stock now run the original stock controller and database service. The SQL bridge keeps the source service's raw query calls and grouped object fetch mode. Shared shopping selection now uses the same SQL date predicates. Numeric day parameters also retain native conversion, including `0` selecting the default five-day range.
+
+Both new stock selection cases failed on the previous code. The expanded 67-case comparison passed in Europe/Bucharest, including the existing parent-stock case. Four upgrade checks passed after their old-schema setup read stored user IDs directly. That setup runs before the native user DTO view exists. The upgrade assertions remain in place.
+
+An existing corruption test left an infinite stock minimum in the shared reference database. A later stock overview then returned the native serialization error in both implementations. The corruption case now deletes its own product after checking the error. The six-case shared-state check passed. The Linux image passed 60 HTTP cases on each of a fresh database and a saved revision 0020 database. All original saved rows and allocation counters remained equal. Restart retained the full state. A rejected upgrade restored the saved database. The image is `sha256:a4cbf73988fedadda0d0e2d86b9087bb1bbd153d8b67d05b984a73f3e0c57fcc`.
+
+All 459 managed vendor checksums match. All 20 Grocy core files retain the release bytes. The built wheel retains those vendor files and all four PHP adapters. Ruff, basedpyright, and PHP syntax checks passed. This batch needs no database revision.
+
+A separate disposable experiment ran the complete pinned PHP API on a copy of the project database. It created records, combined two purchases, and deleted the full combined entry on undo. It needed native migration records and a native valid key expiry. Its generic product response exposed the local purchase-factor column. Direct use of that runtime still needs a boundary for project storage extensions. This experiment does not replace the current API implementation.
+
+An empty saved BLOB still reads as an empty string through the bridge; native PDO returns null. That fetch conversion needs repair. Other write parsing, domain dates, file handling, image bytes, printer errors, and combined permission cases also require work. Full runtime parity remains incomplete.
