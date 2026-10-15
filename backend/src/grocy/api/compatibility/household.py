@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
@@ -7,18 +7,46 @@ from pydantic import BaseModel
 from grocy.api.compatibility.filtering import filter_rows
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import HouseholdSvc
+from grocy.core.errors import GrocyError
 
 router = APIRouter(tags=["household"])
 
 
 class TaskCompletionBody(BaseModel):
-    done_time: datetime | None = None
+    done_time: Any = None
 
 
 class TrackingBody(BaseModel):
-    tracked_time: datetime | None = None
+    tracked_time: Any = None
     done_by: int | None = None
     skipped: bool = False
+
+
+def _timestamp(value: Any) -> datetime | None:
+    if isinstance(value, (dict, list)):
+        raise GrocyError("A timestamp must be a scalar value", status_code=500)
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return (
+        parsed
+        if parsed.tzinfo is None and parsed.isoformat(sep=" ", timespec="seconds") == value
+        else None
+    )
+
+
+def _chore_time(value: Any) -> date | datetime | None:
+    parsed = _timestamp(value)
+    if parsed is not None or not isinstance(value, str):
+        return parsed
+    try:
+        parsed_date = date.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed_date if parsed_date.isoformat() == value else None
 
 
 @router.get("/api/chores")
@@ -44,7 +72,9 @@ async def execute_chore(
     household: HouseholdSvc,
     body: TrackingBody | None = None,
 ) -> dict[str, Any]:
-    return await household.execute_chore(actor, chore_id, **(body.model_dump() if body else {}))
+    values = body.model_dump() if body else {}
+    values["tracked_time"] = _chore_time(values.get("tracked_time"))
+    return await household.execute_chore(actor, chore_id, **values)
 
 
 @router.post("/api/chores/executions/{execution_id}/undo", status_code=204)
@@ -95,7 +125,7 @@ async def complete_task(
     household: HouseholdSvc,
     body: TaskCompletionBody | None = None,
 ) -> Response:
-    await household.complete_task(task_id, done_time=body.done_time if body else None)
+    await household.complete_task(task_id, done_time=_timestamp(body.done_time) if body else None)
     return Response(status_code=204)
 
 
@@ -133,7 +163,7 @@ async def charge_battery(
     body: TrackingBody | None = None,
 ) -> dict[str, Any]:
     return await household.charge_battery(
-        battery_id, tracked_time=body.tracked_time if body else None
+        battery_id, tracked_time=_timestamp(body.tracked_time) if body else None
     )
 
 

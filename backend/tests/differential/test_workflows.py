@@ -4,6 +4,7 @@ import base64
 import os
 import re
 import sqlite3
+from datetime import datetime
 from io import BytesIO
 from uuid import uuid4
 
@@ -1045,3 +1046,75 @@ def test_stock_edit_undo_after_consumption_restores_the_original_amount(api, cat
     assert undone.status_code == 204, undone.text
     assert api.get(base).json()["stock_amount"] == 3
     assert api.get(base + "/entries").json()[0]["price"] == 2
+
+
+@pytest.mark.parametrize(
+    "resource,action,field,log_entity",
+    [
+        ("tasks", "complete", "done_time", None),
+        ("batteries", "charge", "tracked_time", "battery_charge_cycles"),
+        ("chores", "execute", "tracked_time", "chores_log"),
+    ],
+)
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2027-01-04 16:20:00",
+        "2027-01-04",
+        "2027-01-04T16:20:00",
+        "2027-01-04 16:20:00+00:00",
+        "2027-01-04 16:20:00.000",
+        "2027-02-29 16:20:00",
+        "invalid",
+        1800000000,
+        None,
+        [],
+        {},
+    ],
+)
+def test_household_time_input_matches_grocy(api, resource, action, field, log_entity, value):
+    options = {"period_type": "daily", "track_date_only": 0} if resource == "chores" else {}
+    record = create(api, resource, name=uuid4().hex, **options)
+    before = api.get("/api/system/time").json()["time_local_sqlite3"]
+    response = api.post(f"/api/{resource}/{record}/{action}", json={field: value})
+    if isinstance(value, (list, dict)):
+        assert response.status_code == 500, response.text
+        if resource == "tasks":
+            assert api.get(f"/api/objects/tasks/{record}").json()["done"] == 0
+        else:
+            owner = "battery_id" if resource == "batteries" else "chore_id"
+            assert rows(api, log_entity, **{owner: record}) == []
+        return
+    assert response.status_code == (204 if resource == "tasks" else 200), response.text
+    if resource == "tasks":
+        actual = api.get(f"/api/objects/tasks/{record}").json()["done_timestamp"]
+    else:
+        actual = response.json()["tracked_time"]
+        stored = api.get(f"/api/objects/{log_entity}/{response.json()['id']}").json()
+        assert stored["tracked_time"] == actual
+    if value == "2027-01-04 16:20:00" or (resource == "chores" and value == "2027-01-04"):
+        assert actual == value
+    else:
+        after = api.get("/api/system/time").json()["time_local_sqlite3"]
+        assert (
+            datetime.fromisoformat(before)
+            <= datetime.fromisoformat(actual)
+            <= datetime.fromisoformat(after)
+        )
+
+
+def test_chore_date_precision_survives_reads_and_recurrence(api):
+    chore = create(api, "chores", name=uuid4().hex, period_type="adaptive", track_date_only=0)
+    times = ["2027-01-04", "2027-01-04 00:00:00", "2027-01-05 12:00:00", "2027-01-05 13:00:00"]
+    for tracked in times:
+        response = api.post(f"/api/chores/{chore}/execute", json={"tracked_time": tracked})
+        assert response.status_code == 200, response.text
+        assert response.json()["tracked_time"] == tracked
+        assert api.get(f"/api/chores/{chore}").json()["last_tracked"] == tracked
+    details = api.get(f"/api/chores/{chore}").json()
+    assert details["average_execution_frequency_hours"] == 12
+    assert details["next_estimated_execution_time"] == "2027-01-06 01:00:00"
+    assert api.put(f"/api/objects/chores/{chore}", json={"track_date_only": 1}).status_code == 204
+    response = api.post(f"/api/chores/{chore}/execute", json={"tracked_time": "2027-01-06"})
+    assert response.status_code == 200, response.text
+    assert response.json()["tracked_time"] == "2027-01-06 00:00:00"

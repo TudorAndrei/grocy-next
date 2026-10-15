@@ -45,6 +45,15 @@ def source_database(path: Path, *, bad_reference: bool = False):
 def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
     source, target = tmp_path / "source.db", tmp_path / "next.db"
     source_database(source)
+    with sqlite3.connect(source) as connection:
+        connection.executescript("""
+            CREATE TABLE chores (id INTEGER PRIMARY KEY, name TEXT, period_type TEXT);
+            CREATE TABLE chores_log (id INTEGER PRIMARY KEY, chore_id INTEGER, tracked_time TEXT,
+                                    undone INTEGER DEFAULT 0, skipped INTEGER DEFAULT 0);
+            INSERT INTO chores VALUES (1, 'Imported clean', 'daily');
+            INSERT INTO chores_log VALUES (1, 1, '2027-01-04', 0, 0);
+            INSERT INTO chores_log VALUES (2, 1, '2027-01-05 15:00:00', 0, 0);
+        """)
     original = source.read_bytes()
     result = import_grocy_sqlite(source, target)
     assert result["copied_tables"]["products"] == 1
@@ -53,6 +62,10 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
     assert source.read_bytes() == original
     with sqlite3.connect(target) as conn:
         assert conn.execute("SELECT amount FROM stock").fetchone()[0] == 3
+        assert conn.execute("SELECT tracked_time FROM chores_log ORDER BY id").fetchall() == [
+            ("2027-01-04",),
+            ("2027-01-05 15:00:00",),
+        ]
         assert conn.execute(
             "SELECT due_type, default_best_before_days_after_freezing, quick_consume_amount "
             "FROM products"
@@ -133,7 +146,9 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
             CREATE TABLE chores_log (id INTEGER PRIMARY KEY, chore_id INTEGER, tracked_time TEXT,
                                     undone INTEGER DEFAULT 0, skipped INTEGER DEFAULT 0);
             INSERT INTO chores VALUES (1, 'Legacy clean', 'daily', 3);
+            INSERT INTO chores VALUES (2, 'Legacy date clean', 'daily', 3);
             INSERT INTO chores_log VALUES (1, 1, '2027-01-04 15:00:00', 0, 0);
+            INSERT INTO chores_log VALUES (2, 2, '2027-01-04', 0, 0);
             CREATE TABLE api_keys (id INTEGER PRIMARY KEY, api_key TEXT, user_id INTEGER,
                                    key_type TEXT DEFAULT 'default');
             INSERT INTO api_keys VALUES (1, 'upgrade-key', 1, 'default');
@@ -160,6 +175,10 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         assert chore.json()["chore"]["period_interval"] == 3
         assert chore.json()["tracked_count"] == 1
         assert chore.json()["next_estimated_execution_time"] == "2027-01-07 15:00:00"
+        date_chore = upgraded.get("/api/chores/2", headers=headers)
+        assert date_chore.status_code == 200
+        assert date_chore.json()["last_tracked"] == "2027-01-04"
+        assert date_chore.json()["next_estimated_execution_time"] == "2027-01-07 00:00:00"
         assert upgraded.get("/api/objects/equipment", headers=headers).status_code == 200
         assert upgraded.get("/api/userfields/products/1", headers=headers).json() == {
             "origin": "Farm"
@@ -195,7 +214,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == (None, "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0010"
+            == "20261015_0011"
         )
 
 

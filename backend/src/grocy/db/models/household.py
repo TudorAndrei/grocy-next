@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from grocy.db.models.base import Base, TimestampMixin
+from grocy.db.types import DateOrDateTime
 
 
 class Chore(Base, TimestampMixin):
@@ -37,10 +38,11 @@ class Chore(Base, TimestampMixin):
 
 class ChoreLog(Base):
     __tablename__ = "chores_log"
+    __table_args__ = (Index("ix_chores_log_performance1", "chore_id", "undone", "tracked_time"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
-    tracked_time: Mapped[datetime] = mapped_column(DateTime(timezone=False), nullable=False)
+    tracked_time: Mapped[date | datetime] = mapped_column(DateOrDateTime(), nullable=False)
     scheduled_execution_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     done_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     undone: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
