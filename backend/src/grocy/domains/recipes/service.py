@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from decimal import Decimal
+import uuid
+from decimal import ROUND_CEILING, Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -57,9 +58,15 @@ class RecipesService:
                 product = await self.products.get(int(pos["product_id"]))
                 amount = Decimal(str(pos["amount"]))
                 qu_id = int(pos["qu_id"])
+                price_factor = Decimal(str(pos.get("price_factor", 1)))
                 if not amount.is_finite() or amount <= 0:
                     raise ValueError("Invalid amount")
-                await self.units.convert(amount, qu_id, product.qu_id_stock, product_id=product.id)
+                if not price_factor.is_finite() or price_factor < 0:
+                    raise ValueError("Invalid price factor")
+                if not pos.get("only_check_single_unit_in_stock"):
+                    await self.units.convert(
+                        amount, qu_id, product.qu_id_stock, product_id=product.id
+                    )
             except (KeyError, ValueError, TypeError) as exc:
                 raise GrocyError(
                     "Ingredient requires a product, unit, and positive amount"
@@ -72,6 +79,13 @@ class RecipesService:
                     qu_id=int(pos["qu_id"]),
                     note=pos.get("note"),
                     ingredient_group=pos.get("ingredient_group"),
+                    only_check_single_unit_in_stock=int(
+                        bool(pos.get("only_check_single_unit_in_stock"))
+                    ),
+                    not_check_stock_fulfillment=int(bool(pos.get("not_check_stock_fulfillment"))),
+                    round_up=int(bool(pos.get("round_up"))),
+                    price_factor=price_factor,
+                    variable_amount=pos.get("variable_amount"),
                 )
             )
         await self.session.commit()
@@ -102,13 +116,11 @@ class RecipesService:
         details = []
         costs = Decimal("0")
         for pos in positions:
-            available = await self.products.stock_amount(pos["product_id"])
+            available, price = await self._available_and_price(pos["product_id"])
             needed = pos["amount"]
             checked = pos["check_amount"]
             ok = available >= checked
-            entries = await self.stock._ordered_entries(pos["product_id"])
-            price = next((e.price for e in entries if e.price is not None), Decimal("0"))
-            costs += needed * price
+            costs += pos["cost_amount"] * price
             details.append(
                 {
                     "product_id": pos["product_id"],
@@ -117,7 +129,11 @@ class RecipesService:
                     "qu_id": pos["qu_id"],
                     "fulfilled": ok,
                     "fulfilled_with_shopping_list": available
-                    + planned.get(pos["product_id"], Decimal("0"))
+                    + (
+                        Decimal("0")
+                        if recipe.not_check_shoppinglist
+                        else planned.get(pos["product_id"], Decimal("0"))
+                    )
                     >= checked,
                 }
             )
@@ -137,15 +153,36 @@ class RecipesService:
     ) -> dict:
         recipe = await self.get(recipe_id)
         positions = await self._stock_positions(recipe, self._scale(recipe, servings))
+        status = await self.fulfillment(recipe_id, servings=servings)
+        transaction_id = uuid.uuid4().hex
         bookings = []
         try:
             for pos in positions:
-                available = await self.products.stock_amount(pos["product_id"])
-                amount = min(available, pos["amount"])
+                available, _price = await self._available_and_price(pos["product_id"])
+                amount = min(available, pos["consume_amount"])
                 if amount > 0:
                     bookings.append(
-                        await self.stock.consume(actor, pos["product_id"], amount, commit=False)
+                        await self.stock.consume(
+                            actor,
+                            pos["product_id"],
+                            amount,
+                            commit=False,
+                            allow_subproduct_substitution=True,
+                            recipe_id=recipe_id,
+                            transaction_id=transaction_id,
+                        )
                     )
+            if recipe.product_id:
+                produced = servings if servings is not None else recipe.desired_servings
+                await self.stock.purchase(
+                    actor,
+                    recipe.product_id,
+                    produced,
+                    price=Decimal(str(status["costs"])) / produced,
+                    transaction_type="self-production",
+                    note=recipe.name,
+                    commit=False,
+                )
             if commit:
                 await self.session.commit()
             else:
@@ -159,13 +196,49 @@ class RecipesService:
             "bookings": bookings,
         }
 
+    async def _available_and_price(self, product_id: int) -> tuple[Decimal, Decimal]:
+        product = await self.products.get(product_id)
+        entries = await self.stock._ordered_entries(product_id, include_sub_products=True)
+        available = Decimal("0")
+        for entry in entries:
+            child = await self.products.get(entry.product_id)
+            available += await self.units.convert(
+                entry.amount, child.qu_id_stock, product.qu_id_stock, product_id=child.id
+            )
+        effective = product_id
+        if not await self.products.stock_amount(product_id) and entries:
+            effective = entries[0].product_id
+        price = await self.session.scalar(
+            text("SELECT price FROM products_current_price WHERE product_id = :id"),
+            {"id": effective},
+        )
+        value = Decimal(str(price)) if price is not None else Decimal("0")
+        if effective != product_id:
+            child = await self.products.get(effective)
+            factor = await self.units.convert(
+                Decimal("1"), child.qu_id_stock, product.qu_id_stock, product_id=child.id
+            )
+            value /= factor
+        return available, value
+
     async def _stock_positions(self, recipe: Recipe, scale: Decimal) -> list[dict]:
         grouped: dict[int, dict] = {}
         for pos in await self._expanded_positions(recipe, scale):
             product = await self.products.get(pos["product_id"])
-            amount = await self.units.convert(
-                pos["amount"], pos["qu_id"], product.qu_id_stock, product_id=product.id
+            rounded = (
+                pos["amount"].to_integral_value(rounding=ROUND_CEILING)
+                if pos["round_up"]
+                else pos["amount"]
             )
+            try:
+                factor = await self.units.convert(
+                    Decimal("1"), pos["qu_id"], product.qu_id_stock, product_id=product.id
+                )
+            except GrocyError as exc:
+                if not pos["only_check_single_unit_in_stock"] or exc.code != "missing_conversion":
+                    raise
+                factor = Decimal("1")
+            amount = rounded * factor
             check = (
                 Decimal("0")
                 if pos["not_check_stock_fulfillment"]
@@ -173,7 +246,7 @@ class RecipesService:
                 else amount
             )
             if pos.get("only_check_single_unit_in_stock") and check:
-                check = min(check, Decimal("1"))
+                check = Decimal("0.00000001")
             result = grouped.setdefault(
                 product.id,
                 {
@@ -181,10 +254,15 @@ class RecipesService:
                     "qu_id": product.qu_id_stock,
                     "amount": Decimal("0"),
                     "check_amount": Decimal("0"),
+                    "consume_amount": Decimal("0"),
+                    "cost_amount": Decimal("0"),
                 },
             )
             result["amount"] += amount
             result["check_amount"] += check
+            if not pos["only_check_single_unit_in_stock"]:
+                result["consume_amount"] += amount
+            result["cost_amount"] += pos["amount"] * factor * pos["price_factor"]
         return list(grouped.values())
 
     async def add_missing_to_shopping_list(
@@ -195,6 +273,7 @@ class RecipesService:
         shopping_list_id: int = 1,
     ) -> dict:
         status = await self.fulfillment(recipe_id, servings=servings)
+        recipe = await self.get(recipe_id)
         added: list[dict] = []
         for pos in status["positions"]:
             if pos["fulfilled"]:
@@ -202,12 +281,21 @@ class RecipesService:
             needed = Decimal(str(pos["amount_needed"])) - Decimal(str(pos["amount_available"]))
             if needed <= 0:
                 continue
-            item = await self.shopping.ensure_item(
-                pos["product_id"],
-                needed,
-                shopping_list_id=shopping_list_id,
-                note=f"recipe:{recipe_id}",
-            )
+            if recipe.not_check_shoppinglist:
+                await self.shopping.add_product(
+                    pos["product_id"],
+                    needed,
+                    shopping_list_id=shopping_list_id,
+                    note=f"recipe:{recipe_id}",
+                )
+                item = needed
+            else:
+                item = await self.shopping.ensure_item(
+                    pos["product_id"],
+                    needed,
+                    shopping_list_id=shopping_list_id,
+                    note=f"recipe:{recipe_id}",
+                )
             if item:
                 added.append({"product_id": pos["product_id"], "amount": float(item)})
         return {"recipe_id": recipe_id, "added": added}
@@ -297,6 +385,11 @@ class RecipesService:
                     "qu_id": pos.qu_id,
                     "note": pos.note,
                     "ingredient_group": pos.ingredient_group,
+                    "only_check_single_unit_in_stock": pos.only_check_single_unit_in_stock,
+                    "not_check_stock_fulfillment": pos.not_check_stock_fulfillment,
+                    "round_up": pos.round_up,
+                    "price_factor": float(pos.price_factor),
+                    "variable_amount": pos.variable_amount,
                 }
                 for pos in recipe.positions
             ],
@@ -331,6 +424,8 @@ class RecipesService:
                     "product_id": pos.product_id,
                     "amount": Decimal(pos.amount) * scale,
                     "qu_id": pos.qu_id,
+                    "round_up": bool(pos.round_up),
+                    "price_factor": Decimal(pos.price_factor),
                     "only_check_single_unit_in_stock": pos.only_check_single_unit_in_stock,
                     "not_check_stock_fulfillment": bool(
                         pos.not_check_stock_fulfillment or recipe.not_check_stock_fulfillment

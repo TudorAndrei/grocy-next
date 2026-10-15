@@ -55,6 +55,8 @@ Transfers return linked `transfer_from` and `transfer_to` bookings. They keep th
 
 Partial opening keeps the scanned stock ID on the opened amount. The closed remainder keeps its store, price, and note. Opening supports child products, product restrictions, and linked transfers. Stock selection uses the default consume location, opened state, due date, and purchase date.
 
+Recipe checks support child stock, rounded ingredient amounts, price factors, and ingredients that only require some stock. Recipe use leaves those presence-only ingredients in stock. Consumption records store the recipe ID and share a transaction ID. A recipe can create its output product as a self-production booking with its cost per serving. Stock consumption and output creation commit together.
+
 ## Boundaries
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.

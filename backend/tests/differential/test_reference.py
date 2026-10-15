@@ -172,6 +172,72 @@ def test_reference_stock_recipe_and_household_state(
     assert snapshots[0] == snapshots[1] == (3.0, True, 2.0, 1, 0)
 
 
+def test_reference_recipe_options_consumption_and_produced_stock(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    snapshots = []
+    for app in (reference, client):
+        name = f"Recipe options {uuid4().hex[:8]}"
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        defaults = {"location_id": location, "qu_id_stock": unit, "qu_id_purchase": unit}
+        spice = create(app, "products", {**defaults, "name": f"{name} spice"})
+        parent = create(app, "products", {**defaults, "name": f"{name} flour", "no_own_stock": 1})
+        child = create(
+            app, "products", {**defaults, "name": f"{name} flour bag", "parent_product_id": parent}
+        )
+        output = create(app, "products", {**defaults, "name": f"{name} bread"})
+        for product, amount, price in ((spice, 0.25, 4), (child, 3, 2.5)):
+            assert (
+                app.post(
+                    f"/api/stock/products/{product}/add", json={"amount": amount, "price": price}
+                ).status_code
+                == 200
+            )
+        recipe = create(app, "recipes", {"name": name, "base_servings": 2, "product_id": output})
+        create(
+            app,
+            "recipes_pos",
+            {
+                "recipe_id": recipe,
+                "product_id": spice,
+                "amount": 5,
+                "qu_id": unit,
+                "only_check_single_unit_in_stock": 1,
+            },
+        )
+        create(
+            app,
+            "recipes_pos",
+            {
+                "recipe_id": recipe,
+                "product_id": parent,
+                "amount": 1.2,
+                "qu_id": unit,
+                "round_up": 1,
+                "price_factor": 0.5,
+            },
+        )
+        status = app.get(f"/api/recipes/{recipe}/fulfillment").json()
+        assert app.post(f"/api/recipes/{recipe}/consume").status_code == 204
+        stocks = [
+            app.get(f"/api/stock/products/{product}").json() for product in (spice, child, output)
+        ]
+        logs = app.get("/api/objects/stock_log", params={"query[]": f"recipe_id={recipe}"}).json()
+        snapshots.append(
+            (
+                bool(status["need_fulfilled"]),
+                float(status["costs"]),
+                [float(row["stock_amount"]) for row in stocks],
+                float(stocks[2]["last_price"]),
+                len(logs),
+                all(row["transaction_type"] == "consume" for row in logs),
+            )
+        )
+    assert snapshots[0] == snapshots[1] == (True, 21.5, [0.25, 1, 2], 10.75, 1, True)
+
+
 def timestamp(value):
     from datetime import datetime
 

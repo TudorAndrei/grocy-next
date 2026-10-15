@@ -75,6 +75,7 @@ class StockService:
         shopping_location_id: int | None = None,
         note: str | None = None,
         transaction_type: str = "purchase",
+        commit: bool = True,
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
@@ -128,7 +129,10 @@ class StockService:
             shopping_location_id=entry.shopping_location_id,
             note=note,
         )
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         return {
             "id": log.id,
             "product_id": product.id,
@@ -152,6 +156,7 @@ class StockService:
         recipe_id: int | None = None,
         exact_amount: bool = True,
         transaction_type: str = "consume",
+        transaction_id: str | None = None,
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
@@ -193,7 +198,7 @@ class StockService:
                 status_code=400,
                 code="insufficient_stock",
             )
-        transaction_id = uuid.uuid4().hex
+        transaction_id = transaction_id or uuid.uuid4().hex
         last_log_id = None
         for entry in entries:
             if remaining <= 0:
