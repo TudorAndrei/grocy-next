@@ -19,6 +19,8 @@ All 86 contract operations have routes. The 33 listable contract entities suppor
 
 ## Local development
 
+Install PHP 8.1 through 8.4 and the extensions in [the backend setup](backend/README.md). The compatibility API uses PHP to apply Grocy's input filter.
+
 ```bash
 cd backend
 uv sync --frozen

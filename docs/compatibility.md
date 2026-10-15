@@ -2,6 +2,8 @@
 
 The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21`. The OpenAPI file and its hash are in `contracts/`. Permission IDs and their parent relationships follow upstream migration 0110.
 
+The backend requires PHP 8.1 through 8.4 for the included HTMLPurifier 4.18.0 engine. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
+
 The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
 
 The exposed SQLite views and recipe fulfillment API use 19 pinned Grocy view definitions, including their dependencies. Quantity conversion and recipe views read current records instead of upstream caches. The permission hierarchy uses the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
@@ -10,7 +12,7 @@ The `/api/v2` API adds nutrition, API key management, and meal completion. MCP a
 
 System information reports the pinned Grocy API version and a separate application version. Configuration exposes public Grocy feature flags and the display currency. Localization strings use the pinned English defaults. System time supports offsets in seconds. Database change time includes SQLite WAL writes.
 
-System information includes the pinned database version, 253. Its `php_version` field is `"not applicable"` because this server uses Python. System and database change times use the server time zone. Record timestamps use spaces and whole seconds. Timed calendar events include the time zone, equal start and end times, and time zone transitions for the event range.
+System information includes the pinned database version, 253. Its `php_version` field reports the input worker's PHP runtime version. System and database change times use the server time zone. Record timestamps use spaces and whole seconds. Timed calendar events include the time zone, equal start and end times, and time zone transitions for the event range.
 
 User preferences include the pinned defaults. Stored values can be null. Deleting a preference restores its default. Database upgrades preserve existing values and add update timestamps.
 
@@ -77,6 +79,8 @@ File image requests support bounded resizing. Generic queries support the upstre
 
 File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
+Request filtering uses the pinned Grocy HTML, CSS, URI, and entity settings. PHP parses the original JSON bytes. Top-level scalar values pass through HTMLPurifier; booleans and arrays remain intact. Empty optional numeric and date values use the handler defaults. Filtered routes require the exact `application/json` content type. The backend keeps the upstream rules for null bodies, PHP array keys, and large numeric exponents. Empty database text is read as null, as in PDO.
+
 A file upload cannot replace an existing file. Reads use the inline disposition and upstream cache duration. Only `force_serve_as=picture` enables image resizing. Resizing keeps the image format. List filters support SQLite wildcards, ASCII case matching, text values with leading zeros, and upstream null rules. The query parser also copies ignored operators and value truncation. Invalid generic object queries return the upstream status 500.
 
 Stock label modes follow the Grocy 4.5.0 runtime: 0 for no label, 1 for one label, and 2 for one label per whole unit. The pinned OpenAPI file lists 1, 2, and 3. The runtime values take precedence for compatibility. Per-unit bookings share a transaction ID. As in PHP, mode 2 omits a fractional remainder. Stock counts accept a purchase date. They count the product across all locations and use the last price and store when these values are omitted.
@@ -105,6 +109,10 @@ Chore consumption uses the gross tare amount. Chore tracking saves its log befor
 
 Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
 
-The audit still needs full HTML and CSS input purification and more input parser cases. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. More response edge cases need checks. These gaps remain outside the verified behavior.
+The audit still needs more input coercion, validation, and combined error cases. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. More response edge cases need checks. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
+
+To check a disposable running backend with the shared workflow tests, set
+`GROCY_BACKEND_URL`, `GROCY_BACKEND_API_KEY`, and `GROCY_BACKEND_DISPOSABLE=1`.
+Select the `local` cases. The database must be disposable because these cases write data.

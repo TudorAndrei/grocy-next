@@ -62,6 +62,12 @@ List filters use the upstream query grammar. LIKE matching supports `%` and `_` 
 
 Stored record timestamps use spaces and whole seconds. Missing object reads return 404, but missing object updates and deletes return 400. Many missing stock and household actions also return 400. A missing stock entry read returns null. Missing product stock lists are empty. A missing location entry list returns 500, as in PHP.
 
+The backend now includes the unmodified HTMLPurifier 4.18.0 runtime from the verified Grocy release. A PHP worker parses the original JSON bytes and applies the same HTML, CSS, URI, and entity rules. It processes top-level scalar values and keeps booleans and arrays. The request filter runs before Python converts numeric and date fields. Empty optional numbers and dates use the handler defaults. SQLite reads convert empty text to null, as PDO does in Grocy.
+
+Filtered routes require the exact `application/json` content type. Permission writes that bypass the upstream filter retain their separate content type rules. Empty, malformed, and scalar bodies keep each handler's result. For example, task completion can return 500, while a setting write can store null and return 204. A JSON number such as `1e400` becomes `"INF"` in a text field, as in PHP.
+
+The backend now requires PHP 8.1 through 8.4 and the listed extensions. The Docker image includes them. Startup checks the worker and library version. A failed worker cannot pass unfiltered input to a write. The next request can start a new worker. Shutdown stops the child process and removes its private cache. Library source, license, credits, and file checksums are included in the package.
+
 Sources: [file API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/FilesApiController.php), [image service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/FilesService.php), [query parser](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/BaseApiController.php), and [object API](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/GenericEntityApiController.php).
 
 ## Household, stock checks, and time zones
@@ -76,9 +82,9 @@ Task completion and battery tracking accept exact timestamps in `YYYY-MM-DD HH:M
 
 Chore frequency uses SQLite's Julian day calculation and integer truncation, as in Grocy. For example, a one-hour interval can truncate to zero after the floating point calculation. Mixed dates and timestamps remain distinct records in that calculation. New and existing databases also receive Grocy's index on chore ID, undo state, and tracked time.
 
-A local synthetic history with four chores and 1,000 records per chore gave the same average before and after the index. The median query time over three runs fell from 94.46 ms to 0.21 ms. The index used 120 KiB and took 0.59 ms to build in that fixture. Query plans changed from full scans and a temporary sort to index searches. These measurements describe that fixture, not a production history. The index adds storage and write work for each execution.
+A local synthetic history with four chores and 1,000 records per chore gave the same average before and after the index. The median query time over three runs fell from 94.46 ms to 0.21 ms. The index used 120 KiB and took 0.59 ms to build in that fixture. Query plans changed from full scans and a temporary sort to index searches. These measurements apply to that fixture. They do not use a production history. The index adds storage and write work for each execution.
 
-System times and database change times use the server time zone. Timed calendar events include a time zone and an equal start and end time. Calendar exports include time zone transitions for their event range. System metadata reports the pinned database version, 253. The `php_version` field is `"not applicable"` because this server uses Python.
+System times and database change times use the server time zone. Timed calendar events include a time zone and an equal start and end time. Calendar exports include time zone transitions for their event range. System metadata reports the pinned database version, 253. The `php_version` field reports the input worker's PHP runtime version.
 
 Feature flag environment values now follow Grocy's conversion rules. `true` and `false` become booleans. Other values stay strings. Thus, `0` disables a flag, but `off` is a nonempty true string. The configuration response preserves these types. Disabled calendar groups produce no events. Disabled freezing keeps the normal purchase and transfer due dates. Disabled due-date tracking omits label due dates. Disabled location tracking creates location ID 1 when it is absent, including for existing users. Printer requests follow the feature flag and server execution setting.
 
@@ -86,7 +92,9 @@ Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90
 
 ## Verification
 
-The local suite passed 188 tests. It skipped 150 reference cases. The default comparison suite passed 266 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff, basedpyright, and the frontend build passed.
+The local suite passed 241 tests. It skipped 201 reference cases. The default comparison suite passed 368 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff, basedpyright, and the frontend build passed.
+
+The 51 new input cases also passed through HTTP against the built Docker image with PHP 8.4.26. The local reference checks used PHP 8.3.31. The built wheel contains all 380 vendor files with their original checksums and both worker files. Two local checks cover worker failure, recovery, shutdown, and startup without PHP.
 
 The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest. Label comparisons use a local HTTP receiver. They compare label fields, request formats, and stored stock after printer errors. Each new label regression failed on the previous code before the repair.
 
@@ -108,4 +116,4 @@ uv run --project backend python scripts/check-reference.py --timezone Europe/Buc
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
 
-The remaining audit must cover upstream HTML and CSS request purification and more input parser cases. The current date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. More response edge cases need checks. These gaps prevent a claim of full runtime parity.
+The remaining audit must cover more input coercion, validation, and combined error cases. The current date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. Nested values, combined input and permission errors, and response edge cases need checks. Permission and deletion guards also need a direct comparison. These gaps prevent a claim of full runtime parity.
