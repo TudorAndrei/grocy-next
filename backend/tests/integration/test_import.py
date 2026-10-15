@@ -105,6 +105,11 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
             CREATE TABLE api_keys (id INTEGER PRIMARY KEY, api_key TEXT, user_id INTEGER,
                                    key_type TEXT DEFAULT 'default');
             INSERT INTO api_keys VALUES (1, 'upgrade-key', 1, 'default');
+            CREATE TABLE user_settings (id INTEGER PRIMARY KEY, user_id INTEGER,
+                                        key TEXT, value TEXT NOT NULL,
+                                        row_created_timestamp DATETIME);
+            INSERT INTO user_settings VALUES (1, 1, 'legacy-setting', 'kept',
+                                               '2026-01-01 12:00:00');
             DROP TABLE userfield_values;
             CREATE TABLE userfield_values (id INTEGER PRIMARY KEY, entity TEXT,
                                           object_id INTEGER, name TEXT, value TEXT);
@@ -124,13 +129,29 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         assert chore.json()["tracked_count"] == 1
         assert chore.json()["next_estimated_execution_time"] == "2027-01-07T15:00:00"
         assert upgraded.get("/api/objects/equipment", headers=headers).status_code == 200
+        assert upgraded.get("/api/user/settings/legacy-setting", headers=headers).json() == {
+            "value": "kept"
+        }
+        assert (
+            upgraded.put(
+                "/api/user/settings/legacy-setting", headers=headers, json={"value": None}
+            ).status_code
+            == 204
+        )
+        assert upgraded.get("/api/user/settings/legacy-setting", headers=headers).json() == {
+            "value": None
+        }
         assert upgraded.get("/api/users/1/permissions", headers=headers).json() == [
             {"permission_id": 1, "user_id": 1},
         ]
     with sqlite3.connect(database) as connection:
+        assert connection.execute(
+            "SELECT value, row_created_timestamp, row_updated_timestamp IS NOT NULL "
+            "FROM user_settings WHERE key = 'legacy-setting'"
+        ).fetchone() == (None, "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0007"
+            == "20261015_0008"
         )
 
 

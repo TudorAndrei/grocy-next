@@ -8,12 +8,22 @@ from sqlalchemy import select
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility import client_defaults
 from grocy.db.models.settings import UserSetting
 
 DEFINITIONS = Path(__file__).with_name("compatibility") / "grocy_4_5_0_views.json"
 
 
+def register_compatibility_functions(
+    connection: Connection, settings: dict[str, Any] | None = None
+) -> None:
+    values = client_defaults()["user_settings"] if settings is None else settings
+    database: Any = connection.connection.dbapi_connection
+    database.create_function("grocy_user_setting", 1, lambda key: values.get(key))
+
+
 def install_compatibility_views(connection: Connection) -> None:
+    register_compatibility_functions(connection)
     views = json.loads(DEFINITIONS.read_text())["views"]
     for name in views:
         connection.exec_driver_sql(f'DROP VIEW IF EXISTS "{name}"')
@@ -26,12 +36,7 @@ async def configure_compatibility_queries(session: AsyncSession) -> None:
     rows = (
         await session.execute(select(UserSetting).where(UserSetting.user_id == user_id))
     ).scalars()
-    settings = {"stock_due_soon_days": "5", **{row.key: row.value for row in rows}}
-
-    def register(connection: Any) -> None:
-        connection.connection.dbapi_connection.create_function(
-            "grocy_user_setting", 1, lambda key: settings.get(key)
-        )
+    settings = {**client_defaults()["user_settings"], **{row.key: row.value for row in rows}}
 
     connection = await session.connection()
-    await connection.run_sync(register)
+    await connection.run_sync(register_compatibility_functions, settings)

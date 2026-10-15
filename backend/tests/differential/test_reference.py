@@ -849,3 +849,33 @@ def test_reference_system_metadata_localization_and_time(
     for app in (reference, client):
         invalid = app.get("/api/system/time", params={"offset": "tomorrow"})
         assert invalid.status_code == 400
+
+
+def test_reference_user_setting_defaults_values_and_reset(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    key = f"compatibility_{uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        states: list[object] = [app.get("/api/user/settings").json()]
+        default = app.get("/api/user/settings/stock_due_soon_days")
+        assert default.status_code == 200, default.text
+        states.append(default.json())
+        try:
+            for value in (True, False, 2.5, None):
+                saved = app.put(f"/api/user/settings/{key}", json={"value": value})
+                assert saved.status_code == 204, saved.text
+                states.append(app.get(f"/api/user/settings/{key}").json())
+            assert (
+                app.put("/api/user/settings/stock_due_soon_days", json={"value": 3}).status_code
+                == 204
+            )
+            states.append(app.get("/api/user/settings/stock_due_soon_days").json())
+        finally:
+            assert app.delete(f"/api/user/settings/{key}").status_code == 204
+            assert app.delete("/api/user/settings/stock_due_soon_days").status_code == 204
+        states.append(app.get("/api/user/settings/stock_due_soon_days").json())
+        states.append(app.get(f"/api/user/settings/{key}").json())
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]

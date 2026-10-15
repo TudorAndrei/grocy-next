@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from grocy.db.models.base import Base, TimestampMixin
@@ -11,7 +13,10 @@ class UserSetting(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     key: Mapped[str] = mapped_column(String(255), nullable=False)
-    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    value: Mapped[str | None] = mapped_column(Text)
+    row_updated_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime, server_default=func.datetime("now", "localtime")
+    )
 
 
 class UserfieldValue(Base, TimestampMixin):

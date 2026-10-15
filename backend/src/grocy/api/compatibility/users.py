@@ -1,10 +1,14 @@
 import hashlib
+import json
+import math
 import secrets
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Response
 from sqlalchemy import delete, select
 
+from grocy.compatibility import client_defaults
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError, NotFoundError
@@ -49,10 +53,24 @@ async def _get_user_or_404(session: DbSession, user_id: int) -> User:
     return user
 
 
-async def _settings_map(session: DbSession, user_id: int) -> dict[str, str]:
+async def _settings_map(session: DbSession, user_id: int) -> dict[str, Any]:
     stmt = select(UserSetting).where(UserSetting.user_id == user_id)
     rows = (await session.execute(stmt)).scalars().all()
-    return {row.key: row.value for row in rows}
+    return {**client_defaults()["user_settings"], **{row.key: row.value for row in rows}}
+
+
+def _setting_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise GrocyError("A setting number must be finite")
+        return format(value, ".14g")
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
 
 
 @router.get("/api/user")
@@ -62,7 +80,7 @@ async def get_current_user(actor: CurrentActor, session: DbSession) -> dict[str,
 
 
 @router.get("/api/user/settings")
-async def get_user_settings(actor: CurrentActor, session: DbSession) -> dict[str, str]:
+async def get_user_settings(actor: CurrentActor, session: DbSession) -> dict[str, Any]:
     return await _settings_map(session, actor.user_id)
 
 
@@ -71,16 +89,17 @@ async def put_user_settings(
     body: dict[str, Any],
     actor: CurrentActor,
     session: DbSession,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     stmt = select(UserSetting).where(UserSetting.user_id == actor.user_id)
     existing = {row.key: row for row in (await session.execute(stmt)).scalars().all()}
     for key, value in body.items():
-        text = "" if value is None else str(value)
+        text = _setting_text(value)
         row = existing.get(key)
         if row is None:
             session.add(UserSetting(user_id=actor.user_id, key=key, value=text))
         else:
             row.value = text
+            row.row_updated_timestamp = datetime.now()
     await session.commit()
     return await _settings_map(session, actor.user_id)
 
@@ -106,13 +125,10 @@ async def get_user_setting(
         UserSetting.key == setting_key,
     )
     row = (await session.execute(stmt)).scalars().first()
-    if row is None:
-        raise NotFoundError(f"Setting '{setting_key}' not found")
     return {
-        "id": row.id,
-        "user_id": row.user_id,
-        "key": row.key,
-        "value": row.value,
+        "value": row.value
+        if row is not None
+        else client_defaults()["user_settings"].get(setting_key)
     }
 
 
@@ -123,17 +139,18 @@ async def put_user_setting(
     actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    value = body.get("value", "")
+    value = body.get("value")
     stmt = select(UserSetting).where(
         UserSetting.user_id == actor.user_id,
         UserSetting.key == setting_key,
     )
     row = (await session.execute(stmt)).scalars().first()
-    text = "" if value is None else str(value)
+    text = _setting_text(value)
     if row is None:
         session.add(UserSetting(user_id=actor.user_id, key=setting_key, value=text))
     else:
         row.value = text
+        row.row_updated_timestamp = datetime.now()
     await session.commit()
     return Response(status_code=204)
 
@@ -144,14 +161,12 @@ async def delete_user_setting(
     actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    stmt = select(UserSetting).where(
-        UserSetting.user_id == actor.user_id,
-        UserSetting.key == setting_key,
+    await session.execute(
+        delete(UserSetting).where(
+            UserSetting.user_id == actor.user_id,
+            UserSetting.key == setting_key,
+        )
     )
-    row = (await session.execute(stmt)).scalars().first()
-    if row is None:
-        raise NotFoundError(f"Setting '{setting_key}' not found")
-    await session.delete(row)
     await session.commit()
     return Response(status_code=204)
 
