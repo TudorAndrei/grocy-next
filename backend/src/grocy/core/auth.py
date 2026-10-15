@@ -5,14 +5,17 @@ from typing import Annotated
 from fastapi import Depends, Header, Request
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
 from grocy.core.permissions import resolve_permissions
-from grocy.db.models.users import ApiKey, UserPermission
+from grocy.db.models.users import ApiKey, User, UserPermission
 from grocy.db.session import get_session_factory
+
+
+class _MissingKeyUser(UnauthorizedError):
+    """A selected credential has no user, so no later credential can replace it."""
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
@@ -63,6 +66,8 @@ async def authenticate_request(
             continue
         try:
             actor = await authenticate_key(session, candidate, key_type=key_type)
+        except _MissingKeyUser:
+            raise
         except UnauthorizedError:
             continue
         return actor
@@ -88,15 +93,18 @@ def require_request_permission(request: Request, actor: Actor) -> None:
 
 async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "default") -> Actor:
     stmt = (
-        select(ApiKey)
-        .options(selectinload(ApiKey.user))
+        select(ApiKey, User)
+        .outerjoin(User, ApiKey.user_id == User.id)
         .where(ApiKey.api_key == key, ApiKey.key_type == key_type)
     )
-    row = (await session.execute(stmt)).scalars().first()
-    if row is None:
+    identity = (await session.execute(stmt)).first()
+    if identity is None:
         raise UnauthorizedError("Invalid API key")
+    row, user = identity
     if row.expires is not None and row.expires < datetime.now(UTC).replace(tzinfo=None):
         raise UnauthorizedError("API key expired")
+    if user is None:
+        raise _MissingKeyUser("Invalid API key")
     session.info["actor_user_id"] = row.user_id
     ids = set(
         (
@@ -109,7 +117,7 @@ async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "
     )
     return Actor(
         user_id=row.user_id,
-        username=row.user.username,
+        username=user.username,
         api_key=key,
         is_admin=1 in ids,
         permissions=resolve_permissions(ids),

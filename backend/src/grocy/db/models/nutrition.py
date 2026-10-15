@@ -31,7 +31,7 @@ class ProductNutrition(Base):
     source_type: Mapped[str | None] = mapped_column(String(64))
     source_barcode: Mapped[str | None] = mapped_column(String(255))
     source_note: Mapped[str | None] = mapped_column(Text)
-    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    updated_by: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         server_default=func.datetime("now", "localtime"),
@@ -55,7 +55,7 @@ class NutritionEvidence(Base):
     external_url: Mapped[str | None] = mapped_column(String(1024))
     barcode: Mapped[str | None] = mapped_column(String(255))
     notes: Mapped[str | None] = mapped_column(Text)
-    contributor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    contributor_id: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         server_default=func.datetime("now", "localtime"),
@@ -77,7 +77,7 @@ class NutritionRevision(Base):
     origin: Mapped[str] = mapped_column(String(32), nullable=False)
     review_status: Mapped[str] = mapped_column(String(32), nullable=False, default="committed")
     change_summary: Mapped[str | None] = mapped_column(Text)
-    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    actor_id: Mapped[int | None] = mapped_column(Integer)
     evidence_id: Mapped[int | None] = mapped_column(ForeignKey("nutrition_evidence.id"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
@@ -96,8 +96,8 @@ class NutritionProposal(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     conflict_reason: Mapped[str | None] = mapped_column(Text)
-    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
-    approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    created_by: Mapped[int | None] = mapped_column(Integer)
+    approved_by: Mapped[int | None] = mapped_column(Integer)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),

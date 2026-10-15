@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.db.models.catalog import Location, Product, ProductBarcode, ProductGroup, QuantityUnit
@@ -17,6 +17,15 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
     user_count = await session.scalar(select(func.count()).select_from(User))
     if user_count and user_count > 0:
         return
+    if session.bind is not None and session.bind.dialect.name == "sqlite":
+        has_sequence = await session.scalar(
+            text("SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'")
+        )
+        if has_sequence and await session.scalar(
+            text("SELECT seq FROM sqlite_sequence WHERE name='users' AND seq > 0")
+        ):
+            # Deletion of the last user must not create a replacement on restart.
+            return
 
     admin = User(username="admin", first_name="Admin", last_name="User", password="")
     session.add(admin)

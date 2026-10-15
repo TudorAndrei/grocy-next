@@ -408,6 +408,86 @@ def test_chore_merge_requires_master_data_permission(api, permissions):
     )
 
 
+@pytest.mark.parametrize("delete_self", [False, True])
+def test_user_deletion_keeps_history_and_permissions(api, catalog, delete_self):
+    product, *_ = catalog
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    key = user_key(api, user)
+    permissions = api.get(f"/api/users/{user}/permissions").json()
+    task = create(api, "tasks", name=uuid4().hex, assigned_to_user_id=user)
+    chore = create(
+        api,
+        "chores",
+        name=uuid4().hex,
+        period_type="manually",
+        next_execution_assigned_to_user_id=user,
+        rescheduled_next_execution_assigned_to_user_id=user,
+    )
+    owner = api.headers["GROCY-API-KEY"]
+    api.headers["GROCY-API-KEY"] = key
+    try:
+        setting = "deletion_" + uuid4().hex
+        assert api.put(f"/api/user/settings/{setting}", json={"value": "kept"}).status_code == 204
+        execution = api.post(f"/api/chores/{chore}/execute", json={})
+        assert execution.status_code == 200, execution.text
+        assert (
+            api.put(
+                f"/api/objects/chores/{chore}",
+                json={
+                    "next_execution_assigned_to_user_id": user,
+                    "rescheduled_next_execution_assigned_to_user_id": user,
+                },
+            ).status_code
+            == 204
+        )
+        booking = api.post(f"/api/stock/products/{product}/add", json={"amount": 1})
+        assert booking.status_code == 200, booking.text
+        if not delete_self:
+            api.headers["GROCY-API-KEY"] = owner
+        response = api.delete(f"/api/users/{user}")
+        assert response.status_code == 204, response.text
+    finally:
+        api.headers["GROCY-API-KEY"] = owner
+    assert api.get("/api/users", params={"query[]": f"id={user}"}).json() == []
+    assert api.get(f"/api/users/{user}/permissions").json() == permissions
+    assert api.get(f"/api/objects/tasks/{task}").json()["assigned_to_user_id"] == user
+    saved_chore = api.get(f"/api/objects/chores/{chore}").json()
+    assert saved_chore["next_execution_assigned_to_user_id"] == user
+    assert saved_chore["rescheduled_next_execution_assigned_to_user_id"] == user
+    assert (
+        api.get(f"/api/objects/chores_log/{execution.json()['id']}").json()["done_by_user_id"]
+        == user
+    )
+    assert api.get(f"/api/objects/stock_log/{booking.json()[0]['id']}").json()["user_id"] == user
+    assert api.get("/api/user", headers={"GROCY-API-KEY": key}).status_code == 401
+    assert (
+        api.get(
+            "/api/user", headers={"GROCY-API-KEY": key}, params={"GROCY-API-KEY": owner}
+        ).status_code
+        == 401
+    )
+    next_username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": next_username, "password": "test"}).status_code
+        == 204
+    )
+    next_user = api.get("/api/users", params={"query[]": f"username={next_username}"}).json()[0][
+        "id"
+    ]
+    assert next_user > user
+    assert api.get("/api/user", headers={"GROCY-API-KEY": key}).status_code == 401
+
+
+def test_missing_user_deletion_returns_grocy_error(api):
+    response = api.delete("/api/users/2147483647")
+    assert response.status_code == 500, response.text
+    assert response.json()["error_message"] == "Call to a member function delete() on null"
+
+
 def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):
     from datetime import date, timedelta
 

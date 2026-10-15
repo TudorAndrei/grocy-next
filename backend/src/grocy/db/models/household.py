@@ -25,12 +25,10 @@ class Chore(Base, TimestampMixin):
         String(64), nullable=False, default="no-assignment"
     )
     assignment_config: Mapped[str | None] = mapped_column(Text)
-    next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(Integer)
     start_date: Mapped[datetime | None] = mapped_column(DateTime)
     rescheduled_date: Mapped[datetime | None] = mapped_column(DateTime)
-    rescheduled_next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id")
-    )
+    rescheduled_next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(Integer)
     consume_product_on_execution: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
     product_amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
@@ -44,7 +42,7 @@ class ChoreLog(Base):
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
     tracked_time: Mapped[date | datetime] = mapped_column(DateOrDateTime(), nullable=False)
     scheduled_execution_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
-    done_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    done_by_user_id: Mapped[int | None] = mapped_column(Integer)
     undone: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     undone_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
@@ -75,7 +73,7 @@ class Task(Base, TimestampMixin):
     done: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     done_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     category_id: Mapped[int | None] = mapped_column(ForeignKey("task_categories.id"))
-    assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    assigned_to_user_id: Mapped[int | None] = mapped_column(Integer)
 
 
 class Battery(Base, TimestampMixin):

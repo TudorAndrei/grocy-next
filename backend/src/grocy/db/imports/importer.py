@@ -109,6 +109,23 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                     conn.execute(table.insert().values(**values))
                     count += 1
                 copied[table.name] = count
+            if source_db.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'"
+            ).fetchone():
+                sequence = source_db.execute(
+                    "SELECT seq FROM sqlite_sequence WHERE name='users'"
+                ).fetchone()
+                if sequence is not None:
+                    # A deleted user's saved key must never acquire a replacement user.
+                    conn.exec_driver_sql(
+                        "UPDATE sqlite_sequence SET seq=MAX(seq, ?) WHERE name='users'",
+                        (sequence[0],),
+                    )
+                    conn.exec_driver_sql(
+                        "INSERT INTO sqlite_sequence (name, seq) SELECT 'users', ? "
+                        "WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name='users')",
+                        (sequence[0],),
+                    )
             if "user_permissions" not in source_tables:
                 conn.exec_driver_sql(
                     "INSERT INTO user_permissions (user_id, permission_id) SELECT id, 1 FROM users"

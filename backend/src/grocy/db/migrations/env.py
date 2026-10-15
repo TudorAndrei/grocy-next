@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from grocy.core.config import get_settings
 from grocy.db.compatibility_views import register_compatibility_functions
 from grocy.db.models import Base
+from grocy.db.session import migration_connection
 
 config = context.config
 if config.config_file_name is not None:
@@ -43,7 +44,7 @@ async def run_async_migrations() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-    async with connectable.connect() as connection:
+    async with migration_connection(connectable) as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 

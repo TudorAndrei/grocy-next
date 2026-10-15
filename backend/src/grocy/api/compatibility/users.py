@@ -18,7 +18,7 @@ from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.core.permissions import PERMISSIONS
 from grocy.db.models.settings import UserSetting
-from grocy.db.models.users import ApiKey, User, UserPermission
+from grocy.db.models.users import User, UserPermission
 
 router = APIRouter(tags=["users"], route_class=CompatibilityRoute)
 
@@ -226,24 +226,13 @@ async def update_user(
 @router.delete("/api/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
-    actor: CurrentActor,
+    _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    if user_id == actor.user_id:
-        raise NotFoundError("Cannot delete current user")
-    user = await _get_user_or_404(session, user_id)
-    keys = (await session.execute(select(ApiKey).where(ApiKey.user_id == user_id))).scalars().all()
-    for key in keys:
-        await session.delete(key)
-    settings = (
-        (await session.execute(select(UserSetting).where(UserSetting.user_id == user_id)))
-        .scalars()
-        .all()
-    )
-    for setting in settings:
-        await session.delete(setting)
+    user = await session.get(User, user_id)
+    if user is None:
+        raise GrocyError("Call to a member function delete() on null", status_code=500, code=None)
     await session.delete(user)
-    await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
     await session.commit()
     return Response(status_code=204)
 

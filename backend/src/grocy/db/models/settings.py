@@ -11,7 +11,7 @@ class UserSetting(Base, TimestampMixin):
     __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_setting"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     key: Mapped[str] = mapped_column(String(255), nullable=False)
     value: Mapped[str | None] = mapped_column(Text)
     row_updated_timestamp: Mapped[datetime | None] = mapped_column(

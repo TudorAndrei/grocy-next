@@ -214,7 +214,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0011"
+            == "20261015_0012"
         )
 
 
@@ -295,3 +295,55 @@ def test_upgrade_restores_derived_meals_and_inverse_conversions(tmp_path: Path, 
         ).json()
         assert len(conversions) == 1
         assert conversions[0]["factor"] == pytest.approx(0.001)
+
+
+def test_import_keeps_deleted_user_references_and_id_sequence(tmp_path: Path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.main import create_app
+
+    source, target = tmp_path / "deleted-user-source.db", tmp_path / "deleted-user-target.db"
+    source_database(source)
+    with sqlite3.connect(source) as connection:
+        connection.executescript("""
+            ALTER TABLE users RENAME TO legacy_users;
+            CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT);
+            INSERT INTO users SELECT * FROM legacy_users;
+            DROP TABLE legacy_users;
+            INSERT INTO users VALUES (100, 'Deleted');
+            INSERT INTO users VALUES (250, 'Also deleted');
+            DELETE FROM users WHERE id IN (100, 250);
+            CREATE TABLE api_keys (id INTEGER PRIMARY KEY, api_key TEXT, user_id INTEGER,
+                                   key_type TEXT DEFAULT 'default', expires DATETIME);
+            INSERT INTO api_keys VALUES (1, 'import-owner', 1, 'default', '2999-01-01 00:00:00');
+            INSERT INTO api_keys VALUES (2, 'deleted-key', 100, 'default', '2999-01-01 00:00:00');
+            CREATE TABLE user_settings (id INTEGER PRIMARY KEY, user_id INTEGER,
+                                        key TEXT, value TEXT);
+            INSERT INTO user_settings VALUES (1, 100, 'kept', 'saved');
+            CREATE TABLE user_permissions (id INTEGER PRIMARY KEY, user_id INTEGER,
+                                           permission_id INTEGER);
+            INSERT INTO user_permissions VALUES (1, 1, 1);
+            INSERT INTO user_permissions VALUES (2, 100, 1);
+            CREATE TABLE tasks (id INTEGER PRIMARY KEY, name TEXT, assigned_to_user_id INTEGER);
+            INSERT INTO tasks VALUES (1, 'Future assignee', 1000);
+        """)
+    import_grocy_sqlite(source, target)
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
+    clear_settings_cache()
+    with TestClient(create_app(), headers={"GROCY-API-KEY": "import-owner"}) as app:
+        assert app.get("/api/user", headers={"GROCY-API-KEY": "deleted-key"}).status_code == 401
+        created = app.post("/api/users", json={"username": "Next", "password": "test"})
+        assert created.status_code == 204, created.text
+        assert app.get("/api/users", params={"query[]": "username=Next"}).json()[0]["id"] == 251
+        assert app.get("/api/user", headers={"GROCY-API-KEY": "deleted-key"}).status_code == 401
+        assert app.get("/api/users/100/permissions").json() == [
+            {"id": 2, "user_id": 100, "permission_id": 1}
+        ]
+    with sqlite3.connect(target) as connection:
+        assert connection.execute(
+            "SELECT user_id FROM api_keys WHERE api_key='deleted-key'"
+        ).fetchone() == (100,)
+        assert connection.execute(
+            "SELECT value FROM user_settings WHERE user_id=100"
+        ).fetchone() == ("saved",)

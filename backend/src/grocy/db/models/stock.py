@@ -45,7 +45,7 @@ class StockLog(Base):
     transaction_id: Mapped[str | None] = mapped_column(String(64))
     stock_row_id: Mapped[int | None] = mapped_column(Integer)
     shopping_location_id: Mapped[int | None] = mapped_column(Integer)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, default=1)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     note: Mapped[str | None] = mapped_column(Text)
     undo_data: Mapped[str | None] = mapped_column(Text)
     recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id"))

@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
@@ -84,6 +86,27 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
         yield session
 
 
+@asynccontextmanager
+async def migration_connection(engine: AsyncEngine) -> AsyncIterator[AsyncConnection]:
+    async with engine.connect() as connection:
+        sqlite = engine.dialect.name == "sqlite"
+        if sqlite:
+            # SQLite batch rebuilds require this setting before the transaction starts.
+            await connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            await connection.commit()
+        try:
+            async with connection.begin():
+                if sqlite:
+                    # Include DDL in the transaction, including on legacy sqlite3 control.
+                    await connection.exec_driver_sql("BEGIN IMMEDIATE")
+
+                yield connection
+        finally:
+            if sqlite:
+                await connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+                await connection.commit()
+
+
 async def upgrade_schema(engine: AsyncEngine | None = None) -> None:
     from pathlib import Path
 
@@ -93,7 +116,7 @@ async def upgrade_schema(engine: AsyncEngine | None = None) -> None:
     config = Config()
     config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
     eng = engine or get_engine()
-    async with eng.begin() as connection:
+    async with migration_connection(eng) as connection:
 
         def upgrade(sync_connection):
             config.attributes["connection"] = sync_connection
