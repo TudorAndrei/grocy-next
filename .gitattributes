@@ -1,0 +1,2 @@
+# Keep the original source bytes and whitespace from the pinned release.
+backend/src/grocy/_vendor/grocy-core/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol

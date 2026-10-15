@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.generic import NativeStatements
@@ -28,7 +28,7 @@ from grocy.db.models.household import (
 )
 from grocy.db.models.mealplan import MealPlanEntry, MealPlanSection
 from grocy.db.models.recipes import Recipe, RecipeNesting, RecipePosition
-from grocy.db.models.settings import UserEntity, UserfieldDefinition, UserfieldValue, UserObject
+from grocy.db.models.settings import UserEntity, UserfieldDefinition, UserObject
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
@@ -102,8 +102,23 @@ class GenericObjectsService:
         result = await self.session.execute(text(query), parameters)
         return [dict(row) for row in result.mappings()]
 
-    async def list_entity(self, entity: str) -> list[dict[str, Any]]:
-        return await self._read(entity)
+    async def read_objects(
+        self, entity: str, object_id: str | None, query_string: bytes, runtime: InputPurifier
+    ) -> dict[str, Any]:
+        result = await runtime.native_read(
+            entity=entity,
+            object_id=object_id,
+            query_string=query_string,
+            execute=NativeStatements(self.session, runtime).execute,
+        )
+        if "error_message" in result:
+            raise GrocyError(
+                result["error_message"],
+                status_code=result["status"],
+                code=None,
+                details=result.get("error_details"),
+            )
+        return result
 
     async def get_entity(self, entity: str, object_id: int | str) -> dict[str, Any]:
         rows = await self._read(entity, object_id)
@@ -125,10 +140,15 @@ class GenericObjectsService:
             method=method,
             object_id=object_id,
             body=payload,
-            execute=NativeStatements(self.session).execute,
+            execute=NativeStatements(self.session, runtime).execute,
         )
         if "error_message" in result:
-            raise GrocyError(result["error_message"], status_code=result["status"], code=None)
+            raise GrocyError(
+                result["error_message"],
+                status_code=result["status"],
+                code=None,
+                details=result.get("error_details"),
+            )
         if entity == "products" and method != "DELETE":
             await self.recipes.shopping.auto_add_missing()
             await self.session.commit()
@@ -150,92 +170,37 @@ class GenericObjectsService:
         await self._write(entity, "DELETE", object_id, {}, runtime)
 
     async def write_userfields(
-        self, entity: str, object_id: int | str, values: dict, *, commit_each: bool = False
+        self, entity: str, object_id: int | str, values: dict, runtime: InputPurifier
     ) -> None:
-        if not isinstance(values, dict):
-            raise GrocyError("Userfields must be an object")
-        definitions = {row.name or "": row for row in await self._userfield_definitions(entity)}
-        for name, value in values.items():
-            if name not in definitions:
-                raise GrocyError(
-                    f"Field {name} is not a valid userfield of the given entity", code=None
-                )
-            if isinstance(value, (list, dict)):
-                raise GrocyError("Custom field values must be scalar values")
-            stored = (
-                "" if value is None else str(int(value)) if isinstance(value, bool) else str(value)
-            )
-            row = await self.session.scalar(
-                select(UserfieldValue).where(
-                    UserfieldValue.field_id == definitions[name].id,
-                    UserfieldValue.object_id == str(object_id),
-                )
-            )
-            if row is None:
-                self.session.add(
-                    UserfieldValue(
-                        field_id=definitions[name].id, object_id=str(object_id), value=stored
-                    )
-                )
-            else:
-                row.value = stored
-            if commit_each:
-                await self.session.commit()
-
-    async def validate_userfield_entity(self, entity: str) -> None:
-        if entity == "users" or entity in self.supported_entities():
-            return
-        if (
-            entity.startswith("userentity-")
-            and await self.session.scalar(
-                select(UserEntity.id).where(UserEntity.name == entity.removeprefix("userentity-"))
-            )
-            is not None
-        ):
-            return
-        raise GrocyError("Entity does not exist or is not exposed", code=None)
-
-    async def _userfield_definitions(self, entity: str) -> list[UserfieldDefinition]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(UserfieldDefinition)
-                    .where(UserfieldDefinition.entity == entity)
-                    .order_by(
-                        UserfieldDefinition.sort_number,
-                        UserfieldDefinition.name.collate("NOCASE"),
-                    )
-                )
-            ).all()
+        result = await runtime.userfield_write(
+            entity=entity,
+            object_id=object_id,
+            body=values,
+            execute=NativeStatements(self.session, runtime).execute,
         )
+        if "error_message" in result:
+            raise GrocyError(
+                result["error_message"],
+                status_code=result["status"],
+                code=None,
+                details=result.get("error_details"),
+            )
 
-    async def userfield_data(
-        self, entity: str, object_id: int | str | None = None
-    ) -> tuple[list[str | None], list[dict[str, Any]]]:
-        definitions = await self._userfield_definitions(entity)
-        if not definitions:
-            return [], []
-        # The native resolved view aliases namespace values to userobjects.
-        # Definitions still belong to the exact requested entity.
-        condition = UserfieldDefinition.entity == entity
-        if entity == "userobjects":
-            condition |= UserfieldDefinition.entity.like("userentity-%")
-        query = (
-            select(
-                UserfieldDefinition.name,
-                UserfieldValue.object_id,
-                UserfieldValue.value,
-            )
-            .join(UserfieldValue, UserfieldValue.field_id == UserfieldDefinition.id)
-            .where(condition)
-            .order_by(
-                UserfieldDefinition.name.collate("NOCASE"),
-                UserfieldDefinition.id,
-                UserfieldValue.object_id,
-                UserfieldValue.value,
-            )
+    async def get_userfields(
+        self, entity: str, object_id: str, runtime: InputPurifier
+    ) -> dict[str, Any]:
+        result = await runtime.native_read(
+            entity=entity,
+            object_id=object_id,
+            query_string=b"",
+            fields=True,
+            execute=NativeStatements(self.session, runtime).execute,
         )
-        if object_id is not None:
-            query = query.where(UserfieldValue.object_id == str(object_id))
-        values = [dict(row) for row in (await self.session.execute(query)).mappings()]
-        return [row.name for row in definitions], values
+        if "error_message" in result:
+            raise GrocyError(
+                result["error_message"],
+                status_code=result["status"],
+                code=None,
+                details=result.get("error_details"),
+            )
+        return result

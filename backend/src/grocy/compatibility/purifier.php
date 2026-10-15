@@ -45,12 +45,18 @@ while (($line = fgets(STDIN)) !== false) {
     try {
         $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
         $id = $request['id'];
-        if (($request['operation'] ?? 'purify') === 'generic') {
-            reply(['id' => $id, 'ok' => true, 'body' => genericWrite($request, $nativeSchema)]);
+        if (($request['operation'] ?? 'purify') === 'sqlite_function') {
+            try {
+                $value = nativeSqliteFunction($request['name'], $request['arguments']);
+                $body = ['value' => nativeEncodeValue($value)];
+            } catch (Throwable $error) {
+                $body = ['error' => $error->getMessage(), 'error_kind' => $error instanceof Error ? 'error' : 'exception'];
+            }
+            reply(['id' => $id, 'ok' => true, 'body' => $body]);
             continue;
         }
-        if (($request['operation'] ?? 'purify') === 'userfields') {
-            reply(['id' => $id, 'ok' => true, 'body' => userfieldResponses($request)]);
+        if (in_array($request['operation'] ?? 'purify', ['generic', 'field_write', 'field_read', 'generic_read'], true)) {
+            reply(['id' => $id, 'ok' => true, 'body' => nativeDatabaseRequest($request, $nativeSchema)]);
             continue;
         }
         $raw = base64_decode($request['json'], true);

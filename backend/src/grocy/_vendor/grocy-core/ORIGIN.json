@@ -1,0 +1,20 @@
+{
+  "package": "grocy/grocy",
+  "version": "4.5.0",
+  "source": "https://github.com/grocy/grocy",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "license": [
+    "MIT"
+  ],
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE": "ca49d1dcaf24ce093ea748b781469a7ad2a58123a400d1a0f10a29f92ae8c218",
+    "grocy.openapi.json": "9259ef706b8c354c23bebeb955d52ec279adfdd70fe9b833e142fb0c70af457b",
+    "services/BaseService.php": "d9ce9e7aed326a326bb97b536c50af2cdb4fc9b2171db7128e09087bc1a66682",
+    "services/UserfieldsService.php": "b7238bc02742a0236591025817b4444ebe477e5cd024748af8a8df8f1b3450d2",
+    "helpers/extensions.php": "cadcba6d35641d4457d26e6b4e4d31f1e97308c1173ce5cd95ba33115440c3d4",
+    "controllers/BaseController.php": "4bcbbdf153c142e7e70d3ef388a5e7d048db80dda11343fb6e8c1841d56c9135",
+    "controllers/BaseApiController.php": "cffbf4424d8b31d2bb251f9553f7be88788ebcb9b44b8c10393f0b04aba5df99",
+    "controllers/GenericEntityApiController.php": "7213c41d783aac8f36e5a39ed5e242fa0ab1b050dc7cfd7fb2cab6c63e0722b0"
+  }
+}

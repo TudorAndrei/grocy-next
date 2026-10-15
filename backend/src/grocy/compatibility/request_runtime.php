@@ -3,6 +3,8 @@
 // Runtime inputs use the pinned packages in ../_vendor. Each has its own license.
 spl_autoload_register(function (string $class): void {
     $prefixes = [
+        'Grocy\\Services\\' => ['grocy-core/services/'],
+        'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
         'LessQL\\' => ['morris-lessql/src/LessQL/'],
         'Slim\\Http\\' => ['slim-http/src/'],
         'Slim\\Psr7\\' => ['slim-psr7/src/'],
@@ -23,6 +25,7 @@ spl_autoload_register(function (string $class): void {
     }
 });
 require __DIR__ . '/../_vendor/ralouphie-getallheaders/src/getallheaders.php';
+require __DIR__ . '/../_vendor/grocy-core/helpers/extensions.php';
 
 function parsedBody(string $raw, string $method, ?string $contentType)
 {
@@ -96,26 +99,4 @@ function permissionQuery(array $request, string $raw, HTMLPurifier $purifier, PD
             'status' => $error instanceof Exception ? 400 : 500,
         ];
     }
-}
-
-// Grocy 4.5.0 UserfieldsService and GenericEntityApiController use PHP's
-// loose comparisons and array keys when they assemble field responses.
-function userfieldResponses(array $request): array
-{
-    $responses = [];
-    foreach ($request['references'] as $reference) {
-        $pairs = [];
-        foreach ($request['fields'] as $name) {
-            $value = null;
-            foreach ($request['values'] as $row) {
-                if ((!$request['listing'] || $row['object_id'] == $reference) && $row['name'] == $name) {
-                    $value = $row['value'];
-                    break;
-                }
-            }
-            $pairs[$name] = $value;
-        }
-        $responses[] = $pairs;
-    }
-    return $responses;
 }

@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 
 from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
+from grocy.api.compatibility.responses import native_response
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.domains.catalog.objects import GenericObjectsService
@@ -17,14 +18,11 @@ async def get_userfields(
     request: Request,
     _actor: CurrentActor,
     session: DbSession,
-) -> dict[str, str | None] | list:
-    service = GenericObjectsService(session)
-    await service.validate_userfield_entity(entity)
-    fields, values = await service.userfield_data(entity, object_id)
-    responses = await request.app.state.input_purifier.userfield_responses(
-        fields, values, [object_id]
+) -> Response:
+    result = await GenericObjectsService(session).get_userfields(
+        entity, object_id, request.app.state.input_purifier
     )
-    return responses[0]
+    return native_response(result)
 
 
 @router.put("/api/userfields/{entity}/{object_id}", status_code=204)
@@ -33,11 +31,10 @@ async def put_userfields(
     entity: str,
     object_id: str,
     body: dict[str, Any],
+    request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
     service = GenericObjectsService(session)
-    await service.validate_userfield_entity(entity)
-    await service.write_userfields(entity, object_id, body, commit_each=True)
-    await session.commit()
+    await service.write_userfields(entity, object_id, body, request.app.state.input_purifier)
     return Response(status_code=204)

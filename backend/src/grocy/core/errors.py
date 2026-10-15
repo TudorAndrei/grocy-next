@@ -1,13 +1,23 @@
+from typing import Any
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 
 class GrocyError(Exception):
-    def __init__(self, message: str, *, status_code: int = 400, code: str | None = "error") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int = 400,
+        code: str | None = "error",
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.code = code
+        self.details = details
 
 
 class NotFoundError(GrocyError):
@@ -27,7 +37,9 @@ class ConflictError(GrocyError):
 
 async def grocy_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, GrocyError)
-    content = {"error_message": exc.message}
+    content: dict[str, Any] = {"error_message": exc.message}
     if exc.code is not None:
         content["error_code"] = exc.code
+    if exc.details is not None:
+        content["error_details"] = exc.details
     return JSONResponse(status_code=exc.status_code, content=content)

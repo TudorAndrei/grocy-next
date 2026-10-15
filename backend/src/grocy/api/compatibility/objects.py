@@ -3,8 +3,8 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 from sqlalchemy.exc import DBAPIError
 
-from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
+from grocy.api.compatibility.responses import native_response
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
@@ -19,24 +19,11 @@ async def list_objects(
     request: Request,
     _actor: CurrentActor,
     session: DbSession,
-) -> list[dict[str, Any]]:
-    service = GenericObjectsService(session)
-    rows = await service.list_entity(entity)
-    fields, values = await service.userfield_data(entity)
-    if fields:
-        responses = await request.app.state.input_purifier.userfield_responses(
-            fields,
-            values,
-            [row["stock_id"] if entity == "stock" else row["id"] for row in rows],
-            listing=True,
-        )
-        for row, response in zip(rows, responses, strict=True):
-            row["userfields"] = response
-    try:
-        return filter_rows(rows, request.query_params)
-    except GrocyError as exc:
-        # GetObjects lets query errors reach PHP's top-level error handler.
-        raise GrocyError(exc.message, status_code=500, code=exc.code) from exc
+) -> Response:
+    result = await GenericObjectsService(session).read_objects(
+        entity, None, request.scope["query_string"], request.app.state.input_purifier
+    )
+    return native_response(result)
 
 
 @router.post("/api/objects/{entity}")
@@ -65,17 +52,11 @@ async def get_object(
     request: Request,
     _actor: CurrentActor,
     session: DbSession,
-) -> dict[str, Any]:
-    service = GenericObjectsService(session)
-    row = await service.get_entity(entity, object_id)
-    fields, values = await service.userfield_data(
-        entity, row["stock_id"] if entity == "stock" else object_id
+) -> Response:
+    result = await GenericObjectsService(session).read_objects(
+        entity, object_id, request.scope["query_string"], request.app.state.input_purifier
     )
-    responses = await request.app.state.input_purifier.userfield_responses(
-        fields, values, [object_id]
-    )
-    row["userfields"] = responses[0] or None
-    return row
+    return native_response(result)
 
 
 @router.put("/api/objects/{entity}/{object_id}", status_code=204)

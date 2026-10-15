@@ -87,15 +87,28 @@ class NativeStatement
             'query' => $this->query, 'parameters' => $parameters ?? [], 'context' => $this->context,
         ]);
         if (isset($result['error'])) {
+            if (($result['error_kind'] ?? null) === 'error') {
+                throw new Error($result['error']);
+            }
             throw new PDOException($result['error']);
         }
         if (isset($result['insert_id'])) {
             $this->database->insertId = (string)$result['insert_id'];
         }
-        $this->rows = $result['rows'];
+        $this->rows = array_map(
+            fn($row) => array_map('nativeDecodeValue', $row), $result['rows']
+        );
         if ($this->columns !== null) {
             $keys = array_flip($this->columns);
-            $this->rows = array_map(fn($row) => array_intersect_key($row, $keys), $this->rows);
+            $this->rows = array_map(function ($row) use ($keys) {
+                $ordered = [];
+                foreach ($keys as $name => $_position) {
+                    if (array_key_exists($name, $row)) {
+                        $ordered[$name] = $row[$name];
+                    }
+                }
+                return $ordered;
+            }, $this->rows);
         }
         $this->position = 0;
         return true;
@@ -117,6 +130,8 @@ function nativeSchema(): PDO
     $schema = new PDO('sqlite::memory:');
     $schema->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $schema->sqliteCreateFunction('grocy_user_setting', fn($key) => null, 1);
+    $schema->sqliteCreateFunction('regexp', fn($pattern, $value) => nativeSqliteFunction('regexp', [$pattern, $value]), 2);
+    $schema->sqliteCreateFunction('ceil', fn($value) => ceil($value), 1);
     $definitions = json_decode(file_get_contents(__DIR__ . '/../db/compatibility/grocy_4_5_0_schema.json'), true, 512, JSON_THROW_ON_ERROR);
     foreach (['ddl', 'views'] as $kind) {
         foreach ($definitions[$kind] as $statement) {
@@ -126,11 +141,131 @@ function nativeSchema(): PDO
     return $schema;
 }
 
-function genericWrite(array $request, PDO $schema): array
+function nativeDecodeValue($value)
+{
+    if (is_array($value) && isset($value['binary'])) {
+        return base64_decode($value['binary'], true);
+    }
+    if (is_array($value) && isset($value['nonfinite'])) {
+        return match ($value['nonfinite']) {
+            'nan' => NAN, 'inf' => INF, '-inf' => -INF,
+        };
+    }
+    return $value;
+}
+
+function nativeEncodeValue($value)
+{
+    if (is_float($value) && !is_finite($value)) {
+        return ['nonfinite' => is_nan($value) ? 'nan' : ($value > 0 ? 'inf' : '-inf')];
+    }
+    if (is_string($value) && !mb_check_encoding($value, 'UTF-8')) {
+        return ['binary' => base64_encode($value)];
+    }
+    return $value;
+}
+
+// These are DatabaseService's SQLite callbacks, evaluated by PHP itself.
+function nativeSqliteFunction(string $name, array $arguments)
+{
+    $arguments = array_map('nativeDecodeValue', $arguments);
+    if ($name === 'regexp') {
+        mb_regex_encoding('UTF-8');
+        return (false !== mb_ereg($arguments[0], $arguments[1])) ? 1 : 0;
+    }
+    if ($name === 'ceil') {
+        return ceil($arguments[0]);
+    }
+    throw new RuntimeException('Unknown native SQLite function');
+}
+
+class NativeUserfieldsService extends Grocy\Services\UserfieldsService
+{
+    public function __construct(private NativeDatabase $database)
+    {
+    }
+
+    protected function getDatabase()
+    {
+        return $this->database;
+    }
+}
+
+class NativeGenericController extends Grocy\Controllers\GenericEntityApiController
+{
+    private NativeUserfieldsService $fields;
+
+    public function __construct(private NativeDatabase $database)
+    {
+        $this->fields = new NativeUserfieldsService($database);
+    }
+
+    protected function getDatabase()
+    {
+        return $this->database;
+    }
+
+    protected function getUserfieldsService()
+    {
+        return $this->fields;
+    }
+}
+
+function nativeGenericRead(array $request, NativeDatabase $database): array
+{
+    $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
+        'GET', 'http://localhost/api/objects/?' . base64_decode($request['query_string'], true)
+    );
+    $response = new Slim\Http\Response(
+        (new Slim\Psr7\Factory\ResponseFactory())->createResponse(),
+        new Slim\Psr7\Factory\StreamFactory()
+    );
+    $response = $response->withHeader('Content-Type', 'application/json');
+    $controller = new NativeGenericController($database);
+    $args = ['entity' => $request['entity']];
+    if ($request['operation'] === 'field_read') {
+        $args['objectId'] = $request['object_id'];
+        $response = $controller->GetUserfields($http, $response, $args);
+    } elseif ($request['object_id'] === null) {
+        $response = $controller->GetObjects($http, $response, $args);
+    } else {
+        $args['objectId'] = $request['object_id'];
+        $response = $controller->GetObject($http, $response, $args);
+    }
+    // JsonMiddleware applies these headers after a handled controller response.
+    $response = $response->withHeader('Content-Type', 'application/json');
+    $response = $response->withHeader('Access-Control-Allow-Origin', '*');
+    return [
+        'response' => base64_encode((string)$response->getBody()),
+        'status' => $response->getStatusCode(),
+        'headers' => $response->getHeaders(),
+    ];
+}
+
+function nativeErrorDetails(Throwable $error): array
+{
+    // ExceptionController includes these diagnostics for uncaught API errors.
+    return [
+        'stack_trace' => $error->getTraceAsString(),
+        'file' => $error->getFile(),
+        'line' => $error->getLine(),
+    ];
+}
+
+function nativeDatabaseRequest(array $request, PDO $schema): array
 {
     $database = new NativeDatabase($schema);
     $fiber = new Fiber(function () use ($request, $database) {
         try {
+            if (in_array($request['operation'], ['generic_read', 'field_read'], true)) {
+                return nativeGenericRead($request, $database);
+            }
+            if ($request['operation'] === 'field_write') {
+                (new NativeUserfieldsService($database))->SetValues(
+                    $request['entity'], $request['object_id'], $request['body']
+                );
+                return [];
+            }
             if ($request['method'] === 'POST') {
                 $database->table($request['entity'])->createRow($request['body'])->save();
                 return ['created_object_id' => $database->lastInsertId()];
@@ -146,10 +281,21 @@ function genericWrite(array $request, PDO $schema): array
             }
             return [];
         } catch (Throwable $error) {
-            return [
-                'status' => $request['method'] !== 'DELETE' && $error instanceof Exception ? 400 : 500,
+            $data = [
                 'error_message' => $error->getMessage(),
             ];
+            $read = in_array($request['operation'], ['generic_read', 'field_read'], true);
+            $uncaught = $read || ($request['method'] ?? 'PUT') === 'DELETE' || $error instanceof Error;
+            if ($uncaught) {
+                $data['error_details'] = nativeErrorDetails($error);
+            }
+            if ($read) {
+                return [
+                    'response' => base64_encode(json_encode($data)), 'status' => 500,
+                    'headers' => ['Content-Type' => ['application/json']],
+                ];
+            }
+            return ['status' => $uncaught ? 500 : 400] + $data;
         }
     });
     $step = $fiber->start();

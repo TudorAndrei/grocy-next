@@ -51,8 +51,26 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
             pytest.fail("The purifier did not recover after its worker stopped")
         pids = [int(item) for item in processes.read_text().splitlines()]
         assert len(pids) == 2 and pids[0] != pids[1]
-    with pytest.raises(ProcessLookupError):
-        os.kill(pids[-1], 0)
+        parameters = (("query[]", f"name={name}"), ("query[]", "description§Link"))
+        matching = client.get("/api/objects/locations", params=parameters)
+        assert matching.status_code == 200, matching.text
+        assert [row["id"] for row in matching.json()] == [int(location)]
+        regex_pid = int(processes.read_text().splitlines()[-1])
+        assert regex_pid not in pids
+        os.kill(regex_pid, signal.SIGTERM)
+        for _ in range(3):
+            matching = client.get("/api/objects/locations", params=parameters)
+            assert matching.status_code in (200, 500, 503), matching.text
+            if matching.status_code == 200:
+                assert [row["id"] for row in matching.json()] == [int(location)]
+                break
+        else:
+            pytest.fail("The native SQL function worker did not recover")
+        pids = [int(item) for item in processes.read_text().splitlines()]
+        assert len(pids) == 4 and len(set(pids)) == 4
+    for pid in pids:
+        with pytest.raises(ProcessLookupError):
+            os.kill(pid, 0)
 
 
 def test_missing_php_prevents_server_startup(tmp_path: Path, monkeypatch):

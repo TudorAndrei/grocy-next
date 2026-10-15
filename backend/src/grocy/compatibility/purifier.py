@@ -1,4 +1,4 @@
-"""Run the pinned PHP purifier without replacing its HTML or CSS rules."""
+"""Run the pinned PHP request, field, and database logic."""
 
 import asyncio
 import base64
@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from grocy.compatibility.values import decode_value, encode_value
 from grocy.core.errors import GrocyError
 
 
@@ -21,6 +22,7 @@ class InputPurifier:
         self._stderr: asyncio.Task[None] | None = None
         self._cache: TemporaryDirectory[str] | None = None
         self._sequence = 0
+        self._functions: InputPurifier | None = None
 
     async def start(self) -> None:
         async with self._lock:
@@ -83,25 +85,6 @@ class InputPurifier:
             },
         )
 
-    async def userfield_responses(
-        self,
-        fields: list[str | None],
-        values: list[dict[str, Any]],
-        references: list[int | str],
-        *,
-        listing: bool = False,
-    ) -> list[dict[str, str | None] | list[str | None]]:
-        return await self._request(
-            b"",
-            {
-                "operation": "userfields",
-                "fields": fields,
-                "values": values,
-                "references": references,
-                "listing": listing,
-            },
-        )
-
     async def generic_write(
         self,
         *,
@@ -122,6 +105,56 @@ class InputPurifier:
             },
             execute=execute,
         )
+
+    async def userfield_write(
+        self,
+        *,
+        entity: str,
+        object_id: int | str,
+        body: dict[str, Any],
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        return await self._request(
+            b"",
+            {"operation": "field_write", "entity": entity, "object_id": object_id, "body": body},
+            execute=execute,
+        )
+
+    async def native_read(
+        self,
+        *,
+        entity: str,
+        object_id: int | str | None,
+        query_string: bytes,
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+        fields: bool = False,
+    ) -> dict[str, Any]:
+        return await self._request(
+            b"",
+            {
+                "operation": "field_read" if fields else "generic_read",
+                "entity": entity,
+                "object_id": object_id,
+                "query_string": base64.b64encode(query_string).decode("ascii"),
+            },
+            execute=execute,
+        )
+
+    async def sqlite_function(self, name: str, arguments: tuple) -> dict[str, Any]:
+        # A separate worker can answer while the main worker waits for SQLite.
+        if self._functions is None:
+            self._functions = InputPurifier(self.executable)
+        result = await self._functions._request(
+            b"",
+            {
+                "operation": "sqlite_function",
+                "name": name,
+                "arguments": [encode_value(value) for value in arguments],
+            },
+        )
+        if "value" in result:
+            result["value"] = decode_value(result["value"])
+        return result
 
     async def _request(
         self,
@@ -199,6 +232,9 @@ class InputPurifier:
     async def close(self) -> None:
         async with self._lock:
             await self._stop()
+            if self._functions is not None:
+                await self._functions.close()
+                self._functions = None
             if self._cache is not None:
                 self._cache.cleanup()
                 self._cache = None

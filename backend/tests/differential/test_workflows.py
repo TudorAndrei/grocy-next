@@ -151,6 +151,9 @@ def test_picture_mode_preserves_format_and_controls_resize(api, tmp_path, monkey
         ([None, "text", "null"], "description!=null", "id", [0, 1]),
         ([None, "text", "null"], "description=null", "id", [0, 2]),
         ([None, "text"], None, "description:asc", [0, 1]),
+        ([None, "text"], "description§^$", "id", [0]),
+        (["text", "other"], "description§[", "id", []),
+        (["a" * 300, "other"], "description§" + "a" * 300, "id", [0]),
     ],
 )
 def test_list_queries_follow_sqlite_comparison_rules(api, values, query, order, expected):
@@ -2672,3 +2675,173 @@ def test_native_generic_primary_keys_and_unparsed_timestamps(api):
     assert moved["name"] == marker and moved["row_created_timestamp"] is None
     following = create(api, "locations", name=marker + "_next")
     assert following == original + 2
+
+
+@pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("value", [[], {"name": "Child"}, ["Child"]])
+def test_native_field_structures_keep_earlier_values(api, custom_field, existing, value):
+    prefix = "field_" + uuid4().hex
+    first, target, last = [prefix + suffix for suffix in ("first", "target", "last")]
+    for name in (first, target, last):
+        custom_field(entity="locations", name=name, caption=name, type="text-single-line")
+    path = "/api/userfields/locations/structured-key"
+    if existing:
+        assert api.put(path, json={target: "Before"}).status_code == 204
+    response = api.put(path, json={first: "Committed first", target: value, last: "Not reached"})
+    assert response.status_code == 400, response.text
+    detail = (
+        "no such column: value_id"
+        if existing
+        else "table userfield_values has no column named value_id"
+    )
+    assert response.json() == {"error_message": "SQLSTATE[HY000]: General error: 1 " + detail}
+    expected = {first: "Committed first", target: "Before" if existing else None, last: None}
+    values = api.get(path).json()
+    assert {name: values[name] for name in expected} == expected
+    saved = api.put(path, json={target: "After"})
+    assert saved.status_code == 204, saved.text
+    values = api.get(path).json()
+    assert {name: values[name] for name in expected} == {**expected, target: "After"}
+
+
+@pytest.mark.parametrize(
+    "parameters,status,expected,message",
+    [
+        ([("limit", "-2")], 200, [0, 1, 2], None),
+        ([("limit", "1.9")], 200, [0], None),
+        ([("limit", "1e1")], 200, [0, 1, 2], None),
+        ([("limit", "bad")], 200, [], None),
+        ([("limit[]", "1")], 200, [0], None),
+        ([("offset", "-2"), ("limit", "1")], 200, [0], None),
+        ([("offset", "1tail"), ("limit", "1")], 200, [1], None),
+        ([("offset[]", "1"), ("limit", "1")], 200, [1], None),
+        ([("order", "name:asc:ignored")], 200, [0, 1, 2], None),
+        ([("order", "name:DESC")], 500, None, "Invalid sort order DESC"),
+        (
+            [("order[]", "name")],
+            500,
+            None,
+            "explode(): Argument #2 ($string) must be of type string, array given",
+        ),
+        (
+            [("order", "missingSort")],
+            500,
+            None,
+            "SQLSTATE[HY000]: General error: 1 no such column: missingSort",
+        ),
+        (
+            [("query", "description=alpha")],
+            500,
+            None,
+            "Grocy\\Controllers\\BaseApiController::filter(): "
+            "Argument #2 ($query) must be of type array, string given",
+        ),
+        ([("query[one]", "description=alpha")], 200, [0], None),
+        (
+            [("query[one][two]", "description=alpha")],
+            500,
+            None,
+            "preg_match(): Argument #2 ($subject) must be of type string, array given",
+        ),
+        (
+            [("query[]", "missing=1")],
+            500,
+            None,
+            "SQLSTATE[HY000]: General error: 1 no such column: missing",
+        ),
+    ],
+)
+def test_native_generic_query_parameters(api, parameters, status, expected, message):
+    marker = "queries_" + uuid4().hex
+    ids = [
+        create(api, "locations", name=marker + str(index), description=value)
+        for index, value in enumerate(("alpha", "Beta", "12"))
+    ]
+    response = api.get(
+        "/api/objects/locations",
+        params=[
+            ("query[]", f"id>={ids[0]}"),
+            ("query[]", f"id<={ids[-1]}"),
+            *parameters,
+        ],
+    )
+    assert response.status_code == status, response.text
+    if expected is not None:
+        assert [row["id"] for row in response.json()] == [ids[index] for index in expected]
+    else:
+        body = response.json()
+        assert set(body) == {"error_message", "error_details"}
+        assert body["error_message"].startswith(message)
+        details = body["error_details"]
+        assert set(details) == {"stack_trace", "file", "line"}
+        assert isinstance(details["stack_trace"], str) and details["stack_trace"]
+        assert isinstance(details["file"], str) and details["file"].endswith(".php")
+        assert isinstance(details["line"], int) and details["line"] > 0
+
+
+def test_native_generic_json_uses_php_encoding(api):
+    name, timestamp = uuid4().hex, "2027-01-02 03:04:05"
+    record = create(
+        api, "locations", name=name, description="Ä/🧀", row_created_timestamp=timestamp
+    )
+    response = api.get(f"/api/objects/locations/{record}")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "application/json"
+    assert b'"description":"\\u00c4\\/\\ud83e\\uddc0"' in response.content
+    assert response.json()["description"] == "Ä/🧀"
+    prefix = json.dumps(
+        {"id": record, "name": name, "description": "Ä/🧀", "row_created_timestamp": timestamp},
+        ensure_ascii=True, separators=(",", ":"),
+    ).replace("/", "\\/").encode()
+    assert response.content.startswith(prefix[:-1] + b",")
+
+
+def test_native_nonfinite_number_returns_a_serialization_error(api, catalog):
+    product, *_ = catalog
+    saved = api.put(f"/api/objects/products/{product}", json={"min_stock_amount": "1e9999"})
+    assert saved.status_code == 204, saved.text
+    response = api.get(f"/api/objects/products/{product}")
+    assert response.status_code == 500
+    assert response.json()["error_message"] == (
+        "fwrite(): Argument #2 ($data) must be of type string, false given"
+    )
+    assert "error_details" in response.json()
+
+
+@pytest.mark.parametrize("value,valid", [(b"Saved/\xc3\x84", True), (b"\xff", False)])
+def test_native_generic_reads_keep_saved_blob_bytes(api, value, valid):
+    record = create(api, "locations", name=uuid4().hex)
+    statement = "UPDATE locations SET description=? WHERE id=?"
+    if hasattr(api, "portal"):
+        from grocy.db.session import get_session_factory
+
+        async def save():
+            async with get_session_factory()() as session:
+                connection = await session.connection()
+                await connection.exec_driver_sql(statement, (value, record))
+                await session.commit()
+
+        api.portal.call(save)
+    elif api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused")):
+        with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
+            database.execute(statement, (value, record))
+    else:
+        pytest.skip("This stored-value check needs access to the disposable SQLite fixture")
+    response = api.get(f"/api/objects/locations/{record}")
+    if valid:
+        assert response.status_code == 200, response.text
+        assert response.json()["description"] == "Saved/Ä"
+        matching = api.get(
+            "/api/objects/locations",
+            params=[
+                ("query[]", f"id={record}"),
+                ("query[]", "description§^Saved"),
+            ],
+        )
+        assert matching.status_code == 200, matching.text
+        assert [row["id"] for row in matching.json()] == [record]
+    else:
+        assert response.status_code == 500, response.text
+        assert response.json()["error_message"] == (
+            "fwrite(): Argument #2 ($data) must be of type string, false given"
+        )
