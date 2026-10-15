@@ -123,6 +123,7 @@ def test_stock_label_modes_follow_runtime_amounts_and_send_entry_codes(
         lambda **kwargs: original(transport=httpx.MockTransport(receive), **kwargs),
     )
     monkeypatch.setattr(get_settings(), "label_printer_webhook", "https://printer.example/labels")
+    monkeypatch.setattr(get_settings(), "label_printer_run_server", True)
     client.headers.update(api_headers)
     response = client.post("/api/stock/products/1/add", json={"amount": 2.5, "stock_label_type": 2})
     assert response.status_code == 200
@@ -176,6 +177,38 @@ def test_stock_label_modes_follow_runtime_amounts_and_send_entry_codes(
         == 200
     )
     assert len(sent) == 1
+
+
+def test_label_parameters_override_fields_before_due_date(client, api_headers, monkeypatch):
+    from grocy.core.config import get_settings
+
+    client.headers.update(api_headers)
+    response = client.post(
+        "/api/stock/products/1/add", json={"amount": 1, "best_before_date": "2037-01-01"}
+    )
+    assert response.status_code == 200
+    entry = client.get("/api/stock/products/1/entries").json()[0]
+    monkeypatch.setattr(
+        get_settings(),
+        "label_printer_params",
+        {
+            "font_family": "Mono",
+            "product": "Printer name",
+            "grocycode": "custom-code",
+            "due_date": "parameter",
+        },
+    )
+    response = client.get(f"/api/stock/entry/{entry['id']}/printlabel")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["font_family"] == "Mono"
+    assert payload["product"] == "Printer name"
+    assert payload["grocycode"] == "custom-code"
+    assert payload["due_date"] == "DD: 2037-01-01"
+    monkeypatch.setattr(get_settings(), "feature_flag_stock_best_before_date_tracking", False)
+    assert (
+        client.get(f"/api/stock/entry/{entry['id']}/printlabel").json()["due_date"] == "parameter"
+    )
 
 
 def test_thermal_printer_device_receives_output(

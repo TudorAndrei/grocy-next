@@ -6,26 +6,16 @@ from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from grocy.api.compatibility.filtering import filter_rows
-from grocy.api.compatibility.print import label
 from grocy.core.auth import CurrentActor
-from grocy.core.config import get_settings
 from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
+from grocy.domains.printing import label
 
 router = APIRouter(tags=["stock"])
 
 
-async def _bookings(stock: StockSvc, result: dict, *, stock_label_type: int = 0) -> list[dict]:
+async def _bookings(stock: StockSvc, result: dict) -> list[dict]:
     transaction_id = result.get("transaction_id")
-    rows = await stock.get_transaction(transaction_id) if transaction_id else []
-    if (
-        stock_label_type > 0
-        and get_settings().feature_enabled("LABEL_PRINTER")
-        and get_settings().label_printer_runs_on_server()
-    ):
-        for row in rows:
-            if row["amount"] > 0 and row.get("stock_row_id"):
-                await label(stock.session, "stock", row["stock_row_id"])
-    return rows
+    return await stock.get_transaction(transaction_id) if transaction_id else []
 
 
 class AmountBody(BaseModel):
@@ -207,7 +197,7 @@ async def stock_add(
         transaction_type=body.transaction_type or "purchase",
         stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
+    return await _bookings(stock, result)
 
 
 @router.post("/api/stock/products/{product_id}/consume")
@@ -286,7 +276,7 @@ async def stock_inventory(
         note=body.note,
         stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
+    return await _bookings(stock, result)
 
 
 @router.get("/api/stock/products/{product_id}/printlabel")
@@ -338,7 +328,7 @@ async def stock_add_by_barcode(
         transaction_type=body.transaction_type or "purchase",
         stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
+    return await _bookings(stock, result)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/consume")
@@ -417,7 +407,7 @@ async def stock_inventory_by_barcode(
         note=body.note,
         stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
+    return await _bookings(stock, result)
 
 
 @router.get("/api/stock/locations/{location_id}/entries")

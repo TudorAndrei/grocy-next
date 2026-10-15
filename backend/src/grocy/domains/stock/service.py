@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import date, datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import case, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ from grocy.db.models.settings import UserfieldValue
 from grocy.db.models.shopping import ShoppingListItem
 from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
+from grocy.domains.printing import automatic_stock_labels_enabled, stock_label
 from grocy.domains.products.barcodes import parse_product_code
 from grocy.domains.products.service import ProductsService
 from grocy.domains.stock.history import StockHistory
@@ -112,6 +113,11 @@ class StockService:
             raise GrocyError("Product cannot have its own stock")
         if stock_label_type not in {0, 1, 2}:
             raise GrocyError("Invalid stock label type")
+        label_details = (
+            await self.product_details(product_id, compatibility=True)
+            if stock_label_type > 0 and automatic_stock_labels_enabled()
+            else None
+        )
         transaction_id = uuid.uuid4().hex
         remaining = (
             amount.to_integral_value(rounding=ROUND_FLOOR) if stock_label_type == 2 else amount
@@ -152,6 +158,20 @@ class StockService:
                 transaction_id=transaction_id,
             )
             last_log_id = log.id
+            if label_details is not None:
+                # Grocy saves the purchase before printing, then combines entries.
+                if commit:
+                    await self.session.commit()
+                await stock_label(
+                    product_id,
+                    label_details,
+                    {
+                        key: value
+                        for key, value in self._serialize_entry(entry).items()
+                        if key not in {"open", "opened_date", "row_created_timestamp"}
+                    },
+                    best_before_date.isoformat(),
+                )
             remaining -= portion
         await self._compact_entries(product_id)
         if commit:
@@ -290,7 +310,7 @@ class StockService:
             raise GrocyError("Product cannot be opened")
         if product.enable_tare_weight_handling:
             raise GrocyError("Cannot open a tare weight product")
-        details = await self.product_details(product_id)
+        details = await self.product_details(product_id, compatibility=True)
         available = Decimal(str(details["stock_amount_aggregated"])) - Decimal(
             str(details["stock_amount_opened_aggregated"])
         )
@@ -335,6 +355,19 @@ class StockService:
                     days=product.default_best_before_days_after_open
                 )
                 expiry = min(expiry, opened_expiry) if expiry else opened_expiry
+            if (
+                automatic_stock_labels_enabled()
+                and product.auto_reprint_stock_label == 1
+                and expiry != entry.best_before_date
+            ):
+                # Earlier entries remain changed if a later label request fails.
+                await self.session.commit()
+                await stock_label(
+                    product_id,
+                    details,
+                    await self._label_entry(entry),
+                    expiry.isoformat() if expiry else None,
+                )
             if take < entry.amount:
                 new_entry = StockEntry(
                     product_id=entry.product_id,
@@ -379,6 +412,7 @@ class StockService:
                 and entry.location_id is not None
                 and product.default_consume_location_id != entry.location_id
             ):
+                await self.session.commit()
                 await self.transfer(
                     actor,
                     entry.product_id,
@@ -387,7 +421,6 @@ class StockService:
                     product.default_consume_location_id,
                     stock_entry_id=entry.stock_id,
                     transaction_id=transaction_id,
-                    commit=False,
                 )
         from grocy.domains.shopping.service import ShoppingService
 
@@ -434,6 +467,11 @@ class StockService:
             entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
         if sum((entry.amount for entry in entries), Decimal("0")) < amount:
             raise GrocyError("insufficient stock at source", code="insufficient_stock")
+        label_details = (
+            await self.product_details(product_id, compatibility=True)
+            if automatic_stock_labels_enabled() and product.auto_reprint_stock_label == 1
+            else None
+        )
         transaction_id = transaction_id or uuid.uuid4().hex
         remaining = amount
         last_log_id = None
@@ -463,6 +501,15 @@ class StockService:
             ):
                 expiry = date.today() + timedelta(
                     days=product.default_best_before_days_after_thawing
+                )
+            if label_details is not None and expiry != entry.best_before_date:
+                if commit:
+                    await self.session.commit()
+                await stock_label(
+                    product_id,
+                    label_details,
+                    await self._label_entry(entry),
+                    expiry.isoformat() if expiry else None,
                 )
             correlation_id = uuid.uuid4().hex
             await self._add_log(
@@ -666,7 +713,7 @@ class StockService:
             "transaction_type": log.transaction_type,
         }
 
-    async def product_details(self, product_id: int) -> dict:
+    async def product_details(self, product_id: int, *, compatibility: bool = False) -> dict:
         from grocy.db.models.catalog import QuantityUnit
 
         product = await self.products.get_active(product_id)
@@ -716,11 +763,24 @@ class StockService:
         for key, unit_id in [
             ("quantity_unit_stock", product.qu_id_stock),
             ("default_quantity_unit_purchase", product.qu_id_purchase),
-            ("default_quantity_unit_consume", product.qu_id_consume or product.qu_id_stock),
-            ("quantity_unit_price", product.qu_id_price or product.qu_id_purchase),
+            (
+                "default_quantity_unit_consume",
+                product.qu_id_consume
+                if compatibility
+                else product.qu_id_consume or product.qu_id_stock,
+            ),
+            (
+                "quantity_unit_price",
+                product.qu_id_price
+                if compatibility
+                else product.qu_id_price or product.qu_id_purchase,
+            ),
         ]:
-            unit = await self.session.get(QuantityUnit, unit_id)
-            units[key] = UnitsService(self.session).serialize_unit(unit) if unit else None
+            if compatibility:
+                units[key] = await self._details_row("quantity_units", unit_id)
+            else:
+                unit = await self.session.get(QuantityUnit, unit_id)
+                units[key] = UnitsService(self.session).serialize_unit(unit) if unit else None
         location = await self.session.get(Location, product.location_id)
         loc = {"id": location.id, "name": location.name} if location else None
         serialized = self.products.serialize(product, stock_amount=amount)
@@ -738,9 +798,21 @@ class StockService:
             if product.default_consume_location_id
             else None
         )
+        product_data = serialized
+        consume_loc = (
+            {"id": consume_location.id, "name": consume_location.name} if consume_location else None
+        )
+        if compatibility:
+            product_data = await self._details_row("products", product_id)
+            if product_data is not None:
+                product_data.pop("qu_factor_purchase_to_stock", None)
+            loc = await self._details_row("locations", product.location_id)
+            consume_loc = await self._details_row("locations", product.default_consume_location_id)
+        aggregated = overview["is_aggregated_amount"] if overview else 0
         return {
-            **serialized,
-            "product": serialized,
+            **(serialized if not compatibility else {}),
+            "stock_amount": float(amount),
+            "product": product_data,
             "product_barcodes": [
                 {
                     "id": barcode.id,
@@ -766,7 +838,7 @@ class StockService:
             "stock_amount_opened_aggregated": overview["amount_opened_aggregated"]
             if overview
             else 0,
-            "is_aggregated_amount": bool(overview["is_aggregated_amount"]) if overview else False,
+            "is_aggregated_amount": int(aggregated) if compatibility else bool(aggregated),
             "last_purchased": last_purchase.purchased_date.isoformat()
             if last_purchase and last_purchase.purchased_date
             else None,
@@ -781,11 +853,9 @@ class StockService:
             "default_shopping_location_id": product.shopping_location_id,
             "next_due_date": min(dates).isoformat() if dates else None,
             "location": loc,
-            "default_location": loc,
+            **({"default_location": loc} if not compatibility else {}),
             "has_childs": len(await self.products.child_ids(product_id)) > 1,
-            "default_consume_location": {"id": consume_location.id, "name": consume_location.name}
-            if consume_location
-            else None,
+            "default_consume_location": consume_loc,
             "qu_conversion_factor_purchase_to_stock": float(purchase_factor),
             "qu_conversion_factor_price_to_stock": float(price_factor),
             "average_shelf_life_days": history.average_shelf_life,
@@ -797,6 +867,28 @@ class StockService:
                 else 0
             ),
         }
+
+    async def _label_entry(self, entry: StockEntry) -> dict[str, Any]:
+        priority = await self.session.scalar(
+            text("SELECT priority FROM stock_next_use WHERE id = :id"), {"id": entry.id}
+        )
+        return {**self._serialize_entry(entry), "priority": priority}
+
+    async def _details_row(
+        self, table: Literal["products", "quantity_units", "locations"], object_id: int | None
+    ) -> dict[str, Any] | None:
+        if object_id is None:
+            return None
+        row = (
+            (
+                await self.session.execute(
+                    text(f"SELECT * FROM {table} WHERE id = :id"), {"id": object_id}
+                )
+            )
+            .mappings()
+            .first()
+        )
+        return dict(row) if row is not None else None
 
     async def get_entry(self, entry_id: int) -> dict | None:
         entry = await self.session.get(StockEntry, entry_id)

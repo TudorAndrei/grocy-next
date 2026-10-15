@@ -1,8 +1,7 @@
 import asyncio
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, Query
 from starlette.concurrency import run_in_threadpool
 
@@ -11,49 +10,10 @@ from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
-from grocy.domains.household.service import HouseholdService
+from grocy.domains.printing import label
 from grocy.domains.shopping.service import ShoppingService
-from grocy.domains.stock.service import StockService
 
 router = APIRouter(tags=["print"])
-
-
-async def label(session: DbSession, entity: str, object_id: int) -> dict[str, Any]:
-    details = await GenericObjectsService(session).get_entity(entity, object_id)
-    kind, code = {
-        "products": ("product", "p"),
-        "chores": ("chore", "c"),
-        "batteries": ("battery", "b"),
-        "recipes": ("recipe", "r"),
-        "stock": ("product", "p"),
-    }[entity]
-    product_id = details.get("product_id", object_id) if entity == "stock" else object_id
-    name = details.get("name", "")
-    if entity == "chores":
-        details = await HouseholdService(session).get_chore(object_id)
-    elif entity == "batteries":
-        details = await HouseholdService(session).get_battery(object_id)
-    stock_entry = details if entity == "stock" else None
-    if entity in {"stock", "products"}:
-        details = await StockService(session).product_details(product_id)
-        name = details["product"]["name"]
-    grocycode = f"grcy:{code}:{product_id}"
-    if stock_entry is not None:
-        grocycode += f":{stock_entry['stock_id']}"
-    payload = {kind: name, "grocycode": grocycode, "details": details}
-    if stock_entry:
-        payload["stock_entry"] = stock_entry
-        if get_settings().feature_enabled("STOCK_BEST_BEFORE_DATE_TRACKING"):
-            payload["due_date"] = f"DD: {stock_entry['best_before_date']}"
-    webhook = get_settings().label_printer_webhook
-    if webhook and get_settings().label_printer_runs_on_server():
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.post(webhook, json=payload)
-                response.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise GrocyError("Label printer request failed", status_code=502) from exc
-    return payload
 
 
 @router.get("/api/print/shoppinglist/thermal")

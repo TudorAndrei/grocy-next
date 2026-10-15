@@ -1,6 +1,11 @@
 """Run state comparisons against a disposable Grocy v4.5.0 server."""
 
+import json
 import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from threading import Thread
+from urllib.parse import parse_qsl
 from uuid import uuid4
 
 import httpx
@@ -36,6 +41,273 @@ def create(client, entity: str, body: dict) -> int:
     response = client.post(f"/api/objects/{entity}", json=body)
     assert response.status_code == 200, response.text
     return int(response.json()["created_object_id"])
+
+
+@pytest.fixture
+def printer(reference, monkeypatch):
+    """Receive actual label requests from both backends without a physical printer."""
+    from grocy.core.config import get_settings
+
+    database = os.getenv("GROCY_REFERENCE_DATABASE")
+    if not database:
+        pytest.skip("A local disposable reference database is required for printer setup")
+    overrides = Path(database).parent / "settingoverrides"
+    overrides.mkdir(exist_ok=True)
+    previous = {}
+
+    class Printer(list):
+        def __init__(self):
+            super().__init__()
+            self.status = 200
+            self.statuses = []
+
+        def setting(self, name, value):
+            path = overrides / f"{name}.txt"
+            if path not in previous:
+                previous[path] = path.read_bytes() if path.exists() else None
+            path.write_text(str(value).lower() if isinstance(value, bool) else value)
+            monkeypatch.setattr(get_settings(), name.lower(), value)
+
+    received = Printer()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            if self.headers["Content-Type"].startswith("application/json"):
+                received.append(json.loads(body))
+            else:
+                received.append(dict(parse_qsl(body.decode(), keep_blank_values=True)))
+            self.send_response(received.statuses.pop(0) if received.statuses else received.status)
+            self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        received.setting("FEATURE_FLAG_LABEL_PRINTER", True)
+        received.setting("LABEL_PRINTER_RUN_SERVER", True)
+        received.setting("LABEL_PRINTER_WEBHOOK", f"http://127.0.0.1:{server.server_port}/labels")
+        yield received
+    finally:
+        for path, contents in previous.items():
+            if contents is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(contents)
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+def test_reference_purchase_and_due_date_reprints(client, api_headers, reference, printer):
+    from datetime import date, timedelta
+
+    client.headers.update(api_headers)
+    snapshots = []
+    for app in (reference, client):
+        printer.clear()
+        name = uuid4().hex
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        freezer = create(app, "locations", {"name": name + " cold", "is_freezer": 1})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "auto_reprint_stock_label": 1,
+                "default_best_before_days_after_open": 1,
+                "default_best_before_days_after_freezing": 30,
+                "default_best_before_days_after_thawing": 2,
+            },
+        )
+        path = f"/api/stock/products/{product}"
+        for amount in (2, 3):
+            response = app.post(
+                path + "/add",
+                json={"amount": amount, "best_before_date": "2037-01-01", "stock_label_type": 1},
+            )
+            assert response.status_code == 200, response.text
+        assert [item["stock_entry"]["amount"] for item in printer] == [2, 3]
+        assert [item["details"]["stock_amount"] for item in printer] == [0, 2]
+        assert all(item["font_family"] == "Source Sans Pro (Regular)" for item in printer)
+        labels = list(printer)
+        printer.clear()
+        response = app.post(path + "/open", json={"amount": 1})
+        assert response.status_code == 200, response.text
+        assert len(printer) == 1
+        assert printer[0]["stock_entry"]["amount"] == 5
+        assert printer[0]["stock_entry"]["open"] == 0
+        assert printer[0]["stock_entry"]["best_before_date"] == "2037-01-01"
+        assert printer[0]["due_date"] == "DD: " + (date.today() + timedelta(days=1)).isoformat()
+        labels.extend(printer)
+        entry = next(row for row in app.get(path + "/entries").json() if not row["open"])
+        printer.clear()
+        response = app.post(
+            path + "/transfer",
+            json={
+                "amount": 1,
+                "location_id_from": location,
+                "location_id_to": freezer,
+                "stock_entry_id": entry["stock_id"],
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert len(printer) == 1
+        assert printer[0]["stock_entry"]["amount"] == 4
+        assert printer[0]["stock_entry"]["location_id"] == location
+        assert printer[0]["stock_entry"]["best_before_date"] == "2037-01-01"
+        assert printer[0]["due_date"] == "DD: " + (date.today() + timedelta(days=30)).isoformat()
+
+        labels.extend(printer)
+        printer.clear()
+        response = app.post(
+            path + "/transfer",
+            json={"amount": 1, "location_id_from": freezer, "location_id_to": location},
+        )
+        assert response.status_code == 200, response.text
+        assert len(printer) == 1
+        assert printer[0]["stock_entry"]["location_id"] == freezer
+        assert (
+            printer[0]["stock_entry"]["best_before_date"]
+            == (date.today() + timedelta(days=30)).isoformat()
+        )
+        assert printer[0]["due_date"] == "DD: " + (date.today() + timedelta(days=2)).isoformat()
+        labels.extend(printer)
+        snapshots.append(labels)
+
+    def fields(value, path=""):
+        if isinstance(value, dict):
+            return {
+                field for key, item in value.items() for field in fields(item, path + "/" + key)
+            }
+        if isinstance(value, list):
+            return {
+                field
+                for index, item in enumerate(value)
+                for field in fields(item, path + "/" + str(index))
+            }
+        return {path}
+
+    assert fields(snapshots[0]) == fields(snapshots[1])
+
+
+def test_reference_printer_errors_preserve_stock_state(client, api_headers, reference, printer):
+    from datetime import date, timedelta
+
+    client.headers.update(api_headers)
+    for app in (reference, client):
+        name = uuid4().hex
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        freezer = create(app, "locations", {"name": name + " freezer", "is_freezer": 1})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "auto_reprint_stock_label": 1,
+                "default_best_before_days_after_open": 1,
+                "default_best_before_days_after_freezing": 30,
+            },
+        )
+        path = f"/api/stock/products/{product}"
+        printer.status = 500
+        response = app.post(
+            path + "/add",
+            json={"amount": 2, "best_before_date": "2037-01-01", "stock_label_type": 1},
+        )
+        assert response.status_code == 400, response.text
+        assert app.get(path).json()["stock_amount"] == 2
+        printer.status = 200
+        assert (
+            app.post(
+                path + "/add", json={"amount": 3, "best_before_date": "2037-01-01"}
+            ).status_code
+            == 200
+        )
+        entries = app.get(path + "/entries").json()
+        assert len(entries) == 1 and entries[0]["amount"] == 5
+        printer.status = 500
+        for action, body in (
+            ("open", {"amount": 1}),
+            ("transfer", {"amount": 1, "location_id_from": location, "location_id_to": freezer}),
+        ):
+            response = app.post(path + "/" + action, json=body)
+            assert response.status_code == 400, response.text
+            assert app.get(path + "/entries").json() == entries
+        assert app.get(path + "/printlabel").status_code == 400
+        assert (
+            app.put(
+                f"/api/objects/products/{product}",
+                json={"move_on_open": 1, "default_consume_location_id": freezer},
+            ).status_code
+            == 204
+        )
+        printer.clear()
+        printer.statuses = [200, 500]
+        response = app.post(path + "/open", json={"amount": 1})
+        assert response.status_code == 400, response.text
+        assert len(printer) == 2
+        assert [item["stock_entry"]["open"] for item in printer] == [0, 1]
+        assert [item["stock_entry"]["amount"] for item in printer] == [5, 1]
+        entries = app.get(path + "/entries").json()
+        assert len(entries) == 2
+        opened = next(row for row in entries if row["open"])
+        assert opened["amount"] == 1
+        assert opened["location_id"] == location
+        assert opened["best_before_date"] == (date.today() + timedelta(days=1)).isoformat()
+        assert next(row for row in entries if not row["open"])["amount"] == 4
+
+
+def test_reference_form_label_requests(client, api_headers, reference, printer):
+    printer.setting("LABEL_PRINTER_HOOK_JSON", False)
+    printer.status = 302
+    client.headers.update(api_headers)
+    for app in (reference, client):
+        name = "Bread & milk ~ " + uuid4().hex
+        unit = create(app, "quantity_units", {"name": uuid4().hex})
+        location = create(app, "locations", {"name": uuid4().hex})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+            },
+        )
+        path = f"/api/stock/products/{product}"
+        printer.clear()
+        response = app.post(
+            path + "/add",
+            json={"amount": 0.000025, "best_before_date": "2037-01-01", "stock_label_type": 1},
+        )
+        assert response.status_code == 200, response.text
+        assert len(printer) == 1
+        assert printer[0]["product"] == name
+        assert not any(key.startswith("stock_entry[") for key in printer[0])
+        assert printer[0]["details[stock_amount]"] == "0"
+        assert not any(key.startswith("details[product][") for key in printer[0])
+        assert printer[0]["font_family"] == "Source Sans Pro (Regular)"
+        assert printer[0]["due_date"] == "DD: 2037-01-01"
+        assert "stock_entry[price]" not in printer[0]
+        printer.clear()
+        response = app.get(path + "/printlabel")
+        assert response.status_code == 200, response.text
+        assert len(printer) == 1
+        assert printer[0]["details[stock_amount]"] == "2.5E-5"
+        assert printer[0]["grocycode"] == response.json()["grocycode"]
 
 
 def test_reference_file_names_binary_content_and_deletion(
@@ -546,13 +818,17 @@ def test_reference_household_schedule_and_tracking(
         )
         assert completed.status_code == 204, completed.text
         states.append(timestamp(app.get(f"/api/objects/tasks/{task}").json()["done_timestamp"]))
+        recipe = create(app, "recipes", {"name": name})
         for entity, record_id, kind in (
             ("chores", chore, "chore"),
             ("batteries", battery, "battery"),
+            ("recipes", recipe, "recipe"),
         ):
             label = app.get(f"/api/{entity}/{record_id}/printlabel")
             assert label.status_code == 200, label.text
-            states.append((label.json()[kind], label.json()["details"][kind]["name"]))
+            payload = label.json()
+            record = payload["details"] if kind == "recipe" else payload["details"][kind]
+            states.append((payload[kind], record["name"], sorted(record)))
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
 

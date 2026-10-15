@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     barcode_provider_url: str = "https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     label_printer_webhook: str = ""
     label_printer_run_server: bool | str = True
+    label_printer_hook_json: bool | str = True
+    label_printer_params: dict[str, Any] = {"font_family": "Source Sans Pro (Regular)"}
     thermal_printer_device: str = ""
     thermal_printer_host: str = ""
     thermal_printer_port: int = 9100
@@ -63,7 +65,8 @@ class Settings(BaseSettings):
             values = dict(values)
             for name, value in values.items():
                 if (
-                    name.startswith("feature_flag_") or name == "label_printer_run_server"
+                    name.startswith("feature_flag_")
+                    or name in {"label_printer_run_server", "label_printer_hook_json"}
                 ) and isinstance(value, str):
                     value = value.rstrip("\r\n")
                     values[name] = {"true": True, "false": False}.get(value.lower(), value)
