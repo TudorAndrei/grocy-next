@@ -32,6 +32,16 @@ def test_system_time_uses_server_zone(client: TestClient, api_headers: dict, mon
                 )
                 < 2
             )
+            changed = client.get("/api/system/db-changed-time", headers=api_headers).json()
+            changed_time = datetime.strptime(changed["changed_time"], "%Y-%m-%d %H:%M:%S")
+            assert (
+                abs(
+                    (
+                        changed_time - datetime.now(ZoneInfo(zone)).replace(tzinfo=None)
+                    ).total_seconds()
+                )
+                < 2
+            )
     finally:
         time.tzset()
 

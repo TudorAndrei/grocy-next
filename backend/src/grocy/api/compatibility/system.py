@@ -38,6 +38,8 @@ async def system_info(request: Request, _actor: CurrentActor) -> dict[str, Any]:
         "application": {"name": "grocy-next", "version": __version__},
         "compatibility_baseline": get_settings().grocy_baseline,
         "python_version": platform.python_version(),
+        "php_version": "not applicable",
+        "db_version": client_defaults()["db_version"],
         "sqlite_version": sqlite3.sqlite_version,
         "os": platform.platform(),
         "client": request.headers.get("user-agent", "unknown"),
@@ -51,8 +53,9 @@ async def db_changed_time(_actor: CurrentActor) -> dict[str, str]:
     path = _database_path()
     files = (path, Path(str(path) + "-wal")) if path else ()
     times = [file.stat().st_mtime for file in files if file.exists()]
-    changed = datetime.fromtimestamp(max(times), tz=UTC) if times else datetime.now(UTC)
-    return {"changed_time": changed.replace(tzinfo=None).isoformat()}
+    zone = server_timezone()
+    changed = datetime.fromtimestamp(max(times), zone) if times else datetime.now(zone)
+    return {"changed_time": changed.strftime("%Y-%m-%d %H:%M:%S")}
 
 
 @router.get("/api/system/config")

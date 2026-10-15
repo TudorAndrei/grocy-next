@@ -1,6 +1,7 @@
 {
   "baseline": "v4.5.0",
   "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "db_version": 253,
   "grocy_version": {
     "Version": "4.5.0",
     "ReleaseDate": "2025-03-28"
