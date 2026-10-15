@@ -6,7 +6,7 @@ The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, and 
 
 The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
 
-The exposed SQLite views and recipe fulfillment API use 19 pinned Grocy view definitions, including their dependencies. Quantity conversion and recipe views read current records instead of upstream caches. The permission hierarchy uses the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
+The database uses all 45 pinned Grocy views and all 54 native triggers in their original creation order. Quantity conversion and recipe views read current records. Native triggers maintain the internal caches and inverse conversions. The permission hierarchy stores the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
 
 The `/api/v2` API adds nutrition, API key management, and meal completion. MCP and the web application use the same domain services as the compatibility API.
 
@@ -73,7 +73,9 @@ Recipe checks support child stock, rounded ingredient amounts, price factors, an
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.
 
-Calculated view fields and row IDs follow the pinned SQLite definitions. Import checks compared all six exposed SQLite views with the reference database. Purchase price caches are stored and imported. Domain services and 13 pinned validation, default, and custom value triggers implement writes. Other upstream triggers and internal caches are not imported as active behavior.
+Calculated view fields and row IDs follow the pinned SQLite definitions. Generic writes use the unmodified pinned LessQL library. Each successful SQL statement commits before the next statement. Nested writes can therefore keep a parent after a child fails. Creation can return the last child ID. A private native schema checks column names before execution. The generic API exposes native columns and excludes local extension columns. Custom field values use the separate field endpoint.
+
+Imports retain the 33 modeled native tables and their allocation history. The runtime also creates the native conversion cache, permission hierarchy, session table, and migration table. Source session and migration records are not imported. Authentication remains an application extension.
 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 

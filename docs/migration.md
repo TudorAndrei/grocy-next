@@ -75,3 +75,18 @@ A legacy record can violate a native required-column rule. For example, Grocy re
 Revision 0020 matches native SQLite storage affinity. It corrects 15 column rules across nine tables. Conversion factors and other native `REAL` values retain fractional SQL results. Native `INTEGER` columns keep their SQLite rules for fractional values. Chore log times use native `DATETIME` storage and retain date-only precision.
 
 The copy uses SQLite assignment rules without SQL casts. It preserves dates, timestamps, nulls, empty text, counters, and custom SQL. Each changed value must remain equal. Integer `2` can become `2.0`. A large integer that cannot fit in `REAL` without loss stops the upgrade. A custom constraint can also reject the copy. Either failure restores the full original database and revision. No saved value is rounded or replaced to make the upgrade pass.
+
+
+Revision 0021 installs all 45 native views and all 54 native triggers in their source creation order. It creates the four remaining native tables and fills the conversion cache and permission hierarchy. It keeps existing core rows and allocation counters. It also keeps custom SQL outside the native object names.
+
+Some early project revisions did not save internal meal recipes. This upgrade repairs missing internal recipes through the native meal trigger. Normal startup then keeps the saved internal IDs and timestamps. A native object name conflict stops the upgrade. The transaction restores the complete original database and revision.
+
+Generic writes now use the pinned LessQL library. Native database defaults replace Python defaults for these requests. Each successful statement commits separately. A later child error can leave its parent saved. The returned creation ID can belong to the last child. These are Grocy 4.5.0 rules. Custom field values must use `/api/userfields/{entity}/{id}`. The product editor saves its purchase factor through quantity unit conversions.
+
+New household action timestamps use whole seconds, as in Grocy. Existing timestamp text remains saved. Generic timestamp fields retain the native SQLite input rules.
+
+CLI initialization runs the same migrations. A database created with `grocy-cli init` can use native rules when automatic startup migrations are disabled.
+
+Imported timestamp values bypass the runtime timestamp codec. The import keeps fractional seconds and native year 0000 timestamp text exactly. Some domain date operations still have separate year limits.
+
+Custom triggers on replaced native views are saved before replacement. The upgrade restores them after the native triggers. A saved-database check confirms that such a custom trigger still executes after upgrade.
