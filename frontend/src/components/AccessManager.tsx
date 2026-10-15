@@ -219,7 +219,7 @@ export function AccessManager() {
                 mutate.mutate(async () => {
                   await request(`/api/users/${selected}/permissions`, {
                     method: "PUT",
-                    body: JSON.stringify({ permission_ids: ids }),
+                    body: JSON.stringify({ permissions: ids }),
                   });
                   setDraft(null);
                 })

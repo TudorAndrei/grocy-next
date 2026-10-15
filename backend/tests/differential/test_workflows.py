@@ -488,6 +488,199 @@ def test_missing_user_deletion_returns_grocy_error(api):
     assert response.json()["error_message"] == "Call to a member function delete() on null"
 
 
+@pytest.mark.parametrize(
+    "body,status,expected,error",
+    [
+        (b'{"permissions":[]}', 204, [], None),
+        (
+            b'{"permissions":[7,7]}',
+            400,
+            [],
+            "UNIQUE constraint failed: user_permissions.user_id, user_permissions.permission_id",
+        ),
+        (b'{"permissions":[999999]}', 204, [999999], None),
+        (
+            b'{"permissions":[7,null]}',
+            400,
+            [],
+            "NOT NULL constraint failed: user_permissions.permission_id",
+        ),
+        (b'{"permissions":[false,true]}', 204, [0, 1], None),
+        (b'{"permissions":[1.5]}', 204, [1.5], None),
+        (b'{"permissions":["x",""]}', 204, [None, "x"], None),
+        (
+            b'{"permissions":[[7]]}',
+            500,
+            [],
+            "PDO::quote(): Argument #1 ($string) must be of type string, array given",
+        ),
+        (b'{"permissions":{"a":7,"b":5}}', 204, [5, 7], None),
+        (b'{"permissions":"7"}', 204, [], None),
+        (b"{}", 204, [], None),
+        (b"null", 204, [], None),
+        (b"{", 204, [], None),
+        (b"[7]", 204, [], None),
+        (b'{"permissions":null}', 204, [], None),
+        (
+            b'{"permissions":[1,"1.0"]}',
+            400,
+            [],
+            "UNIQUE constraint failed: user_permissions.user_id, user_permissions.permission_id",
+        ),
+        (b'{"permissions":[1e400]}', 204, ["INF"], None),
+        (b'{"permissions":["7\\u0000x"]}', 204, [7], None),
+    ],
+)
+def test_permission_replacement_matches_grocy_failures_and_values(
+    api, body, status, expected, error
+):
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    response = api.put(
+        f"/api/users/{user}/permissions", content=body, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == status, response.text
+    if error:
+        prefix = "SQLSTATE[23000]: Integrity constraint violation: 19 " if status == 400 else ""
+        assert response.json()["error_message"] == prefix + error
+        if status == 400:
+            assert response.json() == {"error_message": prefix + error}
+    assert [
+        row["permission_id"] for row in api.get(f"/api/users/{user}/permissions").json()
+    ] == expected
+
+
+@pytest.mark.parametrize(
+    "body,status,expected,error",
+    [
+        (b'{"permission_id":7}', 204, [1, 7], None),
+        (
+            b'{"permission_id":1}',
+            400,
+            [1],
+            "UNIQUE constraint failed: user_permissions.user_id, user_permissions.permission_id",
+        ),
+        (b'{"permission_id":999999}', 204, [1, 999999], None),
+        (b'{"permission_id":null}', 204, [1, None], None),
+        (b'{"permission_id":false}', 204, [0, 1], None),
+        (b'{"permission_id":1.5}', 204, [1, 1.5], None),
+        (b'{"permission_id":"x"}', 204, [1, "x"], None),
+        (
+            b'{"permission_id":[]}',
+            400,
+            [1],
+            "table user_permissions has no column named permission_id_id",
+        ),
+        (b"{}", 400, [1], "NOT NULL constraint failed: user_permissions.permission_id"),
+        (b"null", 400, [1], "NOT NULL constraint failed: user_permissions.permission_id"),
+        (b"{", 400, [1], "NOT NULL constraint failed: user_permissions.permission_id"),
+        (b"[]", 400, [1], "NOT NULL constraint failed: user_permissions.permission_id"),
+        (b'{"permission_id":"&#55;"}', 204, [1, 7], None),
+        (b'{"permission_id":1e400}', 204, [1, "INF"], None),
+    ],
+)
+def test_permission_add_matches_grocy_values_and_errors(api, body, status, expected, error):
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    response = api.post(
+        f"/api/users/{user}/permissions", content=body, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == status, response.text
+    if error:
+        prefix = (
+            "SQLSTATE[HY000]: General error: 1 "
+            if "no column named" in error
+            else "SQLSTATE[23000]: Integrity constraint violation: 19 "
+        )
+        assert response.json() == {"error_message": prefix + error}
+    assert [
+        row["permission_id"] for row in api.get(f"/api/users/{user}/permissions").json()
+    ] == expected
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT"])
+@pytest.mark.parametrize("text_id", [False, True])
+def test_permissions_allow_a_user_id_without_a_user_row(api, method, text_id):
+    user = "missing'" + uuid4().hex if text_id else 2000000000 + int(uuid4().hex[:4], 16)
+    body = {"permission_id": 7} if method == "POST" else {"permissions": [7]}
+    response = api.request(method, f"/api/users/{user}/permissions", json=body)
+    assert response.status_code == 204, response.text
+    saved = api.get(f"/api/users/{user}/permissions").json()
+    assert len(saved) == 1 and saved[0]["permission_id"] == 7 and saved[0]["user_id"] == user
+
+
+def test_permission_row_ids_keep_input_order_and_never_reuse_deleted_ids(api):
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    path = f"/api/users/{user}/permissions"
+    previous = api.get(path).json()[0]["id"]
+    assert api.put(path, json={"permissions": [30, 5, 7]}).status_code == 204
+    assert [(row["permission_id"], row["id"]) for row in api.get(path).json()] == [
+        (5, previous + 2),
+        (7, previous + 3),
+        (30, previous + 1),
+    ]
+    assert api.put(path, json={"permissions": []}).status_code == 204
+    assert api.post(path, json={"permission_id": 7}).status_code == 204
+    assert api.get(path).json()[0]["id"] == previous + 4
+
+
+@pytest.mark.parametrize(
+    "content_type,body,expected",
+    [
+        ("application/json; charset=utf-8", b'{"permissions":[7]}', [7]),
+        ("application/vnd.grocy+json", b'{"permissions":[7]}', [7]),
+        ("Application/JSON", b'{"permissions":[7]}', [7]),
+        ("application/x-www-form-urlencoded", b"permissions[]=7&permissions[]=5", [5, 7]),
+        ("text/plain", b'{"permissions":[7]}', []),
+        (None, b'{"permissions":[7]}', []),
+        ("application/xml", b"<request><permissions>7</permissions></request>", []),
+    ],
+)
+def test_permission_replacement_uses_grocy_media_type_parsers(api, content_type, body, expected):
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    response = api.put(
+        f"/api/users/{user}/permissions",
+        content=body,
+        headers={"Content-Type": content_type} if content_type else {},
+    )
+    assert response.status_code == 204, response.text
+    assert [
+        row["permission_id"] for row in api.get(f"/api/users/{user}/permissions").json()
+    ] == expected
+
+
+def test_permission_add_bad_content_type_keeps_the_existing_permissions(api):
+    username = uuid4().hex
+    assert (
+        api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+    path = f"/api/users/{user}/permissions"
+    before = api.get(path).json()
+    response = api.post(
+        path,
+        content=b'{"permission_id":7}',
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"error_message": "Bad Content-Type"}
+    assert api.get(path).json() == before
+
+
 def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):
     from datetime import date, timedelta
 

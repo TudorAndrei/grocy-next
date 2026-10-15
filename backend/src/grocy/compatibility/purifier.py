@@ -67,10 +67,26 @@ class InputPurifier:
                 pass
 
     async def purify(self, body: bytes) -> Any:
+        return await self._request(body, {})
+
+    async def permission_query(
+        self, body: bytes, *, user_id: str, method: str, content_type: str | None
+    ) -> dict[str, Any]:
+        return await self._request(
+            body,
+            {
+                "operation": "permissions",
+                "user_id": user_id,
+                "method": method,
+                "content_type": content_type,
+            },
+        )
+
+    async def _request(self, body: bytes, fields: dict[str, Any]) -> Any:
         async with self._lock:
             self._sequence += 1
             message = json.dumps(
-                {"id": self._sequence, "json": base64.b64encode(body).decode("ascii")},
+                {"id": self._sequence, "json": base64.b64encode(body).decode("ascii"), **fields},
                 separators=(",", ":"),
             ).encode()
             try:

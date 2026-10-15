@@ -24,6 +24,10 @@ RELEASE_SHA256 = "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d
 RELEASE_URL = "https://github.com/grocy/grocy/releases/download/v4.5.0/grocy_4.5.0.zip"
 ASSET_URL = "https://api.github.com/repos/grocy/grocy/releases/assets/241656549"
 REQUIRED_MODULES = {
+    "bcmath",
+    "dom",
+    "libxml",
+    "simplexml",
     "ctype",
     "fileinfo",
     "gd",

@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from sqlalchemy import delete, select
+from sqlalchemy.exc import DBAPIError
 
 from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
@@ -239,60 +240,55 @@ async def delete_user(
 
 @router.get("/api/users/{user_id}/permissions")
 async def get_user_permissions(
-    user_id: int, _actor: CurrentActor, session: DbSession
-) -> list[dict[str, int]]:
+    user_id: str, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, Any]]:
     rows = (
-        await session.scalars(
-            select(UserPermission)
-            .where(UserPermission.user_id == user_id)
-            .order_by(UserPermission.id)
-        )
+        await session.scalars(select(UserPermission).where(UserPermission.user_id == user_id))
     ).all()
     return [
         {"id": row.id, "permission_id": row.permission_id, "user_id": row.user_id} for row in rows
     ]
 
 
-@router.post("/api/users/{user_id}/permissions", status_code=204)
-@filtered_body()
-async def add_user_permission(
-    user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
-) -> Response:
-    actor.require("ADMIN")
-    await _get_user_or_404(session, user_id)
-    try:
-        pid = int(body.get("permission_id", body.get("permissions_id", 0)))
-    except (TypeError, ValueError) as exc:
-        raise GrocyError("Invalid permission") from exc
-    if pid not in PERMISSIONS:
-        raise GrocyError("Unknown permission")
-    existing = await session.scalar(
-        select(UserPermission.id).where(
-            UserPermission.user_id == user_id, UserPermission.permission_id == pid
-        )
+async def _write_permissions(request: Request, user_id: str, session: DbSession) -> Response:
+    query = await request.app.state.input_purifier.permission_query(
+        await request.body(),
+        user_id=user_id,
+        method=request.method,
+        content_type=request.headers.get("content-type"),
     )
-    if existing is None:
-        session.add(UserPermission(user_id=user_id, permission_id=pid))
+    if query["clear"]:
+        await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
+        # Grocy commits this delete before the separate batch insert can fail.
         await session.commit()
+    if "error_message" in query:
+        raise GrocyError(query["error_message"], status_code=query["status"], code=None)
+    if query["query"] is not None:
+        try:
+            connection = await session.connection()
+            await connection.exec_driver_sql(query["query"], tuple(query["parameters"]))
+            await session.commit()
+        except DBAPIError as error:
+            await session.rollback()
+            number = getattr(error.orig, "sqlite_errorcode", 1) & 255
+            state = (
+                "23000]: Integrity constraint violation"
+                if number == 19
+                else "HY000]: General error"
+            )
+            raise GrocyError(f"SQLSTATE[{state}: {number} {error.orig}", code=None) from error
     return Response(status_code=204)
+
+
+@router.post("/api/users/{user_id}/permissions", status_code=204)
+async def add_user_permission(
+    user_id: str, request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return await _write_permissions(request, user_id, session)
 
 
 @router.put("/api/users/{user_id}/permissions", status_code=204)
 async def set_user_permissions(
-    user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
+    user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    actor.require("ADMIN")
-    await _get_user_or_404(session, user_id)
-    raw = body.get("permissions", body.get("permission_ids", []))
-    if not isinstance(raw, list):
-        raise GrocyError("Permissions must be a list")
-    try:
-        ids = sorted({int(item) for item in raw})
-    except (TypeError, ValueError) as exc:
-        raise GrocyError("Invalid permission") from exc
-    if any(pid not in PERMISSIONS for pid in ids):
-        raise GrocyError("Unknown permission")
-    await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
-    session.add_all([UserPermission(user_id=user_id, permission_id=pid) for pid in ids])
-    await session.commit()
-    return Response(status_code=204)
+    return await _write_permissions(request, user_id, session)

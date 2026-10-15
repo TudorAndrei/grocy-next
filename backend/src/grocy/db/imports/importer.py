@@ -112,19 +112,19 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
             if source_db.execute(
                 "SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'"
             ).fetchone():
-                sequence = source_db.execute(
-                    "SELECT seq FROM sqlite_sequence WHERE name='users'"
-                ).fetchone()
-                if sequence is not None:
-                    # A deleted user's saved key must never acquire a replacement user.
+                for sequence in source_db.execute("SELECT name, seq FROM sqlite_sequence"):
+                    table = Base.metadata.tables.get(sequence[0])
+                    if table is None or not table.dialect_options["sqlite"]["autoincrement"]:
+                        continue
+                    # Keep allocation history, including counters above all remaining row IDs.
                     conn.exec_driver_sql(
-                        "UPDATE sqlite_sequence SET seq=MAX(seq, ?) WHERE name='users'",
-                        (sequence[0],),
+                        "UPDATE sqlite_sequence SET seq=MAX(seq, ?) WHERE name=?",
+                        (sequence[1], sequence[0]),
                     )
                     conn.exec_driver_sql(
-                        "INSERT INTO sqlite_sequence (name, seq) SELECT 'users', ? "
-                        "WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name='users')",
-                        (sequence[0],),
+                        "INSERT INTO sqlite_sequence (name, seq) SELECT ?, ? "
+                        "WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name=?)",
+                        (sequence[0], sequence[1], sequence[0]),
                     )
             if "user_permissions" not in source_tables:
                 conn.exec_driver_sql(

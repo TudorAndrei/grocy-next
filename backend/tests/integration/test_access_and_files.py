@@ -32,7 +32,7 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     assert client.get(path, headers=headers).content == b"Manual"
     assert client.delete(path, headers=headers).status_code == 204
     grant = client.put(
-        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": [7]}
+        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": [7]}
     )
     assert grant.status_code == 204
     assert client.get("/api/stock", headers=headers).status_code == 200
@@ -59,14 +59,14 @@ def test_permissions_keys_and_mcp_use_stored_identity(
         {"id": 1, "permission_id": 1, "user_id": 1},
     ]
     client.put(
-        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": []}
+        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": []}
     )
     assert (
         client.post("/api/stock/products/1/add", headers=headers, json={"amount": 1}).status_code
         == 403
     )
     client.put(
-        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": [24]}
+        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": [24]}
     )
     tracked = client.post("/api/chores/1/execute", headers=headers, json={})
     assert tracked.status_code == 200

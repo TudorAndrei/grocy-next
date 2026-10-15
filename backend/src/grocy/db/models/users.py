@@ -32,7 +32,7 @@ class ApiKey(Base, TimestampMixin):
 
 class UserPermission(Base):
     __tablename__ = "user_permissions"
-    __table_args__ = (UniqueConstraint("user_id", "permission_id"),)
+    __table_args__ = (UniqueConstraint("user_id", "permission_id"), {"sqlite_autoincrement": True})
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)

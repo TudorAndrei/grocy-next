@@ -214,7 +214,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0012"
+            == "20261015_0013"
         )
 
 
@@ -321,10 +321,12 @@ def test_import_keeps_deleted_user_references_and_id_sequence(tmp_path: Path, mo
             CREATE TABLE user_settings (id INTEGER PRIMARY KEY, user_id INTEGER,
                                         key TEXT, value TEXT);
             INSERT INTO user_settings VALUES (1, 100, 'kept', 'saved');
-            CREATE TABLE user_permissions (id INTEGER PRIMARY KEY, user_id INTEGER,
+            CREATE TABLE user_permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
                                            permission_id INTEGER);
             INSERT INTO user_permissions VALUES (1, 1, 1);
             INSERT INTO user_permissions VALUES (2, 100, 1);
+            INSERT INTO user_permissions VALUES (700, 100, 5);
+            DELETE FROM user_permissions WHERE id=700;
             CREATE TABLE tasks (id INTEGER PRIMARY KEY, name TEXT, assigned_to_user_id INTEGER);
             INSERT INTO tasks VALUES (1, 'Future assignee', 1000);
         """)
@@ -336,6 +338,7 @@ def test_import_keeps_deleted_user_references_and_id_sequence(tmp_path: Path, mo
         created = app.post("/api/users", json={"username": "Next", "password": "test"})
         assert created.status_code == 204, created.text
         assert app.get("/api/users", params={"query[]": "username=Next"}).json()[0]["id"] == 251
+        assert app.get("/api/users/251/permissions").json()[0]["id"] == 701
         assert app.get("/api/user", headers={"GROCY-API-KEY": "deleted-key"}).status_code == 401
         assert app.get("/api/users/100/permissions").json() == [
             {"id": 2, "user_id": 100, "permission_id": 1}
