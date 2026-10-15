@@ -24,8 +24,10 @@ def upgrade() -> None:
             "recipes", naming_convention={"uq": "uq_%(table_name)s_%(column_0_name)s"}
         ) as batch:
             batch.drop_constraint("uq_recipes_name", type_="unique")
-    # These columns have their own data conversion in revision 0004.
-    household_schedule_columns = {
+    # Later revisions handle these column conversions.
+    deferred_columns = {
+        # Revision 0018 owns the field ID backfill for legacy name-based values.
+        "userfield_values": {"field_id"},
         "chores": {
             "period_interval",
             "active",
@@ -43,7 +45,7 @@ def upgrade() -> None:
             continue
         columns = {column["name"] for column in inspect(bind).get_columns(table.name)}
         for column in table.columns:
-            if column.name in columns or column.name in household_schedule_columns.get(
+            if column.name in columns or column.name in deferred_columns.get(
                 table.name, set()
             ):
                 continue

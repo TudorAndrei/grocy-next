@@ -1,0 +1,11 @@
+{
+  "baseline": "Grocy 4.5.0",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "license": "../../compatibility/LICENSE.grocy",
+  "triggers": {
+    "prevent_empty_userfields_INS": "CREATE TRIGGER prevent_empty_userfields_INS AFTER INSERT ON userfield_values\r\nBEGIN\r\n\tDELETE FROM userfield_values\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(value, '') = '';\r\nEND",
+    "prevent_empty_userfields_UPD": "CREATE TRIGGER prevent_empty_userfields_UPD AFTER UPDATE ON userfield_values\r\nBEGIN\r\n\tDELETE FROM userfield_values\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(value, '') = '';\r\nEND",
+    "cascade_userfield_removal": "CREATE TRIGGER cascade_userfield_removal AFTER DELETE ON userfields\r\nBEGIN\r\n\tDELETE FROM userfield_values\r\n\tWHERE object_id = OLD.id\r\n\t\tAND field_id = OLD.id;\r\nEND",
+    "userfield_values_special_handling_INS": "CREATE TRIGGER userfield_values_special_handling_INS AFTER INSERT ON userfield_values\r\nBEGIN\r\n\t-- Entity stock:\r\n\t-- object_id is the transaction_id on insert -> replace it by the corresponding stock_id\r\n\tINSERT OR REPLACE INTO userfield_values\r\n\t\t(field_id, object_id, value)\r\n\tSELECT uv.field_id, sl.stock_id, uv.value\r\n\tFROM userfield_values uv\r\n\tJOIN stock_log sl\r\n\t\tON uv.object_id = sl.transaction_id\r\n\t\tAND sl.transaction_type IN ('purchase', 'inventory-correction', 'stock-edit-new')\r\n\tWHERE uv.field_id IN (SELECT id FROM userfields WHERE entity = 'stock')\r\n\t\tAND uv.field_id = NEW.field_id\r\n\t\tAND uv.object_id = NEW.object_id;\r\n\r\n\tDELETE FROM userfield_values\r\n\tWHERE field_id IN (SELECT id FROM userfields WHERE entity = 'stock')\r\n\t\tAND field_id = NEW.field_id\r\n\t\tAND object_id = NEW.object_id;\r\nEND"
+  }
+}

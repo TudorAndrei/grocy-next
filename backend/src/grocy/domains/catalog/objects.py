@@ -32,7 +32,7 @@ from grocy.db.models.settings import UserEntity, UserfieldDefinition, UserfieldV
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
-from grocy.db.models.users import ApiKey, User
+from grocy.db.models.users import ApiKey
 from grocy.domains.catalog.effects import CatalogEffects
 from grocy.domains.catalog.views import VIEW_ENTITIES, list_view
 from grocy.domains.products.service import ProductsService
@@ -224,93 +224,53 @@ class GenericObjectsService:
         await self.effects.delete(entity, row)
         await self.session.commit()
 
-    async def write_userfields(self, entity: str, object_id: int | str, values: dict) -> None:
+    async def write_userfields(
+        self, entity: str, object_id: int | str, values: dict, *, commit_each: bool = False
+    ) -> None:
         if not isinstance(values, dict):
             raise GrocyError("Userfields must be an object")
         definitions = {
-            row.name: row for row in await self._userfield_definitions(entity, object_id)
+            row.name or "": row for row in await self._userfield_definitions(entity, object_id)
         }
         for name, value in values.items():
             if name not in definitions:
-                raise GrocyError(f"Field '{name}' is not defined for this record")
+                raise GrocyError(
+                    f"Field {name} is not a valid userfield of the given entity", code=None
+                )
             if isinstance(value, (list, dict)):
                 raise GrocyError("Custom field values must be scalar values")
-        references: list[int | str] = [object_id]
-        stock_transaction = False
-        if entity == "stock":
-            stock_ids = (
-                await self.session.scalars(
-                    select(StockLog.stock_id)
-                    .where(
-                        StockLog.transaction_id == str(object_id),
-                        StockLog.transaction_type.in_(
-                            ["purchase", "inventory-correction", "stock-edit-new"]
-                        ),
-                    )
-                    .distinct()
+            stored = (
+                "" if value is None else str(int(value)) if isinstance(value, bool) else str(value)
+            )
+            row = await self.session.scalar(
+                select(UserfieldValue).where(
+                    UserfieldValue.field_id == definitions[name].id,
+                    UserfieldValue.object_id == str(object_id),
                 )
-            ).all()
-            if stock_ids:
-                references = list(stock_ids)
-                stock_transaction = True
-        for reference in references:
-            for name, value in values.items():
-                field_entity = definitions[name].entity
-                stored = (
-                    None
-                    if value is None
-                    else str(int(value))
-                    if isinstance(value, bool)
-                    else str(value)
-                )
-                row = await self.session.scalar(
-                    select(UserfieldValue).where(
-                        UserfieldValue.entity == field_entity,
-                        UserfieldValue.object_id == reference,
-                        UserfieldValue.name == name,
+            )
+            if row is None:
+                self.session.add(
+                    UserfieldValue(
+                        field_id=definitions[name].id, object_id=str(object_id), value=stored
                     )
                 )
-                if row is None:
-                    if entity == "stock" and not stock_transaction:
-                        continue
-                    self.session.add(
-                        UserfieldValue(
-                            entity=field_entity,
-                            object_id=reference,
-                            name=name,
-                            value=stored,
-                        )
-                    )
-                else:
-                    row.value = stored
+            else:
+                row.value = stored
+            if commit_each:
+                await self.session.commit()
 
-    async def validate_userfield_object(self, entity: str, object_id: int | str) -> None:
-        if entity == "stock":
-            entry = await self.session.scalar(
-                select(StockEntry.id).where(StockEntry.stock_id == str(object_id)).limit(1)
+    async def validate_userfield_entity(self, entity: str) -> None:
+        if entity == "users" or entity in self.supported_entities():
+            return
+        if (
+            entity.startswith("userentity-")
+            and await self.session.scalar(
+                select(UserEntity.id).where(UserEntity.name == entity.removeprefix("userentity-"))
             )
-            if entry is None:
-                transaction = await self.session.scalar(
-                    select(StockLog.id)
-                    .where(
-                        StockLog.transaction_id == str(object_id),
-                    )
-                    .limit(1)
-                )
-                if transaction is None:
-                    raise NotFoundError("Stock entry or transaction not found")
-        elif entity.startswith("userentity-"):
-            definition = await self.session.scalar(
-                select(UserEntity).where(UserEntity.name == entity.removeprefix("userentity-"))
-            )
-            row = await self.session.get(UserObject, object_id)
-            if definition is None or row is None or row.userentity_id != definition.id:
-                raise NotFoundError("Custom record not found")
-        elif entity == "users":
-            if await self.session.get(User, object_id) is None:
-                raise NotFoundError("User not found")
-        else:
-            await self.get_entity(entity, int(object_id))
+            is not None
+        ):
+            return
+        raise GrocyError("Entity does not exist or is not exposed", code=None)
 
     async def _userfield_definitions(
         self, entity: str, object_id: int | str
@@ -334,19 +294,15 @@ class GenericObjectsService:
     async def userfields(self, entity: str, object_id: int | str) -> dict[str, str | None]:
         definitions = await self._userfield_definitions(entity, object_id)
         rows = (
-            (
-                await self.session.execute(
-                    select(UserfieldValue).where(
-                        UserfieldValue.entity.in_({row.entity for row in definitions}),
-                        UserfieldValue.object_id == object_id,
-                    )
+            await self.session.scalars(
+                select(UserfieldValue).where(
+                    UserfieldValue.field_id.in_([row.id for row in definitions]),
+                    UserfieldValue.object_id == str(object_id),
                 )
             )
-            .scalars()
-            .all()
-        )
-        values = {(row.entity, row.name): row.value for row in rows}
-        return {row.name: values.get((row.entity, row.name)) for row in definitions}
+        ).all()
+        values = {row.field_id: row.value for row in rows}
+        return {row.name or "": values.get(row.id) for row in definitions}
 
     def _apply_payload(self, row: Any, payload: dict[str, Any]) -> None:
         columns = {column.name: column for column in row.__table__.columns}

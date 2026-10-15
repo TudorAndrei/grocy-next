@@ -84,6 +84,16 @@ def catalog(api):
     return product, unit, other, location
 
 
+@pytest.fixture
+def custom_field(api, request):
+    def create_field(**values):
+        field = create(api, "userfields", **values)
+        request.addfinalizer(lambda: api.delete(f"/api/objects/userfields/{field}"))
+        return field
+
+    return create_field
+
+
 def test_file_creation_preserves_existing_content(api, tmp_path, monkeypatch):
     from grocy.core.config import get_settings
 
@@ -923,6 +933,123 @@ def test_generic_creation_returns_the_native_id_response(api):
     record = response.json()["created_object_id"]
     assert response.json() == {"created_object_id": str(record)}
     assert api.get(f"/api/objects/locations/{record}").status_code == 200
+
+
+@pytest.mark.parametrize(
+    "entity,target,rename",
+    [
+        ("locations", "locations", True),
+        ("products", "products", True),
+        ("stock", "stock", True),
+        ("locations", "tasks", False),
+        ("locations", "tasks", True),
+    ],
+)
+def test_custom_field_definition_changes_keep_saved_values(
+    api, custom_field, catalog, entity, target, rename
+):
+    product, _unit, _other, location = catalog
+    name = "field" + uuid4().hex
+    field = custom_field(entity=entity, name=name, caption=name, type="text-single-line")
+    reference = str(product if entity in {"products", "stock"} else location)
+    write_reference = reference
+    if entity == "stock":
+        purchase = api.post(f"/api/stock/products/{product}/add", json={"amount": 1})
+        assert purchase.status_code == 200, purchase.text
+        write_reference = purchase.json()[0]["transaction_id"]
+        reference = purchase.json()[0]["stock_id"]
+    assert (
+        api.put(f"/api/userfields/{entity}/{write_reference}", json={name: "Saved"}).status_code
+        == 204
+    )
+    new_name = name + "new" if rename else name
+    changed = api.put(f"/api/objects/userfields/{field}", json={"name": new_name, "entity": target})
+    assert changed.status_code == 204, changed.text
+    assert api.get(f"/api/userfields/{target}/{reference}").json()[new_name] == "Saved"
+    assert (
+        api.put(f"/api/userfields/{target}/{reference}", json={new_name: "Updated"}).status_code
+        == 204
+    )
+    assert api.get(f"/api/userfields/{target}/{reference}").json()[new_name] == "Updated"
+
+
+def test_custom_field_failed_definition_change_keeps_both_values(api, custom_field, catalog):
+    _product, _unit, _other, location = catalog
+    names = ["field" + uuid4().hex, "field" + uuid4().hex]
+    fields = [
+        custom_field(entity="locations", name=name, caption=name, type="text-single-line")
+        for name in names
+    ]
+    path = f"/api/userfields/locations/{location}"
+    values = dict(zip(names, ["First", "Second"], strict=True))
+    assert api.put(path, json=values).status_code == 204
+    before = api.get(f"/api/objects/userfields/{fields[0]}").json()
+    rejected = api.put(
+        f"/api/objects/userfields/{fields[0]}", json={"name": names[1], "caption": "Rejected"}
+    )
+    assert rejected.status_code == 400, rejected.text
+    assert {name: api.get(path).json()[name] for name in names} == values
+    assert api.get(f"/api/objects/userfields/{fields[0]}").json() == before
+
+
+def test_custom_field_object_keys_keep_text_identity_and_partial_writes(api, custom_field):
+    name = "field" + uuid4().hex
+    field = custom_field(entity="locations", name=name, caption=name, type="text-single-line")
+    paths = [f"/api/userfields/locations/{key}" for key in ("1", "01", "record-text")]
+    for index, path in enumerate(paths):
+        response = api.put(path, json={name: str(index)})
+        assert response.status_code == 204, response.text
+    assert [api.get(path).json()[name] for path in paths] == ["0", "1", "2"]
+    rejected = api.put(paths[0], json={name: "Committed first", "unknown" + name: "Rejected"})
+    assert rejected.status_code == 400, rejected.text
+    assert api.get(paths[0]).json()[name] == "Committed first"
+    assert api.delete(f"/api/objects/userfields/{field}").status_code == 204
+    replacement = custom_field(entity="locations", name=name, caption=name, type="text-single-line")
+    assert replacement > field
+    assert [api.get(path).json()[name] for path in paths] == [None, None, None]
+
+
+@pytest.mark.parametrize(
+    "entity,kept",
+    [
+        ("locations", True),
+        ("tasks", True),
+        ("products", False),
+        ("chores", False),
+        ("batteries", False),
+        ("userobjects", True),
+    ],
+)
+def test_custom_field_values_follow_native_object_deletion(
+    api, custom_field, catalog, entity, kept
+):
+    name = "field" + uuid4().hex
+    body = generic_body(api, catalog, entity)
+    record = create(api, entity, **body)
+    custom_field(entity=entity, name=name, caption=name, type="text-single-line")
+    path = f"/api/userfields/{entity}/{record}"
+    assert api.put(path, json={name: "Saved"}).status_code == 204
+    assert api.delete(f"/api/objects/{entity}/{record}").status_code == 204
+    values = api.get(path)
+    assert values.status_code == 200, values.text
+    assert values.json()[name] == ("Saved" if kept else None)
+
+
+def test_custom_entity_deletion_keeps_records_definitions_and_values(api, custom_field):
+    name = "entity" + uuid4().hex
+    entity = create(api, "userentities", name=name, caption=name)
+    record = create(api, "userobjects", userentity_id=entity)
+    namespace = "userentity-" + name
+    field = custom_field(entity=namespace, name="saved", caption="Saved", type="text-single-line")
+    path = f"/api/userfields/{namespace}/{record}"
+    assert api.put(path, json={"saved": "Value"}).status_code == 204
+    assert api.delete(f"/api/objects/userentities/{entity}").status_code == 204
+    assert api.get(f"/api/objects/userobjects/{record}").json()["userentity_id"] == entity
+    assert api.get(f"/api/objects/userfields/{field}").json()["entity"] == namespace
+    assert api.get(path).status_code == 400
+    replacement = create(api, "userentities", name=name, caption=name)
+    assert replacement > entity
+    assert api.get(path).json() == {"saved": "Value"}
 
 
 @pytest.mark.parametrize(

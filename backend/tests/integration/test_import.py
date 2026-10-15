@@ -22,7 +22,7 @@ def source_database(path: Path, *, bad_reference: bool = False):
             CREATE TABLE userfields (id INTEGER PRIMARY KEY, entity TEXT,
                 name TEXT, caption TEXT, type TEXT);
             CREATE TABLE userfield_values (id INTEGER PRIMARY KEY, field_id INTEGER,
-                object_id INTEGER, value TEXT);
+                object_id TEXT, value TEXT);
             INSERT INTO userfields VALUES (1, 'products', 'origin', 'Origin', 'text');
             INSERT INTO userfield_values VALUES (1, 1, 1, 'Farm');
             INSERT INTO users VALUES (1, 'Owner');
@@ -47,6 +47,7 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
     source, target = tmp_path / "source.db", tmp_path / "next.db"
     source_database(source)
     with sqlite3.connect(source) as connection:
+        connection.execute("INSERT INTO userfield_values VALUES (2,999,'001','Retained orphan')")
         connection.executescript("""
             CREATE TABLE chores (id INTEGER PRIMARY KEY, name TEXT, period_type TEXT);
             CREATE TABLE chores_log (id INTEGER PRIMARY KEY, chore_id INTEGER, tracked_time TEXT,
@@ -79,6 +80,9 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
             "origin",
             "Farm",
         )
+        assert conn.execute(
+            "SELECT field_id,object_id,value FROM userfield_values WHERE id=2"
+        ).fetchone() == (999, "001", "Retained orphan")
     with sqlite3.connect(result["source_snapshot"]) as snapshot:
         assert snapshot.execute("SELECT legacy_note FROM products").fetchone()[0] == "keep this"
     with pytest.raises(ValueError, match="new database"):
@@ -235,7 +239,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0017"
+            == "20261015_0018"
         )
 
 

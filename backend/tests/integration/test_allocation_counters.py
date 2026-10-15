@@ -65,16 +65,28 @@ def _data_snapshot(database: Path):
                 "AND name != 'alembic_version' ORDER BY name"
             )
         ]
-        return {
-            table: connection.execute('SELECT * FROM "' + table + '" ORDER BY rowid').fetchall()
-            for table in tables
-        }
+        values = {}
+        for table in tables:
+            columns = "*"
+            if table == "userfield_values":
+                columns = "id,entity,CAST(object_id AS TEXT),name,value,row_created_timestamp"
+            values[table] = connection.execute(
+                f'SELECT {columns} FROM "{table}" ORDER BY rowid'
+            ).fetchall()
+        return values
 
 
 def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Path, monkeypatch):
     database = tmp_path / "project.db"
     with sqlite3.connect(database) as connection:
         connection.executescript((FIXTURES / "project-0013-counters.sql").read_text())
+        # Current API writes use native value identity. The legacy-name conversion
+        # has its own saved revision 0017 test in test_userfield_identity.py.
+        connection.execute("DROP TABLE userfield_values")
+        native = json.loads((FIXTURES / "grocy-4.5.0-counter-tables.json").read_text())["tables"]
+        connection.execute(native["userfield_values"])
+        connection.execute("ALTER TABLE userfield_values ADD COLUMN entity TEXT")
+        connection.execute("ALTER TABLE userfield_values ADD COLUMN name TEXT")
         connection.executescript("""
             CREATE TABLE alembic_version (version_num TEXT PRIMARY KEY);
             INSERT INTO alembic_version VALUES ('20261015_0013');

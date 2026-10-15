@@ -26,15 +26,17 @@ class UserSetting(Base, TimestampMixin):
 class UserfieldValue(Base, TimestampMixin):
     __tablename__ = "userfield_values"
     __table_args__ = (
-        UniqueConstraint("entity", "object_id", "name", name="uq_userfield_value"),
+        UniqueConstraint("field_id", "object_id", name="uq_userfield_value_identity"),
         {"sqlite_autoincrement": True},
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    entity: Mapped[str] = mapped_column(String(128), nullable=False)
-    object_id: Mapped[int | str] = mapped_column(Integer, nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    value: Mapped[str | None] = mapped_column(Text)
+    field_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    object_id: Mapped[str] = mapped_column(Text, nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    # Keep the original keys as legacy metadata. Runtime identity uses field_id.
+    entity: Mapped[str | None] = mapped_column(String(128))
+    name: Mapped[str | None] = mapped_column(String(255))
 
 
 class UserfieldDefinition(Base, TimestampMixin):

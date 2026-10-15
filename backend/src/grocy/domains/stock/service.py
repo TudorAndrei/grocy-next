@@ -17,7 +17,7 @@ from grocy.db.models.household import Chore
 from grocy.db.models.mealplan import MealPlanEntry
 from grocy.db.models.nutrition import NutritionProposal, NutritionRevision, ProductNutrition
 from grocy.db.models.recipes import Recipe, RecipePosition
-from grocy.db.models.settings import UserfieldValue
+from grocy.db.models.settings import UserfieldDefinition, UserfieldValue
 from grocy.db.models.shopping import ShoppingListItem
 from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
@@ -1477,7 +1477,11 @@ class StockService:
             (
                 await self.session.scalars(
                     select(UserfieldValue.object_id).where(
-                        UserfieldValue.entity == "stock",
+                        UserfieldValue.field_id.in_(
+                            select(UserfieldDefinition.id).where(
+                                UserfieldDefinition.entity == "stock"
+                            )
+                        ),
                         UserfieldValue.value.is_not(None),
                         UserfieldValue.value != "",
                     )

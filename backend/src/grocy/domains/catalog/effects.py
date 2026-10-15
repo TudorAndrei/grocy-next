@@ -17,7 +17,7 @@ from grocy.db.models.nutrition import (
     ProductNutrition,
 )
 from grocy.db.models.recipes import Recipe, RecipeNesting, RecipePosition
-from grocy.db.models.settings import UserEntity, UserfieldDefinition, UserfieldValue, UserObject
+from grocy.db.models.settings import UserfieldDefinition, UserfieldValue
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
@@ -188,42 +188,15 @@ class CatalogEffects:
                     | (QuantityUnitConversion.to_qu_id == object_id)
                 )
             )
-        elif isinstance(row, UserfieldDefinition):
+        if isinstance(row, (Product, Chore, Battery)):
             await self.session.execute(
                 delete(UserfieldValue).where(
-                    UserfieldValue.entity == row.entity, UserfieldValue.name == row.name
+                    UserfieldValue.field_id.in_(
+                        select(UserfieldDefinition.id).where(UserfieldDefinition.entity == entity)
+                    ),
+                    UserfieldValue.object_id == str(object_id),
                 )
             )
-        elif isinstance(row, UserEntity):
-            for record in (
-                await self.session.scalars(
-                    select(UserObject).where(UserObject.userentity_id == object_id)
-                )
-            ).all():
-                await self.delete("userobjects", record)
-            fields = (
-                await self.session.scalars(
-                    select(UserfieldDefinition).where(
-                        UserfieldDefinition.entity == f"userentity-{row.name}"
-                    )
-                )
-            ).all()
-            for field in fields:
-                await self.delete("userfields", field)
-        if isinstance(row, UserObject):
-            definition = await self.session.get(UserEntity, row.userentity_id)
-            if definition:
-                await self.session.execute(
-                    delete(UserfieldValue).where(
-                        UserfieldValue.entity == f"userentity-{definition.name}",
-                        UserfieldValue.object_id == object_id,
-                    )
-                )
-        await self.session.execute(
-            delete(UserfieldValue).where(
-                UserfieldValue.entity == entity, UserfieldValue.object_id == object_id
-            )
-        )
         # Bulk delete avoids ORM attempts to null non-nullable child references.
         await self.session.execute(delete(type(row)).where(type(row).id == object_id))
         if isinstance(row, MealPlanEntry):

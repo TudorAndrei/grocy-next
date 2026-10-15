@@ -12,6 +12,7 @@ from sqlalchemy import Date, DateTime, create_engine, event
 from grocy.db.compatibility_views import install_compatibility_views
 from grocy.db.imports.validate import validate_grocy_sqlite
 from grocy.db.models import Base
+from grocy.db.userfield_identity import legacy_field_ids
 
 
 def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
@@ -70,6 +71,22 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                 target_columns = set(table.columns.keys())
                 ignored[table.name] = sorted(columns - target_columns)
                 count = 0
+                field_ids = {}
+                if table.name == "userfield_values" and "field_id" not in columns:
+                    field_ids = legacy_field_ids(
+                        [
+                            tuple(row)
+                            for row in source_db.execute(
+                                "SELECT entity,name,id FROM userfields ORDER BY id"
+                            )
+                        ],
+                        [
+                            tuple(row)
+                            for row in source_db.execute(
+                                "SELECT DISTINCT entity,name FROM userfield_values"
+                            )
+                        ],
+                    )
                 for row in source_db.execute(f'SELECT * FROM "{table.name}"'):
                     values = {}
                     for column in table.columns:
@@ -88,13 +105,19 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                             elif isinstance(column.type, Date):
                                 value = date.fromisoformat(value[:10])
                         values[column.name] = value
-                    if table.name == "userfield_values" and "field_id" in columns:
-                        definition = source_db.execute(
-                            "SELECT entity, name FROM userfields WHERE id = ?", (row["field_id"],)
-                        ).fetchone()
-                        if definition is None:
-                            raise ValueError("Imported userfield has no definition")
-                        values.update(entity=definition[0], name=definition[1])
+                    if table.name == "userfield_values":
+                        if "field_id" not in columns:
+                            values["field_id"] = field_ids[row["entity"] or "", row["name"] or ""]
+                        if values.get("value") in {None, ""}:
+                            continue
+                        values["object_id"] = str(values["object_id"])
+                        if "entity" not in columns:
+                            definition = source_db.execute(
+                                "SELECT entity,name FROM userfields WHERE id=?",
+                                (values["field_id"],),
+                            ).fetchone()
+                            if definition is not None:
+                                values.update(entity=definition[0], name=definition[1])
                     if table.name == "recipes_pos" and not values.get("qu_id"):
                         unit = source_db.execute(
                             "SELECT qu_id_stock FROM products WHERE id = ?", (values["product_id"],)
