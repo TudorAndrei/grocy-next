@@ -80,7 +80,11 @@ Transfers return linked `transfer_from` and `transfer_to` bookings. They keep th
 
 Partial opening keeps the scanned stock ID on the opened amount. The closed remainder keeps its store, price, and note. Opening supports child products, product restrictions, and linked transfers. Stock selection uses the default consume location, opened state, due date, and purchase date.
 
-Recipe checks support child stock, rounded ingredient amounts, price factors, and ingredients that only require some stock. Recipe use leaves those presence-only ingredients in stock. Consumption records store the recipe ID and share a transaction ID. A recipe can create its output product as a self-production booking with its cost per serving. Stock consumption and output creation commit together.
+Recipe checks support child stock, rounded ingredient amounts, price factors, and ingredients that only require some stock. Recipe use leaves those presence-only ingredients in stock. Consumption records store the recipe ID and share a transaction ID. A recipe can create its output product as a self-production booking with its cost per serving. Ingredient consumption commits before output creation. A failed output booking or label request keeps that consumption and any output writes already made, as in Grocy 4.5.0.
+
+Recipe fulfillment, consumption, copy, and missing-ingredient actions use the original controllers and services. The native routes ignore the `servings` query parameter. Fulfillment returns the native numeric flags and resolved fields. Copy returns a string ID and can retain its new recipe after a later insert fails. Duplicate ingredients can make a later consumption fail and roll back the full ingredient transaction. Recipe copy uses the original English localization service and pinned Gettext packages. Output labels use the original webhook helper and pinned Guzzle packages, including their HTTP error text.
+
+All six shopping actions also use the original stock controller and service. PHP retains integer amount conversion, default list selection, boolean filtering, null body errors, and permission order. The web recipe page uses `/api/v2/recipes/{id}/fulfillment`, `/consume`, and `/add-not-fulfilled-products-to-shoppinglist` for selected servings and ingredient details. These extension writes require the stock consumption or shopping add permission.
 
 ## Boundaries
 

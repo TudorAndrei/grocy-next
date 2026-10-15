@@ -47,3 +47,10 @@ Its native triggers also permit SQL preparation for writes through native views.
 adapter supplies the configured default permission names and pinned setting
 defaults. Request parsing, password hashes, write order, and PHP array keys
 remain in the original controller and user service.
+
+Recipe and shopping actions run the pinned controllers and services. The adapter forwards
+prepared raw SQL and retains its insert IDs. Recipe copy uses the original localization
+service, Gettext 4.8.12, Languages 2.12.1, and the release's English translation files.
+Recipe output labels use the original Grocycode and webhook helpers. Guzzle 7.9.3,
+Promises 2.2.0, PSR-7 2.7.1, HTTP Client 1.0.3, and Deprecation Contracts 3.5.1 supply
+its native HTTP behavior. Each included package has its license and checksums.

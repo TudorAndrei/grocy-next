@@ -346,3 +346,26 @@ The Linux image passed 79 selected HTTP cases on both a new database and a saved
 The image is `sha256:5011ac21e8f1f79ddfbe9e711130dfc74874bbe72293d564bf8aa1728e72a6c4`. All 470 vendor checksums match. The wheel retains those files, all 25 original Grocy core files, and all six PHP adapters. Git retains the original vendor bytes. The final image and wheel match all 613 application and bundled source files. Ruff, basedpyright, and PHP syntax checks passed. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
 
 This batch needs no database revision. Stock and recipe writes, calendar date limits, printer errors, and further combined permission cases still require work. Full runtime parity remains incomplete.
+
+
+## Native recipe and shopping actions
+
+Recipe fulfillment, consumption, copy, and missing-ingredient actions now execute the unchanged recipe controller and service. The six shopping actions execute the unchanged stock controller and service. Native permissions run at their original boundaries. PHP retains request parsing, numeric URL comparisons, integer amount conversion, default list IDs, boolean filtering, null body errors, and response bytes.
+
+The native recipe routes ignore the `servings` query parameter. Fulfillment returns the native resolved fields and numeric flags. Ingredient consumption runs in one transaction. Duplicate ingredients can make a later booking exceed the remaining stock. That error restores all earlier ingredient changes. Output creation runs after the ingredient transaction commits. An output error retains consumed ingredients. A failed output label can also retain the output stock already saved.
+
+Raw prepared statements now run through the application connection and return native insert IDs. Recipe copy retains the original column lists and string response ID. Its separate statements can leave the new parent recipe saved after a later ingredient insert fails. A retry creates another copy. The former unused Python copy method is removed.
+
+Recipe copy uses the original localization service, English translation files, and pinned Gettext libraries. Output labels use the original Grocycode and webhook helpers with pinned Guzzle dependencies. The source files, licenses, package revisions, and checksums come from the verified release archive. Native JSON and form requests retain the original row serialization. Native HTTP errors keep Guzzle's exact message.
+
+The web recipe page now uses the versioned recipe routes for selected servings and ingredient details. Copy uses the native route. Scaled consumption and missing-ingredient writes require their separate stock and shopping permissions. The public extension check covers selected quantities, ingredient details, denied writes with unchanged records, and permitted writes. The browser check confirmed doubled requirements, saved shopping amounts, consumption of the chosen amounts, and copy. It found a missing JSON body on the shopping action. The page and API helper now send that body.
+
+The initial 34-case comparison passed all reference cases and failed 30 local cases. The extended 45-case comparison failed 41 local cases before the repair. All 45 reference cases and four local controls passed. The additional duplicate-ingredient case also failed on the previous backend while the reference passed. Both output-label cases failed there. The versioned extension case returned 404 on the previous commit. After the repair, the recipe, shopping, and shared merge fixture selection passed 96 comparisons. The additional duplicate and label checks each passed both variants. All 11 focused integration cases passed after correcting native numeric flag expectations and moving the existing scaled quantity check to the extension.
+
+The full local suite passed 752 tests and skipped 701 reference or feature-profile cases. The full comparison suite passed 1,354 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
+
+The Linux image passed 49 selected HTTP cases on both a new database and a saved revision 0020 database. The direct copy trigger case requires database access and is skipped over external HTTP. A separate Linux check proved copy partial saves and retry. Native JSON and form labels, HTTP errors, committed ingredient and output stock, and worker cleanup passed on PHP 8.4. The upgrade kept all original core records and allocation counters. Restart kept complete state. All 45 views and 54 triggers retained their source definitions and order. CLI initialization, import, saved custom triggers, BLOB values, and the earlier native user and chore checks also passed.
+
+The image is `sha256:a6bb6d2d3b0b3441128de37779e8049781d01c9dff3b2c564a7aa28060f0d7e8`. All 651 vendor checksums match. The wheel and image retain all 801 current application and bundled source files. The 36 Grocy core files match the release archive. Git retains all original vendor bytes. Ruff, basedpyright, PHP syntax, and the frontend build passed. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
+
+This batch needs no database revision. Stock writes and remaining stock reads, calendar date limits, label endpoints, printer paths outside recipe output, and further combined permission cases still require work. Full runtime parity remains incomplete.

@@ -20,6 +20,12 @@ checks and SQL use the application database. The action process stops before the
 Chore merges use the original SQL transaction. The private PDO schema retains each PHP version's
 transaction state and error rules. It also has the native triggers, so SQL can write native views.
 Calendar chore dates use the same `chores_current` view as the native API.
+Recipe fulfillment, consumption, copy, missing-ingredient actions, and all six shopping actions
+also use the original controllers and services. Raw prepared statements retain native insert IDs.
+Recipe consumption commits ingredients before output creation. Copy can retain its new parent
+when a later insert fails. The included Gettext packages load the original English translations.
+Native recipe output labels use the pinned Guzzle packages and original webhook helper.
+The web recipe page uses `/api/v2/recipes/{id}` routes for selected servings and ingredient details.
 Set `TZ` to select the same server time zone for Python and the PHP workers.
 User, permission, and single-setting operations also use the original Grocy controller.
 User passwords use PHP's native password hash. Profile edits require the native fields.
