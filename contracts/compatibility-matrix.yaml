@@ -8,10 +8,13 @@ baseline:
 
 notes:
   - All 86 Grocy v4.5.0 OpenAPI operations have routes under /api.
-  - All 34 ExposedEntity names support reads.
+  - All 33 listable ExposedEntity names support reads.
+  - Generic API key reads and writes are blocked by the pinned contract.
   - Stock actions return booking arrays and empty actions return status 204.
   - Permissions persist and follow the Grocy v4.5.0 permission hierarchy.
   - PHP comparison tests require a disposable reference server.
+  - State comparisons cover unit changes, derived meals, shopping settings, stock compaction, and runtime undo rules.
+  - Stock label modes use the PHP runtime values 0, 1, and 2.
   - Route coverage does not establish full upstream behavior parity.
 
 coverage:

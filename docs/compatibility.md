@@ -2,9 +2,9 @@
 
 The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21`. The OpenAPI file and its hash are in `contracts/`. Permission IDs and their parent relationships follow upstream migration 0110.
 
-The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 34 exposed entities, including calculated view records. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
+The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
 
-The six exposed SQLite views use 17 pinned Grocy view definitions, including their dependencies. Quantity conversion and recipe views read current records instead of upstream caches. The permission hierarchy uses the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
+The exposed SQLite views and recipe fulfillment API use 19 pinned Grocy view definitions, including their dependencies. Quantity conversion and recipe views read current records instead of upstream caches. The permission hierarchy uses the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
 
 The `/api/v2` API adds nutrition, API key management, and meal completion. MCP and the web application use the same domain services as the compatibility API.
 
@@ -51,7 +51,7 @@ Grocy 4.5.0 uses the last logged execution in its weekly schedule query, includi
 
 Purchase comparisons cover supplied purchase dates, price history, weighted prices, stock value, average shelf life, and calculated price and barcode records. Grocy's average price view uses integer division when all amounts and prices are integers. This API uses that same rule. Decimal input keeps decimal division.
 
-Stock entry edits return an old booking and a new booking. Undo restores the prior entry. Later stock changes must be undone first. Price caches keep their last value when an undo leaves no calculated price row, as in Grocy 4.5.0.
+Stock entry edits return an old booking and a new booking. Undo restores the prior entry. Undo checks later linked bookings. An entry edit can be undone after an unlinked consumption, as in Grocy 4.5.0. Price caches keep their last value when an undo leaves no calculated price row, as in Grocy 4.5.0.
 
 Transfers return linked `transfer_from` and `transfer_to` bookings. They keep the stock ID, store, and note. Freeze and thaw settings set the new due date. Booking undo restores its linked pair. Transaction undo restores all active bookings in that transaction.
 
@@ -69,8 +69,20 @@ File image requests support bounded resizing. Generic queries support the upstre
 
 File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
-Stock label modes follow the pinned OpenAPI values: 1 for no label, 2 for one label, and 3 for one label per unit. Upstream PHP uses 0, 1, and 2 for these modes. Per-unit bookings share a transaction ID and preserve fractional remainders. Stock counts also accept a purchase date and use the same receipt rules.
+Stock label modes follow the Grocy 4.5.0 runtime: 0 for no label, 1 for one label, and 2 for one label per whole unit. The pinned OpenAPI file lists 1, 2, and 3. The runtime values take precedence for compatibility. Per-unit bookings share a transaction ID. As in PHP, mode 2 omits a fractional remainder. Stock counts accept a purchase date. They count the product across all locations and use the last price and store when these values are omitted.
 
 Calendar subscription keys grant calendar access only. Revoke a subscription key through API key management. Server configuration responses omit API keys and the database URL.
 
-Transfer undo keeps the original source location and store. Grocy 4.5.0 can use the current default location and omit the store when it restores a fully transferred entry. This implementation keeps the original booking data in that case.
+Transfer undo follows Grocy 4.5.0. If the original source entry no longer exists, undo creates an entry at the current default location. It leaves the store empty and uses the default closed state. Consumption undo creates a separate entry and leaves the store empty.
+
+Equivalent purchases combine into one stock entry. Entries with per-unit labels or nonempty stock custom fields remain separate. Purchase undo deletes all stock with that booking's stock ID. Thus, undo of one combined purchase can remove the stock from another purchase. This behavior matches Grocy 4.5.0. Open undo can leave a closed split entry with a separate stock ID.
+
+Stock custom field writes use the purchase, inventory, or entry edit transaction ID. Reads use the stock ID. Generic stock reads include these values. Stock unit changes require a conversion after the first stock booking. They convert current stock, history, related amounts, prices, quick amounts, tare weight, and calories. Existing databases receive missing inverse conversions on upgrade.
+
+Meal plan writes maintain day, week, and individual meal recipes. Startup restores these derived recipes for existing project databases. Consumption of an individual meal recipe uses the output product and servings from its source meal. Recipe fulfillment includes the pinned cost, calorie, price completeness, and product name fields. Normal ingredient amounts use stock units. The `/api/v2/recipes` input converts supplied units before storage. Recipe copy uses Grocy's name and serving defaults.
+
+Shopping writes keep the requested unit, or use the purchase unit. Minimum stock settings can add missing items after product changes, consumption, or opening. Shopping removal uses the configured decimal threshold and the first matching product entry across lists, as in Grocy 4.5.0.
+
+New users receive `GROCY_DEFAULT_PERMISSIONS`, whose default is `["ADMIN"]`. An empty password update keeps the stored password. User writes and permission reads apply the operation-specific permission checks.
+
+See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.

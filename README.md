@@ -15,7 +15,7 @@ Household management with FastAPI, SQLite, FastMCP, and React. The compatibility
 - Nutrition proposals, approval, rejection, revision restore, and label photos.
 - Database import with a source snapshot and a separate destination database.
 
-All 86 contract operations have routes. All 34 contract entities support reads. Contract response tests and workflow tests run locally. PHP state comparison tests are available for a disposable Grocy v4.5.0 server. This does not establish complete behavior parity with every upstream client. See [compatibility](docs/compatibility.md).
+All 86 contract operations have routes. The 33 listable contract entities support reads. The generic API blocks API key reads, as the contract requires. Contract response tests and workflow tests run locally. PHP state comparison tests are available for a disposable Grocy v4.5.0 server. This does not establish complete behavior parity with every upstream client. See [compatibility](docs/compatibility.md).
 
 ## Local development
 
