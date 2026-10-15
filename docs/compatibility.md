@@ -85,6 +85,10 @@ Permission replacement uses the native `permissions` field and Slim's unfiltered
 
 All 33 modeled native tables now use Grocy's SQLite allocation counters. Later inserts do not reuse deleted IDs. Imports keep the source counters even when they exceed all remaining IDs. Revision 0014 adds the remaining 31 counters to existing project databases. It preserves saved records, constraints, indexes, views, and triggers. An older table without a saved counter starts from its highest remaining ID. See [the upgrade limits](migration.md#project-schema-upgrades).
 
+The modeled tables also use all 27 native `CHECK` expressions across 16 tables. These include boolean values, due types, purchase price types, and the positive chore interval. Checked numeric inputs use SQLite affinity. For example, task completion accepts `"1e0"` as 1 and rejects `"invalid"`. A rejected insert or update returns 400 with the native SQLite error message. The rejected update keeps the saved record.
+
+Generic object creation returns only `created_object_id`, as a string. Clients can read the new record through its object URL. The frontend uses this response type. Other generic validation and reference rules still need comparison.
+
 Chore merging requires `MASTER_DATA_EDIT`. An administrator can replace their own permissions and remove their own administrator access. The next request uses those permissions, as in Grocy 4.5.0.
 
 Chore execution filters input before its permission check. Missing chore execution and undo permissions return 400. User permission reads and writes return 403. Their caught errors include the upstream permission name in `error_message`. Task and battery permissions run before input checks.
@@ -119,7 +123,7 @@ Chore consumption uses the gross tare amount. Chore tracking saves its log befor
 
 Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
 
-The audit still needs more input coercion, validation, and combined error cases. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. ID gaps from rejected or repeated writes and internal write order need more checks. More response edge cases need checks. These gaps remain outside the verified behavior.
+The audit still needs more input coercion, validation, and combined error cases. Some generic validation and foreign key rules remain stricter than Grocy. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. ID gaps from rejected or repeated writes and internal write order need more checks. More response edge cases need checks. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
 

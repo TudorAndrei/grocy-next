@@ -45,3 +45,7 @@ Revision 0014 adds the Grocy allocation counters to the other 31 modeled native 
 The upgrade copies the affected tables in one transaction. It preserves stored rows, foreign keys, indexes, check constraints, views, and triggers. If a copy fails, the transaction restores the original schema and rows. Startup keeps matching meal-plan recipe contents, including their IDs and timestamps. It still repairs missing or changed contents.
 
 An older project table without a saved counter starts from its highest remaining row ID. The upgrade cannot recover allocation history that the old database already lost. An original Grocy backup retains that history in `sqlite_sequence`.
+
+Revision 0015 adds all 27 pinned Grocy `CHECK` expressions to the 16 affected modeled tables. It keeps rows, ID counters, existing constraints, indexes, views, and triggers. The table copy includes unnamed check constraints explicitly, as required by [Alembic's batch guidance](https://alembic.sqlalchemy.org/en/latest/batch.html#including-check-constraints).
+
+An older project database can contain values that Grocy rejects. For example, earlier project versions accepted task `done=2`. Such a record makes revision 0015 fail. The transaction then restores the original schema, records, counters, and revision. Correct the invalid values through the previous application version before you repeat the upgrade. The upgrade does not change those values automatically.
