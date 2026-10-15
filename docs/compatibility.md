@@ -56,7 +56,8 @@ uv run pytest tests/differential
 
 The suite creates records in the reference database. It compares stock purchases, consumption, recipe fulfillment, recipe consumption, task completion times, task assignments, chore schedules, skipped executions, rescheduling, charge counts, undo, and household labels. It also checks preferences, custom fields, list filters, calendar events, and binary file storage. It verifies the reference version before it writes. Use a fresh reference database for each run. Disable physical printing in the reference with `LABEL_PRINTER_RUN_SERVER=false`.
 
-The normal suite also uses 14 schedule cases from the pinned Grocy SQLite view. These cases cover hourly, daily, weekly, monthly, yearly, adaptive, manual, and rollover schedules. To regenerate the stored results from a Grocy v4.5.0 source checkout:
+The comparison suite uses 15 schedule cases from the pinned Grocy SQLite view in migration 0185.
+Migration 0167 supplies its frequency view. Each case checks native details, list reads, and calendar dates. These cases cover hourly, daily, weekly, monthly, yearly, adaptive, manual, and rollover schedules. To regenerate the stored results from a Grocy v4.5.0 source checkout:
 
 ```bash
 backend/.venv/bin/python scripts/generate-household-goldens.py \
@@ -67,7 +68,9 @@ Grocy 4.5.0 uses the last logged execution in its weekly schedule query, includi
 
 Task completion and battery tracking use the exact timestamp form `YYYY-MM-DD HH:MM:SS`. Other scalar forms use the current time. Chores also accept `YYYY-MM-DD`. Stored dates keep that precision unless the chore's date-only setting requires a midnight timestamp. Import and startup upgrade preserve both forms. Chore frequency uses the same SQLite calculation and integer truncation as Grocy, including its floating point effects.
 
-Task completion and undo, battery charging and undo, and battery details execute the unchanged native controllers and services. They retain PHP request parsing, numeric ID conversion, year 0000 dates, errors, and JSON bytes. The native permission checks run at the original controller boundary. Each action has its own PHP current-user constant and uses the application database. `TZ` sets the server time zone for both runtimes.
+Task completion and undo, battery charging and undo, battery details, and all chore operations execute the unchanged native controllers and services. They retain PHP request parsing, numeric ID conversion, year 0000 dates, errors, and JSON bytes. The native permission checks run at the original controller boundary. Each action has its own PHP current-user constant and uses the application database. `TZ` sets the server time zone for both runtimes.
+
+Chore execution retains native boolean and user ID conversion, date-only values, year 0000, and partial writes after assignment or stock errors. Merge IDs use the strict native integer check. A merge moves the full execution history in one transaction. A failed merge restores all records and permits a retry. The adapter uses the current PHP PDO runtime to retain its transaction errors, including implicit SQLite rollback. Calendar chore dates read the same native schedule view. Manual schedules return null. Daily schedules keep the saved start clock. Native triggers supply the current clock for omitted, null, and empty start dates.
 
 Purchase comparisons cover supplied purchase dates, price history, weighted prices, stock value, average shelf life, and calculated price and barcode records. Grocy's average price view uses integer division when all amounts and prices are integers. This API uses that same rule. Decimal input keeps decimal division.
 

@@ -35,10 +35,13 @@ PHP GD creates the image bytes. The adapter selects the configured storage root
 and supplies HTTP streams. The native code retains file name checks, upload
 chunk rules, image parameters, cache names, and cache deletion.
 
-Task and battery actions also use the pinned controllers and services. The
+Task, battery, and chore actions also use the pinned controllers and services. The
 included `Users/User.php` and `PermissionMissingException.php` retain their
 permission checks. A request-specific worker sets Grocy's current user constant.
 The adapter supplies the application connection to the native database service.
+It forwards raw SQL and transaction commands. A private PDO database keeps the native
+transaction state, including the different implicit rollback rules in PHP 8.3 and 8.4.
+Its native triggers also permit SQL preparation for writes through native views.
 
 `UsersApiController` now handles user, permission, and setting requests. The
 adapter supplies the configured default permission names and pinned setting

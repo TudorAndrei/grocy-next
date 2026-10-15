@@ -325,3 +325,24 @@ The final Linux image passed 80 HTTP cases on both a new database and a saved re
 The final image is `sha256:99563baa04510fd64937d2765c9cc4c56c0967f50c94525cb7318afbc14368f8`. The wheel retains all 470 managed vendor files, all 25 Grocy core files from the release archive, and all six PHP adapter files.
 
 This batch needs no database revision. Other household, stock, and recipe writes, domain date limits, printer errors, and further combined permission cases still require work. Full runtime parity remains incomplete.
+
+
+## Native chore actions and schedule reads
+
+All chore routes now use the unchanged `ChoresApiController` and `ChoresService`. Details, execution, undo, assignment calculation, and merge retain native request parsing, permission boundaries, numeric conversions, response bytes, and errors. PHP accepts date-only values and year 0000. Its boolean filter keeps invalid skipped values false. Empty user arrays use the current user. Invalid user text returns the original error.
+
+The SQL adapter now forwards raw writes and explicit transactions from the original database service. Chore consumption can write through `stock_next_use`. The private native schema includes the source triggers, which SQLite needs to prepare that view write. Generic object writes still commit separately unless the original service starts a transaction. Merge uses the original transaction to move all execution history and delete the old chore.
+
+The private PDO connection follows the application transaction state. This retains actual PHP runtime errors after implicit SQLite rollback. PHP 8.3 reports the SQLite rollback error. PHP 8.4 reports no active transaction. The checks install disposable ABORT, FAIL, and ROLLBACK triggers. Each failed public merge retains all original rows. Removing the trigger permits a successful retry. A random assignment error also retains the earlier execution log and cleared reschedule date, as in Grocy. Its error text follows the PHP version.
+
+Schedule reads now use the final release view from migration 0185. The previous stored results used migration 0167. That earlier migration still supplies the frequency view. The corrected 15 cases check details, current lists, and calendar output on both backends. Manual schedules return null. Daily schedules keep the saved start clock. Three more API cases check omitted, null, and empty start dates. Native triggers fill those dates with the current clock. The calendar's shared household service now reads the native view instead of a separate Python calculation.
+
+Before the repair, the final 45-case selection failed 33 local cases. All 45 reference cases passed, along with 12 local controls. The corrected schedule and merge failure selection then passed all 42 comparisons. The legacy allocation and user-deletion fixtures now store their old chore logs before the native permission views exist. The import check retains null schedules for legacy null start dates and checks the schedule after a public start-date update. All 97 integration and unit cases passed.
+
+The full local suite passed 705 tests and skipped 653 reference or feature-profile cases. The full comparison suite passed 1,260 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
+
+The Linux image passed 79 selected HTTP cases on both a new database and a saved revision 0020 database. Three direct trigger cases require local database access and are skipped over external HTTP. Separate Linux PHP 8.4 checks passed all three merge failure modes and their retries. The upgrade retained every original core row and allocation counter. Restart retained complete state. All 45 source views and 54 source triggers retained their definitions and order. CLI initialization, import, saved custom triggers, BLOB values, and worker cleanup also passed.
+
+The image is `sha256:5011ac21e8f1f79ddfbe9e711130dfc74874bbe72293d564bf8aa1728e72a6c4`. All 470 vendor checksums match. The wheel retains those files, all 25 original Grocy core files, and all six PHP adapters. Git retains the original vendor bytes. The final image and wheel match all 613 application and bundled source files. Ruff, basedpyright, and PHP syntax checks passed. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
+
+This batch needs no database revision. Stock and recipe writes, calendar date limits, printer errors, and further combined permission cases still require work. Full runtime parity remains incomplete.
