@@ -55,6 +55,8 @@ backend/.venv/bin/python scripts/generate-household-goldens.py \
 
 Grocy 4.5.0 uses the last logged execution in its weekly schedule query, including an undone execution. This API uses that same date for weekly schedules. Chore tracking counts and last completed times exclude skipped and undone executions.
 
+Task completion and battery tracking use the exact timestamp form `YYYY-MM-DD HH:MM:SS`. Other scalar forms use the current time. Chores also accept `YYYY-MM-DD`. Stored dates keep that precision unless the chore's date-only setting requires a midnight timestamp. Import and startup upgrade preserve both forms. Chore frequency uses the same SQLite calculation and integer truncation as Grocy, including its floating point effects.
+
 Purchase comparisons cover supplied purchase dates, price history, weighted prices, stock value, average shelf life, and calculated price and barcode records. Grocy's average price view uses integer division when all amounts and prices are integers. This API uses that same rule. Decimal input keeps decimal division.
 
 Stock entry edits return an old booking and a new booking. Undo restores the prior entry. Undo checks later linked bookings. An entry edit can be undone after an unlinked consumption, as in Grocy 4.5.0. Price caches keep their last value when an undo leaves no calculated price row, as in Grocy 4.5.0.
@@ -103,6 +105,6 @@ Chore consumption uses the gross tare amount. Chore tracking saves its log befor
 
 Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
 
-The audit still needs full HTML and CSS input purification and more input parser cases. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. More response edge cases need checks. These gaps remain outside the verified behavior.
+The audit still needs full HTML and CSS input purification and more input parser cases. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. More response edge cases need checks. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
