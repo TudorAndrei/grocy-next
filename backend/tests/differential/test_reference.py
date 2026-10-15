@@ -582,3 +582,94 @@ def test_reference_parent_stock_and_volatile_records(
         )
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+def test_reference_product_units_and_barcode_stock_selection(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    name = f"Barcode units {uuid4().hex[:8]}"
+    barcode = f"AbC{uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        stock_unit = create(app, "quantity_units", {"name": f"{name} piece"})
+        purchase_unit = create(app, "quantity_units", {"name": f"{name} case"})
+        consume_unit = create(app, "quantity_units", {"name": f"{name} portion"})
+        for source, factor in ((purchase_unit, 6), (consume_unit, 0.5)):
+            create(
+                app,
+                "quantity_unit_conversions",
+                {"from_qu_id": source, "to_qu_id": stock_unit, "factor": factor},
+            )
+        location = create(app, "locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": stock_unit,
+                "qu_id_purchase": purchase_unit,
+                "qu_id_consume": consume_unit,
+                "qu_id_price": purchase_unit,
+            },
+        )
+        create(
+            app,
+            "product_barcodes",
+            {"product_id": product, "barcode": barcode, "qu_id": purchase_unit, "amount": 1},
+        )
+        details = app.get(f"/api/stock/products/{product}").json()
+        states: list[object] = [
+            (
+                [
+                    details[key]["name"]
+                    for key in (
+                        "quantity_unit_stock",
+                        "default_quantity_unit_purchase",
+                        "default_quantity_unit_consume",
+                        "quantity_unit_price",
+                    )
+                ],
+                details["qu_conversion_factor_purchase_to_stock"],
+                details["qu_conversion_factor_price_to_stock"],
+                [row["barcode"] for row in details["product_barcodes"]],
+            )
+        ]
+        found = app.get(f"/api/stock/products/by-barcode/{barcode.lower()}")
+        assert found.status_code == 200, found.text
+        assert int(found.json()["product"]["id"]) == product
+        for price, purchased, expiry in (
+            (2.5, "2027-01-01", "2027-02-01"),
+            (3.5, "2027-01-04", "2027-03-01"),
+        ):
+            added = app.post(
+                f"/api/stock/products/by-barcode/{barcode}/add",
+                json={
+                    "amount": 2,
+                    "price": price,
+                    "purchased_date": purchased,
+                    "best_before_date": expiry,
+                },
+            )
+            assert added.status_code == 200, added.text
+        entries = app.get(f"/api/stock/products/{product}/entries").json()
+        selected = next(row for row in entries if float(row["price"]) == 3.5)
+        code = f"grcy:p:{product}:{selected['stock_id']}"
+        assert (
+            app.post(
+                f"/api/stock/products/by-barcode/{code}/consume", json={"amount": 1}
+            ).status_code
+            == 200
+        )
+        opened = app.post(f"/api/stock/products/by-barcode/{code}/open", json={"amount": 1})
+        assert opened.status_code == 200, opened.text
+        entries = app.get(f"/api/stock/products/{product}/entries").json()
+        states.append(
+            sorted(
+                (float(row["price"]), float(row["amount"]), int(row["open"]), row["purchased_date"])
+                for row in entries
+            )
+        )
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]

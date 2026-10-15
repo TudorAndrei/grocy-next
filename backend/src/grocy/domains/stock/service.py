@@ -18,8 +18,10 @@ from grocy.db.models.recipes import RecipePosition
 from grocy.db.models.shopping import ShoppingListItem
 from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
+from grocy.domains.products.barcodes import parse_product_code
 from grocy.domains.products.service import ProductsService
 from grocy.domains.stock.history import StockHistory
+from grocy.domains.units.service import UnitsService
 
 
 class StockService:
@@ -234,6 +236,8 @@ class StockService:
         actor: Actor,
         product_id: int,
         amount: Decimal = Decimal("1"),
+        *,
+        stock_entry_id: str | None = None,
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
@@ -242,6 +246,8 @@ class StockService:
             raise GrocyError("Cannot open a tare weight product")
         remaining = amount
         entries = await self._ordered_entries(product_id)
+        if stock_entry_id and stock_entry_id != "default":
+            entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
         closed = [e for e in entries if not e.open]
         available = sum((e.amount for e in closed), Decimal("0"))
         if available < amount:
@@ -599,22 +605,47 @@ class StockService:
         for key, unit_id in [
             ("quantity_unit_stock", product.qu_id_stock),
             ("default_quantity_unit_purchase", product.qu_id_purchase),
-            ("default_quantity_unit_consume", product.qu_id_stock),
-            ("quantity_unit_price", product.qu_id_stock),
+            ("default_quantity_unit_consume", product.qu_id_consume or product.qu_id_stock),
+            ("quantity_unit_price", product.qu_id_price or product.qu_id_purchase),
         ]:
             unit = await self.session.get(QuantityUnit, unit_id)
-            units[key] = (
-                {"id": unit.id, "name": unit.name, "name_plural": unit.name_plural}
-                if unit
-                else None
-            )
+            units[key] = UnitsService(self.session).serialize_unit(unit) if unit else None
         location = await self.session.get(Location, product.location_id)
         loc = {"id": location.id, "name": location.name} if location else None
         serialized = self.products.serialize(product, stock_amount=amount)
+        purchase_factor = await UnitsService(self.session).convert(
+            Decimal("1"), product.qu_id_purchase, product.qu_id_stock, product_id=product_id
+        )
+        price_factor = await UnitsService(self.session).convert(
+            Decimal("1"),
+            product.qu_id_price or product.qu_id_purchase,
+            product.qu_id_stock,
+            product_id=product_id,
+        )
+        consume_location = (
+            await self.session.get(Location, product.default_consume_location_id)
+            if product.default_consume_location_id
+            else None
+        )
         return {
             **serialized,
             "product": serialized,
-            "product_barcodes": serialized["barcodes"],
+            "product_barcodes": [
+                {
+                    "id": barcode.id,
+                    "product_id": product.id,
+                    "barcode": barcode.barcode,
+                    "qu_id": barcode.qu_id,
+                    "amount": float(barcode.amount) if barcode.amount is not None else None,
+                    "note": barcode.note,
+                    "last_price": float(barcode.last_price)
+                    if barcode.last_price is not None
+                    else None,
+                    "shopping_location_id": barcode.shopping_location_id,
+                    "row_created_timestamp": barcode.row_created_timestamp.isoformat(),
+                }
+                for barcode in product.barcodes
+            ],
             **units,
             "stock_amount_opened": float(opened),
             "stock_amount_aggregated": overview["amount_aggregated"] if overview else 0,
@@ -639,8 +670,11 @@ class StockService:
             "location": loc,
             "default_location": loc,
             "has_childs": len(await self.products.child_ids(product_id)) > 1,
-            "qu_conversion_factor_purchase_to_stock": float(product.qu_factor_purchase_to_stock),
-            "qu_conversion_factor_price_to_stock": 1,
+            "default_consume_location": {"id": consume_location.id, "name": consume_location.name}
+            if consume_location
+            else None,
+            "qu_conversion_factor_purchase_to_stock": float(purchase_factor),
+            "qu_conversion_factor_price_to_stock": float(price_factor),
             "average_shelf_life_days": history.average_shelf_life,
             "spoil_rate_percent": (
                 100
@@ -902,6 +936,9 @@ class StockService:
         **kwargs: Any,
     ) -> dict:
         product = await self.products.get_by_barcode(barcode)
+        code = parse_product_code(barcode)
+        if code and code[1]:
+            kwargs["stock_entry_id"] = code[1]
         return await self.consume(actor, product.id, amount, **kwargs)
 
     async def open_by_barcode(
@@ -909,9 +946,13 @@ class StockService:
         actor: Actor,
         barcode: str,
         amount: Decimal = Decimal("1"),
+        **kwargs: Any,
     ) -> dict:
         product = await self.products.get_by_barcode(barcode)
-        return await self.open(actor, product.id, amount)
+        code = parse_product_code(barcode)
+        if code and code[1]:
+            kwargs["stock_entry_id"] = code[1]
+        return await self.open(actor, product.id, amount, **kwargs)
 
     async def transfer_by_barcode(
         self,

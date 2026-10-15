@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from grocy.core.errors import NotFoundError
 from grocy.db.models.catalog import Product, ProductBarcode
 from grocy.db.models.stock import StockEntry
+from grocy.domains.products.barcodes import parse_product_code
 
 
 class ProductsService:
@@ -22,11 +23,17 @@ class ProductsService:
         return list((await self.session.execute(stmt)).scalars().all())
 
     async def get_by_barcode(self, barcode: str) -> Product:
+        code = parse_product_code(barcode)
+        if code:
+            product = await self.get(code[0])
+            if not product.active:
+                raise NotFoundError("Product is inactive")
+            return product
         stmt = (
             select(Product)
             .join(ProductBarcode, ProductBarcode.product_id == Product.id)
             .options(selectinload(Product.barcodes))
-            .where(ProductBarcode.barcode == barcode, Product.active == 1)
+            .where(func.lower(ProductBarcode.barcode) == barcode.lower(), Product.active == 1)
         )
         product = (await self.session.execute(stmt)).scalars().first()
         if product is None:

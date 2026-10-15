@@ -141,6 +141,8 @@ class GenericObjectsService:
             row.desired_servings = row.base_servings or Decimal("1")
         self.session.add(row)
         await self.session.flush()
+        if isinstance(row, Product):
+            await self.units.ensure_product_conversions(row)
         await self.write_userfields(entity, row.id, payload.get("userfields", {}))
         await self.session.commit()
         await self.session.refresh(row)
