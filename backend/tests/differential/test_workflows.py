@@ -219,6 +219,10 @@ def test_user_dto_shapes_and_permission_row_ids(api):
 
 
 def test_authenticated_access_without_module_permissions(api, catalog):
+    reference_url = os.getenv("GROCY_REFERENCE_URL")
+    is_reference = reference_url and api.base_url == httpx.URL(reference_url)
+    if is_reference and not os.getenv("GROCY_REFERENCE_DATABASE"):
+        pytest.skip("Set GROCY_REFERENCE_DATABASE to create a restricted reference key")
     product, *_ = catalog
     recipe = create(api, "recipes", name=uuid4().hex)
     chore = create(api, "chores", name=uuid4().hex, period_type="manually")
@@ -228,8 +232,7 @@ def test_authenticated_access_without_module_permissions(api, catalog):
     )
     user = api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
     assert api.put(f"/api/users/{user}/permissions", json={"permissions": []}).status_code == 204
-    reference_url = os.getenv("GROCY_REFERENCE_URL")
-    if reference_url and api.base_url == httpx.URL(reference_url):
+    if is_reference:
         key = uuid4().hex
         with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
             database.execute(
