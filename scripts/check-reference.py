@@ -79,7 +79,12 @@ def download_release(path: Path) -> Path:
 
 
 def run_reference(
-    php: str, release: Path | None, *, json_output: bool, timezone: str
+    php: str,
+    release: Path | None,
+    *,
+    json_output: bool,
+    timezone: str,
+    feature_flags: dict[str, str],
 ) -> int:
     with tempfile.TemporaryDirectory(prefix="grocy-reference-") as temporary:
         folder = Path(temporary)
@@ -110,7 +115,12 @@ def run_reference(
             probe.bind(("127.0.0.1", 0))
             port = probe.getsockname()[1]
         base_url = f"http://127.0.0.1:{port}"
-        environment = {**os.environ, "GROCY_DATAPATH": str(data), "TZ": timezone}
+        environment = {
+            **os.environ,
+            **feature_flags,
+            "GROCY_DATAPATH": str(data),
+            "TZ": timezone,
+        }
         with (folder / "php.log").open("w+") as log:
             server = subprocess.Popen(
                 [
@@ -209,10 +219,30 @@ def main() -> int:
     parser.add_argument(
         "--timezone", default="UTC", help="Server time zone for both implementations"
     )
+    parser.add_argument(
+        "--feature-flag",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="Set a Grocy feature flag for both implementations; can be repeated",
+    )
     args = parser.parse_args()
     result: dict = {"ok": False, "baseline": RELEASE, "dry_run": args.dry_run}
     try:
         ZoneInfo(args.timezone)
+        defaults = json.loads(
+            (
+                ROOT
+                / "backend/src/grocy/compatibility/grocy_4_5_0_client_defaults.json"
+            ).read_text()
+        )["config"]
+        feature_flags: dict[str, str] = {}
+        for item in args.feature_flag:
+            name, separator, value = item.partition("=")
+            field = "FEATURE_FLAG_" + name.upper()
+            if not separator or field not in defaults:
+                raise ValueError(f"Unknown feature flag or missing value: {item}")
+            feature_flags["GROCY_" + field] = value
         php = shutil.which(args.php)
         if php is None:
             raise ValueError("PHP was not found. Set --php to its executable path.")
@@ -237,11 +267,16 @@ def main() -> int:
                 sha256=RELEASE_SHA256,
                 tests="backend/tests/differential",
                 timezone=args.timezone,
+                feature_flags=feature_flags,
             )
             code = 0
         else:
             code = run_reference(
-                php, release, json_output=args.output == "json", timezone=args.timezone
+                php,
+                release,
+                json_output=args.output == "json",
+                timezone=args.timezone,
+                feature_flags=feature_flags,
             )
             result.update(ok=code == 0, exit_code=code)
     except (

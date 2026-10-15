@@ -43,9 +43,10 @@ async def label(session: DbSession, entity: str, object_id: int) -> dict[str, An
     payload = {kind: name, "grocycode": grocycode, "details": details}
     if stock_entry:
         payload["stock_entry"] = stock_entry
-        payload["due_date"] = f"DD: {stock_entry['best_before_date']}"
+        if get_settings().feature_enabled("STOCK_BEST_BEFORE_DATE_TRACKING"):
+            payload["due_date"] = f"DD: {stock_entry['best_before_date']}"
     webhook = get_settings().label_printer_webhook
-    if webhook:
+    if webhook and get_settings().label_printer_runs_on_server():
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 response = await client.post(webhook, json=payload)

@@ -68,13 +68,11 @@ async def system_config(actor: CurrentActor, session: DbSession) -> dict[str, An
         MODE="production",
         CURRENCY=settings.currency,
         DEFAULT_PERMISSIONS=settings.default_permissions,
-        FEATURE_FLAG_LABEL_PRINTER=bool(settings.label_printer_webhook),
-        FEATURE_FLAG_THERMAL_PRINTER=bool(
-            settings.thermal_printer_host or settings.thermal_printer_device
-        ),
+        LABEL_PRINTER_RUN_SERVER=settings.label_printer_run_server,
         USER_USERNAME=actor.username,
         USER_PICTURE_FILE_NAME=user.picture_file_name if user else None,
     )
+    config.update(settings.feature_flags())
     return config
 
 

@@ -280,6 +280,81 @@ def test_authenticated_access_without_module_permissions(api, catalog):
         api.headers["GROCY-API-KEY"] = original
 
 
+def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):
+    from datetime import date, timedelta
+
+    from grocy.core.config import clear_settings_cache
+
+    flags = (
+        "TASKS",
+        "CHORES",
+        "BATTERIES",
+        "RECIPES_MEALPLAN",
+        "STOCK_BEST_BEFORE_DATE_TRACKING",
+        "STOCK_PRODUCT_FREEZING",
+    )
+    reference_url = os.getenv("GROCY_REFERENCE_URL")
+    is_reference = reference_url and api.base_url == httpx.URL(reference_url)
+    if is_reference and os.getenv("GROCY_FEATURE_FLAG_TASKS") != "false":
+        pytest.skip("Run the disabled feature flag reference profile")
+    if not is_reference:
+        for flag in flags:
+            monkeypatch.setenv(f"GROCY_FEATURE_FLAG_{flag}", "false")
+        monkeypatch.setenv("GROCY_FEATURE_FLAG_STOCK_PRICE_TRACKING", "off")
+        clear_settings_cache()
+    config = api.get("/api/system/config").json()
+    assert all(config[f"FEATURE_FLAG_{flag}"] is False for flag in flags)
+    assert config["FEATURE_FLAG_STOCK_PRICE_TRACKING"] == "off"
+    product, _, _, location = catalog
+    freezer = create(api, "locations", name=uuid4().hex, is_freezer=1)
+    assert (
+        api.put(
+            f"/api/objects/products/{product}",
+            json={
+                "default_best_before_days": 2,
+                "default_best_before_days_after_freezing": 30,
+                "default_best_before_days_after_thawing": 5,
+            },
+        ).status_code
+        == 204
+    )
+    path = f"/api/stock/products/{product}"
+    bought = api.post(path + "/add", json={"amount": 1, "location_id": freezer, "price": 3})
+    assert bought.status_code == 200, bought.text
+    due = (date.today() + timedelta(days=2)).isoformat()
+    entry = api.get(path + "/entries").json()[0]
+    assert entry["best_before_date"] == due
+    assert entry["price"] == 3
+    label = api.get(f"/api/stock/entry/{entry['id']}/printlabel")
+    assert label.status_code == 200, label.text
+    assert "due_date" not in label.json()
+    transferred = api.post(
+        path + "/transfer",
+        json={
+            "amount": 1,
+            "location_id_from": freezer,
+            "location_id_to": location,
+        },
+    )
+    assert transferred.status_code == 200, transferred.text
+    assert api.get(path + "/entries").json()[0]["best_before_date"] == due
+    create(api, "tasks", name=uuid4().hex, due_date="2030-02-03")
+    create(api, "chores", name=uuid4().hex, period_type="daily", start_date="2030-02-03 12:00:00")
+    battery = create(api, "batteries", name=uuid4().hex, charge_interval_days=1)
+    assert (
+        api.post(
+            f"/api/batteries/{battery}/charge", json={"tracked_time": "2030-02-03 12:00:00"}
+        ).status_code
+        == 200
+    )
+    create(api, "meal_plan", day="2030-02-03", type="note", note=uuid4().hex)
+    calendar = api.get("/api/calendar/ical")
+    assert calendar.status_code == 200, calendar.text
+    assert "BEGIN:VEVENT" not in calendar.text
+    assert api.get("/api/tasks").status_code == 200
+    assert api.get(path).status_code == 200
+
+
 @pytest.mark.parametrize(
     ("method", "suffix", "body"),
     [
@@ -933,6 +1008,7 @@ def test_recipe_copy_uses_the_grocy_name_and_serving_defaults(api, catalog):
     row = api.get(f"/api/objects/recipes/{copied}").json()
     assert row["name"] == f"Copy of {name}"
     assert row["desired_servings"] == 2
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", row["row_created_timestamp"])
     ingredient = rows(api, "recipes_pos", recipe_id=copied)[0]
     assert (ingredient["amount"], ingredient["round_up"]) == (1.5, 0)
 

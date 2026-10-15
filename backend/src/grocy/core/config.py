@@ -1,6 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,9 +30,67 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     barcode_provider_url: str = "https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     label_printer_webhook: str = ""
+    label_printer_run_server: bool | str = True
     thermal_printer_device: str = ""
     thermal_printer_host: str = ""
     thermal_printer_port: int = 9100
+    feature_flag_stock: bool | str = True
+    feature_flag_shoppinglist: bool | str = True
+    feature_flag_recipes: bool | str = True
+    feature_flag_chores: bool | str = True
+    feature_flag_tasks: bool | str = True
+    feature_flag_batteries: bool | str = True
+    feature_flag_equipment: bool | str = True
+    feature_flag_calendar: bool | str = True
+    feature_flag_label_printer: bool | str = False
+    feature_flag_stock_price_tracking: bool | str = True
+    feature_flag_stock_location_tracking: bool | str = True
+    feature_flag_stock_best_before_date_tracking: bool | str = True
+    feature_flag_stock_product_opened_tracking: bool | str = True
+    feature_flag_stock_product_freezing: bool | str = True
+    feature_flag_stock_best_before_date_field_number_pad: bool | str = True
+    feature_flag_shoppinglist_multiple_lists: bool | str = True
+    feature_flag_recipes_mealplan: bool | str = True
+    feature_flag_chores_assignments: bool | str = True
+    feature_flag_thermal_printer: bool | str = False
+    feature_flag_disable_browser_barcode_camera_scanning: bool | str = False
+    feature_flag_auto_torch_on_with_camera: bool | str = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_feature_flag_values(cls, values: Any) -> Any:
+        if isinstance(values, dict):
+            values = dict(values)
+            for name, value in values.items():
+                if (
+                    name.startswith("feature_flag_") or name == "label_printer_run_server"
+                ) and isinstance(value, str):
+                    value = value.rstrip("\r\n")
+                    values[name] = {"true": True, "false": False}.get(value.lower(), value)
+        return values
+
+    def feature_flags(self) -> dict[str, bool | str]:
+        flags = {
+            name.upper(): getattr(self, name)
+            for name in type(self).model_fields
+            if name.startswith("feature_flag_")
+        }
+        # Keep automatic printer setup for existing Grocy Next deployments.
+        if "feature_flag_label_printer" not in self.model_fields_set and self.label_printer_webhook:
+            flags["FEATURE_FLAG_LABEL_PRINTER"] = True
+        if "feature_flag_thermal_printer" not in self.model_fields_set and (
+            self.thermal_printer_host or self.thermal_printer_device
+        ):
+            flags["FEATURE_FLAG_THERMAL_PRINTER"] = True
+        return flags
+
+    def feature_enabled(self, name: str) -> bool:
+        value = self.feature_flags()[f"FEATURE_FLAG_{name.upper()}"]
+        return value is not False and value not in ("", "0")
+
+    def label_printer_runs_on_server(self) -> bool:
+        value = self.label_printer_run_server
+        return value is not False and value not in ("", "0")
 
 
 @lru_cache

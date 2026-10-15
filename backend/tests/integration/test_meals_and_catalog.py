@@ -154,6 +154,28 @@ def test_stock_label_modes_follow_runtime_amounts_and_send_entry_codes(
         )
     assert len(sent) == 1
     assert sent[0]["stock_entry"]["purchased_date"] == "2026-01-01"
+    sent.clear()
+    monkeypatch.setattr(get_settings(), "feature_flag_label_printer", False)
+    assert (
+        client.post(
+            "/api/stock/products/1/add", json={"amount": 1, "stock_label_type": 1}
+        ).status_code
+        == 200
+    )
+    assert sent == []
+    assert client.get("/api/stock/products/1/printlabel").status_code == 200
+    assert len(sent) == 1
+    monkeypatch.setattr(get_settings(), "label_printer_run_server", False)
+    assert client.get("/api/stock/products/1/printlabel").status_code == 200
+    assert len(sent) == 1
+    monkeypatch.setattr(get_settings(), "feature_flag_label_printer", True)
+    assert (
+        client.post(
+            "/api/stock/products/1/add", json={"amount": 1, "stock_label_type": 1}
+        ).status_code
+        == 200
+    )
+    assert len(sent) == 1
 
 
 def test_thermal_printer_device_receives_output(

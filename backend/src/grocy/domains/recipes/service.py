@@ -420,7 +420,9 @@ class RecipesService:
             "picture_file_name": recipe.picture_file_name,
             "not_check_shoppinglist": recipe.not_check_shoppinglist,
             "product_id": recipe.product_id,
-            "row_created_timestamp": recipe.row_created_timestamp.isoformat(),
+            "row_created_timestamp": recipe.row_created_timestamp.isoformat(
+                sep=" ", timespec="seconds"
+            ),
             "not_check_stock_fulfillment": bool(recipe.not_check_stock_fulfillment),
             "positions": [
                 {

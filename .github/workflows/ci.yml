@@ -58,3 +58,13 @@ jobs:
         run: uv sync --project backend --frozen
       - name: Compare with Grocy 4.5.0
         run: uv run --project backend python scripts/check-reference.py --timezone "${{ matrix.timezone }}"
+      - name: Compare disabled feature flags
+        env:
+          PYTEST_ADDOPTS: -k disabled_feature_flags
+        run: >-
+          uv run --project backend python scripts/check-reference.py
+          --timezone "${{ matrix.timezone }}"
+          --feature-flag TASKS=false --feature-flag CHORES=false
+          --feature-flag BATTERIES=false --feature-flag RECIPES_MEALPLAN=false
+          --feature-flag STOCK_BEST_BEFORE_DATE_TRACKING=false
+          --feature-flag STOCK_PRODUCT_FREEZING=false --feature-flag STOCK_PRICE_TRACKING=off

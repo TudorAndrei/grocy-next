@@ -13,6 +13,7 @@ from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
+from grocy.db.models.catalog import Location
 from grocy.db.models.mealplan import MealPlanEntry
 from grocy.db.seed import seed_if_empty
 from grocy.db.session import configure_sqlite, get_engine, get_session_factory, upgrade_schema
@@ -33,6 +34,11 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
         factory = get_session_factory(settings)
         async with factory() as session:
             await seed_if_empty(session, api_key=settings.dev_open_api_key)
+    if not settings.feature_enabled("STOCK_LOCATION_TRACKING"):
+        async with get_session_factory(settings)() as session:
+            if await session.get(Location, 1) is None:
+                session.add(Location(id=1, name="Default"))
+                await session.commit()
     if settings.auto_create_schema:
         async with get_session_factory(settings)() as session:
             days = (await session.scalars(select(MealPlanEntry.day).distinct())).all()

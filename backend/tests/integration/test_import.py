@@ -86,6 +86,38 @@ def test_failed_import_rolls_back_and_bad_sqlite_is_reported(tmp_path: Path):
     assert any("invalid database" in error for error in result.errors)
 
 
+def test_disabled_location_tracking_restores_default_for_existing_user(tmp_path: Path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.main import create_app
+
+    database = tmp_path / "locations.db"
+    source = tmp_path / "source.db"
+    source_database(source)
+    import_grocy_sqlite(source, database)
+    with sqlite3.connect(database) as connection:
+        connection.executescript("""
+            UPDATE locations SET id=2;
+            UPDATE products SET location_id=2;
+            UPDATE stock SET location_id=2;
+            INSERT INTO api_keys (api_key, user_id, key_type)
+                VALUES ('locations-key', 1, 'default');
+        """)
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
+    monkeypatch.setenv("GROCY_FEATURE_FLAG_STOCK_LOCATION_TRACKING", "0")
+    clear_settings_cache()
+    with TestClient(create_app()) as app:
+        headers = {"GROCY-API-KEY": "locations-key"}
+        response = app.get("/api/objects/locations", headers=headers)
+        assert response.status_code == 200, response.text
+        assert [(row["id"], row["name"]) for row in response.json()] == [
+            (1, "Default"),
+            (2, "Kitchen"),
+        ]
+        assert app.get("/api/objects/products/1", headers=headers).json()["location_id"] == 2
+
+
 def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypatch):
     from fastapi.testclient import TestClient
 
@@ -168,6 +200,8 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
 
 
 def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api_headers: dict):
+    import os
+    import time
     from datetime import datetime
 
     from fastapi.testclient import TestClient
@@ -179,6 +213,13 @@ def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api
     monkeypatch.setenv("GROCY_DATABASE_WAL", "true")
     clear_settings_cache()
     with TestClient(create_app(), headers=api_headers) as app:
+        database = tmp_path / "wal.db"
+        wal = tmp_path / "wal.db-wal"
+        assert wal.exists()
+        # The Grocy timestamp has whole seconds. Age both files before the real write.
+        previous = time.time() - 5
+        for path in (database, wal):
+            os.utime(path, (previous, previous))
         before = app.get("/api/system/db-changed-time").json()["changed_time"]
         created = app.post("/api/objects/locations", json={"name": "WAL location"})
         assert created.status_code == 200

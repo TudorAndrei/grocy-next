@@ -10,6 +10,7 @@ from sqlalchemy import case, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
+from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.models.catalog import Location, Product
 from grocy.db.models.household import Chore
@@ -96,7 +97,11 @@ class StockService:
                 location = await self.session.get(Location, location_id)
                 if location is None or not location.active:
                     raise GrocyError("Location does not exist")
-                if location.is_freezer and product.default_best_before_days_after_freezing >= -1:
+                if (
+                    get_settings().feature_enabled("STOCK_PRODUCT_FREEZING")
+                    and location.is_freezer
+                    and product.default_best_before_days_after_freezing >= -1
+                ):
                     days = product.default_best_before_days_after_freezing
             best_before_date = (
                 date(2999, 12, 31) if days == -1 else date.today() + timedelta(days=days)
@@ -440,7 +445,8 @@ class StockService:
             expiry = entry.best_before_date
             frozen_days = product.default_best_before_days_after_freezing
             if (
-                not source.is_freezer
+                get_settings().feature_enabled("STOCK_PRODUCT_FREEZING")
+                and not source.is_freezer
                 and target.is_freezer
                 and (frozen_days > 0 or frozen_days == -1)
             ):
@@ -450,7 +456,8 @@ class StockService:
                     else date.today() + timedelta(days=frozen_days)
                 )
             elif (
-                source.is_freezer
+                get_settings().feature_enabled("STOCK_PRODUCT_FREEZING")
+                and source.is_freezer
                 and not target.is_freezer
                 and product.default_best_before_days_after_thawing > 0
             ):

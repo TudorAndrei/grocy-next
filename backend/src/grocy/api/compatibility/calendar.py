@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from grocy.compatibility.calendar import timezone_component
 from grocy.core.auth import CurrentActor
+from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.time import server_timezone
 from grocy.db.models.catalog import Product
@@ -44,6 +45,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:Grocy", "CALSCALE:GREGORIAN"]
     zone = server_timezone()
+    settings = get_settings()
     event_times: list[datetime] = []
 
     def event(uid: str, start: str, title: str, description: str = "") -> None:
@@ -66,7 +68,11 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
             ]
         )
 
-    meals = (await session.execute(select(MealPlanEntry))).scalars().all()
+    meals = (
+        (await session.execute(select(MealPlanEntry))).scalars().all()
+        if settings.feature_enabled("RECIPES_MEALPLAN")
+        else []
+    )
     for meal in meals:
         if meal.done:
             continue
@@ -98,7 +104,11 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
             title,
             meal.note or "",
         )
-    for stock in await StockService(session).current_stock():
+    for stock in (
+        await StockService(session).current_stock()
+        if settings.feature_enabled("STOCK_BEST_BEFORE_DATE_TRACKING")
+        else []
+    ):
         due = stock["best_before_date"]
         if due and stock["amount"] > 0:
             event(
@@ -111,7 +121,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
         .scalars()
         .all()
     )
-    for task in tasks:
+    for task in tasks if settings.feature_enabled("TASKS") else []:
         if task.due_date:
             event(
                 f"task-{task.id}",
@@ -120,7 +130,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
                 task.description or "",
             )
     household = HouseholdService(session)
-    for chore in await household.list_chores():
+    for chore in await household.list_chores() if settings.feature_enabled("CHORES") else []:
         due = chore["next_estimated_execution_time"]
         if due:
             scheduled = datetime.fromisoformat(due)
@@ -136,7 +146,9 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
                 start,
                 title,
             )
-    for battery in await household.list_batteries():
+    for battery in (
+        await household.list_batteries() if settings.feature_enabled("BATTERIES") else []
+    ):
         due = battery["next_estimated_charge_time"]
         if due:
             event(
