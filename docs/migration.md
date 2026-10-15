@@ -39,3 +39,9 @@ Startup and manual upgrades use a SQLite transaction. They turn foreign key chec
 Deleting the last user keeps the database without users after restart. Demo data creation does not replace a deleted user. New databases still receive demo data when that setting is enabled.
 
 Revision 0013 keeps the permission row counter after replacement deletes old rows. The upgrade preserves custom views, indexes, and triggers. Imports also copy the counters for the target tables that use SQLite `AUTOINCREMENT`, including users and permissions. A source counter can be higher than all remaining row IDs.
+
+Revision 0014 adds the Grocy allocation counters to the other 31 modeled native tables. All 33 modeled native tables now retain their counters after a delete. The four nutrition extension tables keep their existing allocation rules. Imports copy all 33 source counters, including values above all remaining row IDs.
+
+The upgrade copies the affected tables in one transaction. It preserves stored rows, foreign keys, indexes, check constraints, views, and triggers. If a copy fails, the transaction restores the original schema and rows. Startup keeps matching meal-plan recipe contents, including their IDs and timestamps. It still repairs missing or changed contents.
+
+An older project table without a saved counter starts from its highest remaining row ID. The upgrade cannot recover allocation history that the old database already lost. An original Grocy backup retains that history in `sqlite_sequence`.

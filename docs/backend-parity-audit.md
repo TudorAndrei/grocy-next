@@ -12,6 +12,10 @@ Product deletion removes linked stock, history, barcodes, conversions, recipe in
 
 Generic ingredient, barcode, and shopping writes apply the Grocy unit defaults. Shopping items and ingredients accept zero amounts. Product writes use the upstream opened-stock default and parent rules. The generic API blocks API key reads and writes. It permits key deletion under the application permission checks.
 
+All 33 modeled native tables now use SQLite `AUTOINCREMENT`, as in the pinned Grocy database. Revision 0014 adds the remaining 31 counters. Catalog, stock, and history IDs no longer reuse deleted IDs. The comparison cases check the exact next ID, including the additional ID for an inverse unit conversion. The four nutrition extension tables keep their existing rules.
+
+Imports retain all 33 source counters, including counters above every remaining row ID. The project upgrade preserves a complete saved data set, custom views, indexes, cross-table triggers, foreign keys, and unnamed check constraints. A failed table copy restores the original schema and data. A legacy table without a saved counter starts from its highest remaining ID. Its lost allocation history cannot be recovered from that table.
+
 Sources: [product rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0207.sql), [quick amounts](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0214.sql), [conversion rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0225.sql), [unit defaults](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0231.sql), [shopping defaults](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0250.sql), and [generic API rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/GenericEntityApiController.php).
 
 ## Stock and undo
@@ -34,7 +38,7 @@ Sources: [stock service and undo rules](https://github.com/grocy/grocy/blob/21aa
 
 ## Recipes, meal plans, and shopping
 
-Meal writes maintain day, week, and individual meal recipes. Startup restores derived recipes in existing project databases. An individual meal recipe produces the output product and serving quantity from its source meal.
+Meal writes maintain day, week, and individual meal recipes. Startup restores missing or changed contents in existing project databases. Matching contents keep their row IDs and timestamps. An individual meal recipe produces the output product and serving quantity from its source meal.
 
 Recipe fulfillment uses the pinned SQL results for costs, calories, price completeness, due score, product names, and stock status. Normal ingredient quantities use stock units. The v2 recipe input converts supplied units before storage. Recipe copy follows the Grocy name, serving, and ingredient defaults.
 
@@ -108,11 +112,15 @@ Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90
 
 ## Verification
 
-The local suite passed 299 tests. It skipped 254 reference cases. The default comparison suite passed 474 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff, basedpyright, and the frontend build passed.
+The local suite passed 328 tests. It skipped 280 reference cases. The default comparison suite passed 526 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff and basedpyright passed. The frontend build passed before these database changes; frontend source did not change in this batch.
 
 The 51 new input cases also passed through HTTP against the built Docker image with PHP 8.4.26. The local reference checks used PHP 8.3.31. The current built wheel contains all 437 vendor files with their original checksums and all three worker files. Two local checks cover worker failure, recovery, shutdown, and startup without PHP. User deletion checks cover both startup and CLI upgrades from the saved revision 0011 schema, import of deleted-user records, and restart after last-user deletion. Six permission workflows also passed through HTTP in Docker. The three user deletion cases and a last-user restart check also passed in Docker.
 
 The 45 permission write cases passed on both backends. Before the repair, 38 local cases failed and all 45 reference cases passed. Separate upgrade and import checks also failed before the counter repair. Docker passed those 45 cases and the 51 input cases through HTTP, for 96 passes with PHP 8.4.26. The source comparisons used PHP 8.3.31. Ruff, basedpyright, and the frontend build passed after the repair.
+
+The 26 new allocation cases passed on both backends, for 52 passes. Before the repair, all 26 local cases failed and all 26 Grocy cases passed. The import check also found 31 missing counters. The saved-data restart check found that startup changed valid meal-plan row IDs and timestamps. Both defects are repaired. Three storage checks now cover all-counter imports, upgrade and restart preservation, and rollback after a failed copy.
+
+The new Linux Docker image upgraded a saved revision 0013 database to 0014. All saved rows remained equal, all 33 native counters were present, and SQLite integrity and reference checks passed. The image then passed the 26 new API cases through HTTP. A restart kept every stored row and allocation counter unchanged, including meal-plan IDs and timestamps.
 
 The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest. Label comparisons use a local HTTP receiver. They compare label fields, request formats, and stored stock after printer errors. Each new label regression failed on the previous code before the repair.
 
@@ -134,4 +142,4 @@ uv run --project backend python scripts/check-reference.py --timezone Europe/Buc
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
 
-The remaining audit must cover more input coercion, validation, and combined error cases. The current date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. Other table ID counters, nested and binary values, combined permission errors, response edge cases, and further partial failures still need checks. These gaps prevent a claim of full runtime parity.
+The remaining audit must cover more input coercion, validation, and combined error cases. The current date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. ID gaps from rejected or repeated writes, internal write order, nested and binary values, combined permission errors, response edge cases, and further partial failures still need checks. These gaps prevent a claim of full runtime parity.
