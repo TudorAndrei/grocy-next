@@ -1,0 +1,30 @@
+{
+  "package": "gettext/languages",
+  "version": "2.12.1",
+  "source": "https://github.com/php-gettext/Languages.git",
+  "commit": "0b0b0851c55168e1dfb14305735c64019732b5f1",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "b631b58fe7ac79c51ecde90e1df6cf64eab33031272fb3a3c7978d2c0b38d570",
+    "src/autoloader.php": "5c5527e669bf401468dd797a9a8a2c6fd8a05fb0e2e1ba43a55d587278b665b7",
+    "src/Category.php": "c2458d121038c28f6a24e0cdc08fc4c5a617f71f88d8f24f09543ad8acc9da6f",
+    "src/cldr-data/main/en-US/languages.json": "89333e627fed9543e4530cb26bf9ddab9772c64bbe66a73b381f5f2f5adfd600",
+    "src/cldr-data/main/en-US/scripts.json": "3c69aea0528698e9ed40a22ad22c4874103ce0f6fc3079b604fd8e9f16dabeea",
+    "src/cldr-data/main/en-US/territories.json": "5794c7567105c54b0796baf4f1d5b3d877a523d4b8804cc0da88435253cc3420",
+    "src/cldr-data/supplemental/plurals.json": "22d0bd4fa3d23895c27d0d955fca5a32a660ad9e7e317ee2071991874f35d87c",
+    "src/CldrData.php": "cdefa764240579197ee58f0e3c1b06a53be8e7dba520e1874e92503436276557",
+    "src/Exporter/Exporter.php": "ad6e78adbf5caa50d10434ea96daccf5d95d940e815779ebb1c0f3bc3c156639",
+    "src/Exporter/Html.php": "9c39678d55c30e4f4d09cabacaff16f02c99d0b201bf5fcf0870cf573968c33d",
+    "src/Exporter/Json.php": "d44a33d932a4d0e27bca3f6111ec4a25078a07097280aea47485a7f47b1d8611",
+    "src/Exporter/Php.php": "d2944f97ea5d077f1ae9c3dc5bbb17dd8d79f67eef9ea8ec7d002d05e4bb5128",
+    "src/Exporter/Po.php": "9374441ef235e044386d53be54b21a55ba23823871cca3e485cf85cc018027cc",
+    "src/Exporter/Prettyjson.php": "4f470763c589fb0a0988159378a7085a31a727e4b89c93bdf418452ab66658c5",
+    "src/Exporter/Ruby.php": "fd3d1f4421c2445af3a80e599955f76324709b07149dd4a5020b210ab8ad2599",
+    "src/Exporter/Xml.php": "9c0d07678e27113de6e03655119d5ab2fd7a990a8f66c98b6c36adec3228a2fa",
+    "src/FormulaConverter.php": "54ede961adc2acd46a96585efc46ed562c967c198612dfea764cdf638509a097",
+    "src/Language.php": "fb34f2d5828eb994f799df1a682c1fe9c4302f615d62346d26dea98d492ac383",
+    "UNICODE-LICENSE.txt": "bc4c37c0b70864b8a672bb7a8517f47eb7d2be558a3e8fbbe33bc3ad21e22d39"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "package": "symfony/deprecation-contracts",
+  "version": "v3.5.1",
+  "source": "https://github.com/symfony/deprecation-contracts.git",
+  "commit": "74c71c939a79f7d5bf3c1ce9f5ea37ba0114c6f6",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "function.php": "7b613b9e9473ab25c57052225446644319d4cfc18fb757921d827c278feadeb1",
+    "LICENSE": "b92809182501f0fa422167ea44484b41877e1736e8283d0377fdc9664bb9a02d"
+  }
+}

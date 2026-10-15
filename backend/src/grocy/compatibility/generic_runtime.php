@@ -46,10 +46,15 @@ class NativeDatabase extends LessQL\Database
         return $statement;
     }
 
-    public function executeQuery(string $query)
+    public function prepareExecution(string $query)
     {
         $this->context = ['action' => 'execute', 'table' => ''];
-        $statement = $this->prepare($query);
+        return $this->prepare($query);
+    }
+
+    public function executeQuery(string $query)
+    {
+        $statement = $this->prepareExecution($query);
         $statement->execute();
         return $statement;
     }

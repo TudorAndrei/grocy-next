@@ -66,7 +66,7 @@ class NativeStatements:
                 if result.returns_rows
                 else []
             }
-            if action == "insert" and result.rowcount > 0:
+            if action in {"insert", "execute"} and result.rowcount > 0:
                 response["insert_id"] = str(result.lastrowid)
             if action != "select" and not self.transaction:
                 await self.session.commit()

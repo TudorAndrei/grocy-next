@@ -74,6 +74,30 @@ def user_key(api, user):
 
 
 @pytest.fixture
+def execute_sql(api):
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if not hasattr(api, "portal") and not reference:
+        pytest.skip("The trigger fixture needs access to the disposable database")
+
+    def execute(statement):
+        if hasattr(api, "portal"):
+            from grocy.db.session import get_session_factory
+
+            async def run():
+                async with get_session_factory()() as session:
+                    connection = await session.connection()
+                    await connection.exec_driver_sql(statement)
+                    await session.commit()
+
+            api.portal.call(run)
+        else:
+            with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
+                database.execute(statement)
+
+    return execute
+
+
+@pytest.fixture
 def catalog(api):
     name = f"Parity {uuid4().hex}"
     unit = create(api, "quantity_units", name=name)
@@ -3840,32 +3864,13 @@ def test_native_chore_assignment_error_keeps_earlier_execution_writes(api):
 
 
 @pytest.mark.parametrize("failure", ["ABORT", "FAIL", "ROLLBACK"])
-def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure):
-    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
-    if not hasattr(api, "portal") and not reference:
-        pytest.skip("The trigger fixture needs access to the disposable database")
-
-    def execute(statement):
-        if hasattr(api, "portal"):
-            from grocy.db.session import get_session_factory
-
-            async def run():
-                async with get_session_factory()() as session:
-                    connection = await session.connection()
-                    await connection.exec_driver_sql(statement)
-                    await session.commit()
-
-            api.portal.call(run)
-        else:
-            with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
-                database.execute(statement)
-
+def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure, execute_sql):
     keep, remove = [create(api, "chores", name=uuid4().hex, period_type="daily") for _ in range(2)]
     trigger = "merge_failure_" + uuid4().hex
     try:
         assert api.post(f"/api/chores/{remove}/execute", json={}).status_code == 200
         before = rows(api, "chores_log", chore_id=remove)
-        execute(
+        execute_sql(
             f"CREATE TRIGGER {trigger} BEFORE DELETE ON chores WHEN OLD.id={remove} "
             f"BEGIN SELECT RAISE({failure},'Merge blocked'); END"
         )
@@ -3883,14 +3888,14 @@ def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure
         assert rows(api, "chores_log", chore_id=remove) == before
         assert rows(api, "chores_log", chore_id=keep) == []
         assert api.get(f"/api/objects/chores/{remove}").status_code == 200
-        execute(f"DROP TRIGGER {trigger}")
+        execute_sql(f"DROP TRIGGER {trigger}")
         retry = api.post(f"/api/chores/{keep}/merge/{remove}")
         assert retry.status_code == 204 and retry.content == b"", retry.text
         assert rows(api, "chores_log", chore_id=keep) == [
             {**row, "chore_id": keep} for row in before
         ]
     finally:
-        execute(f"DROP TRIGGER IF EXISTS {trigger}")
+        execute_sql(f"DROP TRIGGER IF EXISTS {trigger}")
         api.delete(f"/api/objects/chores/{keep}")
         api.delete(f"/api/objects/chores/{remove}")
 
@@ -3966,3 +3971,219 @@ def test_native_chore_default_start_clock_is_used_after_execution(api, start):
         assert details.json()["next_estimated_execution_time"] == "2027-01-06 " + saved[11:]
     finally:
         api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("servings", ["4", "0", "-1", "invalid"])
+def test_native_recipe_fulfillment_ignores_query_servings(api, catalog, servings):
+    product, unit, _, _ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex, base_servings=2)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=3, qu_id=unit)
+    expected = api.get("/api/recipes/fulfillment", params={"query[]": f"recipe_id={recipe}"})
+    assert expected.status_code == 200 and len(expected.json()) == 1, expected.text
+    response = api.get(f"/api/recipes/{recipe}/fulfillment", params={"servings": servings})
+    assert response.status_code == 200, response.text
+    assert response.json() == expected.json()[0]
+
+
+@pytest.mark.parametrize("servings", ["4", "invalid", "-1"])
+def test_native_recipe_consumption_ignores_query_servings(api, catalog, servings):
+    product, unit, _, _ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2, qu_id=unit)
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 10}).status_code == 200
+    response = api.post(f"/api/recipes/{recipe}/consume", params={"servings": servings})
+    assert response.status_code == 204 and response.content == b"", response.text
+    assert api.get(f"/api/stock/products/{product}").json()["stock_amount"] == 8
+    bookings = rows(api, "stock_log", recipe_id=recipe)
+    assert len(bookings) == 1 and bookings[0]["amount"] == -2
+
+
+@pytest.mark.parametrize("action", ["fulfillment", "consume", "copy"])
+@pytest.mark.parametrize("id_form", ["exponent", "decimal"])
+def test_native_recipe_actions_accept_numeric_url_ids(api, action, id_form):
+    recipe = create(api, "recipes", name=uuid4().hex)
+    token = f"{recipe}e0" if id_form == "exponent" else f"{recipe}.0"
+    response = api.request(
+        "GET" if action == "fulfillment" else "POST", f"/api/recipes/{token}/{action}"
+    )
+    assert response.status_code == (204 if action == "consume" else 200), response.text
+    if action == "consume":
+        assert response.content == b""
+    elif action == "copy":
+        copied = response.json()["created_object_id"]
+        assert isinstance(copied, str)
+        assert api.get(f"/api/objects/recipes/{copied}").status_code == 200
+
+
+def test_native_recipe_missing_ingredient_action_accepts_unknown_recipe(api):
+    response = api.post(
+        "/api/recipes/2147483647/add-not-fulfilled-products-to-shoppinglist", json={}
+    )
+    assert response.status_code == 204 and response.content == b"", response.text
+
+
+@pytest.mark.parametrize("excluded", ["invalid", {"id": 1}])
+def test_native_recipe_excluded_product_values_keep_php_rules(api, catalog, excluded):
+    product, unit, _, _ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2, qu_id=unit)
+    response = api.post(
+        f"/api/recipes/{recipe}/add-not-fulfilled-products-to-shoppinglist",
+        json={"excludedProductIds": excluded},
+    )
+    if isinstance(excluded, str):
+        assert response.status_code == 500, response.text
+        assert (
+            response.json()["error_message"]
+            == "in_array(): Argument #2 ($haystack) must be of type array, string given"
+        )
+        assert rows(api, "shopping_list", product_id=product) == []
+    else:
+        assert response.status_code == 204, response.text
+        assert rows(api, "shopping_list", product_id=product)[0]["amount"] == 2
+
+
+def test_native_recipe_output_error_keeps_committed_ingredient_consumption(api, catalog):
+    product, unit, _, location = catalog
+    output = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    recipe = create(api, "recipes", name=uuid4().hex, product_id=output)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2, qu_id=unit)
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 3}).status_code == 200
+    assert api.put(f"/api/objects/products/{output}", json={"active": 0}).status_code == 204
+    response = api.post(f"/api/recipes/{recipe}/consume")
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "Product does not exist or is inactive"}
+    assert api.get(f"/api/stock/products/{product}").json()["stock_amount"] == 1
+    bookings = rows(api, "stock_log", recipe_id=recipe)
+    assert len(bookings) == 1 and bookings[0]["amount"] == -2
+    assert rows(api, "stock", product_id=output) == []
+
+
+@pytest.mark.parametrize(
+    "amount,expected", [(2.9, 2), (0, 1), (-1, -1), ("invalid", 1), ([], 1), ("1e0", 1)]
+)
+def test_native_shopping_add_amount_uses_php_integer_defaults(api, catalog, amount, expected):
+    product, _, _, _ = catalog
+    response = api.post(
+        "/api/stock/shoppinglist/add-product",
+        json={"product_id": product, "product_amount": amount},
+    )
+    assert response.status_code == 204 and response.content == b"", response.text
+    assert rows(api, "shopping_list", product_id=product)[0]["amount"] == expected
+
+
+@pytest.mark.parametrize("amount,expected", [(2.9, 3), (0, 4), (-1, 6), ("invalid", 4)])
+def test_native_shopping_remove_amount_uses_php_integer_defaults(api, catalog, amount, expected):
+    product, unit, _, _ = catalog
+    item = create(api, "shopping_list", product_id=product, amount=5, qu_id=unit)
+    response = api.post(
+        "/api/stock/shoppinglist/remove-product",
+        json={"product_id": product, "product_amount": amount},
+    )
+    assert response.status_code == 204 and response.content == b"", response.text
+    assert api.get(f"/api/objects/shopping_list/{item}").json()["amount"] == expected
+
+
+@pytest.mark.parametrize("product", [None, "invalid", [], 0])
+def test_native_shopping_add_missing_product_has_native_error(api, product):
+    response = api.post("/api/stock/shoppinglist/add-product", json={"product_id": product})
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "No product id was supplied"}
+
+
+@pytest.mark.parametrize("done_only", ["invalid", [], "yes"])
+def test_native_shopping_clear_uses_php_boolean_filter(api, done_only):
+    shopping_list = create(api, "shopping_lists", name=uuid4().hex)
+    unfinished = create(
+        api, "shopping_list", note=uuid4().hex, shopping_list_id=shopping_list, done=0
+    )
+    create(api, "shopping_list", note=uuid4().hex, shopping_list_id=shopping_list, done=1)
+    response = api.post(
+        "/api/stock/shoppinglist/clear", json={"list_id": shopping_list, "done_only": done_only}
+    )
+    assert response.status_code == 204 and response.content == b"", response.text
+    remaining = rows(api, "shopping_list", shopping_list_id=shopping_list)
+    assert [row["id"] for row in remaining] == ([unfinished] if done_only == "yes" else [])
+
+
+def test_native_recipe_copy_failure_keeps_parent_and_can_retry(api, catalog, execute_sql):
+    product, unit, _, _ = catalog
+    name = uuid4().hex
+    recipe = create(api, "recipes", name=name, base_servings=2)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=3, qu_id=unit)
+    trigger = "copy_failure_" + uuid4().hex
+    try:
+        execute_sql(
+            f"CREATE TRIGGER {trigger} BEFORE INSERT ON recipes_pos "
+            f"WHEN NEW.product_id={product} AND NEW.recipe_id<>{recipe} "
+            "BEGIN SELECT RAISE(ABORT,'Copy blocked'); END"
+        )
+        response = api.post(f"/api/recipes/{recipe}/copy")
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 Copy blocked"
+        }
+        copies = rows(api, "recipes", name="Copy of " + name)
+        assert len(copies) == 1
+        assert copies[0]["base_servings"] == 2
+        assert rows(api, "recipes_pos", recipe_id=copies[0]["id"]) == []
+        execute_sql(f"DROP TRIGGER {trigger}")
+        retry = api.post(f"/api/recipes/{recipe}/copy")
+        assert retry.status_code == 200, retry.text
+        assert isinstance(retry.json()["created_object_id"], str)
+        successful = rows(api, "recipes_pos", recipe_id=retry.json()["created_object_id"])
+        assert len(successful) == 1 and successful[0]["amount"] == 3
+        assert len(rows(api, "recipes", name="Copy of " + name)) == 2
+    finally:
+        execute_sql(f"DROP TRIGGER IF EXISTS {trigger}")
+
+
+@pytest.mark.parametrize(
+    "action", ["add-missing-products", "add-overdue-products", "add-expired-products"]
+)
+@pytest.mark.parametrize("list_id", ["invalid", []])
+def test_native_shopping_bulk_actions_ignore_invalid_list_ids(api, action, list_id):
+    response = api.post(f"/api/stock/shoppinglist/{action}", json={"list_id": list_id})
+    assert response.status_code == 204 and response.content == b"", response.text
+
+
+@pytest.mark.parametrize(
+    "action", ["add-product", "remove-product", "clear", "add-missing-products"]
+)
+def test_native_shopping_null_body_keeps_php_type_error(api, action):
+    response = api.post(
+        f"/api/stock/shoppinglist/{action}",
+        content=b"null",
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 500, response.text
+    assert (
+        response.json()["error_message"]
+        == "array_key_exists(): Argument #2 ($array) must be of type array, null given"
+    )
+    assert set(response.json()) == {"error_message", "error_details"}
+
+
+def test_native_recipe_duplicate_ingredient_failure_restores_stock_and_log(api, catalog):
+    product, unit, _, _ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex)
+    for amount in [3, 2]:
+        create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=amount, qu_id=unit)
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 4}).status_code == 200
+    before_stock = rows(api, "stock", product_id=product)
+    before_log = rows(api, "stock_log", product_id=product)
+    response = api.post(f"/api/recipes/{recipe}/consume")
+    assert response.status_code == 400, response.text
+    assert response.json() == {
+        "error_message": "Amount to be consumed cannot be > current stock amount "
+        "(if supplied, at the desired location)"
+    }
+    assert rows(api, "stock", product_id=product) == before_stock
+    assert rows(api, "stock_log", product_id=product) == before_log

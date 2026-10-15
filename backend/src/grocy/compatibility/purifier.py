@@ -186,6 +186,7 @@ class InputPurifier:
         content_type: str | None,
         query_string: bytes,
         default_permissions: list[str],
+        configuration: dict[str, Any],
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
@@ -202,6 +203,7 @@ class InputPurifier:
                     "content_type": content_type,
                     "query_string": base64.b64encode(query_string).decode("ascii"),
                     "default_permissions": default_permissions,
+                    "configuration": configuration,
                     "arguments": arguments or {},
                 },
                 execute=execute,

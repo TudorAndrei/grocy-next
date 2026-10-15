@@ -42,6 +42,17 @@ async def native_action_response(
     arguments: dict[str, str] | None = None,
 ) -> Response:
     runtime: InputPurifier = request.app.state.input_purifier
+    settings = get_settings()
+    configuration: dict[str, Any] = {
+        "GROCY_" + name: value for name, value in settings.feature_flags().items()
+    }
+    configuration.update(
+        GROCY_DEFAULT_LOCALE="en",
+        GROCY_LABEL_PRINTER_WEBHOOK=settings.label_printer_webhook,
+        GROCY_LABEL_PRINTER_RUN_SERVER=settings.label_printer_run_server,
+        GROCY_LABEL_PRINTER_HOOK_JSON=settings.label_printer_hook_json,
+        GROCY_LABEL_PRINTER_PARAMS=settings.label_printer_params,
+    )
     result = await runtime.native_action(
         route=route,
         object_id=object_id,
@@ -50,7 +61,8 @@ async def native_action_response(
         body=await request.body(),
         content_type=request.headers.get("content-type"),
         query_string=request.scope["query_string"],
-        default_permissions=get_settings().default_permissions,
+        default_permissions=settings.default_permissions,
+        configuration=configuration,
         arguments=arguments,
         execute=NativeStatements(session, runtime).execute,
     )

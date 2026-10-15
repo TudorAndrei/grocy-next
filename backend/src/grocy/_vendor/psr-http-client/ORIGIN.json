@@ -1,0 +1,16 @@
+{
+  "package": "psr/http-client",
+  "version": "1.0.3",
+  "source": "https://github.com/php-fig/http-client.git",
+  "commit": "bb5906edc1c324c9a05aa0873d40117941e5fa90",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "ea5ec78820494a5256b0ccbecef9212bc7b93b797273ab08cc2eaa34e0ab3e50",
+    "src/ClientExceptionInterface.php": "2ae6b264ddfc8d48096fe50927634a6b406e1eb26e1d00bd992e9aa36f55410b",
+    "src/ClientInterface.php": "f377b570f3211f8d824c7f1edd5c2288c97b51cc27347b1aa74988b05616e137",
+    "src/NetworkExceptionInterface.php": "93b74d294718e772af07780a6df2bb13671701df8a1d1e752d79cb3decd08f66",
+    "src/RequestExceptionInterface.php": "1bcf5fc2b4a6e1a982020caddab497edd889124fd8d17aea1efb1895cb96ee38"
+  }
+}

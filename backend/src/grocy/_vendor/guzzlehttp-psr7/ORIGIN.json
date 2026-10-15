@@ -1,0 +1,43 @@
+{
+  "package": "guzzlehttp/psr7",
+  "version": "2.7.1",
+  "source": "https://github.com/guzzle/psr7.git",
+  "commit": "c2270caaabe631b3b44c85f99e5a04bbb8060d16",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "709437fdecfeb9f22f71d0c144eb4d11938b99a7665f650e6f49fb9dcbfcce84",
+    "src/AppendStream.php": "c2cb3d95dad9ca604579487cc6f16a1013ce8fb893cec505de43b4dd5e358e77",
+    "src/BufferStream.php": "713fbd182f66b86a71f29ae331f4b9b014b8798e2df1e5d7acefb6d45c97988d",
+    "src/CachingStream.php": "a93fbab1ed8a435e6e0026a289f15a12a1a9b3e435507988380c87673a2f8d13",
+    "src/DroppingStream.php": "af6ae45881fda23f2160c9d4ed38c13d6890c8e12fe4263763facd189e9deb42",
+    "src/Exception/MalformedUriException.php": "68bbfb1b1044c21b8ab0fda0bda047c342287d592e8f3f5252fab30ff92a852a",
+    "src/FnStream.php": "33f3cec2f3532ff20f7a526e145c7d84f04bb0ca80b6eeec51569ecb6a6af690",
+    "src/Header.php": "89c7a908e325e23a59c355e8be93f1df20b0422b172c79dac5a9e24e57ba7eee",
+    "src/HttpFactory.php": "99cf9f0a5b211fe411e745695e40e2254ee3f835f09afb7671955a7395abafa7",
+    "src/InflateStream.php": "8adb0b7299e6a8e842a60851e4218e20c70a9cf18ec0063691083ee3a875c20d",
+    "src/LazyOpenStream.php": "77176d36ccb5ae9d5e9ea510d1284a52462435c8e49ac9b7171c5be04bac2613",
+    "src/LimitStream.php": "b0499720a2b46353c454c7e66e24f53915572f5bcec7cd8b6483c018c9a98f82",
+    "src/Message.php": "de587bc1108c06a663c671b05c977aad5bf0cd564234643fee7e78bc39c8189c",
+    "src/MessageTrait.php": "f730c846b8a8d75c7f06d427020fc4245d15484fe0671ade057f5f2aac6f32e3",
+    "src/MimeType.php": "299a5bc6f136cdd5f398b1a5b5e10da850b65e3666bfc329dd94c0e6933b6157",
+    "src/MultipartStream.php": "bce0256c2feb806f085fc4f6439deb9b1cc088613d1cfa056ecdecea6e7ef7e0",
+    "src/NoSeekStream.php": "d8f3fcfbba6378d0c94b8e00295eb2b873523c255216c4f6bf738bb77eb43483",
+    "src/PumpStream.php": "856bd2e160a893442c161a29f8540e698c717cf6538529480649043ab1e2177d",
+    "src/Query.php": "83e4e6598f73983f9d951a9659135008b0ad1f765d4b60ae922f69a9cefc9162",
+    "src/Request.php": "b6348269914160057adcfe9c7c7d44067308573423005b7e8194dbd439bb7bb3",
+    "src/Response.php": "85f711119e3248a8e7cc6c7a8ea74d02fb2193d0f3c7098015aed29a3376af8f",
+    "src/Rfc7230.php": "e6e49fef87f2c0e4b101bf93d066dff65ecb71ccfb83822f1d0dacbf29c29834",
+    "src/ServerRequest.php": "b34458d129d1b8aa0a476d032c057414a5fb49f38217499cc9dbbf3cc103356f",
+    "src/Stream.php": "a15d98e8b94d27c77eed1cd66e2169dd833f87b34ba12d8a8051fa24d1afe0a3",
+    "src/StreamDecoratorTrait.php": "cd79f502dcc01b7e7e59da38a1255538c1111d30bacb74f9bed0810c62e0b26f",
+    "src/StreamWrapper.php": "9ed4768051993674fc87a47e7bae3ed4b90a5f8b109e9211ba91e3da17da3ae5",
+    "src/UploadedFile.php": "123a1da69ceedd154827e6ea50a088fbc67a894caa30a8f22598e6a93cc64ddb",
+    "src/Uri.php": "739c34b07cf5ecdac7b90a572d1c2360169a4207d15526dd43d69cc7708e4a04",
+    "src/UriComparator.php": "76fd693bd93822d5e5a11ba5a56328dc0aeed1639c4b0969ab7f8f9204f4989e",
+    "src/UriNormalizer.php": "f34f87632152243ca2caa76eda861c622ac013f50539e7bb295d612b279f0705",
+    "src/UriResolver.php": "dda49f8761722b172727edd01a7ef6b21fafeb2456d9ecee6a886dc036254dcc",
+    "src/Utils.php": "e7a642668b8ddf832693fcd944a48a496b8b8473cf61e7127247d46d8a7e237b"
+  }
+}

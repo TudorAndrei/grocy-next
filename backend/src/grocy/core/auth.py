@@ -178,7 +178,7 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
         }
         if permission := actions.get((path.split("/")[0], action)):
             return permission
-    if path.startswith("recipes/") and write:
+    if path.startswith(("recipes/", "v2/recipes/")) and write:
         if action == "consume":
             return "STOCK_CONSUME"
         if action == "add-not-fulfilled-products-to-shoppinglist":

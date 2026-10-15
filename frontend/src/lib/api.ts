@@ -213,7 +213,7 @@ export const api = {
   listRecipes: () => request<Recipe[]>("/api/objects/recipes"),
 
   getRecipeFulfillment: (recipeId: number) =>
-    request<RecipeFulfillment>(`/api/recipes/${recipeId}/fulfillment`),
+    request<RecipeFulfillment>(`/api/v2/recipes/${recipeId}/fulfillment`),
 
   consumeRecipe: (recipeId: number) =>
     request<unknown>(`/api/recipes/${recipeId}/consume`, { method: "POST" }),
@@ -221,7 +221,7 @@ export const api = {
   addRecipeMissingToShopping: (recipeId: number) =>
     request<unknown>(
       `/api/recipes/${recipeId}/add-not-fulfilled-products-to-shoppinglist`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify({}) },
     ),
 
   listChores: () => request<Chore[]>("/api/chores"),

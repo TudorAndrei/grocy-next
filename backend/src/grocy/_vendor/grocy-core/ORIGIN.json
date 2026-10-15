@@ -32,6 +32,17 @@
     "services/FilesService.php": "5e163f6bfbe47c1f8055ae7630f5c59040f3e87559bf25a2b2a6f587939e02b7",
     "controllers/Users/User.php": "00f2cdba6eb6ce9ac2688baf2ebde71142e0da9eff22ba2ff66a85b082b6c45e",
     "controllers/Users/PermissionMissingException.php": "2937a51c8e128f6448fe205985d2abe216330e44f0483929a2375e7aecf0621d",
-    "controllers/UsersApiController.php": "25a3599907fa84219021b82066511540aafd70000d5a699c01d12e0d5f4205c1"
+    "controllers/UsersApiController.php": "25a3599907fa84219021b82066511540aafd70000d5a699c01d12e0d5f4205c1",
+    "services/LocalizationService.php": "4a3b14457f2a6f76c733519b70d3ddc5eee916b8a4b4e75433aaa49d80f857ac",
+    "helpers/Grocycode.php": "b794c52769d415f72cc0ff53457772c715d472d2b9f948bdb8ca5e7c45d7ead7",
+    "helpers/WebhookRunner.php": "f67811f64ef8e52ea4e35464377f8c91794cc2224a0acc41325695faea9931df",
+    "localization/en/chore_assignment_types.po": "ca54504d8f3e1756bc9f51f52d08e8cfcb982c7e788e33ae9eaef9448cc91c01",
+    "localization/en/chore_period_types.po": "59f45722cf5bf355a2dd2ee87baee0993b64d3a8a5ed61b1f4d03d085a38ca57",
+    "localization/en/component_translations.po": "5be84434b801bc82dd63444c8e9dcdd7e65693afd9e43746e3d80a6fe25da9e8",
+    "localization/en/locales.po": "51bbe60844602acbaf0adc15c508c33aaf9607a7920114ecc6d8453282c38a02",
+    "localization/en/permissions.po": "20f3b37715e5ddc7ca1595cac242d0c767cf78904b88686a44a58b8a3579d076",
+    "localization/en/stock_transaction_types.po": "85c9daa07aa1d68265a1d5f85e77bce8d855a2f1fa93f230a5fc762a4768cdcd",
+    "localization/en/strings.po": "2f07e6ce890094c5ca3779c41ae2e7c456c2769b66431f1f6bdc7d4f7404d848",
+    "localization/en/userfield_types.po": "f8cf23c1181bb2893c030b13b59cd57c0f29f76e36bdd40e93c01c777ff949f0"
   }
 }

@@ -23,13 +23,18 @@ function RecipeDetailPage() {
     queryKey: ["recipe-fulfillment", id, servings],
     queryFn: () =>
       request<RecipeFulfillment>(
-        `/api/recipes/${id}/fulfillment?servings=${servings}`,
+        `/api/v2/recipes/${id}/fulfillment?servings=${servings}`,
       ),
     enabled: valid,
   });
   const action = useMutation({
     mutationFn: (kind: string) =>
-      api.action(`/api/recipes/${id}/${kind}?servings=${servings}`),
+      api.action(
+        kind === "copy"
+          ? `/api/recipes/${id}/copy`
+          : `/api/v2/recipes/${id}/${kind}?servings=${servings}`,
+        {},
+      ),
     onSuccess: async () => {
       await client.invalidateQueries();
     },

@@ -83,7 +83,7 @@ def test_recipe_fulfillment_and_consume(
         headers=api_headers,
     )
     assert fulfillment.status_code == 200
-    assert fulfillment.json()["need_fulfilled"] is False
+    assert fulfillment.json()["need_fulfilled"] == 0
 
     catalog = client.get("/api/objects/products", headers=api_headers).json()
     products = {p["name"]: p for p in catalog}
@@ -99,7 +99,7 @@ def test_recipe_fulfillment_and_consume(
         f"/api/recipes/{recipe['id']}/fulfillment",
         headers=api_headers,
     ).json()
-    assert fulfillment["need_fulfilled"] is True
+    assert fulfillment["need_fulfilled"] == 1
 
     consumed = client.post(
         f"/api/recipes/{recipe['id']}/consume",

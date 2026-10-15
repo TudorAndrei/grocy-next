@@ -79,6 +79,11 @@ class NativeRawReader
         return $this->database->readQuery($query);
     }
 
+    public function prepare($query)
+    {
+        return $this->database->prepareExecution($query);
+    }
+
     public function beginTransaction()
     {
         return $this->database->transaction('begin');

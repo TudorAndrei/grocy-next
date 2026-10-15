@@ -5,6 +5,13 @@ spl_autoload_register(function (string $class): void {
     $prefixes = [
         'Grocy\\Services\\' => ['grocy-core/services/'],
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
+        'Grocy\\Helpers\\' => ['grocy-core/helpers/'],
+        'Gettext\\Languages\\' => ['gettext-languages/src/'],
+        'Gettext\\' => ['gettext-gettext/src/'],
+        'GuzzleHttp\\Promise\\' => ['guzzlehttp-promises/src/'],
+        'GuzzleHttp\\Psr7\\' => ['guzzlehttp-psr7/src/'],
+        'GuzzleHttp\\' => ['guzzlehttp-guzzle/src/'],
+        'Psr\\Http\\Client\\' => ['psr-http-client/src/'],
         'Gumlet\\' => ['gumlet-image-resize/lib/'],
         'LessQL\\' => ['morris-lessql/src/LessQL/'],
         'Slim\\Http\\' => ['slim-http/src/'],
@@ -28,6 +35,8 @@ spl_autoload_register(function (string $class): void {
 });
 require __DIR__ . '/../_vendor/ralouphie-getallheaders/src/getallheaders.php';
 require __DIR__ . '/../_vendor/grocy-core/helpers/extensions.php';
+require __DIR__ . '/../_vendor/guzzlehttp-guzzle/src/functions_include.php';
+require __DIR__ . '/../_vendor/symfony-deprecation-contracts/function.php';
 
 function parsedBody(string $raw, string $method, ?string $contentType)
 {

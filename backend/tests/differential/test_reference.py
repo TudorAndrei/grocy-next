@@ -1653,3 +1653,63 @@ def test_reference_native_numeric_setting_keys(client, api_headers, reference, k
         finally:
             assert app.delete(f"/api/user/settings/{key}").status_code == 204
     assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize("printer_status,json_body", [(200, True), (500, False)])
+def test_reference_native_recipe_output_label_and_partial_failure(
+    client, api_headers, reference, printer, printer_status, json_body
+):
+    client.headers.update(api_headers)
+    printer.setting("LABEL_PRINTER_HOOK_JSON", json_body)
+    snapshots = []
+    errors = []
+    for app in (reference, client):
+        name = uuid4().hex
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        fields = {"location_id": location, "qu_id_stock": unit, "qu_id_purchase": unit}
+        ingredient = create(app, "products", {**fields, "name": name + " ingredient"})
+        output = create(
+            app, "products", {**fields, "name": name + " output", "default_stock_label_type": 1}
+        )
+        recipe = create(app, "recipes", {"name": name, "product_id": output})
+        create(
+            app,
+            "recipes_pos",
+            {"recipe_id": recipe, "product_id": ingredient, "amount": 2, "qu_id": unit},
+        )
+        assert (
+            app.post(
+                f"/api/stock/products/{ingredient}/add", json={"amount": 3, "price": 2}
+            ).status_code
+            == 200
+        )
+        printer.clear()
+        printer.status = printer_status
+        response = app.post(f"/api/recipes/{recipe}/consume")
+        assert response.status_code == (204 if printer_status == 200 else 400), response.text
+        assert len(printer) == 1
+        label = printer[0]
+        assert label["product"] == name + " output"
+        assert label["grocycode"].startswith(f"grcy:p:{output}:")
+        assert label["font_family"] == "Source Sans Pro (Regular)"
+        if json_body:
+            assert label["details"]["product"]["id"] == output
+            assert label["stock_entry"]["amount"] == 1
+        else:
+            assert "stock_entry" not in label and "details[product]" not in label
+        if printer_status == 500:
+            error = response.json()["error_message"]
+            assert "500 Internal Server Error" in error
+            errors.append(error)
+        else:
+            assert response.content == b""
+        snapshots.append(
+            [
+                app.get(f"/api/stock/products/{product}").json()["stock_amount"]
+                for product in [ingredient, output]
+            ]
+        )
+        printer.status = 200
+    assert snapshots == [[1, 1], [1, 1]]
+    assert not errors or errors[0] == errors[1]

@@ -6,9 +6,9 @@ from fastapi import APIRouter, Query, Request, Response
 from pydantic import Field
 
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
-from grocy.api.compatibility.responses import native_list_response
-from grocy.core.auth import CurrentActor
-from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
+from grocy.api.compatibility.responses import native_action_response, native_list_response
+from grocy.core.auth import AuthenticatedActor, CurrentActor
+from grocy.core.deps import DbSession, StockSvc
 from grocy.domains.printing import label
 
 router = APIRouter(tags=["stock"], route_class=CompatibilityRoute)
@@ -63,29 +63,6 @@ class EditEntryBody(CompatibilityBody):
     location_id: int | None = None
     shopping_location_id: int | None = None
     note: str | None = None
-
-
-class ListIdBody(CompatibilityBody):
-    list_id: int = 1
-
-
-class ClearListBody(CompatibilityBody):
-    list_id: int = 1
-    done_only: bool = False
-
-
-class ShoppingAddProductBody(CompatibilityBody):
-    product_id: int
-    product_amount: Decimal = Field(default=Decimal("1"), gt=0)
-    list_id: int = 1
-    note: str | None = None
-    qu_id: int | None = None
-
-
-class ShoppingRemoveProductBody(CompatibilityBody):
-    product_id: int
-    product_amount: Decimal = Field(default=Decimal("1"), gt=0)
-    list_id: int = 1
 
 
 @router.get("/api/stock")
@@ -426,88 +403,45 @@ async def stock_location_entries(
 
 
 @router.post("/api/stock/shoppinglist/add-missing-products", status_code=204)
-@filtered_body(null_status=500)
 async def stock_shopping_add_missing(
-    _actor: CurrentActor,
-    shopping: ShoppingSvc,
-    body: ListIdBody | None = None,
+    request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    list_id = body.list_id if body is not None else 1
-    await shopping.add_missing_products(shopping_list_id=list_id)
-    return Response(status_code=204)
+    return await native_action_response(request, session, "shopping_missing", "", actor.user_id)
 
 
 @router.post("/api/stock/shoppinglist/add-overdue-products", status_code=204)
-@filtered_body(null_status=500)
 async def stock_shopping_add_overdue(
-    _actor: CurrentActor,
-    shopping: ShoppingSvc,
-    body: ListIdBody | None = None,
+    request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    list_id = body.list_id if body is not None else 1
-    await shopping.add_overdue_products(shopping_list_id=list_id)
-    return Response(status_code=204)
+    return await native_action_response(request, session, "shopping_overdue", "", actor.user_id)
 
 
 @router.post("/api/stock/shoppinglist/add-expired-products", status_code=204)
-@filtered_body(null_status=500)
 async def stock_shopping_add_expired(
-    _actor: CurrentActor,
-    shopping: ShoppingSvc,
-    body: ListIdBody | None = None,
+    request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    list_id = body.list_id if body is not None else 1
-    await shopping.add_expired_products(shopping_list_id=list_id)
-    return Response(status_code=204)
+    return await native_action_response(request, session, "shopping_expired", "", actor.user_id)
 
 
 @router.post("/api/stock/shoppinglist/clear", status_code=204)
-@filtered_body(null_status=500)
 async def stock_shopping_clear(
-    _actor: CurrentActor,
-    shopping: ShoppingSvc,
-    body: ClearListBody | None = None,
+    request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    if body is None:
-        await shopping.clear_list()
-    else:
-        await shopping.clear_list(
-            shopping_list_id=body.list_id,
-            done_only=body.done_only,
-        )
-    return Response(status_code=204)
+    return await native_action_response(request, session, "shopping_clear", "", actor.user_id)
 
 
 @router.post("/api/stock/shoppinglist/add-product", status_code=204)
-@filtered_body(null_status=500)
 async def stock_shopping_add_product(
-    body: ShoppingAddProductBody,
-    _actor: CurrentActor,
-    shopping: ShoppingSvc,
+    request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    await shopping.add_product(
-        body.product_id,
-        body.product_amount,
-        shopping_list_id=body.list_id,
-        note=body.note,
-        qu_id=body.qu_id,
-    )
-    return Response(status_code=204)
+    return await native_action_response(request, session, "shopping_add", "", actor.user_id)
 
 
 @router.post("/api/stock/shoppinglist/remove-product", status_code=204)
-@filtered_body(null_status=500)
 async def stock_shopping_remove_product(
-    body: ShoppingRemoveProductBody,
-    _actor: CurrentActor,
-    shopping: ShoppingSvc,
+    request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    await shopping.remove_product(
-        body.product_id,
-        body.product_amount,
-        shopping_list_id=body.list_id,
-    )
-    return Response(status_code=204)
+    return await native_action_response(request, session, "shopping_remove", "", actor.user_id)
 
 
 @router.get("/api/stock/bookings/{booking_id}")

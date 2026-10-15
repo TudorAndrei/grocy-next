@@ -1,0 +1,28 @@
+{
+  "package": "guzzlehttp/promises",
+  "version": "2.2.0",
+  "source": "https://github.com/guzzle/promises.git",
+  "commit": "7c69f28996b0a6920945dd20b3857e499d9ca96c",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "098313b3908e2a799731aa3816386fe33af0bef21dbe6acc75e7c98958ec89ed",
+    "src/AggregateException.php": "c0ce339c3b78055074a0b3426ba9a45651842efa6db2beeb79ddedae39cf7105",
+    "src/CancellationException.php": "a28acd9a1d5a30184910be946de2bfd3453ddb6ac2a2aa89c6d3d3e03da368be",
+    "src/Coroutine.php": "bb054e2db8e8610e331e36338f1499cc84cf9efb02900c006d5c587537d53e6d",
+    "src/Create.php": "24503fbd24201a759c0a16d8ecfcc72114e4845e591a386d82938919a6a46468",
+    "src/Each.php": "0d97e8c8158edadc8209cc86e50a8e7e0d93f21713cf04bef8855f4399503f7b",
+    "src/EachPromise.php": "09fd7d3d84bc7285b9a376eee29437d64dce6998b94c61812f75b8099f28d3b5",
+    "src/FulfilledPromise.php": "74e0a4c1898acbc2b171f0a3c5689cf8bd5f19e4a8cb46da762712f8c815cbb0",
+    "src/Is.php": "34bdf0c61855358046972692a23451ce2ec139a3731687285e7a065d1ea7b3df",
+    "src/Promise.php": "746d9abd0505878d0d5d10125363691fa2e48986f40cb70128679ef43075ebb0",
+    "src/PromiseInterface.php": "94dc3d5b4f142ddd62eaf4e879ce1ce16525d21e6ebb4d517bfb1292ba2cea85",
+    "src/PromisorInterface.php": "d2524b54fa05e60fd200724e4160ba9fbc0b45549ca3eece922d5902e1e6a901",
+    "src/RejectedPromise.php": "cd7e3242eefceadeb2416debf12149520e2a23b15397f8420a8fdfaf092a32a2",
+    "src/RejectionException.php": "4c29a1567b11d345b7bc7ad181b9bf34f12d05f5fa9f4a4e6388fea6f7217415",
+    "src/TaskQueue.php": "eef98edc8a5818c0e2810d6c953c24a5ed3d905836d67c5593793ae8a30193a9",
+    "src/TaskQueueInterface.php": "af14af31d2425eb82af9bbd76564ac7ae818c28594d6e0fc5b72bef0422351c4",
+    "src/Utils.php": "3488264736319b1a859596ded496bcb0bf41f67e8fa52720df3d053d29dd0295"
+  }
+}

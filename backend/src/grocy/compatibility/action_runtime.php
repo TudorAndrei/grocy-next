@@ -6,6 +6,9 @@ function nativeAction(array $request, NativeDatabase $database): array
     global $GROCY_DEFAULT_USER_SETTINGS;
     $GROCY_DEFAULT_USER_SETTINGS = json_decode(file_get_contents(__DIR__ . '/grocy_4_5_0_client_defaults.json'), true, 512, JSON_THROW_ON_ERROR)['user_settings'];
     define('GROCY_DEFAULT_PERMISSIONS', $request['default_permissions']);
+    foreach ($request['configuration'] as $name => $value) {
+        define($name, $value);
+    }
     (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
     $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
         $request['method'], 'http://localhost/api/?' . base64_decode($request['query_string'], true)
@@ -42,6 +45,16 @@ function nativeAction(array $request, NativeDatabase $database): array
             'chore_undo' => [new NativeChoresController($database), 'UndoChoreExecution', ['executionId' => $request['object_id']]],
             'chore_assign' => [new NativeChoresController($database), 'CalculateNextExecutionAssignments', []],
             'chore_merge' => [new NativeChoresController($database), 'MergeChores', ['choreIdToKeep' => $request['object_id'], 'choreIdToRemove' => $request['arguments']['remove_id']]],
+            'recipe_fulfillment' => [new NativeRecipesController($database), 'GetRecipeFulfillment', ['recipeId' => $request['object_id']]],
+            'recipe_consume' => [new NativeRecipesController($database), 'ConsumeRecipe', ['recipeId' => $request['object_id']]],
+            'recipe_copy' => [new NativeRecipesController($database), 'CopyRecipe', ['recipeId' => $request['object_id']]],
+            'recipe_shopping' => [new NativeRecipesController($database), 'AddNotFulfilledProductsToShoppingList', ['recipeId' => $request['object_id']]],
+            'shopping_missing' => [new NativeStockController($database), 'AddMissingProductsToShoppingList', []],
+            'shopping_overdue' => [new NativeStockController($database), 'AddOverdueProductsToShoppingList', []],
+            'shopping_expired' => [new NativeStockController($database), 'AddExpiredProductsToShoppingList', []],
+            'shopping_add' => [new NativeStockController($database), 'AddProductToShoppingList', []],
+            'shopping_remove' => [new NativeStockController($database), 'RemoveProductFromShoppingList', []],
+            'shopping_clear' => [new NativeStockController($database), 'ClearShoppingList', []],
             default => throw new RuntimeException('Unknown native action route'),
         };
         $response = $controller->$method($http, $response, $args);

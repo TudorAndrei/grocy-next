@@ -346,57 +346,6 @@ class RecipesService:
         await self.session.commit()
         return {"recipe_id": recipe_id, "added": added}
 
-    async def copy(self, recipe_id: int) -> Recipe:
-        recipe = await self.get(recipe_id)
-        nestings = (
-            (
-                await self.session.execute(
-                    select(RecipeNesting).where(RecipeNesting.recipe_id == recipe_id)
-                )
-            )
-            .scalars()
-            .all()
-        )
-        clone = Recipe(
-            name=f"Copy of {recipe.name}",
-            description=recipe.description,
-            base_servings=recipe.base_servings,
-            desired_servings=recipe.base_servings,
-            type=recipe.type,
-            picture_file_name=recipe.picture_file_name,
-            not_check_shoppinglist=recipe.not_check_shoppinglist,
-            product_id=recipe.product_id,
-            not_check_stock_fulfillment=recipe.not_check_stock_fulfillment,
-        )
-        self.session.add(clone)
-        await self.session.flush()
-        for pos in recipe.positions:
-            self.session.add(
-                RecipePosition(
-                    recipe_id=clone.id,
-                    product_id=pos.product_id,
-                    amount=pos.amount,
-                    qu_id=pos.qu_id,
-                    only_check_single_unit_in_stock=pos.only_check_single_unit_in_stock,
-                    ingredient_group=pos.ingredient_group,
-                    note=pos.note,
-                    not_check_stock_fulfillment=pos.not_check_stock_fulfillment,
-                    variable_amount=pos.variable_amount,
-                    price_factor=pos.price_factor,
-                    round_up=0,
-                )
-            )
-        for nesting in nestings:
-            self.session.add(
-                RecipeNesting(
-                    recipe_id=clone.id,
-                    includes_recipe_id=nesting.includes_recipe_id,
-                    servings=nesting.servings,
-                )
-            )
-        await self.session.commit()
-        return await self.get(clone.id)
-
     async def search(self, query: str, *, limit: int = 25) -> list[Recipe]:
         q = query.strip()
         if not q:
