@@ -83,6 +83,16 @@ export function EntityManager({
         entity === "userfields" && field.key === "entity"
           ? {
               ...field,
+              choiceLabels: Object.fromEntries([
+                ...(field.choices ?? []).map((key) => [
+                  key,
+                  entities[key]?.label ?? key,
+                ]),
+                ...(recordTypes.data ?? []).map((type) => [
+                  `userentity-${type.name}`,
+                  String(type.caption ?? type.name),
+                ]),
+              ]),
               choices: [
                 ...(field.choices ?? []),
                 ...(recordTypes.data ?? []).map(
@@ -349,12 +359,15 @@ export function EntityManager({
                           {field.required ? "Select an option" : "None"}
                         </option>
                         {field.choices?.map((choice) => (
-                          <option key={choice}>{choice}</option>
+                          <option key={choice} value={choice}>
+                            {field.choiceLabels?.[choice] ?? choice}
+                          </option>
                         ))}
                         {optionsQuery?.data?.map((row) => (
                           <option key={row.id} value={row.id}>
                             {String(
                               row.display_name ??
+                                row.caption ??
                                 row.name ??
                                 row.username ??
                                 `#${row.id}`,

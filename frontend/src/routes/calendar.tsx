@@ -28,8 +28,8 @@ function CalendarPage() {
     <>
       <h1 className="page-title">Calendar</h1>
       <p className="page-lead">
-        Export planned meals, due tasks, chores, and battery charges to your
-        calendar application.
+        Export product due dates, planned meals, tasks, chores, and battery
+        charges to your calendar application.
       </p>
       <div className="actions">
         <button

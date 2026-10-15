@@ -72,18 +72,19 @@ textarea {
 .app-shell {
   display: grid;
   min-height: 100vh;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
 }
 
 @media (min-width: 900px) {
   .app-shell {
-    grid-template-columns: var(--rail-width) 1fr;
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
     grid-template-rows: 1fr;
   }
 }
 
 .site-rail {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -160,6 +161,7 @@ textarea {
 }
 
 .site-nav a {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;

@@ -19,6 +19,7 @@ export type EntityField = {
   required?: boolean;
   ref?: string;
   choices?: string[];
+  choiceLabels?: Record<string, string>;
   min?: number;
   value?: string;
 };
@@ -119,6 +120,7 @@ export const entities: Record<string, EntitySpec> = {
         key: "due_type",
         label: "Due date type",
         choices: ["1", "2"],
+        choiceLabels: { "1": "Best before date", "2": "Use by date" },
         value: "1",
       },
       numeric("quick_consume_amount", "Quick consume amount", "1"),
@@ -185,6 +187,22 @@ export const entities: Record<string, EntitySpec> = {
           "image",
         ],
         value: "text-single-line",
+        choiceLabels: {
+          "text-single-line": "Text",
+          "text-multi-line": "Multiple lines of text",
+          "number-integral": "Whole number",
+          "number-decimal": "Decimal number",
+          "number-currency": "Currency",
+          checkbox: "Checkbox",
+          date: "Date",
+          datetime: "Date and time",
+          "preset-list": "List",
+          "preset-checklist": "Multiple choices",
+          link: "Link",
+          "link-with-title": "Link with a title",
+          file: "File path",
+          image: "Image path",
+        },
         required: true,
       },
       flag("input_required", "Required input"),
@@ -360,7 +378,7 @@ export const entities: Record<string, EntitySpec> = {
     fields: [
       name,
       { key: "sort_number", label: "Order", type: "number", value: "0" },
-      { key: "time_hms", label: "Time", value: "12:00:00" },
+      { key: "time_info", label: "Time", value: "12:00" },
     ],
   },
   chores: {
