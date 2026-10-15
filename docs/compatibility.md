@@ -4,7 +4,13 @@ The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21
 
 The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, and LessQL runtime. It also requires the PDO SQLite extension. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
 
-The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
+Generic object reads and custom field operations now use the original pinned Grocy classes. Native
+SQLite queries apply PHP query parsing, filters, order, limits, and offsets. The read adapter returns
+PHP response bytes and native column order. SQLite regular expressions use PHP `mb_ereg`, including
+its rules for nulls, invalid patterns, and long patterns. A separate PHP worker answers SQLite function
+calls while the main worker waits for the database. The native `ceil` function also uses PHP.
+
+The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The generic `§` operator uses the native PHP regular expression function. Other list endpoints still use the Python filter and its match timeout.
 
 The database uses all 45 pinned Grocy views and all 54 native triggers in their original creation order. Quantity conversion and recipe views read current records. Native triggers maintain the internal caches and inverse conversions. The permission hierarchy stores the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
 
@@ -156,3 +162,11 @@ See [the backend parity audit](backend-parity-audit.md) for the repair scope and
 To check a disposable running backend with the shared workflow tests, set
 `GROCY_BACKEND_URL`, `GROCY_BACKEND_API_KEY`, and `GROCY_BACKEND_DISPOSABLE=1`.
 Select the `local` cases. The database must be disposable because these cases write data.
+
+Generic reads preserve saved BLOB values through the PHP protocol. Valid UTF-8 becomes JSON text.
+Invalid UTF-8 and nonfinite numbers cause the native PHP JSON serialization error. Uncaught native
+errors include message, stack, file, and line fields. Paths and outer stack frames depend on deployment.
+Caught field errors keep their separate native 400 response. Earlier field writes remain committed.
+
+No database migration is needed for this runtime repair. The pinned source files retain their original
+release bytes and license. Git attributes prevent line-ending changes in that package.
