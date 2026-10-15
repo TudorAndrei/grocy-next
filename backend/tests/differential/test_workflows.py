@@ -142,6 +142,20 @@ def test_text_filters_keep_leading_zeros(api, catalog):
     assert response.json() == []
 
 
+def test_barcode_lookup_uses_sqlite_case_rules_and_stock_errors(api, catalog):
+    product, *_ = catalog
+    barcode = "Ä" + uuid4().hex
+    create(api, "product_barcodes", product_id=product, barcode=barcode)
+    path = "/api/stock/products/by-barcode/"
+    response = api.get(path + barcode)
+    assert response.status_code == 200, response.text
+    assert response.json()["product"]["id"] == product
+    assert api.get(path + barcode.replace("Ä", "ä")).status_code == 400
+    assert api.get(path + uuid4().hex).status_code == 400
+    assert api.put(f"/api/objects/products/{product}", json={"active": 0}).status_code == 204
+    assert api.get(path + barcode).status_code == 400
+
+
 def test_user_dto_shapes_and_permission_row_ids(api):
     response = api.get("/api/user")
     assert response.status_code == 200
@@ -188,6 +202,11 @@ def test_authenticated_access_without_module_permissions(api, catalog):
     original = api.headers["GROCY-API-KEY"]
     api.headers["GROCY-API-KEY"] = key
     try:
+        query_login = api.get(
+            "/api/user", headers={"GROCY-API-KEY": "invalid"}, params={"GROCY-API-KEY": key}
+        )
+        assert query_login.status_code == 200, query_login.text
+        assert query_login.json()[0]["id"] == user
         for path in (
             "/api/stock",
             "/api/stock/volatile",
@@ -281,6 +300,67 @@ def test_chore_consumption_uses_gross_tare_amount(api, catalog):
     assert (
         api.get(f"/api/objects/chores/{chore}").json()["rescheduled_date"].startswith("2030-02-03")
     )
+
+
+@pytest.mark.parametrize("action", ["add", "consume", "transfer-from", "transfer-to", "inventory"])
+def test_inactive_locations_reject_stock_bookings(api, catalog, action):
+    product, _, _, location = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    other = create(api, "locations", name=uuid4().hex)
+    assert api.put(f"/api/objects/locations/{location}", json={"active": 0}).status_code == 204
+    body = {"amount": 1, "location_id": location}
+    route = action
+    if action == "inventory":
+        body = {"new_amount": 3, "location_id": location}
+    elif action.startswith("transfer-"):
+        route = "transfer"
+        source, target = (location, other) if action == "transfer-from" else (other, location)
+        if action == "transfer-to":
+            assert (
+                api.post(path + "/add", json={"amount": 2, "location_id": other}).status_code == 200
+            )
+        body = {"amount": 1, "location_id_from": source, "location_id_to": target}
+    response = api.post(path + "/" + route, json=body)
+    assert response.status_code == 400, response.text
+
+
+@pytest.mark.parametrize("factor,opened", [(10, 12), (None, 1)])
+def test_open_child_stock_follows_grocy_entry_conversion(api, catalog, factor, opened):
+    product, unit, other, location = catalog
+    child = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        parent_product_id=product,
+        location_id=location,
+        qu_id_stock=other,
+        qu_id_purchase=other,
+    )
+    if factor is not None:
+        create(
+            api,
+            "quantity_unit_conversions",
+            product_id=child,
+            from_qu_id=unit,
+            to_qu_id=other,
+            factor=factor,
+        )
+    for due in ("2031-01-01", "2032-01-01"):
+        assert (
+            api.post(
+                f"/api/stock/products/{child}/add", json={"amount": 6, "best_before_date": due}
+            ).status_code
+            == 200
+        )
+    response = api.post(
+        f"/api/stock/products/{product}/open",
+        json={"amount": 1, "allow_subproduct_substitution": True},
+    )
+    assert response.status_code == 200, response.text
+    entries = api.get(f"/api/stock/products/{child}/entries").json()
+    assert sum(row["amount"] for row in entries if row["open"]) == opened
+    assert sum(row["amount"] for row in response.json()) == opened
 
 
 @pytest.mark.parametrize(

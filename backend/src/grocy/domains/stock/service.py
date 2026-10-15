@@ -94,8 +94,8 @@ class StockService:
             days = product.default_best_before_days
             if location_id is not None:
                 location = await self.session.get(Location, location_id)
-                if location is None:
-                    raise NotFoundError("Location not found")
+                if location is None or not location.active:
+                    raise GrocyError("Location does not exist")
                 if location.is_freezer and product.default_best_before_days_after_freezing >= -1:
                     days = product.default_best_before_days_after_freezing
             best_before_date = (
@@ -183,6 +183,10 @@ class StockService:
         product = await self.products.get_active(product_id)
         if transaction_type not in {"consume", "inventory-correction"}:
             raise GrocyError("Invalid consume transaction type")
+        if location_id is not None:
+            location = await self.session.get(Location, location_id)
+            if location is None or not location.active:
+                raise GrocyError("Location does not exist")
         if product.enable_tare_weight_handling and not exact_amount:
             if amount < product.tare_weight:
                 raise GrocyError("Gross amount cannot be below tare weight")
@@ -281,6 +285,15 @@ class StockService:
             raise GrocyError("Product cannot be opened")
         if product.enable_tare_weight_handling:
             raise GrocyError("Cannot open a tare weight product")
+        details = await self.product_details(product_id)
+        available = Decimal(str(details["stock_amount_aggregated"])) - Decimal(
+            str(details["stock_amount_opened_aggregated"])
+        )
+        if available < amount:
+            raise GrocyError(
+                f"insufficient unopened stock: have {available}, need {amount}",
+                code="insufficient_stock",
+            )
         remaining = amount
         entries = await self._ordered_entries(
             product_id, include_sub_products=allow_subproduct_substitution
@@ -291,15 +304,15 @@ class StockService:
         factors = {}
         for entry in closed:
             child = await self.products.get(entry.product_id)
-            factors[child.id] = await UnitsService(self.session).convert(
-                Decimal("1"), child.qu_id_stock, product.qu_id_stock, product_id=child.id
+            raw_factor = await self.session.scalar(
+                text(
+                    "SELECT factor FROM quantity_unit_conversions_resolved "
+                    "WHERE product_id = :product AND from_qu_id = :source "
+                    "AND to_qu_id = :target LIMIT 1"
+                ),
+                {"product": child.id, "source": product.qu_id_stock, "target": child.qu_id_stock},
             )
-        available = sum((e.amount * factors[e.product_id] for e in closed), Decimal("0"))
-        if available < amount:
-            raise GrocyError(
-                f"insufficient unopened stock: have {available}, need {amount}",
-                code="insufficient_stock",
-            )
+            factors[child.id] = Decimal(str(raw_factor)) if raw_factor is not None else Decimal("1")
         transaction_id = uuid.uuid4().hex
         last_log_id = None
         for entry in closed:
@@ -307,8 +320,10 @@ class StockService:
                 break
             before = self._serialize_entry(entry)
             split_stock_id = None
-            factor = factors[entry.product_id]
-            take = min(entry.amount, remaining / factor)
+            if allow_subproduct_substitution and entry.product_id != product_id:
+                # PHP converts the remaining amount again for each child entry.
+                remaining *= factors[entry.product_id]
+            take = min(entry.amount, remaining)
             expiry = entry.best_before_date
             if product.default_best_before_days_after_open > 0:
                 opened_expiry = date.today() + timedelta(
@@ -334,7 +349,7 @@ class StockService:
             entry.best_before_date = expiry
             entry.open = 1
             entry.opened_date = datetime.combine(date.today(), datetime.min.time())
-            remaining -= take * factor
+            remaining -= take
             log = await self._add_log(
                 actor=actor,
                 product_id=entry.product_id,
@@ -405,8 +420,10 @@ class StockService:
             raise GrocyError("Cannot transfer a tare weight product")
         source = await self.session.get(Location, location_id_from)
         target = await self.session.get(Location, location_id_to)
-        if source is None or target is None:
-            raise NotFoundError("Location not found")
+        if source is None or not source.active:
+            raise GrocyError("Source location does not exist")
+        if target is None or not target.active:
+            raise GrocyError("Destination location does not exist")
         entries = await self._ordered_entries(product_id, location_id=location_id_from)
         if stock_entry_id and stock_entry_id != "default":
             entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
@@ -538,7 +555,6 @@ class StockService:
             raise GrocyError(
                 "The new amount cannot equal the current stock amount", code="invalid_amount"
             )
-        loc = location_id or product.location_id
         if delta > 0:
             details = await self.product_details(product_id)
             if price is None and details["last_price"] is not None:
@@ -551,7 +567,7 @@ class StockService:
                 delta,
                 best_before_date=best_before_date,
                 purchased_date=purchased_date,
-                location_id=loc,
+                location_id=location_id,
                 price=price,
                 shopping_location_id=shopping_location_id,
                 note=note,

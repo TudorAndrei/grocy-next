@@ -38,15 +38,23 @@ async def require_api_key(
     calendar_secret = (
         request.query_params.get("secret") if request.url.path == "/api/calendar/ical" else None
     )
-    use_calendar_secret = not key and bool(calendar_secret)
-    key = key or calendar_secret
-    if not key:
+    candidates = [
+        (key, "default"),
+        (request.query_params.get(settings.api_key_header), "default"),
+        (calendar_secret, "calendar"),
+    ]
+    if not any(candidate for candidate, _ in candidates):
         raise UnauthorizedError("Missing API key")
-    actor = await authenticate_key(
-        session, key, key_type="calendar" if use_calendar_secret else "default"
-    )
-    actor.require(request_permission(request, actor.user_id))
-    return actor
+    for candidate, key_type in candidates:
+        if not candidate:
+            continue
+        try:
+            actor = await authenticate_key(session, candidate, key_type=key_type)
+        except UnauthorizedError:
+            continue
+        actor.require(request_permission(request, actor.user_id))
+        return actor
+    raise UnauthorizedError("Invalid API key")
 
 
 async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "default") -> Actor:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,20 +25,17 @@ class ProductsService:
     async def get_by_barcode(self, barcode: str) -> Product:
         code = parse_product_code(barcode)
         if code:
-            product = await self.get(code[0])
-            if not product.active:
-                raise NotFoundError("Product is inactive")
-            return product
+            return await self.get_active(code[0])
         stmt = (
             select(Product)
             .join(ProductBarcode, ProductBarcode.product_id == Product.id)
             .options(selectinload(Product.barcodes))
-            .where(func.lower(ProductBarcode.barcode) == barcode.lower(), Product.active == 1)
+            .where(ProductBarcode.barcode.collate("NOCASE") == barcode)
         )
         product = (await self.session.execute(stmt)).scalars().first()
         if product is None:
-            raise NotFoundError(f"Unknown barcode {barcode}")
-        return product
+            raise GrocyError(f"No product with barcode {barcode} found")
+        return await self.get_active(product.id)
 
     async def get(self, product_id: int) -> Product:
         stmt = (
@@ -53,9 +50,9 @@ class ProductsService:
         try:
             product = await self.get(product_id)
         except NotFoundError as exc:
-            raise GrocyError("Product does not exist") from exc
+            raise GrocyError("Product does not exist or is inactive") from exc
         if not product.active:
-            raise GrocyError("Product does not exist")
+            raise GrocyError("Product does not exist or is inactive")
         return product
 
     async def search(self, query: str, *, limit: int = 25) -> list[Product]:
