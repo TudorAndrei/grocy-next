@@ -2,7 +2,7 @@
 
 The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21`. The OpenAPI file and its hash are in `contracts/`. Permission IDs and their parent relationships follow upstream migration 0110.
 
-The backend requires PHP 8.1 through 8.4 for the included HTMLPurifier 4.18.0 engine. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
+The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, and LessQL runtime. It also requires the PDO SQLite extension. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
 
 The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
 
@@ -80,6 +80,8 @@ File image requests support bounded resizing. Generic queries support the upstre
 File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
 User deletion removes only the user row, including when the current user deletes their own row. Saved keys, settings, permissions, assignments, and history keep their user IDs. A key for a deleted user returns 401. A retained header key whose user was deleted also prevents a query key from replacing it. A missing user delete returns 500. New user IDs do not reuse deleted IDs. Upgrades and imports preserve these records and the user ID sequence. The last user stays deleted after restart.
+
+Permission replacement uses the native `permissions` field and Slim's unfiltered body parser. Single permission writes apply the Grocy input filter. Unknown permission IDs and user IDs without user rows are accepted. A failed replacement batch can leave the old permissions deleted. Missing, null, and scalar replacement values clear the permissions. PHP, PDO, LessQL, and SQLite keep the native value conversion and error rules. Permission row IDs keep their allocation counter after deletes, upgrades, and imports.
 
 Chore merging requires `MASTER_DATA_EDIT`. An administrator can replace their own permissions and remove their own administrator access. The next request uses those permissions, as in Grocy 4.5.0.
 

@@ -37,3 +37,5 @@ Revision 0012 changes user references to match Grocy 4.5.0. Deleting a user keep
 Startup and manual upgrades use a SQLite transaction. They turn foreign key checks off before the transaction and restore them afterward. This permits the required table rebuilds, as described in [Alembic's batch upgrade guidance](https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys).
 
 Deleting the last user keeps the database without users after restart. Demo data creation does not replace a deleted user. New databases still receive demo data when that setting is enabled.
+
+Revision 0013 keeps the permission row counter after replacement deletes old rows. The upgrade preserves custom views, indexes, and triggers. Imports also copy the counters for the target tables that use SQLite `AUTOINCREMENT`, including users and permissions. A source counter can be higher than all remaining row IDs.
