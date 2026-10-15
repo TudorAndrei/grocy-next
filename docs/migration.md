@@ -65,3 +65,9 @@ Revision 0018 gives custom values stable field IDs and text object keys. Matchin
 An unmatched legacy name cannot identify a deleted or previously renamed definition. The upgrade keeps that value under a reserved negative field ID. It retains the original entity and name metadata for recovery. A new definition with the same name does not receive that value. Original Grocy imports keep their actual field IDs, including IDs whose definitions no longer exist. Object key formatting already lost to an older integer column cannot be recovered.
 
 The upgrade keeps custom views, indexes, and triggers. A custom constraint that rejects text object keys can make the table copy fail. The transaction then restores the complete original schema, values, empty records, counters, views, triggers, and revision. The same transaction covers startup and CLI upgrades.
+
+Revision 0019 applies the pinned SQLite defaults and nullability for all 289 modeled native columns. It also gives two required extension columns their existing application defaults at the database level. Direct SQL inserts can then use the native database defaults. ORM input conversion remains a separate part of the compatibility audit.
+
+The upgrade copies only tables whose column rules differ. It keeps stored rows, timestamps, allocation counters, absent counter entries, custom columns, constraints, indexes, views, and triggers. Null native creation timestamps remain null. API reads support those timestamps. Meal-plan records can retain the native default product amount of zero during updates.
+
+A legacy record can violate a native required-column rule. For example, Grocy requires a non-null meal section ID. A saved null section makes the copy fail. The transaction restores the full original database and revision. Correct the invalid record through the previous application version before you repeat the upgrade. The upgrade does not replace saved null values with defaults.
