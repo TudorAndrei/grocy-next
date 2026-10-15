@@ -306,8 +306,10 @@ function nativeEncodedResponse($response): array
     foreach (nativeCorsHeaders() as $name => $values) {
         $response = $response->withHeader($name, $values);
     }
+    // PHP's HTTP emitter suppresses bodies for these status codes.
+    $body = in_array($response->getStatusCode(), [204, 205, 304], true) ? '' : (string)$response->getBody();
     return [
-        'response' => base64_encode((string)$response->getBody()),
+        'response' => base64_encode($body),
         'status' => $response->getStatusCode(),
         'headers' => $response->getHeaders(),
     ];
@@ -329,6 +331,9 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
     $fiber = new Fiber(function () use ($request, $database) {
         $parsing = false;
         try {
+            if ($request['operation'] === 'action') {
+                return nativeAction($request, $database);
+            }
             if ($request['operation'] === 'list_read') {
                 return nativeListRead($request, $database);
             }

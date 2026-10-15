@@ -29,3 +29,19 @@ async def native_list_response(
         execute=NativeStatements(session, runtime).execute,
     )
     return native_response(result)
+
+
+async def native_action_response(
+    request: Request, session: AsyncSession, route: str, object_id: str, user_id: int
+) -> Response:
+    runtime: InputPurifier = request.app.state.input_purifier
+    result = await runtime.native_action(
+        route=route,
+        object_id=object_id,
+        user_id=user_id,
+        method=request.method,
+        body=await request.body(),
+        content_type=request.headers.get("content-type"),
+        execute=NativeStatements(session, runtime).execute,
+    )
+    return native_response(result)

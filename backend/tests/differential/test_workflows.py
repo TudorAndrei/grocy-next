@@ -340,6 +340,14 @@ def test_authenticated_access_without_module_permissions(api, catalog):
                     assert response.json() == {
                         "error_message": "Permission missing: CHORE_TRACK_EXECUTION"
                     }
+                elif resource in {"tasks", "batteries"}:
+                    permission = (
+                        "TASKS_MARK_COMPLETED" if resource == "tasks"
+                        else "BATTERIES_TRACK_CHARGE_CYCLE"
+                    )
+                    assert response.json()["error_message"] == f"Permission missing: {permission}"
+                    assert set(response.json()) == {"error_message", "error_details"}
+                    assert response.headers["access-control-allow-origin"] == "*"
         for method, path, permission, body in (
             ("POST", "/api/chores/executions/0/undo", "CHORE_UNDO_EXECUTION", {}),
             ("GET", f"/api/users/{user}/permissions", "ADMIN", None),
@@ -3365,3 +3373,139 @@ def test_native_files_keep_unicode_header_bytes_and_invalid_image_status(api):
         assert response.json()["error_message"] == "Unsupported file type"
     finally:
         assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "resource,action,field",
+    [
+        ("tasks", "complete", "done_time"),
+        ("batteries", "charge", "tracked_time"),
+    ],
+)
+@pytest.mark.parametrize(
+    "raw,content_type,status,message",
+    [
+        (
+            b"{",
+            "application/json",
+            500,
+            "array_key_exists(): Argument #2 ($array) must be of type array, null given",
+        ),
+        (
+            b"null",
+            "application/json",
+            500,
+            "array_key_exists(): Argument #2 ($array) must be of type array, null given",
+        ),
+        (b"{}", "application/json; charset=utf-8", 400, "Bad Content-Type"),
+        (b"{}", "text/plain", 400, "Bad Content-Type"),
+        (
+            b'{"done_time":[],"tracked_time":[]}',
+            "application/json",
+            500,
+            "DateTime::createFromFormat(): Argument #2 ($datetime) "
+            "must be of type string, array given",
+        ),
+    ],
+)
+def test_native_task_and_battery_write_errors(
+    api, resource, action, field, raw, content_type, status, message
+):
+    record = create(api, resource, name=uuid4().hex)
+    response = api.post(
+        f"/api/{resource}/{record}/{action}", content=raw, headers={"Content-Type": content_type}
+    )
+    assert response.status_code == status, response.text
+    data = response.json()
+    assert data["error_message"] == message
+    assert set(data) == {"error_message", "error_details"}
+    assert response.headers["access-control-allow-origin"] == "*"
+    if resource == "tasks":
+        assert api.get(f"/api/objects/tasks/{record}").json()["done"] == 0
+    else:
+        assert rows(api, "battery_charge_cycles", battery_id=record) == []
+
+
+@pytest.mark.parametrize(
+    "resource,action,field",
+    [
+        ("tasks", "complete", "done_time"),
+        ("batteries", "charge", "tracked_time"),
+    ],
+)
+@pytest.mark.parametrize("id_form", ["leading_zero", "decimal", "exponent", "invalid"])
+def test_native_task_and_battery_action_ids(api, resource, action, field, id_form):
+    record = create(api, resource, name=uuid4().hex)
+    token = {
+        "leading_zero": f"0{record}",
+        "decimal": f"{record}.0",
+        "exponent": f"{record}e0",
+        "invalid": "invalid",
+    }[id_form]
+    response = api.post(f"/api/{resource}/{token}/{action}", json={field: "2027-01-04 16:20:00"})
+    if id_form == "invalid":
+        assert response.status_code == (400 if resource == "tasks" else 500), response.text
+        if resource == "tasks":
+            assert response.json() == {"error_message": "Task does not exist"}
+        else:
+            assert response.json()["error_message"].startswith(
+                "Grocy\\Services\\BatteriesService::TrackChargeCycle(): Argument #1 ($batteryId) "
+                "must be of type int, string given, called in "
+            )
+            assert "error_details" in response.json()
+        return
+    assert response.status_code == (204 if resource == "tasks" else 200), response.text
+    if resource == "tasks":
+        saved = api.get(f"/api/objects/tasks/{record}").json()
+        assert saved["done"] == 1 and saved["done_timestamp"] == "2027-01-04 16:20:00"
+        undo = api.post(f"/api/tasks/{token}/undo")
+    else:
+        saved = response.json()
+        assert saved["battery_id"] == record and saved["tracked_time"] == "2027-01-04 16:20:00"
+        details = api.get(f"/api/batteries/{token}")
+        assert details.status_code == 200, details.text
+        assert details.json()["charge_cycles_count"] == 1
+        undo = api.post(f"/api/batteries/charge-cycles/{saved['id']}e0/undo")
+    assert undo.status_code == 204, undo.text
+    assert undo.content == b""
+    if resource == "tasks":
+        saved = api.get(f"/api/objects/tasks/{record}").json()
+        assert saved["done"] == 0 and saved["done_timestamp"] is None
+    else:
+        saved = api.get(f"/api/objects/battery_charge_cycles/{saved['id']}").json()
+        assert saved["undone"] == 1
+
+
+@pytest.mark.parametrize(
+    "resource,action,field",
+    [
+        ("tasks", "complete", "done_time"),
+        ("batteries", "charge", "tracked_time"),
+    ],
+)
+def test_native_task_and_battery_accept_year_zero(api, resource, action, field):
+    record = create(api, resource, name=uuid4().hex)
+    value = "0000-01-04 16:20:00"
+    response = api.post(f"/api/{resource}/{record}/{action}", json={field: value})
+    assert response.status_code == (204 if resource == "tasks" else 200), response.text
+    if resource == "tasks":
+        assert api.get(f"/api/objects/tasks/{record}").json()["done_timestamp"] == value
+    else:
+        assert response.json()["tracked_time"] == value
+        details = api.get(f"/api/batteries/{record}")
+        assert details.status_code == 200, details.text
+        assert details.json()["last_charged"] == value
+
+
+def test_native_battery_ignores_unrelated_tracking_fields(api):
+    battery = create(api, "batteries", name=uuid4().hex)
+    response = api.post(
+        f"/api/batteries/{battery}/charge",
+        json={
+            "tracked_time": "2027-01-04 16:20:00",
+            "done_by": [],
+            "skipped": {},
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["tracked_time"] == "2027-01-04 16:20:00"

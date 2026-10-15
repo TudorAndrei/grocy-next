@@ -4,16 +4,12 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
-from grocy.api.compatibility.responses import native_list_response
-from grocy.core.auth import CurrentActor
+from grocy.api.compatibility.responses import native_action_response, native_list_response
+from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.deps import DbSession, HouseholdSvc
 from grocy.core.errors import GrocyError
 
 router = APIRouter(tags=["household"], route_class=CompatibilityRoute)
-
-
-class TaskCompletionBody(CompatibilityBody):
-    done_time: Any = None
 
 
 class TrackingBody(CompatibilityBody):
@@ -50,9 +46,7 @@ def _chore_time(value: Any) -> date | datetime | None:
 
 
 @router.get("/api/chores")
-async def list_chores(
-    request: Request, _actor: CurrentActor, session: DbSession
-) -> Response:
+async def list_chores(request: Request, _actor: CurrentActor, session: DbSession) -> Response:
     return await native_list_response(request, session, "chores")
 
 
@@ -120,61 +114,46 @@ async def list_tasks(
 
 
 @router.post("/api/tasks/{task_id}/complete", status_code=204)
-@filtered_body(null_status=500)
 async def complete_task(
-    task_id: int,
-    _actor: CurrentActor,
-    household: HouseholdSvc,
-    body: TaskCompletionBody | None = None,
+    task_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    await household.complete_task(task_id, done_time=_timestamp(body.done_time) if body else None)
-    return Response(status_code=204)
+    return await native_action_response(request, session, "task_complete", task_id, actor.user_id)
 
 
 @router.post("/api/tasks/{task_id}/undo", status_code=204)
 async def undo_task(
-    task_id: int,
-    _actor: CurrentActor,
-    household: HouseholdSvc,
+    task_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    await household.undo_task(task_id)
-    return Response(status_code=204)
+    return await native_action_response(request, session, "task_undo", task_id, actor.user_id)
 
 
 @router.get("/api/batteries")
-async def list_batteries(
-    request: Request, _actor: CurrentActor, session: DbSession
-) -> Response:
+async def list_batteries(request: Request, _actor: CurrentActor, session: DbSession) -> Response:
     return await native_list_response(request, session, "batteries")
 
 
 @router.get("/api/batteries/{battery_id}")
 async def get_battery(
-    battery_id: int,
-    _actor: CurrentActor,
-    household: HouseholdSvc,
-) -> dict[str, Any]:
-    return await household.get_battery(battery_id)
+    battery_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(
+        request, session, "battery_details", battery_id, actor.user_id
+    )
 
 
 @router.post("/api/batteries/{battery_id}/charge")
-@filtered_body(null_status=500)
 async def charge_battery(
-    battery_id: int,
-    _actor: CurrentActor,
-    household: HouseholdSvc,
-    body: TrackingBody | None = None,
-) -> dict[str, Any]:
-    return await household.charge_battery(
-        battery_id, tracked_time=_timestamp(body.tracked_time) if body else None
+    battery_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(
+        request, session, "battery_charge", battery_id, actor.user_id
     )
 
 
 @router.post("/api/batteries/charge-cycles/{charge_cycle_id}/undo", status_code=204)
 async def undo_battery_charge(
-    charge_cycle_id: int,
-    _actor: CurrentActor,
-    household: HouseholdSvc,
+    charge_cycle_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
-    await household.undo_battery_charge(charge_cycle_id)
-    return Response(status_code=204)
+    return await native_action_response(
+        request, session, "battery_undo", charge_cycle_id, actor.user_id
+    )

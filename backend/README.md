@@ -14,6 +14,10 @@ PHP JSON encoding, native column order, status, and headers.
 File requests use the original Grocy file controller and service with the pinned Gumlet image
 library and PHP GD. Each request has its own PHP process. Uploads and downloads use streams.
 The process stops when the response ends, the client disconnects, or the application stops.
+Task completion, task undo, battery charging, charge undo, and battery details use the original
+Grocy controllers and services. Each action has a separate PHP user context. Native permission
+checks and SQL use the application database. The action process stops before the request returns.
+Set `TZ` to select the same server time zone for Python and the PHP workers.
 Set `GROCY_PHP_EXECUTABLE` if PHP is not available as `php` on `PATH`.
 The Docker image includes this runtime.
 

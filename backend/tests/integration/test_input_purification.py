@@ -68,6 +68,14 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
             pytest.fail("The native SQL function worker did not recover")
         pids = [int(item) for item in processes.read_text().splitlines()]
         assert len(pids) == 4 and len(set(pids)) == 4
+        task = client.post("/api/objects/tasks", json={"name": name}).json()["created_object_id"]
+        assert client.post(f"/api/tasks/{task}/complete", json={}).status_code == 204
+        action_pids = {int(item) for item in processes.read_text().splitlines()} - set(pids)
+        assert action_pids
+        for action_pid in action_pids:
+            with pytest.raises(ProcessLookupError):
+                os.kill(action_pid, 0)
+        pids.extend(action_pids)
     for pid in pids:
         with pytest.raises(ProcessLookupError):
             os.kill(pid, 0)

@@ -44,6 +44,15 @@ async def require_api_key(
     return actor
 
 
+async def authenticated_api_key(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    grocy_api_key: Annotated[str | None, Header(alias="GROCY-API-KEY")] = None,
+) -> Actor:
+    # Native controllers check permissions at their original exception boundary.
+    return await authenticate_request(request, session, grocy_api_key)
+
+
 async def authenticate_request(
     request: Request, session: AsyncSession, grocy_api_key: str | None = None
 ) -> Actor:
@@ -250,3 +259,4 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
 
 
 CurrentActor = Annotated[Actor, Depends(require_api_key)]
+AuthenticatedActor = Annotated[Actor, Depends(authenticated_api_key)]

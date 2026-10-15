@@ -145,7 +145,6 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             old.post("/api/chores/1/execute", json={"tracked_time": "2027-01-04"}).status_code
             == 200
         )
-        assert old.post("/api/batteries/1/charge", json={}).status_code == 200
         assert create_saved("shopping_list", product_id=1, amount=1, qu_id=1).status_code == 200
         field = create_saved(
             "userfields",
@@ -199,6 +198,13 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert nutrition.status_code == 200, nutrition.text
     with sqlite3.connect(database) as connection:
         connection.execute("INSERT INTO saved_product_reference VALUES (1)")
+        # Store the old record before upgrading. Native API permission views did not
+        # exist in revision 0013, so the current charge handler cannot seed this schema.
+        connection.execute(
+            "INSERT INTO battery_charge_cycles "
+            "(battery_id,tracked_time,undone,row_created_timestamp) VALUES (1,?,0,?)",
+            ("2027-01-04 12:34:56", "2027-01-04 12:34:56"),
+        )
         native = json.loads((FIXTURES / "grocy-4.5.0-counter-tables.json").read_text())["tables"]
         with sqlite3.connect(":memory:") as original:
             for ddl in native.values():
@@ -244,6 +250,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
     with TestClient(create_app(), headers=headers) as upgraded:
         assert _data_snapshot(database) == after
         assert upgraded.get("/api/stock/products/1").json()["stock_amount"] == 2
+        battery = upgraded.get("/api/batteries/1")
+        assert battery.status_code == 200, battery.text
+        assert battery.json()["last_charged"] == "2027-01-04 12:34:56"
+        assert battery.json()["charge_cycles_count"] == 1
         assert upgraded.get("/api/userfields/products/1").json()["origin"] == "Farm"
         assert upgraded.delete(f"/api/objects/locations/{location}").status_code == 204
         next_location = upgraded.post("/api/objects/locations", json={"name": "Saved spare"})

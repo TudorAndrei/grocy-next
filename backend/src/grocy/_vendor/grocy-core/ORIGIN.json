@@ -29,6 +29,8 @@
     "controllers/RecipesApiController.php": "20be4e5414808312cdb4175820e3403c6acafe0c8f23903acf62227419066bdc",
     "services/DatabaseService.php": "0720507d05a4207f21ddca2c536fe6c02d48af06edfe3e56debb6fdfc49d4d97",
     "controllers/FilesApiController.php": "f87e6d4523367ac15b9ec65b865b42f9ed09df8a8741707d3977a5a41b30d142",
-    "services/FilesService.php": "5e163f6bfbe47c1f8055ae7630f5c59040f3e87559bf25a2b2a6f587939e02b7"
+    "services/FilesService.php": "5e163f6bfbe47c1f8055ae7630f5c59040f3e87559bf25a2b2a6f587939e02b7",
+    "controllers/Users/User.php": "00f2cdba6eb6ce9ac2688baf2ebde71142e0da9eff22ba2ff66a85b082b6c45e",
+    "controllers/Users/PermissionMissingException.php": "2937a51c8e128f6448fe205985d2abe216330e44f0483929a2375e7aecf0621d"
   }
 }

@@ -11,11 +11,13 @@ from typing import Any
 
 from grocy.compatibility.values import decode_value, encode_value
 from grocy.core.errors import GrocyError
+from grocy.core.time import server_timezone
 
 
 class InputPurifier:
-    def __init__(self, executable: str) -> None:
+    def __init__(self, executable: str, *, user_id: int = 1) -> None:
         self.executable = executable
+        self.user_id = user_id
         self.php_version = ""
         self._lock = asyncio.Lock()
         self._process: asyncio.subprocess.Process | None = None
@@ -41,8 +43,11 @@ class InputPurifier:
                 "display_errors=stderr",
                 "-d",
                 "log_errors=0",
+                "-d",
+                f"date.timezone={server_timezone().key}",
                 str(Path(__file__).with_suffix(".php")),
                 self._cache.name,
+                str(self.user_id),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -182,6 +187,34 @@ class InputPurifier:
         if "value" in result:
             result["value"] = decode_value(result["value"])
         return result
+
+    async def native_action(
+        self,
+        *,
+        route: str,
+        object_id: str,
+        user_id: int,
+        method: str,
+        body: bytes,
+        content_type: str | None,
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        # Grocy's current user is a PHP constant. Each action owns its request context.
+        worker = InputPurifier(self.executable, user_id=user_id)
+        try:
+            return await worker._request(
+                body,
+                {
+                    "operation": "action",
+                    "route": route,
+                    "object_id": object_id,
+                    "method": method,
+                    "content_type": content_type,
+                },
+                execute=execute,
+            )
+        finally:
+            await worker.close()
 
     async def _request(
         self,
