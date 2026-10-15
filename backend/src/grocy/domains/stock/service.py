@@ -628,7 +628,7 @@ class StockService:
     async def undo_booking(self, actor: Actor, booking_id: int) -> dict:
         log = await self.session.get(StockLog, booking_id)
         if log is None:
-            raise NotFoundError(f"Booking {booking_id} not found")
+            raise GrocyError(f"Booking {booking_id} not found")
         if log.undone:
             raise GrocyError("booking already undone", code="already_undone")
         related = (
@@ -791,10 +791,10 @@ class StockService:
             ),
         }
 
-    async def get_entry(self, entry_id: int) -> dict:
+    async def get_entry(self, entry_id: int) -> dict | None:
         entry = await self.session.get(StockEntry, entry_id)
         if entry is None:
-            raise NotFoundError(f"Stock entry {entry_id} not found")
+            return None
         return self._serialize_entry(entry)
 
     async def edit_entry(
@@ -907,7 +907,6 @@ class StockService:
     async def product_locations(
         self, product_id: int, *, include_sub_products: bool = False
     ) -> list[dict]:
-        await self.products.get(product_id)
         ids = await self.products.child_ids(product_id) if include_sub_products else [product_id]
         result = []
         for identifier in ids:
@@ -1115,21 +1114,21 @@ class StockService:
 
     async def location_entries(self, location_id: int) -> list[dict]:
         location = await self.session.get(Location, location_id)
-        if location is None:
-            raise NotFoundError(f"Location {location_id} not found")
+        if location is None or not location.active:
+            raise GrocyError("Location does not exist", status_code=500)
         return await self.list_inventory(location_id=location_id)
 
     async def get_booking(self, booking_id: int) -> dict:
         log = await self.session.get(StockLog, booking_id)
         if log is None:
-            raise NotFoundError(f"Booking {booking_id} not found")
+            raise GrocyError(f"Booking {booking_id} not found")
         return self._serialize_log(log)
 
     async def get_transaction(self, transaction_id: str) -> list[dict]:
         stmt = select(StockLog).where(StockLog.transaction_id == transaction_id)
         logs = (await self.session.execute(stmt.order_by(StockLog.id))).scalars().all()
         if not logs:
-            raise NotFoundError(f"Transaction {transaction_id} not found")
+            raise GrocyError(f"Transaction {transaction_id} not found")
         return [self._serialize_log(log) for log in logs]
 
     async def undo_transaction(self, actor: Actor, transaction_id: str) -> dict:
@@ -1139,7 +1138,7 @@ class StockService:
         )
         logs = (await self.session.execute(stmt.order_by(StockLog.id.desc()))).scalars().all()
         if not logs:
-            raise NotFoundError(f"Transaction {transaction_id} not found")
+            raise GrocyError(f"Transaction {transaction_id} not found")
         for log in logs:
             await self._undo_single(actor, log)
         await self.session.commit()

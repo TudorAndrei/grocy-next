@@ -114,7 +114,7 @@ async def stock_get_entry(
     entry_id: int,
     _actor: CurrentActor,
     stock: StockSvc,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     return await stock.get_entry(entry_id)
 
 

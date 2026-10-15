@@ -178,7 +178,7 @@ class GenericObjectsService:
         model = self._require_writable(entity)
         row = await self.session.get(model, object_id)
         if row is None:
-            raise NotFoundError(f"{entity} {object_id} not found")
+            raise GrocyError("Object not found")
         old_unit = row.qu_id_stock if isinstance(row, Product) else None
         old_day = row.day if isinstance(row, MealPlanEntry) else None
         old_conversion = (
@@ -213,7 +213,7 @@ class GenericObjectsService:
         model = self._require_writable(entity, deleting=True)
         row = await self.session.get(model, object_id)
         if row is None:
-            raise NotFoundError(f"{entity} {object_id} not found")
+            raise GrocyError("Object not found")
         await self.effects.delete(entity, row)
         await self.session.commit()
 

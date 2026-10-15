@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.users import user_dto
 from grocy.core.actor import Actor
-from grocy.core.errors import GrocyError, NotFoundError
+from grocy.core.errors import GrocyError
 from grocy.db.models.household import (
     Battery,
     BatteryChargeCycle,
@@ -93,7 +93,7 @@ class HouseholdService:
         chore = await self._require_chore(chore_id)
         user_id = done_by if done_by is not None else actor.user_id
         if await self.session.get(User, user_id) is None:
-            raise NotFoundError("User not found")
+            raise GrocyError("User not found")
         if skipped and chore.period_type == "manually":
             raise GrocyError("Chores without a schedule cannot be skipped")
         tracked = tracked_time or datetime.now()
@@ -147,7 +147,7 @@ class HouseholdService:
     async def undo_chore_execution(self, execution_id: int) -> dict:
         log = await self.session.get(ChoreLog, execution_id)
         if log is None:
-            raise NotFoundError(f"Chore execution {execution_id} not found")
+            raise GrocyError(f"Chore execution {execution_id} not found")
         if log.undone:
             raise GrocyError("already undone", code="already_undone")
         log.undone = 1
@@ -189,7 +189,7 @@ class HouseholdService:
     async def complete_task(self, task_id: int, *, done_time: datetime | None = None) -> dict:
         task = await self.session.get(Task, task_id)
         if task is None:
-            raise NotFoundError(f"Task {task_id} not found")
+            raise GrocyError(f"Task {task_id} not found")
         task.done = 1
         task.done_timestamp = done_time or datetime.now()
         await self.session.commit()
@@ -198,7 +198,7 @@ class HouseholdService:
     async def undo_task(self, task_id: int) -> dict:
         task = await self.session.get(Task, task_id)
         if task is None:
-            raise NotFoundError(f"Task {task_id} not found")
+            raise GrocyError(f"Task {task_id} not found")
         task.done = 0
         task.done_timestamp = None
         await self.session.commit()
@@ -233,7 +233,7 @@ class HouseholdService:
     async def get_battery(self, battery_id: int) -> dict:
         battery = await self.session.get(Battery, battery_id)
         if battery is None:
-            raise NotFoundError(f"Battery {battery_id} not found")
+            raise GrocyError(f"Battery {battery_id} not found")
         last = await self._last_battery_charge(battery_id)
         return {
             "battery": self._serialize_battery(battery),
@@ -251,9 +251,9 @@ class HouseholdService:
         keep = await self.session.get(Chore, keep_id)
         remove = await self.session.get(Chore, remove_id)
         if keep is None:
-            raise NotFoundError(f"Chore {keep_id} not found")
+            raise GrocyError(f"Chore {keep_id} not found")
         if remove is None:
-            raise NotFoundError(f"Chore {remove_id} not found")
+            raise GrocyError(f"Chore {remove_id} not found")
         if keep_id == remove_id:
             raise GrocyError("cannot merge chore into itself", code="invalid_merge")
         logs = (
@@ -314,7 +314,7 @@ class HouseholdService:
     ) -> dict:
         battery = await self.session.get(Battery, battery_id)
         if battery is None:
-            raise NotFoundError(f"Battery {battery_id} not found")
+            raise GrocyError(f"Battery {battery_id} not found")
         cycle = BatteryChargeCycle(
             battery_id=battery_id, tracked_time=tracked_time or datetime.now()
         )
@@ -335,7 +335,7 @@ class HouseholdService:
     async def undo_battery_charge(self, charge_cycle_id: int) -> dict:
         cycle = await self.session.get(BatteryChargeCycle, charge_cycle_id)
         if cycle is None:
-            raise NotFoundError(f"Charge cycle {charge_cycle_id} not found")
+            raise GrocyError(f"Charge cycle {charge_cycle_id} not found")
         if cycle.undone:
             raise GrocyError("already undone", code="already_undone")
         cycle.undone = 1
@@ -363,7 +363,7 @@ class HouseholdService:
     async def _require_chore(self, chore_id: int) -> Chore:
         chore = await self.session.get(Chore, chore_id)
         if chore is None:
-            raise NotFoundError(f"Chore {chore_id} not found")
+            raise GrocyError(f"Chore {chore_id} not found")
         return chore
 
     async def _chore_logs(self, chore_id: int) -> list[ChoreLog]:

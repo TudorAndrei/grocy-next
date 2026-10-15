@@ -164,6 +164,38 @@ def test_barcode_lookup_uses_sqlite_case_rules_and_stock_errors(api, catalog):
     assert api.get(path + barcode).status_code == 400
 
 
+@pytest.mark.parametrize(
+    "method,path,body,status,payload",
+    [
+        ("GET", "/api/objects/locations/2147483647", None, 404, None),
+        ("PUT", "/api/objects/locations/2147483647", {"name": "Missing"}, 400, None),
+        ("DELETE", "/api/objects/locations/2147483647", None, 400, None),
+        ("GET", "/api/stock/products/2147483647", None, 400, None),
+        ("GET", "/api/stock/products/2147483647/entries", None, 200, []),
+        ("GET", "/api/stock/products/2147483647/locations", None, 200, []),
+        ("GET", "/api/stock/locations/2147483647/entries", None, 500, None),
+        ("GET", "/api/stock/entry/2147483647", None, 200, None),
+        ("GET", "/api/stock/bookings/2147483647", None, 400, None),
+        ("POST", "/api/stock/bookings/2147483647/undo", None, 400, None),
+        ("GET", "/api/stock/transactions/missing", None, 400, None),
+        ("POST", "/api/stock/transactions/missing/undo", None, 400, None),
+        ("GET", "/api/chores/2147483647", None, 400, None),
+        ("POST", "/api/chores/2147483647/execute", {}, 400, None),
+        ("GET", "/api/batteries/2147483647", None, 400, None),
+        ("POST", "/api/batteries/2147483647/charge", {}, 400, None),
+        ("POST", "/api/tasks/2147483647/complete", {}, 400, None),
+        ("POST", "/api/tasks/2147483647/undo", None, 400, None),
+    ],
+)
+def test_missing_records_keep_grocy_status_and_empty_results(
+    api, method, path, body, status, payload
+):
+    response = api.request(method, path, json=body)
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert response.json() == payload
+
+
 def test_user_dto_shapes_and_permission_row_ids(api):
     response = api.get("/api/user")
     assert response.status_code == 200
