@@ -24,7 +24,13 @@ Undo follows the PHP state rules. In particular, undo of one combined purchase d
 
 Label modes use the runtime values 0, 1, and 2. The pinned OpenAPI file lists different values. In per-unit mode, PHP omits a fractional remainder. The backend now applies the same rule.
 
-Source: [stock service and undo rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/StockService.php), [stock API and label payloads](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/StockApiController.php), and [stock field handling](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0183.sql).
+Purchase labels use the new entry before stock entries combine. Product details show stock before the purchase. Automatic labels for opening, freezing, and thawing use the old entry with the new due date. Move-on-open can send two labels. If the second request fails, the opened entry remains at the original location, as in Grocy.
+
+Label requests support JSON and form encoding. Form requests omit database row fields because the PHP row objects have no public form fields. Labels include the default font setting. Printer parameters can replace payload fields. The calculated due date takes precedence over those parameters. Printer HTTP errors return 400. A failed purchase label leaves the saved purchase in stock. Server printing uses a two-second timeout. Set `GROCY_LABEL_PRINTER_RUN_SERVER=false` to return label data without sending a request.
+
+Missing label records also follow PHP behavior. Missing products, chores, and batteries return 400. A missing stock entry returns 500. A missing recipe returns 200 with null name and details when server printing is disabled.
+
+Sources: [stock service and undo rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/services/StockService.php), [stock API and label payloads](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/StockApiController.php), [stock field handling](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0183.sql), and [printer request handling](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/helpers/WebhookRunner.php).
 
 ## Recipes, meal plans, and shopping
 
@@ -74,9 +80,9 @@ Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90
 
 ## Verification
 
-The local suite passed 148 tests. It skipped 108 reference cases. The default comparison suite passed 185 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff, basedpyright, and the frontend build passed.
+The local suite passed 154 tests. It skipped 116 reference cases. The default comparison suite passed 198 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff, basedpyright, and the frontend build passed.
 
-The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest.
+The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest. Label comparisons use a local HTTP receiver. They compare label fields, request formats, and stored stock after printer errors. Each new label regression failed on the previous code before the repair.
 
 Run the full local checks:
 
@@ -96,4 +102,4 @@ uv run --project backend python scripts/check-reference.py --timezone Europe/Buc
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
 
-The remaining audit must cover upstream HTML and CSS request purification, more input parser cases, and automatic label reprints. The current datetime input models accept forms that some PHP handlers ignore. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. These gaps prevent a claim of full runtime parity.
+The remaining audit must cover upstream HTML and CSS request purification and more input parser cases. The current datetime input models accept forms that some PHP handlers ignore. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. More response edge cases need checks. These gaps prevent a claim of full runtime parity.

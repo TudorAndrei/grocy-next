@@ -79,6 +79,10 @@ A file upload cannot replace an existing file. Reads use the inline disposition 
 
 Stock label modes follow the Grocy 4.5.0 runtime: 0 for no label, 1 for one label, and 2 for one label per whole unit. The pinned OpenAPI file lists 1, 2, and 3. The runtime values take precedence for compatibility. Per-unit bookings share a transaction ID. As in PHP, mode 2 omits a fractional remainder. Stock counts accept a purchase date. They count the product across all locations and use the last price and store when these values are omitted.
 
+Purchase labels use the new entry before stock entries combine. Automatic open, freeze, and thaw labels use the old entry and the new due date. Printer failures preserve the same prior stock changes as Grocy. Label requests support JSON and form encoding. Form requests omit database row fields, as PHP does. `GROCY_LABEL_PRINTER_PARAMS` supplies extra label values and defaults to the upstream font. The calculated due date takes precedence over these values. Set `GROCY_LABEL_PRINTER_HOOK_JSON=false` for form requests. Set `GROCY_LABEL_PRINTER_RUN_SERVER=false` to return label data without server printing.
+
+Missing label records retain the upstream status rules. A missing stock entry returns 500. Missing products, chores, and batteries return 400. A missing recipe can return 200 with null label data.
+
 Calendar subscription keys grant calendar access only. Revoke a subscription key through API key management. Server configuration responses omit API keys and the database URL.
 
 Transfer undo follows Grocy 4.5.0. If the original source entry no longer exists, undo creates an entry at the current default location. It leaves the store empty and uses the default closed state. Consumption undo creates a separate entry and leaves the store empty.
@@ -99,6 +103,6 @@ Chore consumption uses the gross tare amount. Chore tracking saves its log befor
 
 Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
 
-The audit still needs full HTML and CSS input purification, more input parser cases, and automatic label reprints. Encoded image bytes can differ between Pillow and PHP GD. These gaps remain outside the verified behavior.
+The audit still needs full HTML and CSS input purification and more input parser cases. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. More response edge cases need checks. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
