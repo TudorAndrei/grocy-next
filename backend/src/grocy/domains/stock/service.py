@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
@@ -49,30 +49,15 @@ class StockService:
         return [self._serialize_entry(row) for row in rows]
 
     async def current_stock(self) -> list[dict]:
-        products = await self.products.list_products()
-        result: list[dict] = []
-        for product in products:
-            amount = await self.products.stock_amount(product.id)
-            opened = await self._opened_amount(product.id)
-            if amount <= 0 and opened <= 0:
+        rows = (await self.session.execute(text("SELECT * FROM stock_current"))).mappings().all()
+        result, seen = [], set()
+        for row in rows:
+            product_id = row["product_id"]
+            if product_id in seen:
                 continue
-            entries = await self.list_inventory(product_id=product.id)
-            best_before = None
-            dates = [e["best_before_date"] for e in entries if e["best_before_date"]]
-            if dates:
-                best_before = min(dates)
-            result.append(
-                {
-                    "product_id": product.id,
-                    "amount": float(amount),
-                    "amount_aggregated": float(amount),
-                    "amount_opened": float(opened),
-                    "amount_opened_aggregated": float(opened),
-                    "best_before_date": best_before,
-                    "is_aggregated_amount": False,
-                    "product": self.products.serialize(product),
-                }
-            )
+            seen.add(product_id)
+            product = await self.products.get(product_id)
+            result.append({**dict(row), "product": self.products.serialize(product)})
         return result
 
     async def purchase(
@@ -568,8 +553,18 @@ class StockService:
         from grocy.db.models.catalog import QuantityUnit
 
         product = await self.products.get(product_id)
-        amount = await self.products.stock_amount(product_id)
-        opened = await self._opened_amount(product_id)
+        overview = (
+            (
+                await self.session.execute(
+                    text("SELECT * FROM stock_current WHERE product_id = :product_id"),
+                    {"product_id": product_id},
+                )
+            )
+            .mappings()
+            .first()
+        )
+        amount = Decimal(str(overview["amount"])) if overview else Decimal("0")
+        opened = Decimal(str(overview["amount_opened"])) if overview else Decimal("0")
         entries = await self._ordered_entries(product_id)
         logs = list(
             (
@@ -622,15 +617,12 @@ class StockService:
             "product_barcodes": serialized["barcodes"],
             **units,
             "stock_amount_opened": float(opened),
-            "stock_amount_aggregated": float(amount),
-            "stock_value": float(
-                sum(
-                    (entry.amount * (entry.price or Decimal("0")) for entry in entries),
-                    Decimal("0"),
-                )
-            ),
-            "stock_amount_opened_aggregated": float(opened),
-            "is_aggregated_amount": False,
+            "stock_amount_aggregated": overview["amount_aggregated"] if overview else 0,
+            "stock_value": overview["value"] if overview else 0,
+            "stock_amount_opened_aggregated": overview["amount_opened_aggregated"]
+            if overview
+            else 0,
+            "is_aggregated_amount": bool(overview["is_aggregated_amount"]) if overview else False,
             "last_purchased": last_purchase.purchased_date.isoformat()
             if last_purchase and last_purchase.purchased_date
             else None,
@@ -744,43 +736,26 @@ class StockService:
     async def volatile(self, due_soon_days: int = 5) -> dict:
         today = date.today()
         due_limit = today + timedelta(days=due_soon_days)
-        due_products: list[dict] = []
-        overdue_products: list[dict] = []
-        expired_products: list[dict] = []
-        missing_products: list[dict] = []
-
-        products = await self.products.list_products()
-        for product in products:
-            amount = await self.products.stock_amount(product.id)
-            opened = await self._opened_amount(product.id)
-            entries = await self._ordered_entries(product.id)
-            dates = [e.best_before_date for e in entries if e.best_before_date and e.amount > 0]
-            best_before = min(dates) if dates else None
-
-            usable_amount = amount - opened if product.treat_opened_as_out_of_stock else amount
-            if usable_amount < product.min_stock_amount:
-                missing = product.min_stock_amount - usable_amount
-                missing_products.append(
-                    {
-                        "id": product.id,
-                        "name": product.name,
-                        "amount_missing": float(missing),
-                        "is_partly_in_stock": 1 if amount > 0 else 0,
-                    }
-                )
-
-            if amount <= 0 and opened <= 0:
+        due_products, overdue_products, expired_products = [], [], []
+        for row in await self.current_stock():
+            if not row["best_before_date"]:
                 continue
-
-            stock_row = self._stock_overview_row(product, amount, opened, best_before)
-            if best_before is None:
-                continue
-            if best_before < today:
-                overdue_products.append(stock_row)
-                expired_products.append(stock_row)
-            elif today <= best_before <= due_limit:
-                due_products.append(stock_row)
-
+            due = date.fromisoformat(row["best_before_date"])
+            if due < today:
+                overdue_products.append(row)
+                if row["due_type"] == 2:
+                    expired_products.append(row)
+            elif due <= due_limit:
+                due_products.append(row)
+        missing = (
+            (await self.session.execute(text("SELECT * FROM stock_missing_products")))
+            .mappings()
+            .all()
+        )
+        missing_products = []
+        for row in missing:
+            product = await self.products.get(row["id"])
+            missing_products.append({**dict(row), "product": self.products.serialize(product)})
         return {
             "due_products": due_products,
             "overdue_products": overdue_products,
@@ -1184,14 +1159,6 @@ class StockService:
         )
         return list((await self.session.execute(stmt)).scalars().all())
 
-    async def _opened_amount(self, product_id: int) -> Decimal:
-        stmt = select(StockEntry).where(
-            StockEntry.product_id == product_id,
-            StockEntry.open == 1,
-        )
-        rows = (await self.session.execute(stmt)).scalars().all()
-        return sum((row.amount for row in rows), Decimal("0"))
-
     async def _add_log(
         self,
         *,
@@ -1282,24 +1249,6 @@ class StockService:
                 setattr(last, key, getattr(log, key))
             last.price = history.last_price
         await self.session.flush()
-
-    def _stock_overview_row(
-        self,
-        product: Product,
-        amount: Decimal,
-        opened: Decimal,
-        best_before: date | None,
-    ) -> dict:
-        return {
-            "product_id": product.id,
-            "amount": float(amount),
-            "amount_aggregated": float(amount),
-            "amount_opened": float(opened),
-            "amount_opened_aggregated": float(opened),
-            "best_before_date": best_before.isoformat() if best_before else None,
-            "is_aggregated_amount": False,
-            "product": self.products.serialize(product),
-        }
 
     def _serialize_log(self, log: StockLog) -> dict:
         result = {}

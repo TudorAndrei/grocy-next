@@ -484,3 +484,101 @@ def test_reference_resolved_recipe_and_conversion_records(
     assert actual[1] == expected[1]
     for key, value in expected[0].items():
         assert actual[0][key] == value, key
+
+
+def test_reference_parent_stock_and_volatile_records(
+    client: TestClient, api_headers: dict, reference
+):
+    from datetime import date, timedelta
+
+    client.headers.update(api_headers)
+    name = f"Parent stock {uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        defaults = {"location_id": location, "qu_id_purchase": unit, "qu_id_stock": unit}
+        parent = create(
+            app,
+            "products",
+            {
+                **defaults,
+                "name": name,
+                "no_own_stock": 1,
+                "cumulate_min_stock_amount_of_sub_products": 1,
+            },
+        )
+        children = []
+        for suffix, due_type, minimum, amount in (("A", 1, 4, 2), ("B", 2, 3, 1)):
+            child = create(
+                app,
+                "products",
+                {
+                    **defaults,
+                    "name": f"{name} {suffix}",
+                    "parent_product_id": parent,
+                    "due_type": due_type,
+                    "min_stock_amount": minimum,
+                },
+            )
+            children.append(child)
+            assert (
+                app.post(
+                    f"/api/stock/products/{child}/add",
+                    json={
+                        "amount": amount,
+                        "price": 2.5,
+                        "best_before_date": (date.today() - timedelta(days=1)).isoformat(),
+                    },
+                ).status_code
+                == 200
+            )
+        assert (
+            app.post(f"/api/stock/products/{children[0]}/open", json={"amount": 1}).status_code
+            == 200
+        )
+        details = app.get(f"/api/stock/products/{parent}").json()
+        states: list[object] = [
+            {
+                key: details[key]
+                for key in (
+                    "stock_amount",
+                    "stock_amount_aggregated",
+                    "stock_amount_opened",
+                    "stock_amount_opened_aggregated",
+                    "is_aggregated_amount",
+                    "stock_value",
+                )
+            }
+        ]
+        overview = app.get("/api/stock").json()
+        keys = (
+            "amount",
+            "amount_aggregated",
+            "amount_opened",
+            "amount_opened_aggregated",
+            "value",
+            "is_aggregated_amount",
+            "due_type",
+        )
+        relevant = {parent, *children}
+        states.append(
+            {
+                row["product"]["name"]: {key: row[key] for key in keys}
+                for row in overview
+                if row["product_id"] in relevant
+            }
+        )
+        volatile = app.get("/api/stock/volatile").json()
+        states.append(
+            {
+                kind: sorted(
+                    row["product"]["name"]
+                    for row in rows
+                    if int(row.get("product_id", row.get("id"))) in relevant
+                )
+                for kind, rows in volatile.items()
+            }
+        )
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]
