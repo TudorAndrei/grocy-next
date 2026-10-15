@@ -55,3 +55,7 @@ Revision 0016 removes 36 project foreign keys across 15 native tables. Grocy 4.5
 The revision also installs nine pinned native validation and default triggers. Recipe ingredient units become nullable. Meal section names become unique. A database without the required default meal section receives row -1 with its native name and sort number. Existing rows, counters, custom constraints, views, indexes, and triggers remain saved.
 
 Duplicate meal section names from an earlier project version can make revision 0016 fail. The failed copy restores the full original database, including its revision and ID counters. Resolve duplicate names through the previous application version before you repeat the upgrade. The default meal section cannot be deleted, as in Grocy.
+
+Revision 0017 adds missing unique indexes for equipment names, shopping list names, and recipe nesting pairs. It recognizes existing unique constraints and full unique indexes with matching key columns. It keeps all table data, counters, views, triggers, and custom constraints. It does not copy tables.
+
+Earlier project versions could save duplicates under these keys. Such duplicates make the upgrade fail. The transaction removes any indexes added earlier in the failed upgrade and restores the original revision. Resolve duplicate names or recipe nesting pairs through the previous application version before you repeat the upgrade. The upgrade does not delete or merge those records.
