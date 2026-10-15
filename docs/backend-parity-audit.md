@@ -287,3 +287,23 @@ The Linux image passed 69 HTTP cases on each of a new database and a saved revis
 The final image is `sha256:4d8cf9e5b0c960f7c0e8f10c5542aaea883df8d03fb35777e45f580fb0612139`. The wheel retains all 466 vendor files, all 22 Grocy core files from the release archive, and all five PHP adapter files. PHP syntax checks passed. Separate route declarations remove duplicate API operation IDs. The final route and file selection passed 31 tests and skipped 25 reference-only cases. Browser checks confirmed native manual upload, saved file bytes, native manual download, and download from the old equipment group without an error.
 
 This batch needs no database revision. Other write parsing, domain dates, printer errors, and combined permission cases still require work. Full runtime parity remains incomplete.
+
+## Native task and battery actions
+
+Task completion and undo, battery charging and undo, and battery details now execute the original Grocy controllers and services. Requests retain their raw JSON and Content-Type header. Native PHP handles date validation, numeric ID conversion, errors, and response bytes. A date in year 0000 remains in storage and in the battery details response.
+
+The original `User` class checks permissions through the application connection. Each action owns a PHP process with its authenticated user ID as Grocy's current-user constant. Authentication still selects the application API key. The native controller decides when to check permissions and which errors to catch. The action process stops before the request returns. PHP workers use `TZ` when it is set, so fallback timestamps use the same server time zone as Python.
+
+All 21 new cases passed on Grocy before the repair. Nineteen failed on the former backend. The cases cover malformed JSON, null bodies, exact Content-Type rules, nested time values, numeric ID forms, undo state, year 0000, battery details, and ignored battery fields. The existing restricted-user workflow now also checks native permission messages, diagnostic fields, and CORS headers. The worker lifecycle case checks that a completed task action leaves no child process running.
+
+The first focused run passed 110 comparisons. The extended action and permission checks passed 44 comparisons in Europe/Bucharest. Ruff and basedpyright passed.
+
+The first Linux HTTP run found that battery undo retained a temporary `null` response body after setting status 204. Grocy's HTTP emitter suppresses that body. The adapter now applies the same rule for statuses 204, 205, and 304. The action ID case checks an empty undo body and then reads the saved undone record through the same connection. The final Linux image passed all 56 selected HTTP cases on both a new database and a saved revision 0020 database. All original core rows and allocation counters remained equal. Restart retained the complete state. All 45 source views and 54 source triggers retained their definitions and order.
+
+The local suite also found that PHP used UTC when `TZ` was absent on a machine with another system time zone. The worker now uses the existing `server_timezone` function for its PHP configuration. All 34 local time and worker checks passed after this repair. Before the final worker argument change, the full comparison suite passed 1,126 tests and skipped one disabled-feature case in each time zone. The final Europe/Bucharest action selection then passed 110 comparisons. The disabled-feature profile passed both cases in each zone.
+
+The final Linux image is `sha256:d3b7d9d589ae642b820ccab7730db5a9b9d6a4fe0342e99abeb706b67c150191`. It passed native user context, year 0000, empty undo response, process cleanup, CLI initialization, import, saved custom trigger, BLOB, and all 469 vendor checksum checks. The wheel retains those files, all 24 Grocy core files from the release archive, all six PHP adapter files, and the final Python worker arguments. Git also retains the original vendor bytes. PHP syntax checks passed.
+
+The local full run passed 655 tests and skipped 582 reference or feature-profile cases. Its one failure came from the revision 0013 test setup, which called the current battery handler before installing native permission views. That fixture now stores the old charge record directly. After the upgrade, the current API reads its exact saved timestamp and charge count. All six allocation and upgrade cases passed after this fixture repair. The complete integration and unit selection then passed all 111 tests.
+
+This batch needs no database revision. Other household, stock, recipe, and user writes, other domain dates, printer errors, and further combined permission cases still require work. Full runtime parity remains incomplete.

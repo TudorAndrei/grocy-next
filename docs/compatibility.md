@@ -65,6 +65,8 @@ Grocy 4.5.0 uses the last logged execution in its weekly schedule query, includi
 
 Task completion and battery tracking use the exact timestamp form `YYYY-MM-DD HH:MM:SS`. Other scalar forms use the current time. Chores also accept `YYYY-MM-DD`. Stored dates keep that precision unless the chore's date-only setting requires a midnight timestamp. Import and startup upgrade preserve both forms. Chore frequency uses the same SQLite calculation and integer truncation as Grocy, including its floating point effects.
 
+Task completion and undo, battery charging and undo, and battery details execute the unchanged native controllers and services. They retain PHP request parsing, numeric ID conversion, year 0000 dates, errors, and JSON bytes. The native permission checks run at the original controller boundary. Each action has its own PHP current-user constant and uses the application database. `TZ` sets the server time zone for both runtimes.
+
 Purchase comparisons cover supplied purchase dates, price history, weighted prices, stock value, average shelf life, and calculated price and barcode records. Grocy's average price view uses integer division when all amounts and prices are integers. This API uses that same rule. Decimal input keeps decimal division.
 
 Stock entry edits return an old booking and a new booking. Undo restores the prior entry. Undo checks later linked bookings. An entry edit can be undone after an unlinked consumption, as in Grocy 4.5.0. Price caches keep their last value when an undo leaves no calculated price row, as in Grocy 4.5.0.
