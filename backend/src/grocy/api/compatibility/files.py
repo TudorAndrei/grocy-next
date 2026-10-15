@@ -1,7 +1,10 @@
+import base64
+import binascii
 import io
 import mimetypes
 import os
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 from typing import Annotated
 
@@ -17,6 +20,21 @@ router = APIRouter(tags=["files"])
 
 
 def _file_path(group: str, file_name: str) -> Path:
+    if group not in {
+        "equipmentmanuals",
+        "recipepictures",
+        "productpictures",
+        "userfiles",
+        "userpictures",
+        "equipment",
+        "nutrition",
+    }:
+        raise GrocyError("Invalid file group")
+    # Plain names support existing Grocy Next clients.
+    with suppress(binascii.Error, UnicodeDecodeError, ValueError):
+        file_name = base64.b64decode(file_name + "=" * (-len(file_name) % 4), validate=True).decode(
+            "utf-8"
+        )
     root = get_settings().files_root.resolve()
     for part in (group, file_name):
         if part in {"", ".", ".."} or any(c in part for c in ("/", "\\", "\x00")):
@@ -27,7 +45,7 @@ def _file_path(group: str, file_name: str) -> Path:
     return path
 
 
-@router.get("/api/files/{group}/{file_name}")
+@router.get("/api/files/{group}/{file_name:path}")
 async def get_file(
     group: str,
     file_name: str,
@@ -39,7 +57,7 @@ async def get_file(
     path = _file_path(group, file_name)
     if not path.is_file():
         raise NotFoundError("File not found")
-    media_type = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     if force_serve_as not in {
         None,
         "picture",
@@ -83,13 +101,13 @@ async def get_file(
         )
     return FileResponse(
         path,
-        filename=file_name,
+        filename=path.name,
         media_type=force_serve_as or media_type,
         headers={"X-Content-Type-Options": "nosniff"},
     )
 
 
-@router.put("/api/files/{group}/{file_name}", status_code=204)
+@router.put("/api/files/{group}/{file_name:path}", status_code=204)
 async def put_file(group: str, file_name: str, request: Request, _actor: CurrentActor) -> Response:
     path = _file_path(group, file_name)
     limit = get_settings().max_upload_bytes
@@ -109,10 +127,10 @@ async def put_file(group: str, file_name: str, request: Request, _actor: Current
     return Response(status_code=204)
 
 
-@router.delete("/api/files/{group}/{file_name}", status_code=204)
+@router.delete("/api/files/{group}/{file_name:path}", status_code=204)
 async def delete_file(group: str, file_name: str, _actor: CurrentActor) -> Response:
     path = _file_path(group, file_name)
     if not path.is_file():
-        raise NotFoundError("File not found")
+        return Response(status_code=204)
     await run_in_threadpool(path.unlink)
     return Response(status_code=204)

@@ -1,9 +1,10 @@
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
+from grocy.api.compatibility.filtering import filter_rows
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import RecipesSvc
 
@@ -19,11 +20,12 @@ class RecipeCreateBody(BaseModel):
 
 @router.get("/api/recipes/fulfillment")
 async def recipes_fulfillment(
+    request: Request,
     _actor: CurrentActor,
     recipes: RecipesSvc,
 ) -> list[dict[str, Any]]:
     rows = await recipes.list_recipes()
-    return [await recipes.fulfillment(row.id) for row in rows]
+    return filter_rows([await recipes.fulfillment(row.id) for row in rows], request.query_params)
 
 
 @router.get("/api/recipes/{recipe_id}/fulfillment")

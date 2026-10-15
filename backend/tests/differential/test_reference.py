@@ -38,6 +38,189 @@ def create(client, entity: str, body: dict) -> int:
     return int(response.json()["created_object_id"])
 
 
+def test_reference_file_names_binary_content_and_deletion(
+    client: TestClient, api_headers: dict, reference, tmp_path, monkeypatch
+):
+    import base64
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    client.headers.update(api_headers)
+    filename = f"Manual-{uuid4().hex[:8]}.txt"
+    encoded = base64.b64encode(filename.encode()).decode()
+    path = f"/api/files/equipmentmanuals/{encoded}"
+    for app in (reference, client):
+        assert (
+            app.put(
+                path,
+                content=b"Household manual\n",
+                headers={"Content-Type": "application/octet-stream"},
+            ).status_code
+            == 204
+        )
+        response = app.get(path)
+        assert response.status_code == 200
+        assert response.content == b"Household manual\n"
+        assert response.headers["content-type"].startswith("text/plain")
+        assert filename in response.headers["content-disposition"]
+        assert app.delete(path).status_code == 204
+        assert app.get(path).status_code == 404
+        assert app.delete(path).status_code == 204
+    assert not (tmp_path / "equipmentmanuals" / filename).exists()
+
+
+def test_reference_calendar_stock_tasks_schedules_and_meal_sections(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    name = f"Calendar{uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {"name": name, "location_id": location, "qu_id_stock": unit, "qu_id_purchase": unit},
+        )
+        assert (
+            app.post(
+                f"/api/stock/products/{product}/add",
+                json={"amount": 1, "best_before_date": "2027-01-01"},
+            ).status_code
+            == 200
+        )
+        create(app, "tasks", {"name": name, "due_date": "2027-01-02 12:00:00"})
+        create(
+            app,
+            "chores",
+            {
+                "name": name,
+                "period_type": "daily",
+                "period_interval": 1,
+                "start_date": "2027-01-03 08:30:00",
+                "track_date_only": 1,
+            },
+        )
+        battery = create(app, "batteries", {"name": name, "charge_interval_days": 7})
+        assert (
+            app.post(
+                f"/api/batteries/{battery}/charge", json={"tracked_time": "2027-01-01 12:00:00"}
+            ).status_code
+            == 200
+        )
+        recipe = create(app, "recipes", {"name": name})
+        section = create(app, "meal_plan_sections", {"name": "Evening", "time_info": "18:15"})
+        for kind, fields in (
+            ("recipe", {"recipe_id": recipe, "recipe_servings": 1}),
+            ("product", {"product_id": product, "product_amount": 1, "product_qu_id": unit}),
+            ("note", {"note": name}),
+        ):
+            create(
+                app,
+                "meal_plan",
+                {"day": "2027-01-04", "type": kind, "section_id": section, **fields},
+            )
+        response = app.get("/api/calendar/ical")
+        assert response.status_code == 200
+        events = []
+        for block in response.text.replace("\r\n ", "").replace("\n ", "").split("BEGIN:VEVENT"):
+            lines = block.splitlines()
+            summary = next(
+                (line.partition(":")[2] for line in lines if line.startswith("SUMMARY:")), ""
+            )
+            if name not in summary:
+                continue
+            start = next(line for line in lines if line.startswith("DTSTART"))
+            events.append(
+                (summary, "VALUE=DATE" in start, start.partition(":")[2].removesuffix("Z"))
+            )
+        snapshots.append(sorted(events))
+    assert snapshots[0] == snapshots[1]
+    assert len(snapshots[0]) == 7
+
+
+@pytest.mark.parametrize(
+    "kind", ["users", "recipes", "product-locations", "product-entries", "location-entries"]
+)
+def test_reference_list_filters_order_and_paging(
+    client: TestClient, api_headers: dict, reference, kind: str
+):
+    client.headers.update(api_headers)
+    for app in (reference, client):
+        name = f"Filter{uuid4().hex[:8]}"
+        if kind == "users":
+            for suffix in "ABC":
+                assert (
+                    app.post(
+                        "/api/users",
+                        json={"username": f"{name}{suffix}", "password": "test-password"},
+                    ).status_code
+                    == 204
+                )
+            path, query, field, expected = "/api/users", f"username~{name}", "username", f"{name}B"
+        elif kind == "recipes":
+            ids = [create(app, "recipes", {"name": f"{name}{suffix}"}) for suffix in "ABC"]
+            path, query, field, expected = (
+                "/api/recipes/fulfillment",
+                f"recipe_id>={min(ids)}",
+                "recipe_id",
+                ids[1],
+            )
+        else:
+            unit = create(app, "quantity_units", {"name": name})
+            location = create(app, "locations", {"name": name})
+            product = create(
+                app,
+                "products",
+                {
+                    "name": name,
+                    "location_id": location,
+                    "qu_id_stock": unit,
+                    "qu_id_purchase": unit,
+                },
+            )
+            for number in (1, 2, 3):
+                target_location, target_product = location, product
+                if kind == "product-locations":
+                    target_location = create(app, "locations", {"name": f"{name}{number}"})
+                if kind == "location-entries":
+                    target_product = create(
+                        app,
+                        "products",
+                        {
+                            "name": f"{name}{number}",
+                            "location_id": location,
+                            "qu_id_stock": unit,
+                            "qu_id_purchase": unit,
+                        },
+                    )
+                assert (
+                    app.post(
+                        f"/api/stock/products/{target_product}/add",
+                        json={"amount": number, "price": number, "location_id": target_location},
+                    ).status_code
+                    == 200
+                )
+            suffix = "locations" if kind == "product-locations" else "entries"
+            path = (
+                f"/api/stock/locations/{location}/entries"
+                if kind == "location-entries"
+                else f"/api/stock/products/{product}/{suffix}"
+            )
+            query, field, expected = "amount>=1", "amount", 2
+            if kind == "product-locations":
+                query = f"location_name~{name}"
+        response = app.get(
+            path, params={"query[]": query, "order": f"{field}:desc", "offset": 1, "limit": 1}
+        )
+        assert response.status_code == 200, response.text
+        rows = response.json()
+        assert len(rows) == 1
+        assert rows[0][field] == expected
+
+
 def test_reference_custom_fields_declared_values_and_record_types(
     client: TestClient, api_headers: dict, reference
 ):

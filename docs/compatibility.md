@@ -38,7 +38,7 @@ GROCY_REFERENCE_DISPOSABLE=1 \
 uv run pytest tests/differential
 ```
 
-The suite creates records in the reference database. It compares stock purchases, consumption, recipe fulfillment, recipe consumption, task completion times, task assignments, chore schedules, skipped executions, rescheduling, charge counts, undo, and household labels. It verifies the reference version before it writes. Use a fresh reference database for each run. Disable physical printing in the reference with `LABEL_PRINTER_RUN_SERVER=false`.
+The suite creates records in the reference database. It compares stock purchases, consumption, recipe fulfillment, recipe consumption, task completion times, task assignments, chore schedules, skipped executions, rescheduling, charge counts, undo, and household labels. It also checks preferences, custom fields, list filters, calendar events, and binary file storage. It verifies the reference version before it writes. Use a fresh reference database for each run. Disable physical printing in the reference with `LABEL_PRINTER_RUN_SERVER=false`.
 
 The normal suite also uses 14 schedule cases from the pinned Grocy SQLite view. These cases cover hourly, daily, weekly, monthly, yearly, adaptive, manual, and rollover schedules. To regenerate the stored results from a Grocy v4.5.0 source checkout:
 
@@ -66,6 +66,8 @@ Route and entity coverage does not prove complete upstream behavior parity. The 
 Calculated view fields and row IDs follow the pinned SQLite definitions. Import checks compared all six exposed SQLite views with the reference database. Purchase price caches are stored and imported. Domain services implement writes. Internal recipe caches and other upstream triggers are not imported as active behavior.
 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
+
+File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
 Stock label modes follow the pinned OpenAPI values: 1 for no label, 2 for one label, and 3 for one label per unit. Upstream PHP uses 0, 1, and 2 for these modes. Per-unit bookings share a transaction ID and preserve fractional remainders. Stock counts also accept a purchase date and use the same receipt rules.
 

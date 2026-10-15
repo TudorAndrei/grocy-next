@@ -5,9 +5,10 @@ import secrets
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from sqlalchemy import delete, select
 
+from grocy.api.compatibility.filtering import filter_rows
 from grocy.compatibility import client_defaults
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
@@ -172,9 +173,11 @@ async def delete_user_setting(
 
 
 @router.get("/api/users")
-async def list_users(_actor: CurrentActor, session: DbSession) -> list[dict[str, Any]]:
+async def list_users(
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, Any]]:
     rows = (await session.execute(select(User).order_by(User.id))).scalars().all()
-    return [_serialize_user(row) for row in rows]
+    return filter_rows([_serialize_user(row) for row in rows], request.query_params)
 
 
 @router.post("/api/users", status_code=204)

@@ -75,6 +75,16 @@ def test_file_storage_is_bounded_and_rejects_escape(
         == 400
     )
     assert not (tmp_path / "escaped.txt").exists()
+    import base64
+
+    for invalid in ("../escaped.txt", "/absolute.txt", "nested/file.txt"):
+        encoded = base64.b64encode(invalid.encode()).decode()
+        assert (
+            client.put(
+                f"/api/files/equipment/{encoded}", headers=api_headers, content=b"bad"
+            ).status_code
+            == 400
+        )
     assert client.delete(path, headers=api_headers).status_code == 204
     assert client.get(path, headers=api_headers).status_code == 404
 
@@ -92,7 +102,7 @@ def test_calendar_subscription_is_scoped_and_escaped(client: TestClient, api_hea
     link = client.get("/api/calendar/ical/sharing-link", headers=api_headers).json()["url"]
     calendar = client.get(link)
     assert calendar.status_code == 200
-    assert "SUMMARY:Check\\, shelves\\nBEGIN:VEVENT\r\n" in calendar.text
+    assert "SUMMARY:Task due: Check\\, shelves\\nBEGIN:VEVENT\r\n" in calendar.text
     assert all(len(line.encode()) <= 75 for line in calendar.text.split("\r\n"))
     secret = link.split("secret=", 1)[1]
     assert client.get("/api/stock", headers={"GROCY-API-KEY": secret}).status_code == 401

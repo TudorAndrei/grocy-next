@@ -1,5 +1,5 @@
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 
 from fastapi import APIRouter, Request, Response
 from sqlalchemy import select
@@ -8,10 +8,11 @@ from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.db.models.catalog import Product
 from grocy.db.models.household import Task
-from grocy.db.models.mealplan import MealPlanEntry
+from grocy.db.models.mealplan import MealPlanEntry, MealPlanSection
 from grocy.db.models.recipes import Recipe
 from grocy.db.models.users import ApiKey
 from grocy.domains.household.service import HouseholdService
+from grocy.domains.stock.service import StockService
 
 router = APIRouter(tags=["calendar"])
 
@@ -65,12 +66,35 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
         elif meal.product_id:
             product = await session.get(Product, meal.product_id)
             title = product.name if product else title
+        section = await session.get(MealPlanSection, meal.section_id) if meal.section_id else None
+        clock = (section.time_info or section.time_hms) if section else None
+        start = f"DTSTART;VALUE=DATE:{meal.day.strftime('%Y%m%d')}"
+        if clock:
+            try:
+                scheduled = datetime.combine(meal.day, time.fromisoformat(clock))
+                start = f"DTSTART:{scheduled.strftime('%Y%m%dT%H%M%S')}"
+            except ValueError:
+                pass
+        prefix = {
+            "recipe": "Meal plan recipe",
+            "product": "Meal plan product",
+            "note": "Meal plan note",
+        }.get(meal.type, "Meal plan")
+        title = f"{prefix}: {section.name + ': ' if section else ''}{title}"
         event(
             f"meal-plan-{meal.id}",
-            f"DTSTART;VALUE=DATE:{meal.day.strftime('%Y%m%d')}",
+            start,
             title,
             meal.note or "",
         )
+    for stock in await StockService(session).current_stock():
+        due = stock["best_before_date"]
+        if due and stock["amount"] > 0:
+            event(
+                f"product-{stock['product_id']}",
+                f"DTSTART;VALUE=DATE:{str(due).replace('-', '')}",
+                f"Product due: {stock['product']['name']}",
+            )
     tasks = (
         (await session.execute(select(Task).where(Task.due_date.is_not(None), Task.done == 0)))
         .scalars()
@@ -80,18 +104,26 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
         if task.due_date:
             event(
                 f"task-{task.id}",
-                f"DTSTART:{task.due_date.strftime('%Y%m%dT%H%M%S')}",
-                task.name,
+                f"DTSTART;VALUE=DATE:{task.due_date.strftime('%Y%m%d')}",
+                f"Task due: {task.name}",
                 task.description or "",
             )
     household = HouseholdService(session)
     for chore in await household.list_chores():
         due = chore["next_estimated_execution_time"]
         if due and not due.startswith("2999-"):
+            scheduled = datetime.fromisoformat(due)
+            start = f"DTSTART:{scheduled.strftime('%Y%m%dT%H%M%S')}"
+            if chore["track_date_only"]:
+                start = f"DTSTART;VALUE=DATE:{scheduled.strftime('%Y%m%d')}"
+            title = f"Chore due: {chore['name']}"
+            assigned = chore.get("next_execution_assigned_user")
+            if assigned:
+                title += f" (assigned to {assigned['display_name']})"
             event(
                 f"chore-{chore['id']}",
-                f"DTSTART:{datetime.fromisoformat(due).strftime('%Y%m%dT%H%M%S')}",
-                chore["name"],
+                start,
+                title,
             )
     for battery in await household.list_batteries():
         due = battery["next_estimated_charge_time"]
@@ -99,7 +131,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
             event(
                 f"battery-{battery['id']}",
                 f"DTSTART:{datetime.fromisoformat(due).strftime('%Y%m%dT%H%M%S')}",
-                f"Charge {battery['name']}",
+                f"Battery charge cycle due: {battery['name']}",
             )
     lines.append("END:VCALENDAR")
     return Response(
