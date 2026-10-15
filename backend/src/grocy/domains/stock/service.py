@@ -83,7 +83,7 @@ class StockService:
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
-        product = await self.products.get(product_id)
+        product = await self.products.get_active(product_id)
         if transaction_type not in {"purchase", "inventory-correction", "self-production"}:
             raise GrocyError("Invalid purchase transaction type")
         if product.enable_tare_weight_handling and not exact_amount:
@@ -180,7 +180,7 @@ class StockService:
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
-        product = await self.products.get(product_id)
+        product = await self.products.get_active(product_id)
         if transaction_type not in {"consume", "inventory-correction"}:
             raise GrocyError("Invalid consume transaction type")
         if product.enable_tare_weight_handling and not exact_amount:
@@ -276,7 +276,7 @@ class StockService:
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
-        product = await self.products.get(product_id)
+        product = await self.products.get_active(product_id)
         if product.disable_open:
             raise GrocyError("Product cannot be opened")
         if product.enable_tare_weight_handling:
@@ -400,7 +400,7 @@ class StockService:
             )
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
-        product = await self.products.get(product_id)
+        product = await self.products.get_active(product_id)
         if product.enable_tare_weight_handling:
             raise GrocyError("Cannot transfer a tare weight product")
         source = await self.session.get(Location, location_id_from)
@@ -527,7 +527,7 @@ class StockService:
     ) -> dict:
         if not new_amount.is_finite() or new_amount < 0:
             raise GrocyError("new amount must be non-negative", code="invalid_amount")
-        product = await self.products.get(product_id)
+        product = await self.products.get_active(product_id)
         if product.enable_tare_weight_handling:
             new_amount -= product.tare_weight
             if new_amount < 0:
@@ -646,7 +646,7 @@ class StockService:
     async def product_details(self, product_id: int) -> dict:
         from grocy.db.models.catalog import QuantityUnit
 
-        product = await self.products.get(product_id)
+        product = await self.products.get_active(product_id)
         overview = (
             (
                 await self.session.execute(
@@ -911,7 +911,7 @@ class StockService:
     async def price_history(self, product_id: int) -> list[dict]:
         from grocy.db.models.catalog import ShoppingLocation
 
-        await self.products.get(product_id)
+        await self.products.get_active(product_id)
         logs = list(
             (
                 await self.session.execute(
@@ -950,8 +950,8 @@ class StockService:
         _ = actor
         if keep_id == remove_id:
             raise GrocyError("keep and remove product must differ", code="invalid_merge")
-        keep = await self.products.get(keep_id)
-        remove = await self.products.get(remove_id)
+        keep = await self.products.get_active(keep_id)
+        remove = await self.products.get_active(remove_id)
         raw_factor = await self.session.scalar(
             text(
                 "SELECT factor FROM quantity_unit_conversions_resolved "

@@ -6,7 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from grocy.core.errors import NotFoundError
+from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.models.catalog import Product, ProductBarcode
 from grocy.db.models.stock import StockEntry
 from grocy.domains.products.barcodes import parse_product_code
@@ -47,6 +47,15 @@ class ProductsService:
         product = (await self.session.execute(stmt)).scalars().first()
         if product is None:
             raise NotFoundError(f"Product {product_id} not found")
+        return product
+
+    async def get_active(self, product_id: int) -> Product:
+        try:
+            product = await self.get(product_id)
+        except NotFoundError as exc:
+            raise GrocyError("Product does not exist") from exc
+        if not product.active:
+            raise GrocyError("Product does not exist")
         return product
 
     async def search(self, query: str, *, limit: int = 25) -> list[Product]:

@@ -140,6 +140,130 @@ def test_text_filters_keep_leading_zeros(api, catalog):
     assert response.json() == []
 
 
+def test_user_dto_shapes_and_permission_row_ids(api):
+    response = api.get("/api/user")
+    assert response.status_code == 200
+    current = response.json()
+    assert isinstance(current, list) and len(current) == 1
+    name = uuid4().hex
+    assert api.post("/api/users", json={"username": name, "password": "keep"}).status_code == 204
+    users = api.get("/api/users", params={"query[]": f"username={name}"}).json()
+    assert len(users) == 1
+    user = users[0]
+    assert user["first_name"] is None
+    assert user["last_name"] is None
+    assert user["picture_file_name"] is None
+    assert user["display_name"] == name
+    permissions = api.get(f"/api/users/{user['id']}/permissions").json()
+    assert len(permissions) == 1
+    assert permissions[0]["permission_id"] == 1
+    assert permissions[0]["user_id"] == user["id"]
+    assert isinstance(permissions[0]["id"], int)
+
+
+@pytest.mark.parametrize(
+    ("method", "suffix", "body"),
+    [
+        ("GET", "", None),
+        ("GET", "/price-history", None),
+        ("POST", "/add", {"amount": 1}),
+        ("POST", "/consume", {"amount": 1}),
+        ("POST", "/open", {"amount": 1}),
+        ("POST", "/inventory", {"new_amount": 3}),
+        ("POST", "/transfer", {"amount": 1}),
+    ],
+)
+def test_inactive_products_reject_stock_actions(api, catalog, method, suffix, body):
+    product, _, _, location = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    assert api.put(f"/api/objects/products/{product}", json={"active": 0}).status_code == 204
+    assert api.get(f"/api/objects/products/{product}").json()["active"] == 0
+    assert api.get(path + "/entries").status_code == 200
+    if suffix == "/transfer":
+        destination = create(api, "locations", name=uuid4().hex)
+        body = {**body, "location_id_from": location, "location_id_to": destination}
+    response = api.request(method, path + suffix, json=body)
+    assert response.status_code == 400, response.text
+
+
+def test_chore_consumption_uses_gross_tare_amount(api, catalog):
+    product, *_ = catalog
+    assert (
+        api.put(
+            f"/api/objects/products/{product}",
+            json={"enable_tare_weight_handling": 1, "tare_weight": 100},
+        ).status_code
+        == 204
+    )
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 1100}).status_code == 200
+    chore = create(
+        api,
+        "chores",
+        name=uuid4().hex,
+        period_type="manually",
+        consume_product_on_execution=1,
+        product_id=product,
+        product_amount=600,
+    )
+    response = api.post(f"/api/chores/{chore}/execute", json={})
+    assert response.status_code == 200, response.text
+    assert api.get(path).json()["stock_amount"] == 500
+
+
+@pytest.mark.parametrize(
+    "entity,action,log_entity",
+    [
+        ("chores", "execute", "chores_log"),
+        ("batteries", "charge", "battery_charge_cycles"),
+    ],
+)
+def test_household_actions_return_the_stored_log(api, entity, action, log_entity):
+    item = create(
+        api, entity, name=uuid4().hex, **({"period_type": "manually"} if entity == "chores" else {})
+    )
+    response = api.post(
+        f"/api/{entity}/{item}/{action}",
+        json={"tracked_time": "2027-02-03 14:15:16"},
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    stored = api.get(f"/api/objects/{log_entity}/{payload['id']}").json()
+    stored.pop("userfields", None)
+    assert payload == stored
+
+
+def test_least_done_assignment_breaks_ties_by_user_id(api):
+    ids = []
+    for prefix in ("Z", "A"):
+        username = prefix + uuid4().hex
+        assert (
+            api.post("/api/users", json={"username": username, "password": "test"}).status_code
+            == 204
+        )
+        ids.append(
+            api.get("/api/users", params={"query[]": f"username={username}"}).json()[0]["id"]
+        )
+    chore = create(
+        api,
+        "chores",
+        name=uuid4().hex,
+        period_type="manually",
+        assignment_type="who-least-did-first",
+        assignment_config=",".join(map(str, ids)),
+    )
+    response = api.post(
+        "/api/chores/executions/calculate-next-assignments", json={"chore_id": chore}
+    )
+    assert response.status_code == 204, response.text
+    result = api.get(f"/api/chores/{chore}").json()
+    assigned = result["next_execution_assigned_user"]
+    assert assigned["id"] == ids[0]
+    users = api.get("/api/users", params={"query[]": f"id={ids[0]}"}).json()
+    assert assigned == users[0]
+
+
 def test_stock_unit_change_converts_history_and_undo(api, catalog):
     product, unit, other, _ = catalog
     create(api, "quantity_unit_conversions", from_qu_id=unit, to_qu_id=other, factor=10)

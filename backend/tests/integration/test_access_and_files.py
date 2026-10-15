@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 
 def test_permissions_keys_and_mcp_use_stored_identity(
-    client: TestClient, api_headers: dict, monkeypatch
+    client: TestClient, api_headers: dict, monkeypatch, tmp_path: Path
 ):
     from grocy.core.config import get_settings
 
@@ -18,6 +18,15 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     key = client.post("/api/v2/api-keys", headers=api_headers, json={"user_id": user_id}).json()
     headers = {"GROCY-API-KEY": key["api_key"]}
     assert client.get("/api/stock", headers=headers).status_code == 403
+    assert client.get("/api/system/config", headers=headers).status_code == 200
+    import base64
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    encoded = base64.b64encode(b"manual.txt").decode()
+    path = f"/api/files/equipmentmanuals/{encoded}"
+    assert client.put(path, headers=headers, content=b"Manual").status_code == 204
+    assert client.get(path, headers=headers).content == b"Manual"
+    assert client.delete(path, headers=headers).status_code == 204
     grant = client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": [7]}
     )
@@ -43,7 +52,7 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     )
     assert response.status_code == 422
     assert client.get("/api/users/1/permissions", headers=api_headers).json() == [
-        {"permission_id": 1, "user_id": 1},
+        {"id": 1, "permission_id": 1, "user_id": 1},
     ]
     client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": []}
@@ -154,7 +163,7 @@ def test_user_defaults_and_operation_permissions(client: TestClient, api_headers
     user = next(row for row in client.get("/api/users").json() if row["username"] == "Profile user")
     user_id = user["id"]
     assert client.get(f"/api/users/{user_id}/permissions").json() == [
-        {"user_id": user_id, "permission_id": 1}
+        {"id": 2, "user_id": user_id, "permission_id": 1}
     ]
     key = client.post("/api/v2/api-keys", json={"user_id": user_id}).json()["api_key"]
     headers = {"GROCY-API-KEY": key}
@@ -168,7 +177,7 @@ def test_user_defaults_and_operation_permissions(client: TestClient, api_headers
         ).status_code
         == 204
     )
-    assert client.get("/api/user", headers=headers).json()["first_name"] == "Updated"
+    assert client.get("/api/user", headers=headers).json()[0]["first_name"] == "Updated"
     assert (
         client.put("/api/users/1", headers=headers, json={"first_name": "Wrong user"}).status_code
         == 403
@@ -213,7 +222,7 @@ async def test_empty_profile_password_preserves_stored_password(
         user = await session.scalar(select(User).where(User.username == "Password user"))
         assert user is not None
         user_id, password = user.id, user.password
-    for value in ("", None):
+    for value in ("", None, "0"):
         assert (
             client.put(
                 f"/api/users/{user_id}", json={"password": value, "first_name": "Updated"}

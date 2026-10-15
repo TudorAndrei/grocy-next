@@ -154,7 +154,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
             "value": None
         }
         assert upgraded.get("/api/users/1/permissions", headers=headers).json() == [
-            {"permission_id": 1, "user_id": 1},
+            {"id": 1, "permission_id": 1, "user_id": 1},
         ]
     with sqlite3.connect(database) as connection:
         assert connection.execute(

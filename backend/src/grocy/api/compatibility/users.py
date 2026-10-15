@@ -10,6 +10,7 @@ from sqlalchemy import delete, select
 
 from grocy.api.compatibility.filtering import filter_rows
 from grocy.compatibility import client_defaults
+from grocy.compatibility.users import user_dto
 from grocy.core.auth import CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
@@ -32,20 +33,6 @@ def _username(body: dict[str, Any]) -> str:
     if not value:
         raise GrocyError("Username is required")
     return value
-
-
-def _serialize_user(user: User) -> dict[str, Any]:
-    parts = [user.first_name or "", user.last_name or ""]
-    display = " ".join(part for part in parts if part).strip() or user.username
-    return {
-        "id": user.id,
-        "username": user.username,
-        "first_name": user.first_name or "",
-        "last_name": user.last_name or "",
-        "display_name": display,
-        "picture_file_name": user.picture_file_name or "",
-        "row_created_timestamp": user.row_created_timestamp.isoformat(),
-    }
 
 
 async def _get_user_or_404(session: DbSession, user_id: int) -> User:
@@ -76,9 +63,9 @@ def _setting_text(value: Any) -> str | None:
 
 
 @router.get("/api/user")
-async def get_current_user(actor: CurrentActor, session: DbSession) -> dict[str, Any]:
+async def get_current_user(actor: CurrentActor, session: DbSession) -> list[dict[str, Any]]:
     user = await _get_user_or_404(session, actor.user_id)
-    return _serialize_user(user)
+    return [user_dto(user)]
 
 
 @router.get("/api/user/settings")
@@ -178,7 +165,7 @@ async def list_users(
     request: Request, _actor: CurrentActor, session: DbSession
 ) -> list[dict[str, Any]]:
     rows = (await session.execute(select(User).order_by(User.id))).scalars().all()
-    return filter_rows([_serialize_user(row) for row in rows], request.query_params)
+    return filter_rows([user_dto(row) for row in rows], request.query_params)
 
 
 @router.post("/api/users", status_code=204)
@@ -224,7 +211,7 @@ async def update_user(
         user.first_name = body["first_name"]
     if "last_name" in body:
         user.last_name = body["last_name"]
-    if body.get("password"):
+    if body.get("password") and body["password"] != "0":
         user.password = _hash_password(str(body["password"]))
     if "picture_file_name" in body:
         user.picture_file_name = body["picture_file_name"]
@@ -257,27 +244,20 @@ async def delete_user(
     return Response(status_code=204)
 
 
-def _permission_rows(user_id: int, permission_ids: list[int]) -> list[dict[str, int]]:
-    return [{"permission_id": pid, "user_id": user_id} for pid in permission_ids]
-
-
 @router.get("/api/users/{user_id}/permissions")
 async def get_user_permissions(
     user_id: int, _actor: CurrentActor, session: DbSession
 ) -> list[dict[str, int]]:
-    await _get_user_or_404(session, user_id)
-    ids = list(
-        (
-            await session.execute(
-                select(UserPermission.permission_id)
-                .where(UserPermission.user_id == user_id)
-                .order_by(UserPermission.permission_id)
-            )
+    rows = (
+        await session.scalars(
+            select(UserPermission)
+            .where(UserPermission.user_id == user_id)
+            .order_by(UserPermission.id)
         )
-        .scalars()
-        .all()
-    )
-    return _permission_rows(user_id, ids)
+    ).all()
+    return [
+        {"id": row.id, "permission_id": row.permission_id, "user_id": row.user_id} for row in rows
+    ]
 
 
 @router.post("/api/users/{user_id}/permissions", status_code=204)

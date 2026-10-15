@@ -7,6 +7,7 @@ from itertools import pairwise
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.users import user_dto
 from grocy.core.actor import Actor
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.models.household import (
@@ -116,6 +117,7 @@ class HouseholdService:
                     actor,
                     chore.product_id,
                     chore.product_amount,
+                    exact_amount=False,
                     allow_subproduct_substitution=True,
                     commit=False,
                 )
@@ -133,6 +135,8 @@ class HouseholdService:
             "tracked_time": log.tracked_time.isoformat(),
             "done_by_user_id": log.done_by_user_id,
             "skipped": bool(log.skipped),
+            "undone": log.undone,
+            "undone_timestamp": None,
             "scheduled_execution_time": due,
             "row_created_timestamp": log.row_created_timestamp.isoformat(),
         }
@@ -291,7 +295,7 @@ class HouseholdService:
                     user.id: sum(log.done_by_user_id == user.id for log in logs)
                     for user in candidates
                 }
-                assigned = min(candidates, key=lambda u: counts[u.id]).id
+                assigned = min(candidates, key=lambda u: (counts[u.id], u.id)).id
             else:
                 last_user = logs[-1].done_by_user_id if logs else None
                 index = next((i for i, user in enumerate(candidates) if user.id == last_user), -1)
@@ -314,6 +318,9 @@ class HouseholdService:
             "id": cycle.id,
             "battery_id": battery_id,
             "tracked_time": cycle.tracked_time.isoformat(),
+            "undone": cycle.undone,
+            "undone_timestamp": None,
+            "row_created_timestamp": cycle.row_created_timestamp.isoformat(),
         }
 
     async def undo_battery_charge(self, charge_cycle_id: int) -> dict:
@@ -369,15 +376,7 @@ class HouseholdService:
         user = await self.session.get(User, user_id)
         if user is None:
             return None
-        display = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username
-        return {
-            "id": user.id,
-            "username": user.username,
-            "first_name": user.first_name or "",
-            "last_name": user.last_name or "",
-            "display_name": display,
-            "picture_file_name": user.picture_file_name or "",
-        }
+        return user_dto(user)
 
     def _average_frequency(self, logs: list[ChoreLog]) -> float | None:
         times = sorted({log.tracked_time for log in logs})

@@ -83,7 +83,7 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
     path = request.url.path.removeprefix("/api/")
     action = path.rsplit("/", 1)[-1]
     write = request.method not in {"GET", "HEAD", "OPTIONS"}
-    if path.startswith("v2/mcp") or path == "user" or path.startswith("user/settings"):
+    if path.startswith(("v2/mcp", "user/settings", "files/", "system")) or path == "user":
         return ""
     if path.startswith("v2/api-keys"):
         return "ADMIN"
@@ -187,8 +187,6 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
     ):
         if path.startswith(prefix):
             return permission
-    if path.startswith("system"):
-        return "ADMIN" if action == "config" else ""
     return "MASTER_DATA_EDIT" if write else "STOCK"
 
 
