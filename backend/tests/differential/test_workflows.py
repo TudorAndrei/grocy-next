@@ -2374,6 +2374,9 @@ def test_filtered_input_requires_exact_json_content_type(api, content_type):
         "/api/objects/locations", content=json.dumps({"name": uuid4().hex}), headers=headers
     )
     assert response.status_code == 400, response.text
+    assert set(response.json()) == {"error_message", "error_details"}
+    assert response.json()["error_message"] == "Bad Content-Type"
+    assert set(response.json()["error_details"]) == {"stack_trace", "file", "line"}
     response = api.post(
         "/api/objects/locations", content=b"{}", headers={**headers, "GROCY-API-KEY": "invalid"}
     )
@@ -2420,11 +2423,22 @@ def test_user_fields_and_settings_use_the_same_purifier(api):
     "content",
     [b"{", b'{"name":"value","description":"\\ud800"}', b'{"name":NaN}', b'{"name":"\xff"}'],
 )
-def test_invalid_json_input_returns_grocy_status(api, content):
-    response = api.post(
-        "/api/objects/locations", content=content, headers={"Content-Type": "application/json"}
+@pytest.mark.parametrize("operation", ["create", "edit", "fields"])
+def test_invalid_json_input_returns_grocy_status(api, content, operation):
+    location = create(api, "locations", name=uuid4().hex)
+    method, path = {
+        "create": ("POST", "/api/objects/locations"),
+        "edit": ("PUT", f"/api/objects/locations/{location}"),
+        "fields": ("PUT", f"/api/userfields/locations/{location}"),
+    }[operation]
+    response = api.request(
+        method, path, content=content, headers={"Content-Type": "application/json"}
     )
     assert response.status_code == 400, response.text
+    assert response.json() == {
+        "error_message": "Request body could not be parsed "
+        "(probably invalid JSON format or missing/wrong Content-Type header)"
+    }
     name = uuid4().hex
     location = create(api, "locations", name=name, description='<a href="javascript:x()">Link</a>')
     assert api.get(f"/api/objects/locations/{location}").json()["description"] == "<a>Link</a>"
@@ -2462,6 +2476,11 @@ def test_unparsed_body_follows_each_grocy_handler(api, content, kind, status):
         assert response.status_code == status, response.text
         if kind == "setting":
             assert api.get(path).json()["value"] is None
+        elif kind == "locations":
+            assert response.json() == {
+                "error_message": "Request body could not be parsed "
+                "(probably invalid JSON format or missing/wrong Content-Type header)"
+            }
         elif task is not None:
             assert api.get(f"/api/objects/tasks/{task}").json()["done"] == 0
     finally:
@@ -2547,6 +2566,12 @@ def test_empty_chore_options_keep_the_current_actor_and_default_flags(api):
         ("locationsList", [], None, True),
         (
             "locationsList",
+            [{"name": float("inf")}],
+            "table locations has no column named locations_id",
+            True,
+        ),
+        (
+            "locationsList",
             [{"name": "Child"}],
             "table locations has no column named locations_id",
             True,
@@ -2572,7 +2597,10 @@ def test_native_generic_structures_keep_statement_order(
     name = "structure_" + uuid4().hex
     original = create(api, "locations", name=name + "_old") if method == "put" else None
     path = "/api/objects/locations" + (f"/{original}" if original is not None else "")
-    response = getattr(api, method)(path, json={"name": name, field: value})
+    content = json.dumps({"name": name, field: value}).replace("Infinity", "1e400")
+    response = getattr(api, method)(
+        path, content=content, headers={"Content-Type": "application/json"}
+    )
     if error is None:
         assert response.status_code == (200 if method == "post" else 204), response.text
     else:
@@ -2678,7 +2706,7 @@ def test_native_generic_primary_keys_and_unparsed_timestamps(api):
 
 
 @pytest.mark.parametrize("existing", [False, True])
-@pytest.mark.parametrize("value", [[], {"name": "Child"}, ["Child"]])
+@pytest.mark.parametrize("value", [[], {"name": "Child"}, ["Child"], [float("inf")]])
 def test_native_field_structures_keep_earlier_values(api, custom_field, existing, value):
     prefix = "field_" + uuid4().hex
     first, target, last = [prefix + suffix for suffix in ("first", "target", "last")]
@@ -2687,7 +2715,12 @@ def test_native_field_structures_keep_earlier_values(api, custom_field, existing
     path = "/api/userfields/locations/structured-key"
     if existing:
         assert api.put(path, json={target: "Before"}).status_code == 204
-    response = api.put(path, json={first: "Committed first", target: value, last: "Not reached"})
+    content = json.dumps({first: "Committed first", target: value, last: "Not reached"})
+    response = api.put(
+        path,
+        content=content.replace("Infinity", "1e400"),
+        headers={"Content-Type": "application/json"},
+    )
     assert response.status_code == 400, response.text
     detail = (
         "no such column: value_id"
@@ -2845,3 +2878,37 @@ def test_native_generic_reads_keep_saved_blob_bytes(api, value, valid):
         assert response.json()["error_message"] == (
             "fwrite(): Argument #2 ($data) must be of type string, false given"
         )
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT"])
+@pytest.mark.parametrize("entity", ["unknown", "stock_current", "api_keys"])
+def test_native_entity_guard_precedes_body_parsing(api, method, entity):
+    path = f"/api/objects/{entity}" + ("/9999999" if method == "PUT" else "")
+    response = api.request(method, path, content=b"{", headers={"Content-Type": "text/plain"})
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "Entity does not exist or is not exposed"}
+
+
+@pytest.mark.parametrize("method", ["post", "put"])
+@pytest.mark.parametrize("number", ["1e400", "-1e400"])
+def test_native_nested_nonfinite_numbers_use_lessql_storage(api, method, number):
+    marker = "number_" + uuid4().hex
+    root = create(api, "shopping_list", note=marker + "_old") if method == "put" else None
+    body = (
+        '{"note":"' + marker + '_root","shopping_listList":[{"note":"'
+        + marker + '_child","amount":' + number + '}]}'
+    )
+    path = "/api/objects/shopping_list" + (f"/{root}" if root is not None else "")
+    response = getattr(api, method)(
+        path, content=body, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == (200 if method == "post" else 204), response.text
+    saved = rows(api, "shopping_list", note=marker + "_child")
+    parent = rows(api, "shopping_list", note=marker + "_root")
+    assert len(saved) == len(parent) == 1
+    assert saved[0]["amount"] == 0
+    assert saved[0]["shopping_list_id"] == parent[0]["id"]
+    if method == "post":
+        assert response.json() == {"created_object_id": str(saved[0]["id"])}
+    else:
+        assert parent[0]["id"] == root

@@ -3,14 +3,13 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 from sqlalchemy.exc import DBAPIError
 
-from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
 from grocy.api.compatibility.responses import native_response
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
 
-router = APIRouter(tags=["objects"], route_class=CompatibilityRoute)
+router = APIRouter(tags=["objects"])
 
 
 @router.get("/api/objects/{entity}")
@@ -27,17 +26,18 @@ async def list_objects(
 
 
 @router.post("/api/objects/{entity}")
-@filtered_body()
 async def create_object(
     entity: str,
-    body: dict[str, Any],
     request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> dict[str, Any]:
     try:
         result = await GenericObjectsService(session).create_entity(
-            entity, body, request.app.state.input_purifier
+            entity,
+            await request.body(),
+            request.app.state.input_purifier,
+            ", ".join(request.headers.getlist("content-type")),
         )
     except DBAPIError as error:
         await session.rollback()
@@ -60,18 +60,20 @@ async def get_object(
 
 
 @router.put("/api/objects/{entity}/{object_id}", status_code=204)
-@filtered_body()
 async def update_object(
     entity: str,
     object_id: str,
-    body: dict[str, Any],
     request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
     try:
         await GenericObjectsService(session).update_entity(
-            entity, object_id, body, request.app.state.input_purifier
+            entity,
+            object_id,
+            await request.body(),
+            request.app.state.input_purifier,
+            ", ".join(request.headers.getlist("content-type")),
         )
     except DBAPIError as error:
         await session.rollback()

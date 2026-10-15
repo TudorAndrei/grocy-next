@@ -131,8 +131,9 @@ class GenericObjectsService:
         entity: str,
         method: str,
         object_id: int | str | None,
-        payload: dict[str, Any],
+        payload: bytes,
         runtime: InputPurifier,
+        content_type: str,
     ) -> dict[str, Any]:
         self._require_writable(entity, deleting=method == "DELETE")
         result = await runtime.generic_write(
@@ -140,6 +141,7 @@ class GenericObjectsService:
             method=method,
             object_id=object_id,
             body=payload,
+            content_type=content_type,
             execute=NativeStatements(self.session, runtime).execute,
         )
         if "error_message" in result:
@@ -155,27 +157,38 @@ class GenericObjectsService:
         return result
 
     async def create_entity(
-        self, entity: str, payload: dict[str, Any], runtime: InputPurifier
+        self, entity: str, payload: bytes, runtime: InputPurifier, content_type: str
     ) -> dict[str, Any]:
-        return await self._write(entity, "POST", None, payload, runtime)
+        return await self._write(entity, "POST", None, payload, runtime, content_type)
 
     async def update_entity(
-        self, entity: str, object_id: int | str, payload: dict[str, Any], runtime: InputPurifier
+        self,
+        entity: str,
+        object_id: int | str,
+        payload: bytes,
+        runtime: InputPurifier,
+        content_type: str,
     ) -> dict[str, Any]:
-        return await self._write(entity, "PUT", object_id, payload, runtime)
+        return await self._write(entity, "PUT", object_id, payload, runtime, content_type)
 
     async def delete_entity(
         self, entity: str, object_id: int | str, runtime: InputPurifier
     ) -> None:
-        await self._write(entity, "DELETE", object_id, {}, runtime)
+        await self._write(entity, "DELETE", object_id, b"", runtime, "")
 
     async def write_userfields(
-        self, entity: str, object_id: int | str, values: dict, runtime: InputPurifier
+        self,
+        entity: str,
+        object_id: int | str,
+        values: bytes,
+        runtime: InputPurifier,
+        content_type: str,
     ) -> None:
         result = await runtime.userfield_write(
             entity=entity,
             object_id=object_id,
             body=values,
+            content_type=content_type,
             execute=NativeStatements(self.session, runtime).execute,
         )
         if "error_message" in result:

@@ -47,7 +47,7 @@ class NativeDatabase extends LessQL\Database
     public function update($table, $data, $where = [], $params = [])
     {
         $this->context = [
-            'action' => 'update', 'table' => $table, 'values' => $data,
+            'action' => 'update', 'table' => $table,
             'before_query' => 'SELECT * FROM ' . $this->quoteIdentifier($table) . $this->getSuffix($where),
         ];
         return parent::update($table, $data, $where, $params);
@@ -209,6 +209,23 @@ class NativeGenericController extends Grocy\Controllers\GenericEntityApiControll
     {
         return $this->fields;
     }
+
+    public function parseBody($request)
+    {
+        return $this->GetParsedAndFilteredRequestBody($request);
+    }
+}
+
+function nativeWriteBody(array $request, NativeDatabase $database)
+{
+    $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
+        $request['method'], 'http://localhost/'
+    );
+    $http = $http->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(
+        base64_decode($request['json'], true)
+    ));
+    $http = $http->withHeader('Content-Type', $request['content_type']);
+    return (new NativeGenericController($database))->parseBody(new Slim\Http\ServerRequest($http));
 }
 
 function nativeGenericRead(array $request, NativeDatabase $database): array
@@ -256,18 +273,28 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
 {
     $database = new NativeDatabase($schema);
     $fiber = new Fiber(function () use ($request, $database) {
+        $parsing = false;
         try {
             if (in_array($request['operation'], ['generic_read', 'field_read'], true)) {
                 return nativeGenericRead($request, $database);
             }
+            if ($request['method'] !== 'DELETE') {
+                // Grocy parses outside its write exception handler.
+                $parsing = true;
+                $body = nativeWriteBody($request, $database);
+                $parsing = false;
+                if ($body === null) {
+                    throw new Exception('Request body could not be parsed (probably invalid JSON format or missing/wrong Content-Type header)');
+                }
+            }
             if ($request['operation'] === 'field_write') {
                 (new NativeUserfieldsService($database))->SetValues(
-                    $request['entity'], $request['object_id'], $request['body']
+                    $request['entity'], $request['object_id'], $body
                 );
                 return [];
             }
             if ($request['method'] === 'POST') {
-                $database->table($request['entity'])->createRow($request['body'])->save();
+                $database->table($request['entity'])->createRow($body)->save();
                 return ['created_object_id' => $database->lastInsertId()];
             }
             $row = $database->table($request['entity'], $request['object_id']);
@@ -277,7 +304,7 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
             if ($request['method'] === 'DELETE') {
                 $row->delete();
             } else {
-                $row->update($request['body']);
+                $row->update($body);
             }
             return [];
         } catch (Throwable $error) {
@@ -285,7 +312,7 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
                 'error_message' => $error->getMessage(),
             ];
             $read = in_array($request['operation'], ['generic_read', 'field_read'], true);
-            $uncaught = $read || ($request['method'] ?? 'PUT') === 'DELETE' || $error instanceof Error;
+            $uncaught = $parsing || $read || ($request['method'] ?? 'PUT') === 'DELETE' || $error instanceof Error;
             if ($uncaught) {
                 $data['error_details'] = nativeErrorDetails($error);
             }
@@ -295,7 +322,8 @@ function nativeDatabaseRequest(array $request, PDO $schema): array
                     'headers' => ['Content-Type' => ['application/json']],
                 ];
             }
-            return ['status' => $uncaught ? 500 : 400] + $data;
+            $status = $error instanceof Slim\Exception\HttpException ? $error->getCode() : ($uncaught ? 500 : 400);
+            return ['status' => $status] + $data;
         }
     });
     $step = $fiber->start();

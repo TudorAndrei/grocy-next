@@ -1,0 +1,15 @@
+{
+  "package": "slim/slim",
+  "version": "4.14.0",
+  "source": "https://github.com/slimphp/Slim.git",
+  "commit": "5943393b88716eb9e82c4161caa956af63423913",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE.md": "24d84675cc9fffd507101fd43fecb5dd7f87679f065d90b2ef597d0a8b7e5994",
+    "Slim/Exception/HttpException.php": "f0ad4d036249eec7ce59f72d540a58ca8384e5db7190289c7ff11c502866276b"
+  }
+}

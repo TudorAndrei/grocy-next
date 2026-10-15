@@ -91,17 +91,18 @@ class InputPurifier:
         entity: str,
         method: str,
         object_id: int | str | None,
-        body: dict[str, Any],
+        body: bytes,
+        content_type: str,
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
     ) -> dict[str, Any]:
         return await self._request(
-            b"",
+            body,
             {
                 "operation": "generic",
                 "entity": entity,
                 "method": method,
                 "object_id": object_id,
-                "body": body,
+                "content_type": content_type,
             },
             execute=execute,
         )
@@ -111,12 +112,19 @@ class InputPurifier:
         *,
         entity: str,
         object_id: int | str,
-        body: dict[str, Any],
+        body: bytes,
+        content_type: str,
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
     ) -> dict[str, Any]:
         return await self._request(
-            b"",
-            {"operation": "field_write", "entity": entity, "object_id": object_id, "body": body},
+            body,
+            {
+                "operation": "field_write",
+                "entity": entity,
+                "object_id": object_id,
+                "method": "PUT",
+                "content_type": content_type,
+            },
             execute=execute,
         )
 

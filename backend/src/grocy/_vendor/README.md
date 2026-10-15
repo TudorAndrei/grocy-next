@@ -19,3 +19,8 @@ Slim parses request bodies. LessQL compiles permission writes with the same PDO
 quoting and relation rules as Grocy. A query callback stops the query before
 execution. The Python backend executes that statement against its own database.
 The PHP worker has only a private memory database for PDO quoting.
+
+Generic object and custom field writes pass raw request bodies to Grocy's
+unchanged `BaseApiController`. It parses and filters each body before LessQL
+uses its PHP values. `slim-framework` contains the pinned `HttpException` class
+and its license. This class keeps native Content-Type errors and status codes.

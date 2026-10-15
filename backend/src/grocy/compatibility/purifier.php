@@ -22,6 +22,10 @@ try {
     require __DIR__ . '/../_vendor/htmlpurifier/library/HTMLPurifier.auto.php';
     require __DIR__ . '/request_runtime.php';
     require __DIR__ . '/generic_runtime.php';
+    define('GROCY_DATAPATH', $argv[1]);
+    if (!is_dir(GROCY_DATAPATH . '/viewcache')) {
+        mkdir(GROCY_DATAPATH . '/viewcache', 0700, true);
+    }
     $nativeSchema = nativeSchema();
     $pdo = new PDO('sqlite::memory:');
     $config = HTMLPurifier_Config::createDefault();

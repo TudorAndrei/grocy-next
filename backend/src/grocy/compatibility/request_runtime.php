@@ -7,6 +7,7 @@ spl_autoload_register(function (string $class): void {
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
         'LessQL\\' => ['morris-lessql/src/LessQL/'],
         'Slim\\Http\\' => ['slim-http/src/'],
+        'Slim\\Exception\\' => ['slim-framework/Slim/Exception/'],
         'Slim\\Psr7\\' => ['slim-psr7/src/'],
         'Psr\\Http\\Message\\' => ['psr-http-message/src/', 'psr-http-factory/src/'],
         'Fig\\Http\\Message\\' => ['fig-http-message-util/src/'],
