@@ -106,6 +106,11 @@ def test_picture_mode_preserves_format_and_controls_resize(api, tmp_path, monkey
     ("values", "query", "order", "expected"),
     [
         (["ABC", "AXXC"], "name~A_C", "id", [0]),
+        (["ABBC", "AC"], "name~A%C", "id", [0, 1]),
+        (["Ignored A", "Ignored B"], "name!>A", "id", [0, 1]),
+        (["A", "B"], "name=A😀", "id", [0]),
+        (["Emoji A", "Emoji B"], "name=😀", "id", None),
+        (["A", "B"], "description=", "id", None),
         (["ÄBC", "äBC"], "name~äBC", "id", [1]),
         ([None, "text", "null"], "description!=null", "id", [0, 1]),
         ([None, "text", "null"], "description=null", "id", [0, 2]),
@@ -127,6 +132,9 @@ def test_list_queries_follow_sqlite_comparison_rules(api, values, query, order, 
     if query:
         params.append(("query[]", query))
     response = api.get("/api/objects/locations", params=params)
+    if expected is None:
+        assert response.status_code == 500, response.text
+        return
     assert response.status_code == 200, response.text
     assert [row["id"] for row in response.json()] == [ids[index] for index in expected]
 

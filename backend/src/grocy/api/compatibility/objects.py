@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, Response
 from grocy.api.compatibility.filtering import filter_rows
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
+from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
 
 router = APIRouter(tags=["objects"])
@@ -23,7 +24,11 @@ async def list_objects(
         row["userfields"] = await service.userfields(
             entity, row["stock_id"] if entity == "stock" else row["id"]
         )
-    return filter_rows(rows, request.query_params)
+    try:
+        return filter_rows(rows, request.query_params)
+    except GrocyError as exc:
+        # GetObjects lets query errors reach PHP's top-level error handler.
+        raise GrocyError(exc.message, status_code=500, code=exc.code) from exc
 
 
 @router.post("/api/objects/{entity}")

@@ -14,10 +14,17 @@ def filter_rows(rows: list[dict[str, Any]], params: QueryParams) -> list[dict[st
     queries = [v for k, v in params.multi_items() if k == "query" or k.startswith("query[")]
     fields = set().union(*(row.keys() for row in rows))
     for query in queries:
-        match = re.fullmatch(r"([a-zA-Z_][\w]*)(!=|!~|<=|>=|=|~|<|>|§)(.*)", query)
+        match = regex.search(
+            r"([A-Za-z_][A-Za-z0-9_]+)(!?(?:>=|<=|=|~|<|>|§))"
+            r"([A-Za-z\p{L}\p{M}0-9*_.$#^| -\\]+)",
+            query,
+        )
         if not match:
             raise GrocyError("Invalid query", code="invalid_query")
         field, op, raw = match.groups()
+        if op not in {"=", "!=", "~", "!~", "<", ">", "<=", ">=", "§"}:
+            # The PHP parser accepts these negated operators but its switch ignores them.
+            continue
         if fields and field not in fields:
             raise GrocyError("Unknown query field", code="invalid_query")
 
