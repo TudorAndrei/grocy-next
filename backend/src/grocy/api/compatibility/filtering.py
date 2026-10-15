@@ -23,8 +23,8 @@ def filter_rows(rows: list[dict[str, Any]], params: QueryParams) -> list[dict[st
 
         def matches(row: dict, field=field, raw=raw, op=op) -> bool:
             value = row.get(field)
-            if raw.lower() == "null":
-                return value is None if op == "=" else value is not None
+            if raw.lower() == "null" and op in {"=", "!="} and value is None:
+                return True
             if value is None:
                 return False
             if op == "§":
@@ -35,14 +35,25 @@ def filter_rows(rows: list[dict[str, Any]], params: QueryParams) -> list[dict[st
                 except (regex.error, TimeoutError) as exc:
                     raise GrocyError("Invalid regular expression") from exc
             if op in {"~", "!~"}:
-                found = raw.casefold() in str(value).casefold()
+                pattern = ".*".join(
+                    ".".join(re.escape(part) for part in segment.split("_"))
+                    for segment in raw.split("%")
+                )
+                # SQLite LIKE folds ASCII letters only and keeps '_' as a wildcard.
+                found = (
+                    re.search(pattern, str(value), re.IGNORECASE | re.ASCII | re.DOTALL) is not None
+                )
                 return found if op == "~" else not found
             left, right = str(value), raw
-            with suppress(InvalidOperation):
-                left, right = (
-                    Decimal(str(int(value) if isinstance(value, bool) else value)),
-                    Decimal(raw),
-                )
+            if isinstance(value, (int, float, Decimal)):
+                with suppress(InvalidOperation):
+                    left, right = (
+                        Decimal(str(int(value) if isinstance(value, bool) else value)),
+                        Decimal(raw),
+                    )
+                if isinstance(left, str):
+                    # A numeric SQLite column sorts before a nonnumeric TEXT parameter.
+                    return op in {"!=", "<", "<="}
             compare = {
                 "=": operator.eq,
                 "!=": operator.ne,
@@ -59,7 +70,16 @@ def filter_rows(rows: list[dict[str, Any]], params: QueryParams) -> list[dict[st
         if (fields and field not in fields) or direction not in {"", "asc", "desc"}:
             raise GrocyError("Invalid sort order", code="invalid_query")
         rows = sorted(
-            rows, key=lambda r: (r.get(field) is None, r.get(field)), reverse=direction == "desc"
+            rows,
+            key=lambda r: (
+                0
+                if r.get(field) is None
+                else 1
+                if isinstance(r.get(field), (int, float, Decimal))
+                else 2,
+                r.get(field),
+            ),
+            reverse=direction == "desc",
         )
     try:
         offset = int(params.get("offset", 0))

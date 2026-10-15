@@ -1,6 +1,8 @@
 """Public workflows checked against both implementations of the pinned Grocy API."""
 
+import base64
 import os
+from io import BytesIO
 from uuid import uuid4
 
 import httpx
@@ -52,6 +54,90 @@ def catalog(api):
         api, "products", name=name, location_id=location, qu_id_stock=unit, qu_id_purchase=unit
     )
     return product, unit, other, location
+
+
+def test_file_creation_preserves_existing_content(api, tmp_path, monkeypatch):
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    name = f"{uuid4().hex}.txt"
+    encoded = base64.b64encode(name.encode()).decode()
+    path = f"/api/files/productpictures/{encoded}"
+    assert api.put(path, content=b"first").status_code == 204
+    try:
+        assert api.put(path, content=b"second").status_code == 400
+        response = api.get(path)
+        assert response.content == b"first"
+        assert response.headers["content-disposition"] == f'inline; filename="{name}"'
+        assert response.headers["cache-control"] == "max-age=2592000"
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+def test_picture_mode_preserves_format_and_controls_resize(api, tmp_path, monkeypatch):
+    from PIL import Image
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    original = BytesIO()
+    Image.new("RGB", (100, 50), "red").save(original, "JPEG")
+    name = base64.b64encode(f"{uuid4().hex}.jpg".encode()).decode()
+    path = f"/api/files/productpictures/{name}"
+    assert api.put(path, content=original.getvalue()).status_code == 204
+    try:
+        assert api.get(path, params={"best_fit_width": 20}).content == original.getvalue()
+        response = api.get(
+            path,
+            params={"force_serve_as": "picture", "best_fit_width": 20, "best_fit_height": 20},
+        )
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "image/jpeg"
+        with Image.open(BytesIO(response.content)) as picture:
+            assert picture.size == (20, 10)
+        assert api.get(path).content == original.getvalue()
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    ("values", "query", "order", "expected"),
+    [
+        (["ABC", "AXXC"], "name~A_C", "id", [0]),
+        (["ÄBC", "äBC"], "name~äBC", "id", [1]),
+        ([None, "text", "null"], "description!=null", "id", [0, 1]),
+        ([None, "text", "null"], "description=null", "id", [0, 2]),
+        ([None, "text"], None, "description:asc", [0, 1]),
+    ],
+)
+def test_list_queries_follow_sqlite_comparison_rules(api, values, query, order, expected):
+    group = uuid4().hex
+    ids = [
+        create(
+            api,
+            "locations",
+            name=value if query and query.startswith("name") else f"{group} {index}",
+            **({"description": value} if value is not None else {}),
+        )
+        for index, value in enumerate(values)
+    ]
+    params = [("order", order), ("query[]", f"id>={ids[0]}"), ("query[]", f"id<={ids[-1]}")]
+    if query:
+        params.append(("query[]", query))
+    response = api.get("/api/objects/locations", params=params)
+    assert response.status_code == 200, response.text
+    assert [row["id"] for row in response.json()] == [ids[index] for index in expected]
+
+
+def test_text_filters_keep_leading_zeros(api, catalog):
+    product, *_ = catalog
+    barcode = create(api, "product_barcodes", product_id=product, barcode="00123")
+    response = api.get(
+        "/api/objects/product_barcodes",
+        params=[("query[]", f"id={barcode}"), ("query[]", "barcode=123")],
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == []
 
 
 def test_stock_unit_change_converts_history_and_undo(api, catalog):

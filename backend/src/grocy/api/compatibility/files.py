@@ -58,58 +58,50 @@ async def get_file(
     if not path.is_file():
         raise NotFoundError("File not found")
     media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    if force_serve_as not in {
-        None,
-        "picture",
-        "image",
-        "image/png",
-        "image/jpeg",
-        "application/octet-stream",
-        "text/plain",
-    }:
-        raise GrocyError("Unsupported file media type")
-    if (
-        best_fit_width
-        or best_fit_height
-        or force_serve_as in {"picture", "image", "image/png", "image/jpeg"}
-    ):
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "max-age=2592000",
+    }
+    if force_serve_as == "picture":
 
-        def render() -> bytes:
+        def render() -> tuple[bytes, str]:
             from PIL import Image, UnidentifiedImageError
 
             try:
                 with Image.open(path) as picture:
+                    image_format = picture.format or "PNG"
                     if picture.width * picture.height > 25_000_000:
                         raise GrocyError("Image exceeds the pixel limit", status_code=413)
                     picture.thumbnail(
                         (best_fit_width or picture.width, best_fit_height or picture.height)
                     )
                     output = io.BytesIO()
-                    if force_serve_as == "image/jpeg":
-                        picture.convert("RGB").save(output, "JPEG")
-                    else:
-                        picture.save(output, "PNG")
-                    return output.getvalue()
+                    picture.save(output, image_format)
+                    return output.getvalue(), Image.MIME.get(image_format, media_type)
             except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
                 raise GrocyError("File is not a valid image") from exc
 
-        body = await run_in_threadpool(render)
+        body, image_type = await run_in_threadpool(render)
+        headers["Content-Disposition"] = f'inline; filename="{path.name}"'
         return Response(
             body,
-            media_type="image/jpeg" if force_serve_as == "image/jpeg" else "image/png",
-            headers={"X-Content-Type-Options": "nosniff"},
+            media_type=image_type,
+            headers=headers,
         )
     return FileResponse(
         path,
         filename=path.name,
-        media_type=force_serve_as or media_type,
-        headers={"X-Content-Type-Options": "nosniff"},
+        media_type=media_type,
+        content_disposition_type="inline",
+        headers=headers,
     )
 
 
 @router.put("/api/files/{group}/{file_name:path}", status_code=204)
 async def put_file(group: str, file_name: str, request: Request, _actor: CurrentActor) -> Response:
     path = _file_path(group, file_name)
+    if path.exists():
+        raise GrocyError(f"Error while creating file {path.name}")
     limit = get_settings().max_upload_bytes
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(dir=path.parent)
@@ -121,7 +113,10 @@ async def put_file(group: str, file_name: str, request: Request, _actor: Current
                 if size > limit:
                     raise GrocyError("File exceeds the upload limit", status_code=413)
                 await run_in_threadpool(stream.write, chunk)
-        await run_in_threadpool(os.replace, temporary, path)
+        try:
+            await run_in_threadpool(os.link, temporary, path)
+        except FileExistsError as exc:
+            raise GrocyError(f"Error while creating file {path.name}") from exc
     finally:
         Path(temporary).unlink(missing_ok=True)
     return Response(status_code=204)

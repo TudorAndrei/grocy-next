@@ -72,8 +72,8 @@ def test_file_storage_is_bounded_and_rejects_escape(
     assert client.put(path, headers=api_headers, content=b"Manual").status_code == 204
     downloaded = client.get(path, headers=api_headers)
     assert downloaded.content == b"Manual"
-    assert "attachment" in downloaded.headers["content-disposition"]
-    assert client.put(path, headers=api_headers, content=b"0123456789").status_code == 413
+    assert "inline" in downloaded.headers["content-disposition"]
+    assert client.put(path + "2", headers=api_headers, content=b"0123456789").status_code == 413
     assert client.get(path, headers=api_headers).content == b"Manual"
     assert (
         client.put("/api/files/%2e%2e/escaped.txt", headers=api_headers, content=b"bad").status_code
