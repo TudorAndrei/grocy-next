@@ -59,3 +59,9 @@ Duplicate meal section names from an earlier project version can make revision 0
 Revision 0017 adds missing unique indexes for equipment names, shopping list names, and recipe nesting pairs. It recognizes existing unique constraints and full unique indexes with matching key columns. It keeps all table data, counters, views, triggers, and custom constraints. It does not copy tables.
 
 Earlier project versions could save duplicates under these keys. Such duplicates make the upgrade fail. The transaction removes any indexes added earlier in the failed upgrade and restores the original revision. Resolve duplicate names or recipe nesting pairs through the previous application version before you repeat the upgrade. The upgrade does not delete or merge those records.
+
+Revision 0018 gives custom values stable field IDs and text object keys. Matching legacy entity and name keys receive their current definition ID. Old entity and name columns remain as legacy metadata. Runtime reads and writes use the field ID. Meaningful values, row IDs, timestamps, and allocation counters remain saved. Existing null and empty values become absent records, as required by the native empty-value rule.
+
+An unmatched legacy name cannot identify a deleted or previously renamed definition. The upgrade keeps that value under a reserved negative field ID. It retains the original entity and name metadata for recovery. A new definition with the same name does not receive that value. Original Grocy imports keep their actual field IDs, including IDs whose definitions no longer exist. Object key formatting already lost to an older integer column cannot be recovered.
+
+The upgrade keeps custom views, indexes, and triggers. A custom constraint that rejects text object keys can make the table copy fail. The transaction then restores the complete original schema, values, empty records, counters, views, triggers, and revision. The same transaction covers startup and CLI upgrades.

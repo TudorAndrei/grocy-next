@@ -8,7 +8,7 @@ The backend has routes for all 86 contract operations. The audit found missing s
 
 Stock unit changes now require a conversion after a product has stock history. They convert current stock, history, recipe, shopping, chore, and meal quantities. They also convert prices, quick amounts, tare weight, calories, and local undo data. Conversion writes maintain inverse records. Upgrades add missing inverse records.
 
-Product deletion removes linked stock, history, barcodes, conversions, recipe ingredients, shopping items, and product meal entries. It clears recipe output references and removes custom values. Chore, battery, shopping list, recipe, and custom record deletion also removes their linked records.
+Product deletion removes linked stock, history, barcodes, conversions, recipe ingredients, shopping items, and product meal entries. It clears recipe output references and removes custom values. Chore, battery, shopping list, and recipe deletion also removes their linked core records. Custom value cleanup follows its separate native rules.
 
 Generic ingredient, barcode, and shopping writes apply the Grocy unit defaults. Shopping items and ingredients accept zero amounts. Product writes use the upstream opened-stock default and parent rules. The generic API blocks API key reads and writes. It permits key deletion under the application permission checks.
 
@@ -29,6 +29,12 @@ Nine unmodified native triggers keep the separate barcode and ingredient insert 
 Equipment names, shopping list names, and recipe nesting pairs now have their native unique keys. Duplicate creates and updates return 400 with the native error message. A failed update keeps all fields in the saved row. Failed writes do not consume an ID. Case variants and spaces use SQLite's native comparison rules. Shopping lists no longer receive an application name default when a nonempty request omits the name.
 
 Revision 0017 adds missing unique indexes without copying tables. It retains existing unique keys and full unique indexes with matching key columns. It preserves all rows, counters, custom constraints, views, and triggers. Existing duplicate records make the upgrade fail. The transaction also removes indexes created earlier in that failed upgrade.
+
+Custom values now use stable field IDs and text object keys. Renames and entity changes keep their values. Keys `1` and `01` remain distinct. The field API validates the entity without requiring a parent record. Each field write commits before the next field. A later invalid field therefore keeps earlier writes, as in Grocy.
+
+Four unmodified native triggers handle empty values, stock transaction mapping, and field deletion. Empty writes remove the record but keep its allocation history. The native deletion trigger only removes a value when its object key equals the deleted field ID. Other values remain under the old field ID and do not attach to a replacement definition. Product, chore, and battery deletion clears their custom values. Location, task, and custom record deletion keeps values. Custom record type deletion keeps records and definitions, as in Grocy.
+
+Revision 0018 maps known legacy names to definition IDs. Unmatched names keep their values under reserved negative IDs, with their old labels retained as metadata. The upgrade cannot infer identity already lost by the former name-based storage. It preserves meaningful values, IDs, timestamps, counters, custom views, indexes, and triggers. Null and empty legacy records become absent values. Original Grocy imports keep orphan field IDs and text object keys.
 
 Sources: [product rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0207.sql), [quick amounts](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0214.sql), [conversion rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0225.sql), [unit defaults](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0231.sql), [shopping defaults](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/migrations/0250.sql), and [generic API rules](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90729154cb293fffbe10c21/controllers/GenericEntityApiController.php).
 
@@ -126,7 +132,7 @@ Sources: [chore service](https://github.com/grocy/grocy/blob/21aa5eab218c8466f90
 
 ## Verification
 
-The local suite passed 416 tests. It skipped 364 reference cases. The default comparison suite passed 694 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff and basedpyright passed. The frontend build passed before these backend-only changes.
+The local suite passed 433 tests. It skipped 378 reference cases. The default comparison suite passed 722 cases and skipped the disabled-flag case. The disabled-flag profile passed both cases. Default checks ran in UTC and Europe/Bucharest. The disabled profile also passed in both zones. Ruff and basedpyright passed. The frontend build passed before these backend-only changes.
 
 The 51 new input cases also passed through HTTP against the built Docker image with PHP 8.4.26. The local reference checks used PHP 8.3.31. The current built wheel contains all 437 vendor files with their original checksums and all three worker files. Two local checks cover worker failure, recovery, shutdown, and startup without PHP. User deletion checks cover both startup and CLI upgrades from the saved revision 0011 schema, import of deleted-user records, and restart after last-user deletion. Six permission workflows also passed through HTTP in Docker. The three user deletion cases and a last-user restart check also passed in Docker.
 
@@ -148,6 +154,10 @@ The five new uniqueness cases passed on both backends, for ten passes. Before th
 
 The revision 0017 Linux image kept all saved rows during upgrade and retained the required native section. It passed 108 HTTP cases on the legacy database and 53 on a fresh database. Restart kept all rows and counters unchanged. A startup upgrade with duplicate recipe nesting pairs failed and restored the original revision 0016 schema, rows, counters, views, and triggers. This includes rollback of unique indexes created before the failing index.
 
+The 14 new field lifecycle cases passed on both backends, for 28 passes. Before the repair, 13 local cases failed and all 14 native cases passed. Three new storage cases and the extended native orphan import check also failed on the previous commit. Storage checks now cover the native narrow deletion rule, empty-write allocation, legacy identity mapping, a counter of 4000, timestamps, custom SQL, and full rollback after a rejected text-key conversion. The wider saved graph test uses native value identity for current API setup. The separate revision 0017 fixture covers legacy name-based values.
+
+The revision 0018 Linux image upgraded a saved revision 0017 database. It retained meaningful values, orphan metadata, timestamps, counters, custom views, and triggers, and cleared empty records. All 14 new API cases passed over HTTP. Restart kept all stored rows and counters unchanged. A fresh Linux database passed those cases and the existing stock compaction case, for 15 passes. A failed copy restored the full original revision 0017 schema and data, including empty records.
+
 The regression tests exercise public HTTP requests and stored state. The same new workflow cases run against the local backend and a disposable PHP reference server. The release archive has a pinned SHA-256 checksum. The reference server uses real API keys, English, default feature flags, and no physical label printer. CI runs comparisons in UTC and Europe/Bucharest. Label comparisons use a local HTTP receiver. They compare label fields, request formats, and stored stock after printer errors. Each new label regression failed on the previous code before the repair.
 
 Run the full local checks:
@@ -168,6 +178,8 @@ uv run --project backend python scripts/check-reference.py --timezone Europe/Buc
 
 These checks do not test every plugin, physical printer, configuration, or third-party client. The `/api/v2` API, MCP, authentication storage, and server configuration are application extensions. See [the compatibility record](compatibility.md) for their boundaries.
 
-The remaining audit must cover more input coercion, validation, and combined error cases. A custom field rename currently loses access to its saved value. Grocy keeps that value under the new field name. The current date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. ID gaps from rejected or repeated writes, internal write order, nested and binary values, combined permission errors, response edge cases, and further partial failures still need checks. These gaps prevent a claim of full runtime parity.
+The remaining audit must cover more input coercion, validation, and combined error cases. Numeric field names and custom record aliases still have response differences. The current date types do not support year 0000, which PHP accepts. Generic object date inputs also need more checks. Image processing uses Pillow, so encoded image bytes can differ from PHP GD. Printer error text uses the local HTTP library and differs from Guzzle. ID gaps from rejected or repeated writes, internal write order, nested and binary values, combined permission errors, response edge cases, and further partial failures still need checks. These gaps prevent a claim of full runtime parity.
+
+A disposable comparison confirmed that a single field named `0` returns `["Saved"]` in Grocy and `{"0":"Saved"}` here. Another comparison confirmed that the `userobjects` field endpoint includes a custom namespace field here while Grocy returns an empty array. These are the next field response repairs.
 
 The three uniqueness differences from the previous audit are repaired. Duplicate barcode checks also return 400 in both backends.
