@@ -22,6 +22,8 @@ System information includes the pinned database version, 253. Its `php_version` 
 
 User preferences include the pinned defaults. Stored values can be null. Deleting a preference restores its default. Database upgrades preserve existing values and add update timestamps.
 
+User, permission, and single-setting requests execute the original Grocy `UsersApiController` and `UsersService`. PHP parses their raw bodies and creates password hashes. User creation requires both `username` and `password`. An empty password is accepted when the field is present. Profile edits require `username`, `first_name`, and `last_name`; omitted picture names clear the saved picture. Self-edit permission checks use PHP's numeric ID comparison. Setting values and numeric setting keys retain native LessQL and PHP array behavior. Bulk setting writes and deletion use the separate `/api/v2/user/settings` extension.
+
 Custom field reads include declared fields with null values when no value is stored. Empty and null writes clear the stored value. Unknown field names return an error. Named custom record types use `userentity-{name}`. The web forms use field types, defaults, required inputs, and preset options from their definitions.
 
 ## Verification
