@@ -7,7 +7,15 @@ export type EntityRow = {
 export type EntityField = {
   key: string;
   label: string;
-  type?: "number" | "date" | "datetime-local" | "textarea" | "checkbox";
+  type?:
+    | "number"
+    | "date"
+    | "datetime-local"
+    | "textarea"
+    | "checkbox"
+    | "weekdays"
+    | "multiple";
+  when?: { key: string; values: string[] };
   required?: boolean;
   ref?: string;
   choices?: string[];
@@ -263,15 +271,58 @@ export const entities: Record<string, EntitySpec> = {
       {
         key: "period_type",
         label: "Repeat",
-        choices: ["manually", "hourly", "daily", "weekly", "monthly", "yearly"],
+        choices: [
+          "manually",
+          "hourly",
+          "daily",
+          "weekly",
+          "monthly",
+          "yearly",
+          "adaptive",
+        ],
         value: "manually",
       },
       {
-        key: "period_days",
+        key: "period_interval",
         label: "Repeat interval",
         type: "number",
         min: 1,
         value: "1",
+        required: true,
+        when: {
+          key: "period_type",
+          values: ["hourly", "daily", "weekly", "monthly", "yearly"],
+        },
+      },
+      {
+        key: "period_days",
+        label: "Day of month",
+        type: "number",
+        min: 1,
+        value: "1",
+        required: true,
+        when: { key: "period_type", values: ["monthly"] },
+      },
+      {
+        key: "period_config",
+        label: "Weekdays",
+        type: "weekdays",
+        when: { key: "period_type", values: ["weekly"] },
+      },
+      {
+        key: "start_date",
+        label: "First scheduled date",
+        type: "datetime-local",
+      },
+      {
+        key: "track_date_only",
+        label: "Track the date only",
+        type: "checkbox",
+      },
+      {
+        key: "rollover",
+        label: "Move overdue chores to today",
+        type: "checkbox",
       },
       {
         key: "assignment_type",
@@ -286,8 +337,44 @@ export const entities: Record<string, EntitySpec> = {
       },
       {
         key: "assignment_config",
-        label: "Assigned user IDs, separated by commas",
+        label: "Assigned users",
+        type: "multiple",
+        ref: "users",
+        when: {
+          key: "assignment_type",
+          values: ["in-alphabetical-order", "who-least-did-first", "random"],
+        },
       },
+      {
+        key: "rescheduled_date",
+        label: "Rescheduled date",
+        type: "datetime-local",
+      },
+      ref(
+        "rescheduled_next_execution_assigned_to_user_id",
+        "Assign next execution to",
+        "users",
+        false,
+      ),
+      {
+        key: "consume_product_on_execution",
+        label: "Consume stock when recorded",
+        type: "checkbox",
+      },
+      {
+        ...ref("product_id", "Product to consume", "products"),
+        when: { key: "consume_product_on_execution", values: ["1"] },
+      },
+      {
+        key: "product_amount",
+        label: "Stock amount to consume",
+        type: "number",
+        min: 0.000001,
+        value: "1",
+        required: true,
+        when: { key: "consume_product_on_execution", values: ["1"] },
+      },
+      { key: "active", label: "Active", type: "checkbox", value: "1" },
     ],
   },
   tasks: {
@@ -297,13 +384,17 @@ export const entities: Record<string, EntitySpec> = {
       ...named,
       { key: "due_date", label: "Due date", type: "datetime-local" },
       ref("category_id", "Category", "task_categories", false),
+      ref("assigned_to_user_id", "Assigned to", "users", false),
       { key: "done", label: "Completed", type: "checkbox" },
     ],
   },
   task_categories: {
     label: "Task categories",
     singular: "category",
-    fields: named,
+    fields: [
+      ...named,
+      { key: "active", label: "Active", type: "checkbox", value: "1" },
+    ],
   },
   batteries: {
     label: "Batteries",
@@ -311,6 +402,7 @@ export const entities: Record<string, EntitySpec> = {
     fields: [
       ...named,
       { key: "used_in", label: "Used in" },
+      { key: "active", label: "Active", type: "checkbox", value: "1" },
       {
         key: "charge_interval_days",
         label: "Days between charges",

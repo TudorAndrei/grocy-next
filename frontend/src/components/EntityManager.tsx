@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, request } from "@/lib/api";
 import { entities, type EntityRow, type EntitySpec } from "@/lib/entities";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
@@ -63,7 +63,8 @@ export function EntityManager({
   const options = useQueries({
     queries: refs.map((ref) => ({
       queryKey: ["objects", ref],
-      queryFn: () => api.objects(ref),
+      queryFn: () =>
+        ref === "users" ? request<EntityRow[]>("/api/users") : api.objects(ref),
     })),
   });
   const error = query.error || options.find((q) => q.error)?.error;
@@ -114,6 +115,8 @@ export function EntityManager({
     const body: Record<string, unknown> = { ...fixed };
     for (const field of spec.fields) {
       if (fixed && field.key in fixed) continue;
+      if (field.when && !field.when.values.includes(values[field.when.key]))
+        continue;
       const value = values[field.key] ?? "";
       if (field.key.startsWith("custom:")) {
         const fields = (body.userfields ?? {}) as Record<string, string>;
@@ -125,7 +128,11 @@ export function EntityManager({
         if (editing !== null && !field.required) body[field.key] = null;
       } else
         body[field.key] =
-          field.type === "number" || field.ref ? Number(value) : value;
+          field.type === "multiple"
+            ? value
+            : field.type === "number" || field.ref
+              ? Number(value)
+              : value;
     }
     mutate.mutate({ kind: "save", body });
   };
@@ -158,7 +165,11 @@ export function EntityManager({
           </h3>
           <div className="form-grid">
             {spec.fields
-              .filter((f) => !fixed || !(f.key in fixed))
+              .filter(
+                (f) =>
+                  (!fixed || !(f.key in fixed)) &&
+                  (!f.when || f.when.values.includes(values[f.when.key])),
+              )
               .map((field) => {
                 const id = `${prefix}-${field.key}`;
                 const optionsQuery = field.ref
@@ -167,7 +178,89 @@ export function EntityManager({
                 return (
                   <div className="field" key={field.key}>
                     <label htmlFor={id}>{field.label}</label>
-                    {field.ref || field.choices ? (
+                    {field.type === "multiple" ? (
+                      <div
+                        role="group"
+                        aria-label={field.label}
+                        className="weekday-options"
+                      >
+                        {optionsQuery?.data?.map((row) => {
+                          const selected = (values[field.key] ?? "")
+                            .split(",")
+                            .filter(Boolean);
+                          const value = String(row.id);
+                          return (
+                            <label key={row.id}>
+                              <input
+                                type="checkbox"
+                                checked={selected.includes(value)}
+                                onChange={(e) =>
+                                  setValues({
+                                    ...values,
+                                    [field.key]: (e.target.checked
+                                      ? [...selected, value]
+                                      : selected.filter(
+                                          (item) => item !== value,
+                                        )
+                                    ).join(","),
+                                  })
+                                }
+                              />{" "}
+                              {String(
+                                row.display_name ??
+                                  row.name ??
+                                  row.username ??
+                                  row.id,
+                              )}
+                            </label>
+                          );
+                        })}
+                        {optionsQuery?.isSuccess &&
+                          !optionsQuery.data.length && (
+                            <span className="muted">
+                              Create a user in Manage to assign this chore.
+                            </span>
+                          )}
+                      </div>
+                    ) : field.type === "weekdays" ? (
+                      <div
+                        role="group"
+                        aria-label={field.label}
+                        className="weekday-options"
+                      >
+                        {[
+                          "monday",
+                          "tuesday",
+                          "wednesday",
+                          "thursday",
+                          "friday",
+                          "saturday",
+                          "sunday",
+                        ].map((day) => {
+                          const days = (values[field.key] ?? "")
+                            .split(",")
+                            .filter(Boolean);
+                          return (
+                            <label key={day}>
+                              <input
+                                type="checkbox"
+                                checked={days.includes(day)}
+                                onChange={(e) =>
+                                  setValues({
+                                    ...values,
+                                    [field.key]: (e.target.checked
+                                      ? [...days, day]
+                                      : days.filter((value) => value !== day)
+                                    ).join(","),
+                                  })
+                                }
+                              />{" "}
+                              {day[0].toUpperCase() + day.slice(1)}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : field.ref || field.choices ? (
                       <select
                         id={id}
                         value={values[field.key] ?? ""}
@@ -184,7 +277,12 @@ export function EntityManager({
                         ))}
                         {optionsQuery?.data?.map((row) => (
                           <option key={row.id} value={row.id}>
-                            {row.name ?? `#${row.id}`}
+                            {String(
+                              row.display_name ??
+                                row.name ??
+                                row.username ??
+                                `#${row.id}`,
+                            )}
                           </option>
                         ))}
                       </select>
