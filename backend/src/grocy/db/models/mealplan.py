@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from grocy.db.grocy_checks import native_checks
@@ -10,7 +10,7 @@ from grocy.db.models.base import Base, TimestampMixin
 
 class MealPlanSection(Base, TimestampMixin):
     __tablename__ = "meal_plan_sections"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (UniqueConstraint("name"), {"sqlite_autoincrement": True})
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

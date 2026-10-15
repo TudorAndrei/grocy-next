@@ -94,5 +94,9 @@ async def delete_object(
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    await GenericObjectsService(session).delete_entity(entity, object_id)
+    try:
+        await GenericObjectsService(session).delete_entity(entity, object_id)
+    except DBAPIError as error:
+        await session.rollback()
+        raise GrocyError(_database_error(error).message, status_code=500, code=None) from error
     return Response(status_code=204)

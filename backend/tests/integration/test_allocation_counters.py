@@ -78,6 +78,8 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         connection.executescript("""
             CREATE TABLE alembic_version (version_num TEXT PRIMARY KEY);
             INSERT INTO alembic_version VALUES ('20261015_0013');
+            INSERT INTO meal_plan_sections (id,name,sort_number) VALUES (-1,'',-1);
+            ALTER TABLE tasks ADD COLUMN saved_location INTEGER REFERENCES locations(id) DEFAULT 1;
             CREATE TABLE saved_product_reference (product_id INTEGER REFERENCES products(id));
             CREATE TABLE counter_audit (kind TEXT, value INTEGER);
             CREATE VIEW saved_graph AS
@@ -118,6 +120,12 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             == 200
         )
         assert old.post("/api/batteries/1/charge", json={}).status_code == 200
+        assert (
+            old.post(
+                "/api/objects/shopping_list", json={"product_id": 1, "amount": 1, "qu_id": 1}
+            ).status_code
+            == 200
+        )
         field = old.post(
             "/api/objects/userfields",
             json={
@@ -178,6 +186,18 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert nutrition.status_code == 200, nutrition.text
     with sqlite3.connect(database) as connection:
         connection.execute("INSERT INTO saved_product_reference VALUES (1)")
+        native = json.loads((FIXTURES / "grocy-4.5.0-counter-tables.json").read_text())["tables"]
+        with sqlite3.connect(":memory:") as original:
+            for ddl in native.values():
+                original.execute(ddl)
+            references = {}
+            for table in native:
+                columns = {row[1] for row in original.execute(f'PRAGMA table_info("{table}")')}
+                references[table] = [
+                    row[3]
+                    for row in connection.execute(f'PRAGMA foreign_key_list("{table}")')
+                    if row[3] in columns
+                ]
         connection.execute("UPDATE sqlite_sequence SET seq=9000 WHERE name='tasks'")
         # This old table has no recorded counter until revision 0014 creates it.
         connection.execute(
@@ -218,6 +238,7 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         )
         assert nutrition.status_code == 200, nutrition.text
     with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA foreign_keys=ON")
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
         assert connection.execute("SELECT COUNT(*) FROM counter_audit").fetchone()[0] == (
@@ -230,6 +251,23 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             "SELECT name FROM sqlite_master WHERE name='saved_product_description'"
         ).fetchone() == ("saved_product_description",)
         assert connection.execute("SELECT COUNT(*) FROM saved_graph").fetchone()[0] > 0
+        for table, columns in references.items():
+            for column in columns:
+                assert connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] > 0
+                connection.execute("SAVEPOINT orphan_reference")
+                connection.execute(
+                    f'UPDATE "{table}" SET "{column}"=2147483647 '
+                    f'WHERE rowid=(SELECT MIN(rowid) FROM "{table}")'
+                )
+                assert connection.execute(
+                    f'SELECT "{column}" FROM "{table}" ORDER BY rowid LIMIT 1'
+                ).fetchone() == (2147483647,)
+                connection.execute("ROLLBACK TO orphan_reference")
+                connection.execute("RELEASE orphan_reference")
+        with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY constraint failed"):
+            connection.execute("UPDATE tasks SET saved_location=2147483647")
+        with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY constraint failed"):
+            connection.execute("UPDATE product_nutrition SET product_id=2147483647")
         native = json.loads((FIXTURES / "grocy-4.5.0-counter-tables.json").read_text())["tables"]
         for table, ddl in native.items():
             if not before.get(table):
@@ -247,7 +285,7 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             raise AssertionError("The saved equipment check must still reject an empty name")
 
 
-@pytest.mark.parametrize("revision", ["20261015_0013", "20261015_0014"])
+@pytest.mark.parametrize("revision", ["20261015_0013", "20261015_0014", "20261015_0015"])
 def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
     tmp_path: Path, monkeypatch, revision: str
 ):
@@ -265,7 +303,7 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
         """)
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
     command = [sys.executable, "-m", "alembic", "upgrade"]
-    if revision == "20261015_0014":
+    if revision != "20261015_0013":
         result = subprocess.run(
             [*command, revision],
             cwd=Path(__file__).parents[2],
@@ -278,9 +316,16 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
         connection.execute("PRAGMA ignore_check_constraints=ON")
         if revision == "20261015_0013":
             connection.execute("INSERT INTO equipment (id, name) VALUES (1, '')")
-        else:
+        elif revision == "20261015_0014":
             connection.execute("INSERT INTO tasks (name,done) VALUES ('Invalid task',2)")
             connection.execute("UPDATE sqlite_sequence SET seq=9000 WHERE name='tasks'")
+        else:
+            connection.execute(
+                "INSERT INTO meal_plan_sections (name,sort_number) VALUES ('Duplicate',0)"
+            )
+            connection.execute(
+                "INSERT INTO meal_plan_sections (name,sort_number) VALUES ('Duplicate',0)"
+            )
         connection.execute("PRAGMA ignore_check_constraints=OFF")
         schema = connection.execute(
             "SELECT type,name,sql FROM sqlite_master ORDER BY type,name"
@@ -297,7 +342,8 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
         timeout=30,
     )
     assert result.returncode != 0
-    assert "CHECK constraint failed" in result.stderr
+    constraint = "UNIQUE" if revision == "20261015_0015" else "CHECK"
+    assert f"{constraint} constraint failed" in result.stderr
     assert _data_snapshot(database) == before
     with sqlite3.connect(database) as connection:
         assert (

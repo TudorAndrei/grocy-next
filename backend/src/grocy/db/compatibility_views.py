@@ -1,4 +1,4 @@
-"""Install the pinned Grocy read models without upstream write triggers."""
+"""Install the pinned Grocy read models and query functions."""
 
 import json
 from pathlib import Path

@@ -142,6 +142,12 @@ class GenericObjectsService:
 
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]:
         model = self._require_writable(entity)
+        if not payload:
+            # LessQL does not insert an empty row. Its fresh PDO reports lastInsertId 0.
+            if entity == "products":
+                await self.recipes.shopping.auto_add_missing()
+                await self.session.commit()
+            return {"created_object_id": 0}
         row = model()
         self._apply_payload(row, {k: v for k, v in payload.items() if k != "userfields"})
         await self._validate(row)
@@ -362,8 +368,6 @@ class GenericObjectsService:
             setattr(row, key, value)
 
     async def _validate(self, row: Any) -> None:
-        if hasattr(row, "name") and not str(row.name or "").strip():
-            raise GrocyError("Name is required", code="invalid_field")
         for field in (
             "amount",
             "factor",
@@ -417,18 +421,6 @@ class GenericObjectsService:
             and row.charge_interval_days < 0
         ):
             raise GrocyError("Charge interval cannot be negative")
-        if isinstance(row, (RecipePosition, ProductBarcode, ShoppingListItem)) and row.product_id:
-            product = await self.products.get(row.product_id)
-            if not row.qu_id:
-                row.qu_id = (
-                    product.qu_id_purchase
-                    if isinstance(row, ShoppingListItem)
-                    else product.qu_id_stock
-                )
-            if isinstance(row, RecipePosition) and not row.only_check_single_unit_in_stock:
-                await self.units.convert(
-                    Decimal("1"), row.qu_id, product.qu_id_stock, product_id=product.id
-                )
         if isinstance(row, MealPlanEntry):
             if row.recipe_servings is None:
                 row.recipe_servings = Decimal("1")
@@ -458,24 +450,8 @@ class GenericObjectsService:
                 with self.session.no_autoflush:
                     parent = await self.session.get(Product, pending)
                 pending = parent.parent_product_id if parent else None
-        if isinstance(row, QuantityUnitConversion):
-            if row.from_qu_id == row.to_qu_id:
-                raise GrocyError("Quantity units must differ", code="invalid_conversion")
-            with self.session.no_autoflush:
-                duplicate = await self.session.scalar(
-                    select(QuantityUnitConversion.id)
-                    .where(
-                        QuantityUnitConversion.from_qu_id == row.from_qu_id,
-                        QuantityUnitConversion.to_qu_id == row.to_qu_id,
-                        QuantityUnitConversion.product_id == row.product_id,
-                        QuantityUnitConversion.id != row.id,
-                    )
-                    .limit(1)
-                )
-            if duplicate is not None:
-                raise GrocyError(
-                    "Quantity unit conversion already exists", code="invalid_conversion"
-                )
+        if isinstance(row, QuantityUnitConversion) and row.from_qu_id == row.to_qu_id:
+            raise GrocyError("Quantity units must differ", code="invalid_conversion")
         if isinstance(row, RecipeNesting):
             if row.recipe_id == row.includes_recipe_id:
                 raise GrocyError("Recipe nesting cycle", code="recipe_cycle")

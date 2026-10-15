@@ -1,3 +1,4 @@
+from grocy.db.grocy_references import configure_native_references
 from grocy.db.models.base import Base
 from grocy.db.models.catalog import (
     Location,
@@ -35,6 +36,8 @@ from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.db.models.users import ApiKey, User, UserPermission
+
+configure_native_references(Base.metadata)
 
 __all__ = [
     "ApiKey",

@@ -43,7 +43,7 @@ def test_object_validation_filters_and_recipe_cycle(client: TestClient, api_head
     assert bad.status_code == 400
     assert (
         client.post("/api/objects/locations", headers=api_headers, json={"name": ""}).status_code
-        == 400
+        == 200
     )
     rows = client.get(
         "/api/objects/products?query[]=name~milk&order=name:desc&limit=1", headers=api_headers

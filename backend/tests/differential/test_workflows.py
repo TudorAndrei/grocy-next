@@ -7,6 +7,7 @@ import re
 import sqlite3
 from datetime import datetime
 from io import BytesIO
+from typing import Any
 from uuid import uuid4
 
 import httpx
@@ -922,6 +923,229 @@ def test_generic_creation_returns_the_native_id_response(api):
     record = response.json()["created_object_id"]
     assert response.json() == {"created_object_id": str(record)}
     assert api.get(f"/api/objects/locations/{record}").status_code == 200
+
+
+def generic_body(api, catalog, entity) -> dict[str, Any]:
+    product, unit, other, location = catalog
+    name = uuid4().hex
+    body: dict[str, Any] = {"name": name}
+    if entity == "products":
+        body.update(
+            location_id=location,
+            qu_id_stock=unit,
+            qu_id_purchase=unit,
+            qu_id_consume=unit,
+            qu_id_price=unit,
+            parent_product_id=product,
+            default_consume_location_id=location,
+            product_group_id=create(api, "product_groups", name=name),
+        )
+    elif entity == "chores":
+        body.update(period_type="manually", product_id=product)
+    elif entity == "tasks":
+        body["category_id"] = create(api, "task_categories", name=name)
+    elif entity == "recipes":
+        body["product_id"] = product
+    elif entity == "userfields":
+        body.update(entity="locations", caption=name, type="text-single-line")
+    elif entity == "userentities":
+        body["caption"] = name
+    elif entity == "userobjects":
+        body = {"userentity_id": create(api, "userentities", name=name, caption=name)}
+    elif entity == "product_barcodes":
+        body = {"product_id": product, "qu_id": unit, "barcode": name}
+    elif entity == "quantity_unit_conversions":
+        body = {"from_qu_id": unit, "to_qu_id": other, "product_id": product, "factor": 2}
+    elif entity == "shopping_list":
+        body = {"product_id": product, "qu_id": unit, "shopping_list_id": 1, "amount": 1}
+    elif entity in {"recipes_pos", "recipes_nestings", "meal_plan"}:
+        recipe = create(api, "recipes", name=name)
+        if entity == "recipes_pos":
+            body = {"recipe_id": recipe, "product_id": product, "qu_id": unit, "amount": 1}
+        elif entity == "recipes_nestings":
+            body = {
+                "recipe_id": recipe,
+                "includes_recipe_id": create(api, "recipes", name=name + " child"),
+                "servings": 1,
+            }
+        else:
+            body = {
+                "day": "2027-01-04",
+                "type": "note",
+                "note": name,
+                "section_id": create(api, "meal_plan_sections", name=name),
+                "recipe_id": recipe,
+                "recipe_servings": 1,
+                "product_id": product,
+                "product_amount": 1,
+                "product_qu_id": unit,
+            }
+    return body
+
+
+@pytest.mark.parametrize(
+    "entity",
+    [
+        "batteries",
+        "chores",
+        "equipment",
+        "locations",
+        "product_groups",
+        "products",
+        "quantity_units",
+        "shopping_locations",
+        "shopping_lists",
+        "task_categories",
+        "tasks",
+        "recipes",
+        "meal_plan_sections",
+        "userfields",
+        "userentities",
+    ],
+)
+def test_generic_names_accept_empty_values_with_native_required_and_unique_rules(
+    api, catalog, entity
+):
+    body = generic_body(api, catalog, entity)
+    without_name = {key: value for key, value in body.items() if key != "name"}
+    missing = api.post(f"/api/objects/{entity}", json=without_name)
+    if without_name:
+        assert missing.status_code == 400, missing.text
+        assert missing.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+            f"NOT NULL constraint failed: {entity}.name"
+        }
+    else:
+        assert missing.status_code == 200, missing.text
+        assert missing.json() == {"created_object_id": "0"}
+    if entity == "meal_plan_sections":
+        rejected = api.post(f"/api/objects/{entity}", json={**body, "name": ""})
+        assert rejected.status_code == 400, rejected.text
+        assert rejected.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+            "UNIQUE constraint failed: meal_plan_sections.name"
+        }
+    else:
+        body["name"] = ""
+    record = create(api, entity, **body)
+    path = f"/api/objects/{entity}/{record}"
+    try:
+        assert api.get(path).json()["name"] == (body["name"] or None)
+        assert api.put(path, json={"name": "   "}).status_code == 204
+        assert api.get(path).json()["name"] == "   "
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "entity,field",
+    [
+        *[
+            ("products", field)
+            for field in (
+                "location_id",
+                "qu_id_purchase",
+                "qu_id_stock",
+                "default_consume_location_id",
+                "parent_product_id",
+                "product_group_id",
+                "qu_id_consume",
+                "qu_id_price",
+            )
+        ],
+        ("product_barcodes", "product_id"),
+        ("product_barcodes", "qu_id"),
+        ("chores", "product_id"),
+        ("tasks", "category_id"),
+        *[
+            ("meal_plan", field)
+            for field in ("product_id", "product_qu_id", "recipe_id", "section_id")
+        ],
+        ("recipes", "product_id"),
+        *[("recipes_pos", field) for field in ("product_id", "qu_id", "recipe_id")],
+        ("recipes_nestings", "includes_recipe_id"),
+        ("recipes_nestings", "recipe_id"),
+        ("userobjects", "userentity_id"),
+        *[("shopping_list", field) for field in ("product_id", "qu_id", "shopping_list_id")],
+        *[
+            ("quantity_unit_conversions", field)
+            for field in ("from_qu_id", "product_id", "to_qu_id")
+        ],
+    ],
+)
+def test_generic_references_accept_missing_parents_after_native_insert_checks(
+    api, catalog, entity, field
+):
+    body = generic_body(api, catalog, entity)
+    missing = 2147483647
+    errors = {
+        ("products", "qu_id_stock"): "QU conversion already exists",
+        ("product_barcodes", "product_id"): "product_id doesn't reference a existing product",
+        (
+            "recipes_pos",
+            "product_id",
+        ): "Provided qu_id doesn't have a related conversion for that product",
+        (
+            "recipes_pos",
+            "qu_id",
+        ): "Provided qu_id doesn't have a related conversion for that product",
+    }
+    if (entity, field) in errors:
+        rejected = api.post(f"/api/objects/{entity}", json={**body, field: missing})
+        assert rejected.status_code == 400, rejected.text
+        assert rejected.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+            + errors[entity, field]
+        }
+        record = create(api, entity, **body)
+    else:
+        record = create(api, entity, **{**body, field: missing})
+        assert api.get(f"/api/objects/{entity}/{record}").json()[field] == missing
+    path = f"/api/objects/{entity}/{record}"
+    restored = api.put(path, json={field: body[field]})
+    assert restored.status_code == 204, restored.text
+    replaced = api.put(path, json={field: missing})
+    assert replaced.status_code == 204, replaced.text
+    assert api.get(path).json()[field] == missing
+
+
+@pytest.mark.parametrize("entity", ["product_barcodes", "recipes_pos", "shopping_list"])
+def test_orphan_product_defaults_keep_null_units_or_reject_the_insert(api, catalog, entity):
+    body = generic_body(api, catalog, entity)
+    body.pop("qu_id")
+    body["product_id"] = 2147483647
+    response = api.post(f"/api/objects/{entity}", json=body)
+    if entity != "shopping_list":
+        error = (
+            "product_id doesn't reference a existing product"
+            if entity == "product_barcodes"
+            else "Provided qu_id doesn't have a related conversion for that product"
+        )
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 " + error
+        }
+        return
+    assert response.status_code == 200, response.text
+    record = response.json()["created_object_id"]
+    saved = api.get(f"/api/objects/{entity}/{record}").json()
+    assert saved["product_id"] == 2147483647
+    assert saved["qu_id"] is None
+
+
+def test_internal_meal_section_keeps_the_native_delete_guard(api):
+    path = "/api/objects/meal_plan_sections/-1"
+    before = api.get(path)
+    assert before.status_code == 200, before.text
+    assert before.json()["name"] is None
+    assert before.json()["sort_number"] == -1
+    rejected = api.delete(path)
+    assert rejected.status_code == 500, rejected.text
+    assert rejected.json()["error_message"] == (
+        "SQLSTATE[23000]: Integrity constraint violation: 19 "
+        "This is an internally used/required default section and therefore can't be deleted"
+    )
+    assert api.get(path).json() == before.json()
 
 
 def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):

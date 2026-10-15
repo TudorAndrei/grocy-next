@@ -2,6 +2,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from grocy.db.imports.importer import import_grocy_sqlite
 from grocy.db.imports.validate import validate_grocy_sqlite
@@ -87,8 +88,10 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
 
 def test_failed_import_rolls_back_and_bad_sqlite_is_reported(tmp_path: Path):
     source, target = tmp_path / "source.db", tmp_path / "next.db"
-    source_database(source, bad_reference=True)
-    with pytest.raises(ValueError, match="invalid references"):
+    source_database(source)
+    with sqlite3.connect(source) as connection:
+        connection.execute("UPDATE products SET due_type=0")
+    with pytest.raises(IntegrityError, match="CHECK constraint failed"):
         import_grocy_sqlite(source, target)
     assert not target.exists()
     assert not target.with_suffix(".db.source.sqlite").exists()
@@ -97,6 +100,24 @@ def test_failed_import_rolls_back_and_bad_sqlite_is_reported(tmp_path: Path):
     result = validate_grocy_sqlite(bad)
     assert not result.ok
     assert any("invalid database" in error for error in result.errors)
+
+
+def test_import_preserves_dangling_native_references(tmp_path: Path):
+    source, target = tmp_path / "source.db", tmp_path / "next.db"
+    source_database(source, bad_reference=True)
+    with sqlite3.connect(source) as connection:
+        connection.execute("UPDATE stock SET product_id=2147483647,location_id=999")
+    original = source.read_bytes()
+    result = import_grocy_sqlite(source, target)
+    assert result["copied_tables"]["stock"] == 1
+    assert source.read_bytes() == original
+    with sqlite3.connect(target) as connection:
+        assert connection.execute("SELECT location_id FROM products").fetchone() == (999,)
+        assert connection.execute("SELECT product_id,location_id FROM stock").fetchone() == (
+            2147483647,
+            999,
+        )
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
 def test_disabled_location_tracking_restores_default_for_existing_user(tmp_path: Path, monkeypatch):
@@ -214,7 +235,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0015"
+            == "20261015_0016"
         )
 
 
