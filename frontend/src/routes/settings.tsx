@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -24,11 +25,10 @@ function SettingsPage() {
 
   return (
     <>
-      <h1 className="page-title">Connection</h1>
-      <p className="page-lead">
-        Enter your server address and API key. Leave the address blank when the
-        web application and API use the same server.
-      </p>
+      <PageHeader
+        title="Connection"
+        lead="Enter your server address and API key. Leave the address blank when the web application and API use the same server."
+      />
       <section className="panel" style={{ maxWidth: "32rem" }}>
         <div className="panel-inner">
           <form onSubmit={onSubmit}>
@@ -51,6 +51,7 @@ function SettingsPage() {
                 id="api-key"
                 type="password"
                 autoComplete="off"
+                placeholder="dev-key"
                 value={apiKey}
                 onChange={(e) => {
                   setSaved(false);
@@ -59,7 +60,7 @@ function SettingsPage() {
               />
             </div>
             <button type="submit" className="btn btn-primary">
-              Save
+              Save connection
             </button>
             {saved ? (
               <p className="muted" style={{ marginTop: "1rem" }} role="status">

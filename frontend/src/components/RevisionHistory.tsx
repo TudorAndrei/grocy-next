@@ -41,16 +41,14 @@ export function RevisionHistory({ productId }: RevisionHistoryProps) {
   return (
     <section className="panel" aria-labelledby="revisions-heading">
       <div className="panel-inner">
-        <h2
-          id="revisions-heading"
-          className="page-title"
-          style={{ fontSize: "1.25rem" }}
-        >
+        <h2 id="revisions-heading" className="panel-title">
           Revision history
         </h2>
         {restore.error && <ErrorBlock message={restore.error.message} />}
         {items.length === 0 ? (
-          <p className="empty-state">No prior revisions.</p>
+          <p className="empty-state" style={{ padding: 0 }}>
+            No prior revisions.
+          </p>
         ) : (
           <ul className="revision-list">
             {items.map((rev) => (

@@ -18,6 +18,7 @@ import { Route as MealPlanRouteImport } from './routes/meal-plan'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
+import { Route as StockRouteImport } from './routes/stock'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
@@ -68,6 +69,11 @@ const ShoppingRoute = ShoppingRouteImport.update({
   path: '/shopping',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StockRoute = StockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/stock': typeof StockRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/stock': typeof StockRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products': typeof ProductsIndexRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/stock': typeof StockRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/stock'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/stock'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/stock'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
+  StockRoute: typeof StockRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShoppingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stock': {
+      id: '/stock'
+      path: '/stock'
+      fullPath: '/stock'
+      preLoaderRoute: typeof StockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/': {
       id: '/products/'
       path: '/products'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
+  StockRoute: StockRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
   ProductsIndexRoute: ProductsIndexRoute,

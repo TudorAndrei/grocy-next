@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
 import { Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { nutrientLabels } from "./ProposalForm";
 import type { Nutrients } from "@/lib/types";
 import { ErrorBlock } from "./ErrorBlock";
@@ -12,6 +13,18 @@ export function PendingProposals() {
     queryKey: queryKeys.proposalsPending,
     queryFn: () => api.listPendingProposals(),
   });
+  const productsQuery = useQuery({
+    queryKey: queryKeys.products,
+    queryFn: () => api.listProducts(),
+  });
+
+  const productNames = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const product of productsQuery.data ?? []) {
+      map.set(product.id, product.name);
+    }
+    return map;
+  }, [productsQuery.data]);
 
   const approve = useMutation({
     mutationFn: ({ id, reject }: { id: number; reject?: boolean }) =>
@@ -68,7 +81,8 @@ export function PendingProposals() {
                   to="/products/$productId"
                   params={{ productId: String(item.product_id) }}
                 >
-                  Product #{item.product_id}
+                  {productNames.get(item.product_id) ??
+                    `Product #${item.product_id}`}
                 </Link>
               </h2>
               <p>

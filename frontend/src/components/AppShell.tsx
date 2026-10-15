@@ -12,11 +12,13 @@ export function AppShell({ children }: AppShellProps) {
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <header className="site-header">
+      <aside className="site-rail">
         <Wordmark />
         <SiteNav />
-      </header>
-      <main id="main-content">{children}</main>
+      </aside>
+      <main id="main-content" className="site-main">
+        {children}
+      </main>
     </div>
   );
 }

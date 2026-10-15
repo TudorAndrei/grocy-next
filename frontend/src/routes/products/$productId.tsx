@@ -41,19 +41,21 @@ function ProductDetailPage() {
 
   return (
     <>
-      <p className="muted" style={{ marginBottom: "0.5rem" }}>
-        <Link to="/products">← Back to pantry</Link>
-      </p>
-      <h1 className="page-title">{title}</h1>
-      {product?.barcode ? (
-        <p className="page-lead">Barcode {product.barcode}</p>
-      ) : (
-        <p className="page-lead">
-          Nutrition details and staged updates for this item.
-        </p>
-      )}
+      <Link to="/products" className="back-link">
+        ← Products
+      </Link>
+      <header className="page-header">
+        <div className="page-header-copy">
+          <h1 className="page-title">{title}</h1>
+          <p className="page-lead">
+            {product?.barcode
+              ? `Barcode ${product.barcode}`
+              : "Stock moves, nutrition, and staged updates for this item."}
+          </p>
+        </div>
+      </header>
 
-      <div className="stack" style={{ marginTop: "1.5rem" }}>
+      <div className="stack">
         <StockActions productId={id} />
         {nutritionQuery.isLoading ? (
           <LoadingBlock label="Loading nutrition…" />
