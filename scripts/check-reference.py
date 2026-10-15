@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 RELEASE = "v4.5.0"
 RELEASE_SHA256 = "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95"
@@ -76,7 +77,9 @@ def download_release(path: Path) -> Path:
     raise ValueError("The pinned release download failed.")
 
 
-def run_reference(php: str, release: Path | None, *, json_output: bool) -> int:
+def run_reference(
+    php: str, release: Path | None, *, json_output: bool, timezone: str
+) -> int:
     with tempfile.TemporaryDirectory(prefix="grocy-reference-") as temporary:
         folder = Path(temporary)
         archive = (
@@ -106,13 +109,13 @@ def run_reference(php: str, release: Path | None, *, json_output: bool) -> int:
             probe.bind(("127.0.0.1", 0))
             port = probe.getsockname()[1]
         base_url = f"http://127.0.0.1:{port}"
-        environment = {**os.environ, "GROCY_DATAPATH": str(data), "TZ": "UTC"}
+        environment = {**os.environ, "GROCY_DATAPATH": str(data), "TZ": timezone}
         with (folder / "php.log").open("w+") as log:
             server = subprocess.Popen(
                 [
                     php,
                     "-d",
-                    "date.timezone=UTC",
+                    f"date.timezone={timezone}",
                     "-S",
                     f"127.0.0.1:{port}",
                     "-t",
@@ -190,9 +193,13 @@ def main() -> int:
         help="Check local inputs and show the run configuration",
     )
     parser.add_argument("--output", choices=("text", "json"), default="text")
+    parser.add_argument(
+        "--timezone", default="UTC", help="Server time zone for both implementations"
+    )
     args = parser.parse_args()
     result: dict = {"ok": False, "baseline": RELEASE, "dry_run": args.dry_run}
     try:
+        ZoneInfo(args.timezone)
         php = shutil.which(args.php)
         if php is None:
             raise ValueError("PHP was not found. Set --php to its executable path.")
@@ -216,12 +223,15 @@ def main() -> int:
                 release=str(release) if release else RELEASE_URL,
                 sha256=RELEASE_SHA256,
                 tests="backend/tests/differential",
+                timezone=args.timezone,
             )
             code = 0
         else:
-            code = run_reference(php, release, json_output=args.output == "json")
+            code = run_reference(
+                php, release, json_output=args.output == "json", timezone=args.timezone
+            )
             result.update(ok=code == 0, exit_code=code)
-    except (OSError, ValueError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, ZoneInfoNotFoundError, subprocess.SubprocessError) as error:
         code = 2
         result["error"] = str(error)
     if args.output == "json":

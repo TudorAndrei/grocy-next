@@ -42,6 +42,9 @@ jobs:
 
   php-reference:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        timezone: [UTC, Europe/Bucharest]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -54,4 +57,4 @@ jobs:
       - name: Sync backend
         run: uv sync --project backend --frozen
       - name: Compare with Grocy 4.5.0
-        run: uv run --project backend python scripts/check-reference.py
+        run: uv run --project backend python scripts/check-reference.py --timezone "${{ matrix.timezone }}"

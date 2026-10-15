@@ -133,9 +133,8 @@ def test_reference_calendar_stock_tasks_schedules_and_meal_sections(
             if name not in summary:
                 continue
             start = next(line for line in lines if line.startswith("DTSTART"))
-            events.append(
-                (summary, "VALUE=DATE" in start, start.partition(":")[2].removesuffix("Z"))
-            )
+            end = next((line for line in lines if line.startswith("DTEND")), None)
+            events.append((summary, start, end))
         snapshots.append(sorted(events))
     assert snapshots[0] == snapshots[1]
     assert len(snapshots[0]) == 7
@@ -1231,6 +1230,25 @@ def test_reference_system_metadata_localization_and_time(
         expected_time = reference.get("/api/system/time", params={"offset": offset}).json()
         actual_time = client.get("/api/system/time", params={"offset": offset}).json()
         assert actual_time["offset"] == offset
+        assert actual_time["timezone"] == expected_time["timezone"]
+        assert (
+            abs(
+                (
+                    datetime.fromisoformat(actual_time["time_local"])
+                    - datetime.fromisoformat(expected_time["time_local"])
+                ).total_seconds()
+            )
+            < 5
+        )
+        assert (
+            abs(
+                (
+                    datetime.fromisoformat(actual_time["time_local_sqlite3"])
+                    - datetime.fromisoformat(expected_time["time_local_sqlite3"])
+                ).total_seconds()
+            )
+            < 5
+        )
         assert abs(actual_time["timestamp"] - expected_time["timestamp"]) < 5
         assert (
             abs(

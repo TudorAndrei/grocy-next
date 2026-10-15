@@ -1,9 +1,77 @@
 import json
+import time
+from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
+import pytest
 from fastapi.testclient import TestClient
 
 CONTRACT = Path(__file__).resolve().parents[3] / "contracts" / "grocy.openapi.json"
+
+
+@pytest.mark.parametrize("zone", ["UTC", "Europe/Bucharest"])
+def test_system_time_uses_server_zone(client: TestClient, api_headers: dict, monkeypatch, zone):
+    try:
+        with monkeypatch.context() as environment:
+            environment.setenv("TZ", zone)
+            time.tzset()
+            response = client.get("/api/system/time", headers=api_headers, params={"offset": 3600})
+            assert response.status_code == 200
+            payload = response.json()
+            assert payload["timezone"] == zone
+            expected = datetime.fromtimestamp(payload["timestamp"], ZoneInfo(zone))
+            assert payload["time_local"] == expected.strftime("%Y-%m-%d %H:%M:%S")
+            assert payload["time_utc"] == expected.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S")
+            assert (
+                abs(
+                    (
+                        datetime.fromisoformat(payload["time_local_sqlite3"])
+                        - expected.replace(tzinfo=None)
+                    ).total_seconds()
+                )
+                < 2
+            )
+    finally:
+        time.tzset()
+
+
+@pytest.mark.parametrize("zone", ["UTC", "Europe/Bucharest"])
+def test_calendar_times_keep_server_zone_and_daylight_changes(
+    client: TestClient, api_headers: dict, monkeypatch, zone
+):
+    client.headers.update(api_headers)
+    section = client.post(
+        "/api/objects/meal_plan_sections", json={"name": "Evening", "time_info": "18:00"}
+    ).json()["created_object_id"]
+    for day, note in (("2027-01-04", "Winter time"), ("2027-07-04", "Summer time")):
+        assert (
+            client.post(
+                "/api/objects/meal_plan",
+                json={"type": "note", "day": day, "note": note, "section_id": section},
+            ).status_code
+            == 200
+        )
+    with monkeypatch.context() as environment:
+        environment.setenv("TZ", zone)
+        response = client.get("/api/calendar/ical")
+    assert response.status_code == 200
+    calendar = response.text.replace("\r\n ", "")
+    assert f"TZID:{zone}\r\n" in calendar
+    events = [
+        block
+        for block in calendar.split("BEGIN:VEVENT")
+        if "Winter time" in block or "Summer time" in block
+    ]
+    assert len(events) == 2
+    for block in events:
+        scheduled = "20270104T180000" if "Winter time" in block else "20270704T180000"
+        prefix, suffix = ("", "Z") if zone == "UTC" else (f";TZID={zone}", "")
+        assert f"DTSTART{prefix}:{scheduled}{suffix}\r\n" in block
+        assert f"DTEND{prefix}:{scheduled}{suffix}\r\n" in block
+    if zone == "Europe/Bucharest":
+        assert "BEGIN:DAYLIGHT\r\n" in calendar
+        assert "TZOFFSETTO:+0300\r\n" in calendar
 
 
 def test_contract_entities_and_derived_records(client: TestClient, api_headers: dict):

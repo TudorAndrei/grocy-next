@@ -4,8 +4,10 @@ from datetime import UTC, datetime, time
 from fastapi import APIRouter, Request, Response
 from sqlalchemy import select
 
+from grocy.compatibility.calendar import timezone_component
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
+from grocy.core.time import server_timezone
 from grocy.db.models.catalog import Product
 from grocy.db.models.household import Task
 from grocy.db.models.mealplan import MealPlanEntry, MealPlanSection
@@ -40,15 +42,24 @@ def _fold(line: str) -> str:
 @router.get("/api/calendar/ical")
 async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//grocy-next//EN", "CALSCALE:GREGORIAN"]
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:Grocy", "CALSCALE:GREGORIAN"]
+    zone = server_timezone()
+    event_times: list[datetime] = []
 
     def event(uid: str, start: str, title: str, description: str = "") -> None:
+        key, _, value = start.partition(":")
+        timed = key == "DTSTART"
+        scheduled = datetime.strptime(value, "%Y%m%dT%H%M%S" if timed else "%Y%m%d")
+        event_times.append(scheduled.replace(tzinfo=zone))
+        if timed:
+            start = f"DTSTART:{value}Z" if zone.key == "UTC" else f"DTSTART;TZID={zone.key}:{value}"
         lines.extend(
             [
                 "BEGIN:VEVENT",
                 f"UID:{uid}@grocy-next",
                 f"DTSTAMP:{stamp}",
                 start,
+                *([start.replace("DTSTART", "DTEND", 1)] if timed else []),
                 f"SUMMARY:{_escape(title)}",
                 f"DESCRIPTION:{_escape(description)}",
                 "END:VEVENT",
@@ -111,7 +122,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
     household = HouseholdService(session)
     for chore in await household.list_chores():
         due = chore["next_estimated_execution_time"]
-        if due and not due.startswith("2999-"):
+        if due:
             scheduled = datetime.fromisoformat(due)
             start = f"DTSTART:{scheduled.strftime('%Y%m%dT%H%M%S')}"
             if chore["track_date_only"]:
@@ -127,12 +138,14 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
             )
     for battery in await household.list_batteries():
         due = battery["next_estimated_charge_time"]
-        if due and not due.startswith("2999-"):
+        if due:
             event(
                 f"battery-{battery['id']}",
                 f"DTSTART:{datetime.fromisoformat(due).strftime('%Y%m%dT%H%M%S')}",
                 f"Battery charge cycle due: {battery['name']}",
             )
+    if event_times:
+        lines.extend(timezone_component(zone, min(event_times), max(event_times)))
     lines.append("END:VCALENDAR")
     return Response(
         "\r\n".join(_fold(line) for line in lines) + "\r\n",

@@ -14,6 +14,7 @@ from grocy.core.auth import CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
+from grocy.core.time import server_timezone
 from grocy.db.models.users import User
 
 router = APIRouter(tags=["system"])
@@ -88,8 +89,10 @@ async def system_time(
         select(func.datetime("now", f"{seconds:+} seconds", "localtime"))
     )
     return {
-        "timezone": "UTC",
-        "time_local": utc.isoformat(sep=" ", timespec="seconds"),
+        "timezone": server_timezone().key,
+        "time_local": datetime.fromtimestamp(timestamp, server_timezone()).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
         "time_local_sqlite3": sqlite_time,
         "time_utc": utc.isoformat(sep=" ", timespec="seconds"),
         "timestamp": timestamp,
