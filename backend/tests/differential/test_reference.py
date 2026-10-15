@@ -35,7 +35,7 @@ def reference():
 def create(client, entity: str, body: dict) -> int:
     response = client.post(f"/api/objects/{entity}", json=body)
     assert response.status_code == 200, response.text
-    return response.json()["created_object_id"]
+    return int(response.json()["created_object_id"])
 
 
 def test_reference_stock_recipe_and_household_state(
@@ -68,7 +68,7 @@ def test_reference_stock_recipe_and_household_state(
         assert app.post(f"/api/recipes/{recipe}/consume").status_code == 204
         after_recipe = app.get(base).json()["stock_amount"]
         task = create(app, "tasks", {"name": name})
-        assert app.post(f"/api/tasks/{task}/complete").status_code == 204
+        assert app.post(f"/api/tasks/{task}/complete", json={}).status_code == 204
         done = app.get(f"/api/objects/tasks/{task}").json()["done"]
         assert app.post(f"/api/tasks/{task}/undo").status_code == 204
         undone = app.get(f"/api/objects/tasks/{task}").json()["done"]
@@ -86,3 +86,103 @@ def test_reference_stock_recipe_and_household_state(
             (float(stock), bool(fulfilled), float(after_recipe), int(done), int(undone))
         )
     assert snapshots[0] == snapshots[1] == (3.0, True, 2.0, 1, 0)
+
+
+def timestamp(value):
+    from datetime import datetime
+
+    return datetime.fromisoformat(value) if value else None
+
+
+def test_reference_household_schedule_and_tracking(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    snapshots = []
+    name = f"Household {uuid4().hex[:8]}"
+    for app in (reference, client):
+        chore = create(
+            app,
+            "chores",
+            {
+                "name": name,
+                "period_type": "weekly",
+                "period_interval": 2,
+                "period_config": "monday,thursday",
+                "start_date": "2027-01-01 10:00:00",
+                "track_date_only": 1,
+                "rollover": 0,
+                "assignment_type": "no-assignment",
+            },
+        )
+        states = []
+        for body in (
+            {"tracked_time": "2027-01-04 15:00:00"},
+            {"tracked_time": "2027-01-14 15:00:00", "skipped": True},
+        ):
+            result = app.post(f"/api/chores/{chore}/execute", json=body)
+            assert result.status_code == 200, result.text
+            details = app.get(f"/api/chores/{chore}").json()
+            states.append(
+                (
+                    timestamp(result.json()["tracked_time"]),
+                    timestamp(result.json()["scheduled_execution_time"]),
+                    timestamp(details["last_tracked"]),
+                    int(details["tracked_count"]),
+                    timestamp(details["next_estimated_execution_time"]),
+                )
+            )
+        assert app.post(f"/api/chores/executions/{result.json()['id']}/undo").status_code == 204
+        states.append(
+            timestamp(app.get(f"/api/chores/{chore}").json()["next_estimated_execution_time"])
+        )
+        response = app.put(f"/api/objects/chores/{chore}", json={"rescheduled_date": "2027-03-01"})
+        assert response.status_code == 204, response.text
+        states.append(
+            timestamp(app.get(f"/api/chores/{chore}").json()["next_estimated_execution_time"])
+        )
+        battery = create(app, "batteries", {"name": name, "charge_interval_days": 7})
+        states.append(app.get(f"/api/batteries/{battery}").json()["next_estimated_charge_time"])
+        cycle = app.post(
+            f"/api/batteries/{battery}/charge", json={"tracked_time": "2027-01-04 15:00:00"}
+        )
+        assert cycle.status_code == 200, cycle.text
+        details = app.get(f"/api/batteries/{battery}").json()
+        states.append(
+            (
+                timestamp(details["last_charged"]),
+                int(details["charge_cycles_count"]),
+                timestamp(details["next_estimated_charge_time"]),
+            )
+        )
+        assert (
+            app.post(f"/api/batteries/charge-cycles/{cycle.json()['id']}/undo").status_code == 204
+        )
+        states.append(int(app.get(f"/api/batteries/{battery}").json()["charge_cycles_count"]))
+        category = create(app, "task_categories", {"name": name})
+        task = create(
+            app, "tasks", {"name": name, "category_id": category, "assigned_to_user_id": 1}
+        )
+        current = next(row for row in app.get("/api/tasks").json() if int(row["id"]) == task)
+        states.append((int(current["assigned_to_user"]["id"]), current["category"]["name"]))
+        assert (
+            app.put(f"/api/objects/task_categories/{category}", json={"active": 0}).status_code
+            == 204
+        )
+        states.append(
+            next(row for row in app.get("/api/tasks").json() if int(row["id"]) == task)["category"]
+        )
+        completed = app.post(
+            f"/api/tasks/{task}/complete", json={"done_time": "2027-01-04 15:00:00"}
+        )
+        assert completed.status_code == 204, completed.text
+        states.append(timestamp(app.get(f"/api/objects/tasks/{task}").json()["done_timestamp"]))
+        for entity, record_id, kind in (
+            ("chores", chore, "chore"),
+            ("batteries", battery, "battery"),
+        ):
+            label = app.get(f"/api/{entity}/{record_id}/printlabel")
+            assert label.status_code == 200, label.text
+            states.append((label.json()[kind], label.json()["details"][kind]["name"]))
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]

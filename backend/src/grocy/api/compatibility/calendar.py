@@ -87,7 +87,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
     household = HouseholdService(session)
     for chore in await household.list_chores():
         due = chore["next_estimated_execution_time"]
-        if due:
+        if due and not due.startswith("2999-"):
             event(
                 f"chore-{chore['id']}",
                 f"DTSTART:{datetime.fromisoformat(due).strftime('%Y%m%dT%H%M%S')}",
@@ -95,7 +95,7 @@ async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
             )
     for battery in await household.list_batteries():
         due = battery["next_estimated_charge_time"]
-        if due:
+        if due and not due.startswith("2999-"):
             event(
                 f"battery-{battery['id']}",
                 f"DTSTART:{datetime.fromisoformat(due).strftime('%Y%m%dT%H%M%S')}",

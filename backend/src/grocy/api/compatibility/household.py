@@ -1,13 +1,18 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel
 
+from grocy.api.compatibility.filtering import filter_rows
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import HouseholdSvc
 
 router = APIRouter(tags=["household"])
+
+
+class TaskCompletionBody(BaseModel):
+    done_time: datetime | None = None
 
 
 class TrackingBody(BaseModel):
@@ -17,8 +22,10 @@ class TrackingBody(BaseModel):
 
 
 @router.get("/api/chores")
-async def list_chores(_actor: CurrentActor, household: HouseholdSvc) -> list[dict[str, Any]]:
-    return await household.list_chores()
+async def list_chores(
+    request: Request, _actor: CurrentActor, household: HouseholdSvc
+) -> list[dict[str, Any]]:
+    return filter_rows(await household.list_chores(), request.query_params)
 
 
 @router.get("/api/chores/{chore_id}")
@@ -54,8 +61,9 @@ async def undo_chore(
 async def calculate_next_assignments(
     _actor: CurrentActor,
     household: HouseholdSvc,
+    body: dict[str, int] | None = None,
 ) -> Response:
-    await household.calculate_next_assignments()
+    await household.calculate_next_assignments((body or {}).get("chore_id"))
     return Response(status_code=204)
 
 
@@ -72,11 +80,12 @@ async def merge_chores(
 
 @router.get("/api/tasks")
 async def list_tasks(
+    request: Request,
     _actor: CurrentActor,
     household: HouseholdSvc,
     include_done: Annotated[bool, Query()] = False,
 ) -> list[dict[str, Any]]:
-    return await household.list_tasks(include_done=include_done)
+    return filter_rows(await household.list_tasks(include_done=include_done), request.query_params)
 
 
 @router.post("/api/tasks/{task_id}/complete", status_code=204)
@@ -84,8 +93,9 @@ async def complete_task(
     task_id: int,
     _actor: CurrentActor,
     household: HouseholdSvc,
+    body: TaskCompletionBody | None = None,
 ) -> Response:
-    await household.complete_task(task_id)
+    await household.complete_task(task_id, done_time=body.done_time if body else None)
     return Response(status_code=204)
 
 
@@ -100,8 +110,10 @@ async def undo_task(
 
 
 @router.get("/api/batteries")
-async def list_batteries(_actor: CurrentActor, household: HouseholdSvc) -> list[dict[str, Any]]:
-    return await household.list_batteries()
+async def list_batteries(
+    request: Request, _actor: CurrentActor, household: HouseholdSvc
+) -> list[dict[str, Any]]:
+    return filter_rows(await household.list_batteries(), request.query_params)
 
 
 @router.get("/api/batteries/{battery_id}")

@@ -238,6 +238,44 @@ class GenericObjectsService:
             value = getattr(row, field, None)
             if value is not None and (not Decimal(str(value)).is_finite() or value <= 0):
                 raise GrocyError(f"'{field}' must be positive", code="invalid_amount")
+        if isinstance(row, Chore):
+            if not row.start_date:
+                row.start_date = datetime.now()
+            if row.period_type not in {
+                None,
+                "manually",
+                "hourly",
+                "daily",
+                "weekly",
+                "monthly",
+                "yearly",
+                "adaptive",
+            }:
+                raise GrocyError("Invalid chore period")
+            if row.period_interval is not None and row.period_interval <= 0:
+                raise GrocyError("Repeat interval must be positive")
+            if (
+                row.period_type == "monthly"
+                and row.period_days is not None
+                and not 1 <= row.period_days <= 31
+            ):
+                raise GrocyError("Day of month must be between 1 and 31")
+            if row.assignment_type not in {
+                None,
+                "no-assignment",
+                "random",
+                "who-least-did-first",
+                "in-alphabetical-order",
+            }:
+                raise GrocyError("Invalid chore assignment")
+            if row.consume_product_on_execution and not (row.product_id and row.product_amount):
+                raise GrocyError("Chore stock consumption requires a product and amount")
+        if (
+            isinstance(row, Battery)
+            and row.charge_interval_days is not None
+            and row.charge_interval_days < 0
+        ):
+            raise GrocyError("Charge interval cannot be negative")
         if isinstance(row, Product) and row.parent_product_id:
             pending = row.parent_product_id
             seen = {row.id} if row.id else set()

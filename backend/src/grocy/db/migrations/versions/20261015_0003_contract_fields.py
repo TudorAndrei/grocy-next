@@ -24,13 +24,28 @@ def upgrade() -> None:
             "recipes", naming_convention={"uq": "uq_%(table_name)s_%(column_0_name)s"}
         ) as batch:
             batch.drop_constraint("uq_recipes_name", type_="unique")
+    # These columns have their own data conversion in revision 0004.
+    household_schedule_columns = {
+        "chores": {
+            "period_interval",
+            "active",
+            "consume_product_on_execution",
+            "product_id",
+            "product_amount",
+        },
+        "chores_log": {"scheduled_execution_time"},
+        "batteries": {"active"},
+        "task_categories": {"active"},
+    }
     for table in Base.metadata.sorted_tables:
         if not inspect(bind).has_table(table.name):
             table.create(bind)
             continue
         columns = {column["name"] for column in inspect(bind).get_columns(table.name)}
         for column in table.columns:
-            if column.name in columns:
+            if column.name in columns or column.name in household_schedule_columns.get(
+                table.name, set()
+            ):
                 continue
             default = None
             if not column.nullable and isinstance(column.type, DateTime):

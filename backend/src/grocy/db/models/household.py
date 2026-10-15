@@ -1,6 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from grocy.db.models.base import Base, TimestampMixin
@@ -14,6 +15,8 @@ class Chore(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     period_type: Mapped[str] = mapped_column(String(32), nullable=False, default="manually")
     period_days: Mapped[int | None] = mapped_column(Integer)
+    period_interval: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     period_config: Mapped[str | None] = mapped_column(String(255))
     track_date_only: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     rollover: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -27,6 +30,9 @@ class Chore(Base, TimestampMixin):
     rescheduled_next_execution_assigned_to_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id")
     )
+    consume_product_on_execution: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
+    product_amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
 
 
 class ChoreLog(Base):
@@ -35,6 +41,7 @@ class ChoreLog(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
     tracked_time: Mapped[datetime] = mapped_column(DateTime(timezone=False), nullable=False)
+    scheduled_execution_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     done_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     undone: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -48,6 +55,8 @@ class ChoreLog(Base):
 
 class TaskCategory(Base, TimestampMixin):
     __tablename__ = "task_categories"
+
+    active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -75,6 +84,7 @@ class Battery(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     used_in: Mapped[str | None] = mapped_column(String(255))
     charge_interval_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
 class BatteryChargeCycle(Base):

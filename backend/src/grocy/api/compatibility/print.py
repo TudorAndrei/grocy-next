@@ -11,6 +11,7 @@ from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
+from grocy.domains.household.service import HouseholdService
 from grocy.domains.shopping.service import ShoppingService
 
 router = APIRouter(tags=["print"])
@@ -27,6 +28,10 @@ async def label(session: DbSession, entity: str, object_id: int) -> dict[str, An
     }[entity]
     product_id = details.get("product_id", object_id) if entity == "stock" else object_id
     name = details.get("name", "")
+    if entity == "chores":
+        details = await HouseholdService(session).get_chore(object_id)
+    elif entity == "batteries":
+        details = await HouseholdService(session).get_battery(object_id)
     if entity == "stock":
         product = await GenericObjectsService(session).get_entity("products", product_id)
         name = product["name"]

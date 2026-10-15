@@ -139,7 +139,9 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
                 name="Clean fridge",
                 description="Wipe shelves",
                 period_type="weekly",
-                period_days=7,
+                period_interval=1,
+                period_config="sunday",
+                start_date=datetime.now(),
             ),
             Battery(
                 name="Kitchen scale",

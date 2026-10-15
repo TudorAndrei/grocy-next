@@ -20,7 +20,16 @@ GROCY_REFERENCE_DISPOSABLE=1 \
 uv run pytest tests/differential
 ```
 
-The suite creates records in the reference database. It compares stock purchases, consumption, recipe fulfillment, recipe consumption, tasks, and chore execution. It verifies the reference version before it writes. Use a fresh reference database for each run.
+The suite creates records in the reference database. It compares stock purchases, consumption, recipe fulfillment, recipe consumption, task completion times, task assignments, chore schedules, skipped executions, rescheduling, charge counts, undo, and household labels. It verifies the reference version before it writes. Use a fresh reference database for each run. Disable physical printing in the reference with `LABEL_PRINTER_RUN_SERVER=false`.
+
+The normal suite also uses 14 schedule cases from the pinned Grocy SQLite view. These cases cover hourly, daily, weekly, monthly, yearly, adaptive, manual, and rollover schedules. To regenerate the stored results from a Grocy v4.5.0 source checkout:
+
+```bash
+backend/.venv/bin/python scripts/generate-household-goldens.py \
+  /path/to/grocy-4.5.0 backend/tests/fixtures/household-grocy-4.5.0.json
+```
+
+Grocy 4.5.0 uses the last logged execution in its weekly schedule query, including an undone execution. This API uses that same date for weekly schedules. Chore tracking counts and last completed times exclude skipped and undone executions.
 
 ## Boundaries
 

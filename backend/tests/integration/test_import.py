@@ -84,6 +84,12 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
     source_database(database)
     with sqlite3.connect(database) as connection:
         connection.executescript("""
+            CREATE TABLE chores (id INTEGER PRIMARY KEY, name TEXT, period_type TEXT,
+                                 period_days INTEGER);
+            CREATE TABLE chores_log (id INTEGER PRIMARY KEY, chore_id INTEGER, tracked_time TEXT,
+                                    undone INTEGER DEFAULT 0, skipped INTEGER DEFAULT 0);
+            INSERT INTO chores VALUES (1, 'Legacy clean', 'daily', 3);
+            INSERT INTO chores_log VALUES (1, 1, '2027-01-04 15:00:00', 0, 0);
             CREATE TABLE api_keys (id INTEGER PRIMARY KEY, api_key TEXT, user_id INTEGER,
                                    key_type TEXT DEFAULT 'default');
             INSERT INTO api_keys VALUES (1, 'upgrade-key', 1, 'default');
@@ -100,6 +106,11 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         stock = upgraded.get("/api/stock/products/1", headers=headers)
         assert stock.status_code == 200
         assert stock.json()["stock_amount"] == 3
+        chore = upgraded.get("/api/chores/1", headers=headers)
+        assert chore.status_code == 200
+        assert chore.json()["chore"]["period_interval"] == 3
+        assert chore.json()["tracked_count"] == 1
+        assert chore.json()["next_estimated_execution_time"] == "2027-01-07T15:00:00"
         assert upgraded.get("/api/objects/equipment", headers=headers).status_code == 200
         assert upgraded.get("/api/users/1/permissions", headers=headers).json() == [
             {"permission_id": 1, "user_id": 1},
@@ -107,5 +118,5 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
     with sqlite3.connect(database) as connection:
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0003"
+            == "20261015_0004"
         )
