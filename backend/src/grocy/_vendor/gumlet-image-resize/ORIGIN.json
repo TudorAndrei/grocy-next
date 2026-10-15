@@ -1,0 +1,16 @@
+{
+  "package": "gumlet/php-image-resize",
+  "version": "2.0.4",
+  "source": "https://github.com/gumlet/php-image-resize.git",
+  "commit": "54165d97ebc3d4fc188761166b78e6702f605f59",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "Licence.md": "1320af371ec26b919ec47b408efdf2bc0b50f39cfec2bb8e02128afe7f348542",
+    "lib/ImageResize.php": "0ebfb75dcf03d2d72063feff9f6dabda09d4fb6c07b66a6b163c4153354db430",
+    "lib/ImageResizeException.php": "c30ea61e80df3fba3760c03a97d133216efeacdee66f1c0867a20b8814045859"
+  }
+}

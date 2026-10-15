@@ -128,7 +128,10 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
     path = request.url.path.removeprefix("/api/")
     action = path.rsplit("/", 1)[-1]
     write = request.method not in {"GET", "HEAD", "OPTIONS"}
-    if path.startswith(("v2/mcp", "user/settings", "files/", "system")) or path == "user":
+    if (
+        path.startswith(("v2/mcp", "v2/files/", "user/settings", "files/", "system"))
+        or path == "user"
+    ):
         return ""
     if path.startswith("v2/api-keys"):
         return "ADMIN"

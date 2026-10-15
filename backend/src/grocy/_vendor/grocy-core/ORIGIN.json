@@ -27,6 +27,8 @@
     "controllers/BatteriesApiController.php": "9f2e4fc6dabe6a90ebd7a0c94640cd1043b008d639e974eecee6e93ee94bb8c2",
     "controllers/StockApiController.php": "c655e7ca1a908aa544ade70074aff090338cd1595a246964f266afe800d444a6",
     "controllers/RecipesApiController.php": "20be4e5414808312cdb4175820e3403c6acafe0c8f23903acf62227419066bdc",
-    "services/DatabaseService.php": "0720507d05a4207f21ddca2c536fe6c02d48af06edfe3e56debb6fdfc49d4d97"
+    "services/DatabaseService.php": "0720507d05a4207f21ddca2c536fe6c02d48af06edfe3e56debb6fdfc49d4d97",
+    "controllers/FilesApiController.php": "f87e6d4523367ac15b9ec65b865b42f9ed09df8a8741707d3977a5a41b30d142",
+    "services/FilesService.php": "5e163f6bfbe47c1f8055ae7630f5c59040f3e87559bf25a2b2a6f587939e02b7"
   }
 }

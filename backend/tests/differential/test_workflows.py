@@ -3215,3 +3215,153 @@ def test_shopping_expiry_uses_the_same_sqlite_day_as_stock(api, catalog):
     assert rows(api, "shopping_list", product_id=product) == []
     saved = rows(api, "shopping_list", product_id=expired)
     assert len(saved) == 1 and saved[0]["amount"] == 1
+
+
+@pytest.mark.parametrize("method", ["GET", "PUT", "DELETE"])
+@pytest.mark.parametrize(
+    "group,name,message",
+    [
+        ("invalid", "file.txt", "Invalid file group"),
+        ("productpictures", "NoExtension", "Invalid filename"),
+        ("userfiles", "bad;name.txt", "Invalid filename"),
+        ("equipmentmanuals", "../escape.txt", "Invalid filename"),
+    ],
+)
+def test_native_file_validation_and_error_order(api, group, name, message, method):
+    token = base64.b64encode(name.encode()).decode()
+    response = api.request(method, f"/api/files/{group}/{token}", content=b"data")
+    assert response.status_code == (404 if method == "GET" else 400), response.text
+    data = response.json()
+    assert data["error_message"] == message
+    assert set(data) == (
+        {"error_message", "error_details"} if method == "GET" else {"error_message"}
+    )
+    assert response.headers["content-type"] == "application/json"
+    assert response.headers["access-control-allow-origin"] == "*"
+
+
+@pytest.mark.parametrize(
+    "value,expected,mime",
+    [
+        (b"0", b"", "application/x-empty"),
+        (b"", b"", "application/x-empty"),
+        (b"\x00", b"\x00", "application/octet-stream"),
+        (b"hello", b"hello", "text/plain;charset=UTF-8"),
+        (b"x" * 1048576 + b"0", b"x" * 1048576, "text/plain;charset=UTF-8"),
+    ],
+    ids=["zero", "empty", "binary", "text", "full_chunk_and_zero"],
+)
+def test_native_file_streams_keep_chunk_and_header_rules(api, value, expected, mime):
+    name = uuid4().hex + ".jpg"
+    token = base64.b64encode(name.encode()).decode()
+    path = f"/api/files/userfiles/{token}"
+    try:
+        uploaded = api.put(path, content=value)
+        assert uploaded.status_code == 204, uploaded.text
+        downloaded = api.get(path, headers={"Range": "bytes=0-0"})
+        assert downloaded.status_code == 200, downloaded.text
+        assert downloaded.content == expected
+        assert downloaded.headers["content-type"] == mime
+        assert downloaded.headers["content-disposition"] == f'inline; filename="{name}"'
+        assert downloaded.headers["cache-control"] == "max-age=2592000"
+        head = api.head(path)
+        assert head.status_code == 200 and head.content == b""
+        assert head.headers["content-type"] == mime
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "parameters,status,size",
+    [
+        ({"best_fit_height": "20"}, 500, None),
+        ({"best_fit_width": "0"}, 200, (100, 50)),
+        ({"best_fit_width": "-2"}, 500, None),
+        ({"best_fit_width": "1.9"}, 200, (1, 1)),
+        ({"best_fit_width": "bad", "best_fit_height": "bad"}, 200, (100, 50)),
+        ({"best_fit_width[]": "20"}, 200, (100, 50)),
+    ],
+)
+def test_native_picture_parameters_follow_php_and_gd(api, parameters, status, size):
+    from PIL import Image
+
+    original = BytesIO()
+    Image.new("RGBA", (100, 50), (10, 20, 30, 120)).save(original, "PNG")
+    token = base64.b64encode((uuid4().hex + ".png").encode()).decode()
+    path = f"/api/files/productpictures/{token}"
+    assert api.put(path, content=original.getvalue()).status_code == 204
+    try:
+        response = api.get(path, params={"force_serve_as": "picture", **parameters})
+        assert response.status_code == status, response.text if status != 200 else status
+        if status == 200:
+            with Image.open(BytesIO(response.content)) as picture:
+                assert picture.size == size
+        else:
+            assert response.json()["error_message"] == (
+                "imagecreatetruecolor(): Argument #1 ($width) must be greater than 0"
+            )
+            assert "error_details" in response.json()
+        assert api.get(path).content == original.getvalue()
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+def test_native_picture_cache_is_reused_and_deleted_with_the_original(api):
+    from PIL import Image
+
+    output = BytesIO()
+    Image.new("RGB", (16, 8), "red").save(output, "PNG")
+    name = uuid4().hex + ".png"
+
+    def url(value):
+        return "/api/files/productpictures/" + base64.b64encode(value.encode()).decode()
+
+    original = url(name)
+    cached = url(name[:-4] + "__downscaledtoautox8.png")
+    assert api.put(original, content=output.getvalue()).status_code == 204
+    try:
+        response = api.get(original, params={"force_serve_as": "picture", "best_fit_width": 8})
+        assert response.status_code == 200, response.text
+        assert api.get(cached).content == response.content
+        assert api.put(cached, content=b"replacement").status_code == 400
+        assert (
+            api.get(original, params={"force_serve_as": "picture", "best_fit_width": 8}).content
+            == response.content
+        )
+        assert api.delete(original).status_code == 204
+        missing = api.get(cached)
+        assert missing.status_code == 404
+        assert missing.json()["error_message"] == "File not found"
+    finally:
+        api.delete(original)
+        api.delete(cached)
+
+
+def test_native_files_keep_unicode_header_bytes_and_invalid_image_status(api):
+    name = uuid4().hex + "_漢字.txt"
+    path = "/api/files/userfiles/" + base64.b64encode(name.encode()).decode()
+    assert api.put(path, content=b"plain text").status_code == 204
+    try:
+        if hasattr(api, "portal"):
+            # TestClient decodes raw response headers through ASCII; ASGITransport retains bytes.
+            async def fetch():
+                async with httpx.AsyncClient(
+                    transport=httpx.ASGITransport(app=api.app),
+                    base_url="http://testserver",
+                    headers=dict(api.headers),
+                ) as connected:
+                    result = await connected.get(path)
+                    return result.status_code, result.headers.raw
+
+            status, headers = api.portal.call(fetch)
+        else:
+            response = api.get(path)
+            status, headers = response.status_code, response.headers.raw
+        assert status == 200
+        expected = f'inline; filename="{name}"'.encode()
+        assert {key.lower(): value for key, value in headers}[b"content-disposition"] == expected
+        response = api.get(path, params={"force_serve_as": "picture"})
+        assert response.status_code == 404, response.text
+        assert response.json()["error_message"] == "Unsupported file type"
+    finally:
+        assert api.delete(path).status_code == 204

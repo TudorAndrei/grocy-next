@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from grocy import __version__
 from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
+from grocy.compatibility.files import NativeFiles
 from grocy.compatibility.purifier import InputPurifier
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
@@ -38,12 +39,15 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
                 session.add(Location(id=1, name="Default"))
                 await session.commit()
     purifier = InputPurifier(settings.php_executable)
+    files = NativeFiles(settings.php_executable)
     try:
         await purifier.start()
         if _app is not None:
             _app.state.input_purifier = purifier
+            _app.state.native_files = files
         yield
     finally:
+        await files.close()
         await purifier.close()
         await engine.dispose()
 

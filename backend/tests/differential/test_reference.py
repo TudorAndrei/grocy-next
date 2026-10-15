@@ -1571,3 +1571,46 @@ def test_reference_user_setting_defaults_values_and_reset(
         states.append(app.get(f"/api/user/settings/{key}").json())
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize("image_format", ["PNG", "JPEG", "GIF", "WEBP"])
+def test_reference_native_picture_bytes(
+    client: TestClient, api_headers: dict, reference, tmp_path, monkeypatch, image_format
+):
+    import base64
+    from io import BytesIO
+
+    from PIL import Image
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    image = Image.new("RGBA", (32, 20))
+    image.putdata([
+        ((x * 7) % 256, (y * 11) % 256, ((x + y) * 13) % 256, (x * 17 + y * 7) % 256)
+        for y in range(20) for x in range(32)
+    ])
+    if image_format == "JPEG":
+        image = image.convert("RGB")
+    source = BytesIO()
+    image.save(source, image_format)
+    name = uuid4().hex + "." + image_format.lower()
+    path = "/api/files/productpictures/" + base64.b64encode(name.encode()).decode()
+    snapshots = []
+    for app in [client, reference]:
+        headers = api_headers if app is client else {}
+        assert app.put(path, content=source.getvalue(), headers=headers).status_code == 204
+        try:
+            rows = []
+            for parameters in [
+                {"force_serve_as": "picture"},
+                {"force_serve_as": "picture", "best_fit_width": "17"},
+                {"force_serve_as": "picture", "best_fit_width": "17", "best_fit_height": "13"},
+            ]:
+                response = app.get(path, params=parameters, headers=headers)
+                assert response.status_code == 200, response.text
+                rows.append((response.content, response.headers["content-type"]))
+            snapshots.append(rows)
+        finally:
+            assert app.delete(path, headers=headers).status_code == 204
+    assert snapshots[0] == snapshots[1]

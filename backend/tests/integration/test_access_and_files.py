@@ -31,6 +31,10 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     assert client.put(path, headers=headers, content=b"Manual").status_code == 204
     assert client.get(path, headers=headers).content == b"Manual"
     assert client.delete(path, headers=headers).status_code == 204
+    photo = "/api/v2/files/nutrition/reader-photo.jpg"
+    assert client.put(photo, headers=headers, content=b"photo").status_code == 204
+    assert client.get(photo, headers=headers).content == b"photo"
+    assert client.delete(photo, headers=headers).status_code == 204
     grant = client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": [7]}
     )
@@ -58,16 +62,12 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     assert client.get("/api/users/1/permissions", headers=api_headers).json() == [
         {"id": 1, "permission_id": 1, "user_id": 1},
     ]
-    client.put(
-        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": []}
-    )
+    client.put(f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": []})
     assert (
         client.post("/api/stock/products/1/add", headers=headers, json={"amount": 1}).status_code
         == 403
     )
-    client.put(
-        f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": [24]}
-    )
+    client.put(f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": [24]})
     tracked = client.post("/api/chores/1/execute", headers=headers, json={})
     assert tracked.status_code == 200
     assert tracked.json()["done_by_user_id"] == user_id
@@ -84,7 +84,7 @@ def test_file_storage_is_bounded_and_rejects_escape(
     settings = get_settings()
     monkeypatch.setattr(settings, "files_root", tmp_path / "files")
     monkeypatch.setattr(settings, "max_upload_bytes", 8)
-    path = "/api/files/equipment/manual.txt"
+    path = "/api/v2/files/equipment/manual.txt"
     assert client.put(path, headers=api_headers, content=b"Manual").status_code == 204
     downloaded = client.get(path, headers=api_headers)
     assert downloaded.content == b"Manual"
@@ -92,7 +92,9 @@ def test_file_storage_is_bounded_and_rejects_escape(
     assert client.put(path + "2", headers=api_headers, content=b"0123456789").status_code == 413
     assert client.get(path, headers=api_headers).content == b"Manual"
     assert (
-        client.put("/api/files/%2e%2e/escaped.txt", headers=api_headers, content=b"bad").status_code
+        client.put(
+            "/api/v2/files/%2e%2e/escaped.txt", headers=api_headers, content=b"bad"
+        ).status_code
         == 400
     )
     assert not (tmp_path / "escaped.txt").exists()
@@ -102,7 +104,7 @@ def test_file_storage_is_bounded_and_rejects_escape(
         encoded = base64.b64encode(invalid.encode()).decode()
         assert (
             client.put(
-                f"/api/files/equipment/{encoded}", headers=api_headers, content=b"bad"
+                f"/api/v2/files/equipment/{encoded}", headers=api_headers, content=b"bad"
             ).status_code
             == 400
         )
@@ -130,7 +132,7 @@ def test_calendar_subscription_is_scoped_and_escaped(client: TestClient, api_hea
     assert client.get(f"/api/stock?secret={secret}").status_code == 401
 
 
-def test_picture_response_preserves_original_and_aspect_ratio(
+def test_extension_picture_response_preserves_original_and_aspect_ratio(
     client: TestClient, api_headers: dict, tmp_path: Path, monkeypatch
 ):
     from io import BytesIO
@@ -144,19 +146,21 @@ def test_picture_response_preserves_original_and_aspect_ratio(
     Image.new("RGB", (100, 50), "red").save(original, "PNG")
     assert (
         client.put(
-            "/api/files/productpictures/photo.png", headers=api_headers, content=original.getvalue()
+            "/api/v2/files/productpictures/photo.png",
+            headers=api_headers,
+            content=original.getvalue(),
         ).status_code
         == 204
     )
     response = client.get(
-        "/api/files/productpictures/photo.png?force_serve_as=picture&best_fit_width=20",
+        "/api/v2/files/productpictures/photo.png?force_serve_as=picture&best_fit_width=20",
         headers=api_headers,
     )
     assert response.status_code == 200
     with Image.open(BytesIO(response.content)) as resized:
         assert resized.size == (20, 10)
     assert (
-        client.get("/api/files/productpictures/photo.png", headers=api_headers).content
+        client.get("/api/v2/files/productpictures/photo.png", headers=api_headers).content
         == original.getvalue()
     )
 

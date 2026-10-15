@@ -262,14 +262,27 @@ export const queryKeys = {
   batteries: ["batteries"] as const,
 };
 
-export async function downloadFile(group: string, name: string): Promise<void> {
-  const { apiKey } = readApiConfig();
-  const response = await fetch(
-    resolveUrl(
-      `/api/files/${encodeURIComponent(group)}/${encodeURIComponent(name)}`,
-    ),
-    { headers: { "GROCY-API-KEY": apiKey } },
+export function filePath(group: string, name: string): string {
+  if (group === "equipment" || group === "nutrition")
+    return `/api/v2/files/${encodeURIComponent(group)}/${encodeURIComponent(name)}`;
+  const encoded = btoa(
+    Array.from(new TextEncoder().encode(name), (byte) =>
+      String.fromCharCode(byte),
+    ).join(""),
   );
+  return `/api/files/${encodeURIComponent(group)}/${encodeURIComponent(encoded)}`;
+}
+
+export async function downloadFile(
+  group: string,
+  name: string,
+  legacyGroup?: string,
+): Promise<void> {
+  const { apiKey } = readApiConfig();
+  const headers = { "GROCY-API-KEY": apiKey };
+  let response = await fetch(resolveUrl(filePath(group, name)), { headers });
+  if (response.status === 404 && legacyGroup)
+    response = await fetch(resolveUrl(filePath(legacyGroup, name)), { headers });
   if (!response.ok)
     throw new ApiError(response.status, "Could not download the file.", null);
   const url = URL.createObjectURL(await response.blob());

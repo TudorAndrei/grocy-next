@@ -28,3 +28,9 @@ and its license. This class keeps native Content-Type errors and status codes.
 List and stock reads also use the pinned Grocy controllers and services. The
 adapter supplies the application connection. The original database service
 retains its raw SQL calls and grouped object fetches for stock responses.
+
+File requests use the unchanged Grocy file controller and service. The pinned
+Gumlet PHP Image Resize 2.0.4 source and MIT license are in `gumlet-image-resize`.
+PHP GD creates the image bytes. The adapter selects the configured storage root
+and supplies HTTP streams. The native code retains file name checks, upload
+chunk rules, image parameters, cache names, and cache deletion.

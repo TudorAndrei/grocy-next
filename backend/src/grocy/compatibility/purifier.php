@@ -14,7 +14,7 @@ try {
     if (PHP_VERSION_ID < 80100 || PHP_VERSION_ID >= 80500) {
         throw new RuntimeException('The pinned HTMLPurifier requires PHP 8.1 through 8.4');
     }
-    foreach (['bcmath', 'ctype', 'dom', 'fileinfo', 'iconv', 'intl', 'libxml', 'mbstring', 'pdo_sqlite', 'simplexml'] as $extension) {
+    foreach (['bcmath', 'ctype', 'dom', 'fileinfo', 'gd', 'iconv', 'intl', 'libxml', 'mbstring', 'pdo_sqlite', 'simplexml'] as $extension) {
         if (!extension_loaded($extension)) {
             throw new RuntimeException('The PHP extension ' . $extension . ' is required');
         }

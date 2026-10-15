@@ -10,6 +10,8 @@
   "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
   "files": {
     "LICENSE.md": "24d84675cc9fffd507101fd43fecb5dd7f87679f065d90b2ef597d0a8b7e5994",
-    "Slim/Exception/HttpException.php": "f0ad4d036249eec7ce59f72d540a58ca8384e5db7190289c7ff11c502866276b"
+    "Slim/Exception/HttpException.php": "f0ad4d036249eec7ce59f72d540a58ca8384e5db7190289c7ff11c502866276b",
+    "Slim/Exception/HttpNotFoundException.php": "9f79d9b276a8d01f87c1365ea43caa28e4dab0e44f56316bc1cd104aa73edc3f",
+    "Slim/Exception/HttpSpecializedException.php": "c5845a20d7645c3d97886e1d842bf11bc2dd437045abb3371a1cfaf7a70760a6"
   }
 }

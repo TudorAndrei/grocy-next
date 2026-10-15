@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
-import { api, downloadFile, request } from "@/lib/api";
+import { api, downloadFile, filePath, request } from "@/lib/api";
 export const Route = createFileRoute("/equipment")({
   component: EquipmentPage,
 });
@@ -20,7 +20,7 @@ function EquipmentPage() {
       if (!file || !equipmentId)
         throw new Error("Select equipment and a file.");
       const filename = `${equipmentId}-${file.name}`;
-      await request(`/api/files/equipment/${encodeURIComponent(filename)}`, {
+      await request(filePath("equipmentmanuals", filename), {
         method: "PUT",
         body: file,
       });
@@ -33,7 +33,7 @@ function EquipmentPage() {
     },
   });
   const download = useMutation({
-    mutationFn: (name: string) => downloadFile("equipment", name),
+    mutationFn: (name: string) => downloadFile("equipmentmanuals", name, "equipment"),
   });
   const submit = (e: FormEvent) => {
     e.preventDefault();

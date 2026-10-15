@@ -44,7 +44,7 @@ export function ProposalForm({
       let photoPath: string | undefined;
       if (photo) {
         const name = `${productId}-${Date.now()}-${photo.name}`;
-        await request(`/api/files/nutrition/${encodeURIComponent(name)}`, {
+        await request(`/api/v2/files/nutrition/${encodeURIComponent(name)}`, {
           method: "PUT",
           body: photo,
         });

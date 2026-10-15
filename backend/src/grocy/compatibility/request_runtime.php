@@ -5,6 +5,7 @@ spl_autoload_register(function (string $class): void {
     $prefixes = [
         'Grocy\\Services\\' => ['grocy-core/services/'],
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
+        'Gumlet\\' => ['gumlet-image-resize/lib/'],
         'LessQL\\' => ['morris-lessql/src/LessQL/'],
         'Slim\\Http\\' => ['slim-http/src/'],
         'Slim\\Exception\\' => ['slim-framework/Slim/Exception/'],
