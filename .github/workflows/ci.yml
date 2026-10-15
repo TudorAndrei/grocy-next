@@ -7,12 +7,16 @@ on:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+      - name: Install PHP input processor
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli php-bcmath php-intl php-mbstring php-xml
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -41,7 +45,7 @@ jobs:
       - run: npm run build
 
   php-reference:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         timezone: [UTC, Europe/Bucharest]
@@ -53,7 +57,7 @@ jobs:
       - name: Install PHP modules
         run: |
           sudo apt-get update
-          sudo apt-get install -y php-cli php-curl php-gd php-intl php-mbstring php-sqlite3 php-xml php-zip
+          sudo apt-get install -y php-cli php-bcmath php-curl php-gd php-intl php-mbstring php-sqlite3 php-xml php-zip
       - name: Sync backend
         run: uv sync --project backend --frozen
       - name: Compare with Grocy 4.5.0

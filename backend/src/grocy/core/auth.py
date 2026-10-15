@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -15,7 +15,10 @@ from grocy.db.models.users import ApiKey, UserPermission
 from grocy.db.session import get_session_factory
 
 
-async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
+async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
+    if session := getattr(request.state, "grocy_session", None):
+        yield session
+        return
     factory = get_session_factory()
     async with factory() as session:
         if request.method not in {
@@ -33,6 +36,8 @@ async def require_api_key(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     grocy_api_key: Annotated[str | None, Header(alias="GROCY-API-KEY")] = None,
 ) -> Actor:
+    if actor := getattr(request.state, "grocy_actor", None):
+        return actor
     settings = get_settings()
     key = grocy_api_key or request.headers.get(settings.api_key_header)
     calendar_secret = (

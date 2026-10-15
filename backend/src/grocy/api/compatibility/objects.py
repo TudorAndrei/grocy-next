@@ -3,12 +3,13 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 
 from grocy.api.compatibility.filtering import filter_rows
+from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
 
-router = APIRouter(tags=["objects"])
+router = APIRouter(tags=["objects"], route_class=CompatibilityRoute)
 
 
 @router.get("/api/objects/{entity}")
@@ -32,6 +33,7 @@ async def list_objects(
 
 
 @router.post("/api/objects/{entity}")
+@filtered_body()
 async def create_object(
     entity: str,
     body: dict[str, Any],
@@ -57,6 +59,7 @@ async def get_object(
 
 
 @router.put("/api/objects/{entity}/{object_id}", status_code=204)
+@filtered_body()
 async def update_object(
     entity: str,
     object_id: int,

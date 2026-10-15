@@ -128,7 +128,7 @@ def test_recipe_copy_and_task_undo(client: TestClient, api_headers: dict[str, st
     )
     assert task.status_code == 200
     task_id = task.json().get("created_object_id") or task.json()["id"]
-    done = client.post(f"/api/tasks/{task_id}/complete", headers=api_headers)
+    done = client.post(f"/api/tasks/{task_id}/complete", headers=api_headers, json={})
     assert done.status_code == 204
     undone = client.post(f"/api/tasks/{task_id}/undo", headers=api_headers)
     assert undone.status_code == 204

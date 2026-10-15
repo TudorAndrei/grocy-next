@@ -5,13 +5,14 @@ from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from grocy.api.compatibility.filtering import filter_rows
+from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import RecipesSvc
 
-router = APIRouter(tags=["recipes"])
+router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
 
-class RecipeShoppingBody(BaseModel):
+class RecipeShoppingBody(CompatibilityBody):
     excludedProductIds: list[int] = Field(default_factory=list)
 
 
@@ -54,6 +55,7 @@ async def recipe_consume(
 
 
 @router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist", status_code=204)
+@filtered_body(null_status=None)
 async def recipe_add_missing(
     recipe_id: int,
     _actor: CurrentActor,

@@ -38,7 +38,7 @@ async def system_info(request: Request, _actor: CurrentActor) -> dict[str, Any]:
         "application": {"name": "grocy-next", "version": __version__},
         "compatibility_baseline": get_settings().grocy_baseline,
         "python_version": platform.python_version(),
-        "php_version": "not applicable",
+        "php_version": request.app.state.input_purifier.php_version,
         "db_version": client_defaults()["db_version"],
         "sqlite_version": sqlite3.sqlite_version,
         "os": platform.platform(),

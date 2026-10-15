@@ -43,6 +43,8 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
 
             @event.listens_for(_engine.sync_engine, "connect")
             def configure_connection(connection: Any, _record: Any) -> None:
+                # Grocy uses PDO::NULL_EMPTY_STRING when it reads SQLite text.
+                connection.driver_connection.text_factory = lambda value: value.decode() or None
                 cursor = connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.execute(f"PRAGMA busy_timeout={cfg.database_busy_timeout_ms}")

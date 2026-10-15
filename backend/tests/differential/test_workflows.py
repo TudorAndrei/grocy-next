@@ -1,6 +1,7 @@
 """Public workflows checked against both implementations of the pinned Grocy API."""
 
 import base64
+import json
 import os
 import re
 import sqlite3
@@ -13,23 +14,27 @@ import pytest
 
 
 @pytest.fixture(params=["local", "php"])
-def api(request, client, api_headers):
+def api(request, api_headers):
     if request.param == "local":
-        client.headers.update(api_headers)
-        yield client
-        return
-    url = os.getenv("GROCY_REFERENCE_URL")
-    if not url:
-        pytest.skip("Set GROCY_REFERENCE_URL for PHP comparison")
-    if os.getenv("GROCY_REFERENCE_DISPOSABLE") != "1":
-        pytest.fail("The reference database must be disposable")
-    with httpx.Client(
-        base_url=url,
-        headers={"GROCY-API-KEY": os.environ["GROCY_REFERENCE_API_KEY"]},
-        timeout=15,
-    ) as reference:
-        assert reference.get("/api/system/info").json()["grocy_version"]["Version"] == "4.5.0"
-        yield reference
+        url = os.getenv("GROCY_BACKEND_URL")
+        if not url:
+            client = request.getfixturevalue("client")
+            client.headers.update(api_headers)
+            yield client
+            return
+        if os.getenv("GROCY_BACKEND_DISPOSABLE") != "1":
+            pytest.fail("The backend database must be disposable")
+        key = os.getenv("GROCY_BACKEND_API_KEY", api_headers["GROCY-API-KEY"])
+    else:
+        url = os.getenv("GROCY_REFERENCE_URL")
+        if not url:
+            pytest.skip("Set GROCY_REFERENCE_URL for PHP comparison")
+        if os.getenv("GROCY_REFERENCE_DISPOSABLE") != "1":
+            pytest.fail("The reference database must be disposable")
+        key = os.environ["GROCY_REFERENCE_API_KEY"]
+    with httpx.Client(base_url=url, headers={"GROCY-API-KEY": key}, timeout=15) as backend:
+        assert backend.get("/api/system/info").json()["grocy_version"]["Version"] == "4.5.0"
+        yield backend
 
 
 def create(api, resource, **fields):
@@ -1118,3 +1123,213 @@ def test_chore_date_precision_survives_reads_and_recurrence(api):
     response = api.post(f"/api/chores/{chore}/execute", json={"tracked_time": "2027-01-06"})
     assert response.status_code == 200, response.text
     assert response.json()["tracked_time"] == "2027-01-06 00:00:00"
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (
+            '<p style="color:red;position:fixed" onclick="x()">Hello<script>alert(1)</script></p>',
+            '<p style="color:#FF0000;">Hello</p>',
+        ),
+        ('<a href="javascript:alert(1)">Link</a>', "<a>Link</a>"),
+        ("Tom &amp; Jerry &lt;food&gt;", "Tom & Jerry <food>"),
+        ("", None),
+        (None, None),
+        (1.25, "1.25"),
+        (True, "1"),
+        (False, "0"),
+    ],
+)
+def test_html_input_matches_grocy_storage(api, value, expected):
+    location = create(api, "locations", name=uuid4().hex, description=value)
+    assert api.get(f"/api/objects/locations/{location}").json()["description"] == expected
+    assert (
+        api.put(f"/api/objects/locations/{location}", json={"description": value}).status_code
+        == 204
+    )
+    assert api.get(f"/api/objects/locations/{location}").json()["description"] == expected
+
+
+def test_stock_input_is_purified_before_numeric_and_date_parsing(api, catalog):
+    product, _unit, _other, _location = catalog
+    response = api.post(
+        f"/api/stock/products/{product}/add",
+        json={
+            "amount": "&#50;",
+            "best_before_date": "2037&#45;01&#45;01",
+            "note": '<a href="javascript:alert(1)">Link</a>',
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["amount"] == 2
+    assert response.json()[0]["note"] == "<a>Link</a>"
+    entry = api.get(f"/api/stock/products/{product}/entries").json()[0]
+    assert entry["best_before_date"] == "2037-01-01"
+    assert entry["note"] == "<a>Link</a>"
+
+
+@pytest.mark.parametrize(
+    "content_type", [None, "text/plain", "application/json; charset=utf-8", "Application/JSON"]
+)
+def test_filtered_input_requires_exact_json_content_type(api, content_type):
+    headers = {"Content-Type": content_type} if content_type is not None else {}
+    response = api.post(
+        "/api/objects/locations", content=json.dumps({"name": uuid4().hex}), headers=headers
+    )
+    assert response.status_code == 400, response.text
+    response = api.post(
+        "/api/objects/locations", content=b"{}", headers={**headers, "GROCY-API-KEY": "invalid"}
+    )
+    assert response.status_code == 401, response.text
+
+
+def test_unfiltered_permission_input_accepts_json_parameters(api):
+    response = api.put(
+        "/api/users/1/permissions",
+        content=b'{"permissions":[1]}',
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    assert response.status_code == 204, response.text
+    assert api.get("/api/users/1/permissions").json()[0]["permission_id"] == 1
+
+
+def test_user_fields_and_settings_use_the_same_purifier(api):
+    raw = '<a href="javascript:alert(1)">Link</a>'
+    setting = "purifier_" + uuid4().hex
+    path = f"/api/user/settings/{setting}"
+    try:
+        assert api.put(path, json={"value": raw}).status_code == 204
+        assert api.get(path).json()["value"] == "<a>Link</a>"
+    finally:
+        assert api.delete(path).status_code == 204
+    name = uuid4().hex
+    location = create(api, "locations", name=name)
+    create(api, "userfields", entity="locations", name=name, caption=name, type="text-single-line")
+    path = f"/api/userfields/locations/{location}"
+    assert api.put(path, json={name: raw}).status_code == 204
+    assert api.get(path).json()[name] == "<a>Link</a>"
+    username = "purifier_" + uuid4().hex
+    assert (
+        api.post(
+            "/api/users", json={"username": username, "first_name": raw, "password": "secret"}
+        ).status_code
+        == 204
+    )
+    user = api.get("/api/users", params={"query[]": f"username={username}"}).json()
+    assert len(user) == 1 and user[0]["first_name"] == "<a>Link</a>"
+
+
+@pytest.mark.parametrize(
+    "content",
+    [b"{", b'{"name":"value","description":"\\ud800"}', b'{"name":NaN}', b'{"name":"\xff"}'],
+)
+def test_invalid_json_input_returns_grocy_status(api, content):
+    response = api.post(
+        "/api/objects/locations", content=content, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 400, response.text
+    name = uuid4().hex
+    location = create(api, "locations", name=name, description='<a href="javascript:x()">Link</a>')
+    assert api.get(f"/api/objects/locations/{location}").json()["description"] == "<a>Link</a>"
+
+
+def test_large_html_input_keeps_the_complete_filtered_value(api):
+    text = "food" * 25000
+    location = create(
+        api, "locations", name=uuid4().hex, description="<p>" + text + "<script>bad</script></p>"
+    )
+    assert (
+        api.get(f"/api/objects/locations/{location}").json()["description"] == "<p>" + text + "</p>"
+    )
+
+
+@pytest.mark.parametrize("content", [b"", b"null", b"false", b'"value"', b"{"])
+@pytest.mark.parametrize(
+    "kind,status", [("locations", 400), ("tasks", 500), ("setting", 204), ("shopping", 500)]
+)
+def test_unparsed_body_follows_each_grocy_handler(api, content, kind, status):
+    task = None
+    if kind == "tasks":
+        task = create(api, "tasks", name=uuid4().hex)
+        path, method = f"/api/tasks/{task}/complete", "POST"
+    elif kind == "setting":
+        path, method = f"/api/user/settings/{uuid4().hex}", "PUT"
+    elif kind == "shopping":
+        path, method = "/api/stock/shoppinglist/add-missing-products", "POST"
+    else:
+        path, method = "/api/objects/locations", "POST"
+    try:
+        response = api.request(
+            method, path, content=content, headers={"Content-Type": "application/json"}
+        )
+        assert response.status_code == status, response.text
+        if kind == "setting":
+            assert api.get(path).json()["value"] is None
+        elif task is not None:
+            assert api.get(f"/api/objects/tasks/{task}").json()["done"] == 0
+    finally:
+        if kind == "setting":
+            assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "resource,action,status",
+    [("tasks", "complete", 204), ("chores", "execute", 200), ("batteries", "charge", 200)],
+)
+@pytest.mark.parametrize("content", [b"[]", b'["ignored"]'])
+def test_array_body_keeps_php_array_key_rules(api, resource, action, status, content):
+    options = {"period_type": "daily"} if resource == "chores" else {}
+    record = create(api, resource, name=uuid4().hex, **options)
+    response = api.post(
+        f"/api/{resource}/{record}/{action}",
+        content=content,
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == status, response.text
+
+
+@pytest.mark.parametrize("number,expected", [("1e400", "INF"), ("-1e400", "-INF")])
+def test_numeric_json_is_parsed_by_the_php_runtime(api, number, expected):
+    content = '{"name":"' + uuid4().hex + '","description":' + number + "}"
+    response = api.post(
+        "/api/objects/locations", content=content, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 200, response.text
+    location = response.json()["created_object_id"]
+    assert api.get(f"/api/objects/locations/{location}").json()["description"] == expected
+
+
+@pytest.mark.parametrize("empty", [None, ""])
+def test_empty_optional_stock_values_use_grocy_defaults(api, catalog, empty):
+    product, _unit, _other, location = catalog
+    today = api.get("/api/system/time").json()["time_local_sqlite3"][:10]
+    response = api.post(
+        f"/api/stock/products/{product}/add",
+        json={
+            "amount": 1,
+            "best_before_date": empty,
+            "purchased_date": empty,
+            "price": empty,
+            "location_id": empty,
+            "shopping_location_id": empty,
+            "stock_label_type": empty,
+            "note": empty,
+        },
+    )
+    assert response.status_code == 200, response.text
+    entry = api.get(f"/api/stock/products/{product}/entries").json()[0]
+    assert entry["best_before_date"] == today
+    assert entry["purchased_date"] == today
+    assert entry["location_id"] == location
+    assert (
+        entry["price"] is None and entry["shopping_location_id"] is None and entry["note"] is None
+    )
+
+
+def test_empty_chore_options_keep_the_current_actor_and_default_flags(api):
+    chore = create(api, "chores", name=uuid4().hex, period_type="daily")
+    response = api.post(f"/api/chores/{chore}/execute", json={"done_by": None, "skipped": None})
+    assert response.status_code == 200, response.text
+    assert response.json()["done_by_user_id"] == 1
+    assert not response.json()["skipped"]

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GROCY_", env_file=".env", extra="ignore")
 
     app_name: str = "grocy-next"
+    php_executable: str = "php"
     currency: str = "USD"
     default_permissions: list[str] = ["ADMIN"]
     debug: bool = False

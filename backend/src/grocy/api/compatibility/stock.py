@@ -3,14 +3,15 @@ from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from grocy.api.compatibility.filtering import filter_rows
+from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
 from grocy.domains.printing import label
 
-router = APIRouter(tags=["stock"])
+router = APIRouter(tags=["stock"], route_class=CompatibilityRoute)
 
 
 async def _bookings(stock: StockSvc, result: dict) -> list[dict]:
@@ -18,7 +19,7 @@ async def _bookings(stock: StockSvc, result: dict) -> list[dict]:
     return await stock.get_transaction(transaction_id) if transaction_id else []
 
 
-class AmountBody(BaseModel):
+class AmountBody(CompatibilityBody):
     amount: Decimal = Field(gt=0)
     best_before_date: date | None = None
     purchased_date: date | None = None
@@ -35,14 +36,14 @@ class AmountBody(BaseModel):
     stock_label_type: int = Field(default=0, ge=0, le=2)
 
 
-class TransferBody(BaseModel):
+class TransferBody(CompatibilityBody):
     amount: Decimal = Field(gt=0)
     location_id_from: int
     location_id_to: int
     stock_entry_id: str | None = None
 
 
-class InventoryBody(BaseModel):
+class InventoryBody(CompatibilityBody):
     purchased_date: date | None = None
     price: Decimal | None = None
     shopping_location_id: int | None = None
@@ -53,7 +54,7 @@ class InventoryBody(BaseModel):
     location_id: int | None = None
 
 
-class EditEntryBody(BaseModel):
+class EditEntryBody(CompatibilityBody):
     amount: Decimal | None = None
     best_before_date: date | None = None
     purchased_date: date | None = None
@@ -64,16 +65,16 @@ class EditEntryBody(BaseModel):
     note: str | None = None
 
 
-class ListIdBody(BaseModel):
+class ListIdBody(CompatibilityBody):
     list_id: int = 1
 
 
-class ClearListBody(BaseModel):
+class ClearListBody(CompatibilityBody):
     list_id: int = 1
     done_only: bool = False
 
 
-class ShoppingAddProductBody(BaseModel):
+class ShoppingAddProductBody(CompatibilityBody):
     product_id: int
     product_amount: Decimal = Field(default=Decimal("1"), gt=0)
     list_id: int = 1
@@ -81,7 +82,7 @@ class ShoppingAddProductBody(BaseModel):
     qu_id: int | None = None
 
 
-class ShoppingRemoveProductBody(BaseModel):
+class ShoppingRemoveProductBody(CompatibilityBody):
     product_id: int
     product_amount: Decimal = Field(default=Decimal("1"), gt=0)
     list_id: int = 1
@@ -114,6 +115,7 @@ async def stock_get_entry(
 
 
 @router.put("/api/stock/entry/{entry_id}")
+@filtered_body()
 async def stock_edit_entry(
     entry_id: int,
     body: EditEntryBody,
@@ -178,6 +180,7 @@ async def stock_price_history(
 
 
 @router.post("/api/stock/products/{product_id}/add")
+@filtered_body()
 async def stock_add(
     product_id: int,
     body: AmountBody,
@@ -201,6 +204,7 @@ async def stock_add(
 
 
 @router.post("/api/stock/products/{product_id}/consume")
+@filtered_body()
 async def stock_consume(
     product_id: int,
     body: AmountBody,
@@ -223,6 +227,7 @@ async def stock_consume(
 
 
 @router.post("/api/stock/products/{product_id}/open")
+@filtered_body()
 async def stock_open(
     product_id: int,
     body: AmountBody,
@@ -240,6 +245,7 @@ async def stock_open(
 
 
 @router.post("/api/stock/products/{product_id}/transfer")
+@filtered_body()
 async def stock_transfer(
     product_id: int,
     body: TransferBody,
@@ -258,6 +264,7 @@ async def stock_transfer(
 
 
 @router.post("/api/stock/products/{product_id}/inventory")
+@filtered_body()
 async def stock_inventory(
     product_id: int,
     body: InventoryBody,
@@ -309,6 +316,7 @@ async def stock_product_by_barcode(
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/add")
+@filtered_body()
 async def stock_add_by_barcode(
     barcode: str,
     body: AmountBody,
@@ -332,6 +340,7 @@ async def stock_add_by_barcode(
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/consume")
+@filtered_body()
 async def stock_consume_by_barcode(
     barcode: str,
     body: AmountBody,
@@ -354,6 +363,7 @@ async def stock_consume_by_barcode(
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/open")
+@filtered_body()
 async def stock_open_by_barcode(
     barcode: str,
     body: AmountBody,
@@ -371,6 +381,7 @@ async def stock_open_by_barcode(
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/transfer")
+@filtered_body()
 async def stock_transfer_by_barcode(
     barcode: str,
     body: TransferBody,
@@ -389,6 +400,7 @@ async def stock_transfer_by_barcode(
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/inventory")
+@filtered_body()
 async def stock_inventory_by_barcode(
     barcode: str,
     body: InventoryBody,
@@ -421,6 +433,7 @@ async def stock_location_entries(
 
 
 @router.post("/api/stock/shoppinglist/add-missing-products", status_code=204)
+@filtered_body(null_status=500)
 async def stock_shopping_add_missing(
     _actor: CurrentActor,
     shopping: ShoppingSvc,
@@ -432,6 +445,7 @@ async def stock_shopping_add_missing(
 
 
 @router.post("/api/stock/shoppinglist/add-overdue-products", status_code=204)
+@filtered_body(null_status=500)
 async def stock_shopping_add_overdue(
     _actor: CurrentActor,
     shopping: ShoppingSvc,
@@ -443,6 +457,7 @@ async def stock_shopping_add_overdue(
 
 
 @router.post("/api/stock/shoppinglist/add-expired-products", status_code=204)
+@filtered_body(null_status=500)
 async def stock_shopping_add_expired(
     _actor: CurrentActor,
     shopping: ShoppingSvc,
@@ -454,6 +469,7 @@ async def stock_shopping_add_expired(
 
 
 @router.post("/api/stock/shoppinglist/clear", status_code=204)
+@filtered_body(null_status=500)
 async def stock_shopping_clear(
     _actor: CurrentActor,
     shopping: ShoppingSvc,
@@ -470,6 +486,7 @@ async def stock_shopping_clear(
 
 
 @router.post("/api/stock/shoppinglist/add-product", status_code=204)
+@filtered_body(null_status=500)
 async def stock_shopping_add_product(
     body: ShoppingAddProductBody,
     _actor: CurrentActor,
@@ -486,6 +503,7 @@ async def stock_shopping_add_product(
 
 
 @router.post("/api/stock/shoppinglist/remove-product", status_code=204)
+@filtered_body(null_status=500)
 async def stock_shopping_remove_product(
     body: ShoppingRemoveProductBody,
     _actor: CurrentActor,

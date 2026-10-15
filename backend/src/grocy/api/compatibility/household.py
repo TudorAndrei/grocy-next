@@ -2,21 +2,21 @@ from datetime import date, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
-from pydantic import BaseModel
 
 from grocy.api.compatibility.filtering import filter_rows
+from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import HouseholdSvc
 from grocy.core.errors import GrocyError
 
-router = APIRouter(tags=["household"])
+router = APIRouter(tags=["household"], route_class=CompatibilityRoute)
 
 
-class TaskCompletionBody(BaseModel):
+class TaskCompletionBody(CompatibilityBody):
     done_time: Any = None
 
 
-class TrackingBody(BaseModel):
+class TrackingBody(CompatibilityBody):
     tracked_time: Any = None
     done_by: int | None = None
     skipped: bool = False
@@ -66,6 +66,7 @@ async def get_chore(
 
 
 @router.post("/api/chores/{chore_id}/execute")
+@filtered_body(null_status=500)
 async def execute_chore(
     chore_id: int,
     actor: CurrentActor,
@@ -88,6 +89,7 @@ async def undo_chore(
 
 
 @router.post("/api/chores/executions/calculate-next-assignments", status_code=204)
+@filtered_body(null_status=500)
 async def calculate_next_assignments(
     _actor: CurrentActor,
     household: HouseholdSvc,
@@ -119,6 +121,7 @@ async def list_tasks(
 
 
 @router.post("/api/tasks/{task_id}/complete", status_code=204)
+@filtered_body(null_status=500)
 async def complete_task(
     task_id: int,
     _actor: CurrentActor,
@@ -156,6 +159,7 @@ async def get_battery(
 
 
 @router.post("/api/batteries/{battery_id}/charge")
+@filtered_body(null_status=500)
 async def charge_battery(
     battery_id: int,
     _actor: CurrentActor,

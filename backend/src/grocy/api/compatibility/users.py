@@ -9,6 +9,7 @@ from fastapi import APIRouter, Request, Response
 from sqlalchemy import delete, select
 
 from grocy.api.compatibility.filtering import filter_rows
+from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
 from grocy.compatibility import client_defaults
 from grocy.compatibility.users import user_dto
 from grocy.core.auth import CurrentActor
@@ -19,7 +20,7 @@ from grocy.core.permissions import PERMISSIONS
 from grocy.db.models.settings import UserSetting
 from grocy.db.models.users import ApiKey, User, UserPermission
 
-router = APIRouter(tags=["users"])
+router = APIRouter(tags=["users"], route_class=CompatibilityRoute)
 
 
 def _hash_password(password: str) -> str:
@@ -122,6 +123,7 @@ async def get_user_setting(
 
 
 @router.put("/api/user/settings/{setting_key}", status_code=204)
+@filtered_body(null_status=None)
 async def put_user_setting(
     setting_key: str,
     body: dict[str, Any],
@@ -169,6 +171,7 @@ async def list_users(
 
 
 @router.post("/api/users", status_code=204)
+@filtered_body()
 async def create_user(
     body: dict[str, Any],
     _actor: CurrentActor,
@@ -198,6 +201,7 @@ async def create_user(
 
 
 @router.put("/api/users/{user_id}", status_code=204)
+@filtered_body(null_status=500)
 async def update_user(
     user_id: int,
     body: dict[str, Any],
@@ -261,6 +265,7 @@ async def get_user_permissions(
 
 
 @router.post("/api/users/{user_id}/permissions", status_code=204)
+@filtered_body()
 async def add_user_permission(
     user_id: int, body: dict[str, Any], actor: CurrentActor, session: DbSession
 ) -> Response:

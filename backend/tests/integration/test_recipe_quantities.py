@@ -92,9 +92,9 @@ def test_missing_ingredients_do_not_duplicate_shopping_quantities(
     client: TestClient, api_headers: dict
 ):
     path = "/api/recipes/1/add-not-fulfilled-products-to-shoppinglist"
-    assert client.post(path, headers=api_headers).status_code == 204
+    assert client.post(path, headers=api_headers, json={}).status_code == 204
     first = client.get("/api/v2/shopping-lists/1", headers=api_headers).json()["items"]
-    assert client.post(path, headers=api_headers).status_code == 204
+    assert client.post(path, headers=api_headers, json={}).status_code == 204
     second = client.get("/api/v2/shopping-lists/1", headers=api_headers).json()["items"]
     assert [(item["product_id"], item["amount"]) for item in second] == [
         (item["product_id"], item["amount"]) for item in first

@@ -121,6 +121,7 @@ def test_household_chores_tasks_batteries(
     executed = client.post(
         f"/api/chores/{chores[0]['id']}/execute",
         headers=api_headers,
+        json={},
     )
     assert executed.status_code == 200
     undone = client.post(
@@ -134,6 +135,7 @@ def test_household_chores_tasks_batteries(
     completed = client.post(
         f"/api/tasks/{tasks[0]['id']}/complete",
         headers=api_headers,
+        json={},
     )
     assert completed.status_code == 204
     assert (
@@ -145,6 +147,7 @@ def test_household_chores_tasks_batteries(
     charged = client.post(
         f"/api/batteries/{batteries[0]['id']}/charge",
         headers=api_headers,
+        json={},
     )
     assert charged.status_code == 200
 

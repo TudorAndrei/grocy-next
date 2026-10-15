@@ -68,7 +68,7 @@ def test_permissions_keys_and_mcp_use_stored_identity(
     client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": [24]}
     )
-    tracked = client.post("/api/chores/1/execute", headers=headers)
+    tracked = client.post("/api/chores/1/execute", headers=headers, json={})
     assert tracked.status_code == 200
     assert tracked.json()["done_by_user_id"] == user_id
     assert client.post("/api/batteries/1/charge", headers=headers).status_code == 403

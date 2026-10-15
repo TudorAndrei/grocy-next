@@ -2,6 +2,12 @@
 
 Python package for the Grocy Next API and MCP adapters.
 
+The API requires PHP 8.1 through 8.4 with `bcmath`, `ctype`, `dom`, `iconv`,
+`intl`, and `mbstring`. A PHP worker runs the included HTMLPurifier 4.18.0
+library with Grocy 4.5.0 settings. This keeps the same HTML and CSS output.
+Set `GROCY_PHP_EXECUTABLE` if PHP is not available as `php` on `PATH`.
+The Docker image includes this runtime.
+
 ```bash
 uv sync
 uv run grocy

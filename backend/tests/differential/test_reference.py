@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
@@ -1488,7 +1489,7 @@ def test_reference_system_metadata_localization_and_time(
     info = client.get("/api/system/info").json()
     assert info["grocy_version"] == expected["grocy_version"]
     assert info["db_version"] == expected["db_version"]
-    assert isinstance(info["php_version"], str)
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", info["php_version"])
     expected_config = reference.get("/api/system/config").json()
     config = client.get("/api/system/config").json()
     for key in (

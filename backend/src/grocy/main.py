@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from grocy import __version__
 from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
+from grocy.compatibility.purifier import InputPurifier
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
 from grocy.db.models.catalog import Location
@@ -45,8 +46,15 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
             if days:
                 await sync_meal_plan_recipes(session, *days)
                 await session.commit()
-    yield
-    await engine.dispose()
+    purifier = InputPurifier(settings.php_executable)
+    try:
+        await purifier.start()
+        if _app is not None:
+            _app.state.input_purifier = purifier
+        yield
+    finally:
+        await purifier.close()
+        await engine.dispose()
 
 
 def create_app() -> FastAPI:

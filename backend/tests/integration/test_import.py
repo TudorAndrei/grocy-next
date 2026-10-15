@@ -211,7 +211,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         assert connection.execute(
             "SELECT value, row_created_timestamp, row_updated_timestamp IS NOT NULL "
             "FROM user_settings WHERE key = 'legacy-setting'"
-        ).fetchone() == (None, "2026-01-01 12:00:00", 1)
+        ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
             == "20261015_0011"

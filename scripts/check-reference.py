@@ -163,6 +163,7 @@ def run_reference(
                             ) from None
                         time.sleep(0.1)
                 environment.update(
+                    GROCY_PHP_EXECUTABLE=php,
                     GROCY_REFERENCE_URL=base_url,
                     GROCY_REFERENCE_API_KEY="disposable-reference",
                     GROCY_REFERENCE_DISPOSABLE="1",
