@@ -1,0 +1,19 @@
+{
+  "package": "morris/lessql",
+  "version": "dev-php82",
+  "source": "https://github.com/berrnd/lessql.git",
+  "commit": "6e119fcf0e8145cd9b5e22fe030e147655acc4e3",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE.md": "2e3c947a9a318cc2f0fb9246a976a81faac9e7743a3cbda803f0fb6adb42bf34",
+    "README.md": "adc7a9a8456793232f45611d773e2ffef6529c16c1833583aca5bca298aa4edf",
+    "src/LessQL/Database.php": "721def2ff726a2012e29907fc4c533087fed8efc3deb34f93ea98c90c799a0b5",
+    "src/LessQL/Literal.php": "ef6e5445db198d5988f5aa0ba825592694cdd9d2f17ce8c6fae587927a10ad27",
+    "src/LessQL/Result.php": "7ca6b730e977f8df37e3677c8d91d7d81d505807eff0cce4b2bd73a1ca2c14b5",
+    "src/LessQL/Row.php": "87cc819c9ba04014b733545f284db2b6d79fd439640145d499d821e5e57b830f"
+  }
+}

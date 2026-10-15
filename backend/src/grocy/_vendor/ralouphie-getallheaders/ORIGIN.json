@@ -1,0 +1,16 @@
+{
+  "package": "ralouphie/getallheaders",
+  "version": "3.0.3",
+  "source": "https://github.com/ralouphie/getallheaders.git",
+  "commit": "120b605dfeb996808c31b6477290a714d356e822",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE": "e97490769229e08f0a017f5c6fd5d8aa1669672110c6df5ebd0506f23ec91087",
+    "README.md": "a5a015ade842a81fb04d692c9a342fa17446f778110c4e9ba4c8d178f65a8478",
+    "src/getallheaders.php": "b2275333d82617732ad407dd55420ff16c0d0c19a5599d60aa9e1e3871d5a654"
+  }
+}

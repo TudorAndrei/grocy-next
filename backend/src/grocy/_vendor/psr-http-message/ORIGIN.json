@@ -1,0 +1,22 @@
+{
+  "package": "psr/http-message",
+  "version": "1.1",
+  "source": "https://github.com/php-fig/http-message.git",
+  "commit": "cb6ce4845ce34a8ad9e68117c10ee90a29919eba",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE": "8d36e938943b04ef01994bb148793c971685b746d0ced31da03a97594a47ee62",
+    "README.md": "4cd6339fa85e7a903f2117b081de8446cd45229b9b761539dd8f440ccd2eb288",
+    "src/MessageInterface.php": "be8605ab17a3eb28ab5445f7c5ef7d343129ab4b37fc65417a736d34752c54fb",
+    "src/RequestInterface.php": "cdfa5f130e7a9af3ed0d956e0cf1f27270e3191541d96e93387547fcaef9ec9c",
+    "src/ResponseInterface.php": "78ff3b609dbaf4a4d9b97678a3717987cb590d67f278f8c8c7ae457b4fcf9c0d",
+    "src/ServerRequestInterface.php": "a2f4ed719ea2617a4df878e4b1c8ce19677b2632f2003e6f6fbcac5c996c7c08",
+    "src/StreamInterface.php": "281cef7f771287b12accb9364afc937b740435b5673824fd06d7510c2757529a",
+    "src/UploadedFileInterface.php": "305d5cca64180033a941981bd60ecb16cdf82277c86a7f97026cabee27fa289d",
+    "src/UriInterface.php": "af54bc3ef4c018f13da0f602a160eb3a7d5560e85e90c0f60e471cf7f10a1601"
+  }
+}

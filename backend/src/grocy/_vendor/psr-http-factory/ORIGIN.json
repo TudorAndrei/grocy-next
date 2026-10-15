@@ -1,0 +1,21 @@
+{
+  "package": "psr/http-factory",
+  "version": "1.1.0",
+  "source": "https://github.com/php-fig/http-factory.git",
+  "commit": "2b4765fddfe3b508ac62f829e852b1501d3f6e8a",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE": "d2e70341a9667b93ad542e4842b0b7022d302aa7c2d2a909b156b8f1e3c4cca8",
+    "README.md": "d80b63e2a8c4f80af830e5307683fc73718d15e71db3c5af56e15b56b2a47d63",
+    "src/RequestFactoryInterface.php": "95bb9e09f52d05bf09630cce49abbfdb2282d396ccc3e16e77e3a9f54cd4071f",
+    "src/ResponseFactoryInterface.php": "fb58f39db8e472bed4109f6392443a10785305ccc0c920d11f98208f91214e02",
+    "src/ServerRequestFactoryInterface.php": "8584390af1bc3c624918525e725a7cfa639366c15bb7a3c7c065d04d8a20703b",
+    "src/StreamFactoryInterface.php": "25fe9d048ce6718141d21c122ef9b3498be45025300717ccbe912ef5bc0083ec",
+    "src/UploadedFileFactoryInterface.php": "712c705ac850b43dbf47458e571c8be314d1d1f01b0e470407ed014b702d9e5b",
+    "src/UriFactoryInterface.php": "2600f967cd969706dcdff326d3fe602e812110352c75c6b5e9773601f2d17c7d"
+  }
+}

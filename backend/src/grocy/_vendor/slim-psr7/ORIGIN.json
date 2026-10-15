@@ -1,0 +1,32 @@
+{
+  "package": "slim/psr7",
+  "version": "1.7.0",
+  "source": "https://github.com/slimphp/Slim-Psr7.git",
+  "commit": "753e9646def5ff4db1a06e5cf4ef539bfd30f467",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE.md": "58eb26a800b0a197b6a04264435901c6d43b1ff3b7d2547e1019d210a1415bb1",
+    "src/Cookies.php": "8b19828989355dc059b6704fbfe866f2482567c5f876d0054f080ffa37bde7b5",
+    "src/Environment.php": "7556a5449dcad141e476a433a700d9afadd1092de24c161d9c773a5c50d122e7",
+    "src/Factory/RequestFactory.php": "058840de83bb1044ac1d707b563fb44d1a77dbbf5d357447a618248cf82e7ecf",
+    "src/Factory/ResponseFactory.php": "8e6d975fad1759dd9bb14341d9d744bdabe1ed18e4f41dc7356878c00e2acb6a",
+    "src/Factory/ServerRequestFactory.php": "f9cb39e966db80a8c62d442b0403e21468b08ed4a06c031a455abf650de8514f",
+    "src/Factory/StreamFactory.php": "730cd14cc51d34fa8a9f5dcf90c5bb6a41f13841d0ded4f635ba0036ddea2d6e",
+    "src/Factory/UploadedFileFactory.php": "02aa6df9ada0bed3c27829ceb82321cc89dcb0ab6879dd9ed0da63f65f7a30d5",
+    "src/Factory/UriFactory.php": "a64c0086903470e991c28c9cd3814b67d8752d96f9daaddd84aad9c4d7b7cd9d",
+    "src/Header.php": "9591ce79d37e07902aa9f07a91e8997cef8dee04f5268afff9a2a7446c262a21",
+    "src/Headers.php": "7bb5bb0c61058f62551e343a32451f176087d4855dadd24721eb8021414c3c6e",
+    "src/Interfaces/HeadersInterface.php": "a955d2b84819aacfdd1c9a59ebb287e6ec800dc5be42408711468772b1f66b7a",
+    "src/Message.php": "0fa9d0a47b4e080cf562c35d59bec8880a3c89f98ab8691e7bf325daa99346f6",
+    "src/NonBufferedBody.php": "cdd92caa43bd08a8be4e82f0dad2520858f89fdb1e9d72763a1500fdd3aa26e9",
+    "src/Request.php": "185572e85e73bc93459ab7fccb1acb420df5cca4908677e8ec9531bbd17d7019",
+    "src/Response.php": "67c18fd1aa31651ff853f5c1169ab050ede55a05e1c85481805652eb8f23af0f",
+    "src/Stream.php": "936b9f7d63354da395b0932e281e0145236d59c338bf1c31db89c4d21599114b",
+    "src/UploadedFile.php": "7fdc252ff083bf18191339cd5df3e711be5c4d58e54aba7df1078b91b9cc67b9",
+    "src/Uri.php": "9b58f8b11faeaa64a558004ca90c2a862e33c18fd20e199b098dd29d0b1a2715"
+  }
+}

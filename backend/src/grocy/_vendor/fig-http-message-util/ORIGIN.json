@@ -1,0 +1,17 @@
+{
+  "package": "fig/http-message-util",
+  "version": "1.1.5",
+  "source": "https://github.com/php-fig/http-message-util.git",
+  "commit": "9d94dc0154230ac39e5bf89398b324a86f63f765",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE": "c6efb5af73d04f10da731a8a83cdf11afb87ba6a1e49f30877d536bbf770a606",
+    "README.md": "ea8c50ff8636c47f05c91ef3b1f77008be1f2d711b9def5a887c2a4fcd2c3b3d",
+    "src/RequestMethodInterface.php": "5a0d48a538ebfbd0b10b2af358904308d730571bf6cf76f4368a86fff024f07d",
+    "src/StatusCodeInterface.php": "e0677bec5874371c00f19f85fc19f2868f494a00fd2276c8cafc14e0145267f4"
+  }
+}

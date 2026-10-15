@@ -1,0 +1,21 @@
+{
+  "package": "slim/http",
+  "version": "1.4.0",
+  "source": "https://github.com/slimphp/Slim-Http.git",
+  "commit": "a8def7b8e9eabd0cdc21654ad4a82606942e066a",
+  "license": [
+    "MIT"
+  ],
+  "grocy_release": "v4.5.0",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "files": {
+    "LICENSE.md": "58eb26a800b0a197b6a04264435901c6d43b1ff3b7d2547e1019d210a1415bb1",
+    "src/Factory/DecoratedResponseFactory.php": "2f3b1b2ef273dd25298715acee9de13264dc825d76ccfb653b7728d847496d32",
+    "src/Factory/DecoratedServerRequestFactory.php": "774f183ca3743ccf741d2e9d4f61a8f58f90dd153b2cc9c7c1ffa7f979af2305",
+    "src/Factory/DecoratedUriFactory.php": "921648074febab7ba74fe3a422560995d1d58b336ad00738a190fa746202790d",
+    "src/Interfaces/ResponseInterface.php": "8d2b7b7dc415124f11cba55a056b5f2dc60a0204b62d5be9c9009864ce3aa06c",
+    "src/Response.php": "3af1757a898a906e83792ec8563368e38b5ebe09a8e17929ba7adb65530bc8e8",
+    "src/ServerRequest.php": "7d64b78a8df2fe464eae14c311e801f4323599dd9fd3e48719e5ff1daae7204b",
+    "src/Uri.php": "77bb90fb896e59c4bfb44d0eccb1c00de88438cb2860fbd1400af3d91bf082ec"
+  }
+}
