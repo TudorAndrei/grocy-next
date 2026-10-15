@@ -806,3 +806,46 @@ def test_reference_freezing_transfer_bookings_and_undo(
         )
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+def test_reference_system_metadata_localization_and_time(
+    client: TestClient, api_headers: dict, reference
+):
+    from datetime import datetime
+
+    client.headers.update(api_headers)
+    expected = reference.get("/api/system/info").json()
+    info = client.get("/api/system/info").json()
+    assert info["grocy_version"] == expected["grocy_version"]
+    expected_config = reference.get("/api/system/config").json()
+    config = client.get("/api/system/config").json()
+    for key in (
+        "FEATURE_FLAG_STOCK",
+        "FEATURE_FLAG_RECIPES",
+        "FEATURE_FLAG_CHORES_ASSIGNMENTS",
+        "FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS",
+        "FEATURE_FLAG_STOCK_PRODUCT_FREEZING",
+        "DEFAULT_LOCALE",
+        "CURRENCY",
+    ):
+        assert config[key] == expected_config[key]
+    strings = client.get("/api/system/localization-strings")
+    assert strings.status_code == 200
+    assert strings.json() == reference.get("/api/system/localization-strings").json()
+    for offset in (-60, 3600):
+        expected_time = reference.get("/api/system/time", params={"offset": offset}).json()
+        actual_time = client.get("/api/system/time", params={"offset": offset}).json()
+        assert actual_time["offset"] == offset
+        assert abs(actual_time["timestamp"] - expected_time["timestamp"]) < 5
+        assert (
+            abs(
+                (
+                    datetime.fromisoformat(actual_time["time_utc"])
+                    - datetime.fromisoformat(expected_time["time_utc"])
+                ).total_seconds()
+            )
+            < 5
+        )
+    for app in (reference, client):
+        invalid = app.get("/api/system/time", params={"offset": "tomorrow"})
+        assert invalid.status_code == 400

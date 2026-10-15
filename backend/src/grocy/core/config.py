@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GROCY_", env_file=".env", extra="ignore")
 
     app_name: str = "grocy-next"
+    currency: str = "USD"
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
     database_busy_timeout_ms: int = 5000

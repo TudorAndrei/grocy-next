@@ -1,4 +1,3 @@
-import sqlite3
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
@@ -69,24 +68,3 @@ async def delete_object(
 ) -> Response:
     await GenericObjectsService(session).delete_entity(entity, object_id)
     return Response(status_code=204)
-
-
-@router.get("/api/system/info")
-async def system_info(_actor: CurrentActor) -> dict[str, Any]:
-    from grocy import __version__
-    from grocy.core.config import get_settings
-    from grocy.domains.catalog.objects import ENTITY_MODELS
-    from grocy.domains.catalog.views import VIEW_ENTITIES
-
-    settings = get_settings()
-    return {
-        "grocy_version": {
-            "Version": __version__,
-            "ReleaseDate": "2026-10-14",
-        },
-        "compatibility_baseline": settings.grocy_baseline,
-        "python_version": "3.13+",
-        "sqlite_version": sqlite3.sqlite_version,
-        "modules": ["stock", "nutrition", "mcp", "recipes", "household", "units"],
-        "exposed_entities": sorted(set(ENTITY_MODELS) | VIEW_ENTITIES),
-    }

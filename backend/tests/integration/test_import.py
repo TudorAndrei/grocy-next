@@ -132,3 +132,24 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
             == "20261015_0007"
         )
+
+
+def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api_headers: dict):
+    from datetime import datetime
+
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.main import create_app
+
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'wal.db'}")
+    monkeypatch.setenv("GROCY_DATABASE_WAL", "true")
+    clear_settings_cache()
+    with TestClient(create_app(), headers=api_headers) as app:
+        before = app.get("/api/system/db-changed-time").json()["changed_time"]
+        created = app.post("/api/objects/locations", json={"name": "WAL location"})
+        assert created.status_code == 200
+        after = app.get("/api/system/db-changed-time").json()["changed_time"]
+        assert datetime.fromisoformat(after) > datetime.fromisoformat(before)
+        saved = app.get(f"/api/objects/locations/{created.json()['id']}").json()
+        assert saved["name"] == "WAL location"
