@@ -100,7 +100,7 @@ export function AccessManager() {
           username,
           first_name: firstName,
           last_name: lastName,
-          ...(password ? { password } : {}),
+          password,
         }),
       }),
     );

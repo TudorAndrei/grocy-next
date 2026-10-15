@@ -206,13 +206,13 @@ def test_calculated_due_status_uses_each_users_settings(client: TestClient, api_
     )
     assert (
         client.put(
-            "/api/user/settings", headers=api_headers, json={"stock_due_soon_days": "1"}
+            "/api/v2/user/settings", headers=api_headers, json={"stock_due_soon_days": "1"}
         ).status_code
         == 200
     )
     assert (
         client.post(
-            "/api/users", headers=api_headers, json={"username": "Due status user"}
+            "/api/users", headers=api_headers, json={"username": "Due status user", "password": ""}
         ).status_code
         == 204
     )
@@ -233,7 +233,7 @@ def test_calculated_due_status_uses_each_users_settings(client: TestClient, api_
     other_headers = {"GROCY-API-KEY": key}
     assert (
         client.put(
-            "/api/user/settings", headers=other_headers, json={"stock_due_soon_days": "10"}
+            "/api/v2/user/settings", headers=other_headers, json={"stock_due_soon_days": "10"}
         ).status_code
         == 200
     )
@@ -243,3 +243,10 @@ def test_calculated_due_status_uses_each_users_settings(client: TestClient, api_
         for headers in (api_headers, other_headers, api_headers)
     ]
     assert scores == [0, 1, 0]
+    assert client.delete("/api/v2/user/settings", headers=other_headers).status_code == 204
+    assert client.get("/api/user/settings/stock_due_soon_days", headers=api_headers).json() == {
+        "value": "1"
+    }
+    assert client.get("/api/user/settings/stock_due_soon_days", headers=other_headers).json() == {
+        "value": 5
+    }

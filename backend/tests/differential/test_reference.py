@@ -1614,3 +1614,42 @@ def test_reference_native_picture_bytes(
         finally:
             assert app.delete(path, headers=headers).status_code == 204
     assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize("value", [[], {}, [1, "saved"], {"nested": {"value": True}}, 1e100])
+def test_reference_native_setting_value_storage(client, api_headers, reference, value):
+    client.headers.update(api_headers)
+    key = "native_" + uuid4().hex
+    snapshots = []
+    for app in (reference, client):
+        try:
+            response = app.put(f"/api/user/settings/{key}", json={"value": value})
+            data = response.json() if response.content else None
+            if data and "error_details" in data:
+                data["error_details"] = True
+            snapshots.append(
+                (response.status_code, data, app.get(f"/api/user/settings/{key}").json())
+            )
+        finally:
+            assert app.delete(f"/api/user/settings/{key}").status_code == 204
+    assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize("key", ["0", "01", "1"])
+def test_reference_native_numeric_setting_keys(client, api_headers, reference, key):
+    client.headers.update(api_headers)
+    value = "saved_" + uuid4().hex
+    snapshots = []
+    for app in (reference, client):
+        try:
+            assert app.put(f"/api/user/settings/{key}", json={"value": value}).status_code == 204
+            settings = app.get("/api/user/settings").json()
+            snapshots.append(
+                (
+                    app.get(f"/api/user/settings/{key}").content,
+                    [name for name, stored in settings.items() if stored == value],
+                )
+            )
+        finally:
+            assert app.delete(f"/api/user/settings/{key}").status_code == 204
+    assert snapshots[0] == snapshots[1]

@@ -184,7 +184,14 @@ def test_user_defaults_and_operation_permissions(client: TestClient, api_headers
     )
     assert (
         client.put(
-            f"/api/users/{user_id}", headers=headers, json={"first_name": "Updated", "password": ""}
+            f"/api/users/{user_id}",
+            headers=headers,
+            json={
+                "username": "Profile user",
+                "first_name": "Updated",
+                "last_name": "",
+                "password": "",
+            },
         ).status_code
         == 204
     )
@@ -200,7 +207,7 @@ def test_user_defaults_and_operation_permissions(client: TestClient, api_headers
     )
     assert (
         client.post(
-            "/api/users", headers=headers, json={"username": "Created by manager"}
+            "/api/users", headers=headers, json={"username": "Created by manager", "password": ""}
         ).status_code
         == 204
     )
@@ -233,10 +240,17 @@ async def test_empty_profile_password_preserves_stored_password(
         user = await session.scalar(select(User).where(User.username == "Password user"))
         assert user is not None
         user_id, password = user.id, user.password
+        assert password.startswith("$2y$")
     for value in ("", None, "0"):
         assert (
             client.put(
-                f"/api/users/{user_id}", json={"password": value, "first_name": "Updated"}
+                f"/api/users/{user_id}",
+                json={
+                    "username": "Password user",
+                    "password": value,
+                    "first_name": "Updated",
+                    "last_name": "",
+                },
             ).status_code
             == 204
         )

@@ -3509,3 +3509,138 @@ def test_native_battery_ignores_unrelated_tracking_fields(api):
     )
     assert response.status_code == 200, response.text
     assert response.json()["tracked_time"] == "2027-01-04 16:20:00"
+
+
+@pytest.mark.parametrize("value", ["", " spaces ", None, True])
+def test_native_user_creation_keeps_php_name_values(api, value):
+    marker = uuid4().hex
+    response = api.post(
+        "/api/users",
+        json={
+            "username": value,
+            "password": "test",
+            "last_name": marker,
+        },
+    )
+    assert response.status_code == 204, response.text
+    users = api.get("/api/users", params={"query[]": f"last_name={marker}"}).json()
+    assert len(users) == 1
+    try:
+        assert users[0]["username"] == (
+            None if value in ("", None) else "1" if value is True else value
+        )
+    finally:
+        assert api.delete(f"/api/users/{users[0]['id']}").status_code == 204
+
+
+@pytest.mark.parametrize(
+    "method,body,field",
+    [
+        ("POST", {"password": "test"}, "username"),
+        ("POST", {"username": "marker"}, "password"),
+        ("POST", {"username": [], "password": "test"}, "username"),
+        ("POST", {"username": "marker", "password": []}, "password"),
+        ("PUT", {"first_name": "Changed"}, "username"),
+        ("PUT", {"username": "marker", "last_name": "Last"}, "firstName"),
+        ("PUT", {"username": "marker", "first_name": "First"}, "lastName"),
+    ],
+)
+def test_native_user_write_type_errors_keep_the_saved_profile(api, method, body, field):
+    marker = uuid4().hex
+    body = {key: marker if value == "marker" else value for key, value in body.items()}
+    user = None
+    if method == "PUT":
+        assert (
+            api.post("/api/users", json={"username": marker, "password": "test"}).status_code == 204
+        )
+        user = api.get("/api/users", params={"query[]": f"username={marker}"}).json()[0]
+    try:
+        response = api.request(method, "/api/users" + (f"/{user['id']}" if user else ""), json=body)
+        assert response.status_code == 500, response.text
+        data = response.json()
+        assert set(data) == {"error_message", "error_details"}
+        assert f"(${field}) must be of type" in data["error_message"]
+        assert response.headers["access-control-allow-origin"] == "*"
+        if user:
+            assert api.get("/api/users", params={"query[]": f"id={user['id']}"}).json() == [user]
+        else:
+            assert api.get("/api/users", params={"query[]": f"username={marker}"}).json() == []
+    finally:
+        if user:
+            api.delete(f"/api/users/{user['id']}")
+
+
+def test_native_user_duplicate_and_full_edit_rules(api):
+    marker = uuid4().hex
+    body = {
+        "username": marker,
+        "password": "test",
+        "first_name": "First",
+        "last_name": "Last",
+        "picture_file_name": "saved.png",
+    }
+    assert api.post("/api/users", json=body).status_code == 204
+    user = api.get("/api/users", params={"query[]": f"username={marker}"}).json()[0]
+    try:
+        duplicate = api.post("/api/users", json=body)
+        assert duplicate.status_code == 400, duplicate.text
+        assert duplicate.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: "
+            "19 UNIQUE constraint failed: users.username"
+        }
+        changed = api.put(
+            f"/api/users/{user['id']}e0",
+            json={"username": marker, "first_name": "New", "last_name": "Name"},
+        )
+        assert changed.status_code == 204, changed.text
+        saved = api.get("/api/users", params={"query[]": f"id={user['id']}"}).json()[0]
+        assert saved["first_name"] == "New" and saved["last_name"] == "Name"
+        assert saved["picture_file_name"] is None
+    finally:
+        api.delete(f"/api/users/{user['id']}")
+
+
+@pytest.mark.parametrize(
+    "raw,content_type,status,details",
+    [
+        (b"{", "application/json", 400, False),
+        (b"null", "application/json", 400, False),
+        (b"{}", "application/json; charset=utf-8", 400, True),
+    ],
+)
+def test_native_user_create_raw_body_errors(api, raw, content_type, status, details):
+    response = api.post("/api/users", content=raw, headers={"Content-Type": content_type})
+    assert response.status_code == status, response.text
+    data = response.json()
+    assert set(data) == ({"error_message", "error_details"} if details else {"error_message"})
+    assert data["error_message"] == (
+        "Bad Content-Type"
+        if details
+        else "Request body could not be parsed "
+        "(probably invalid JSON format or missing/wrong Content-Type header)"
+    )
+
+
+@pytest.mark.parametrize("id_form", ["leading_zero", "decimal", "exponent"])
+def test_native_user_self_edit_uses_php_id_comparison(api, id_form):
+    marker = uuid4().hex
+    body = {"username": marker, "password": "test", "first_name": "First", "last_name": "Last"}
+    assert api.post("/api/users", json=body).status_code == 204
+    user = api.get("/api/users", params={"query[]": f"username={marker}"}).json()[0]["id"]
+    key = user_key(api, user)
+    assert api.put(f"/api/users/{user}/permissions", json={"permissions": [6]}).status_code == 204
+    original = api.headers["GROCY-API-KEY"]
+    try:
+        api.headers["GROCY-API-KEY"] = key
+        token = {"leading_zero": f"0{user}", "decimal": f"{user}.0", "exponent": f"{user}e0"}[
+            id_form
+        ]
+        response = api.put(f"/api/users/{token}", json={**body, "first_name": "Changed"})
+        assert response.status_code == 204, response.text
+        assert api.get("/api/user").json()[0]["first_name"] == "Changed"
+        denied = api.put("/api/users/1", json={**body, "first_name": "Other"})
+        assert denied.status_code == 403, denied.text
+        assert denied.json()["error_message"] == "Permission missing: USERS_EDIT"
+    finally:
+        api.headers["GROCY-API-KEY"] = original
+        api.delete(f"/api/users/{user}")

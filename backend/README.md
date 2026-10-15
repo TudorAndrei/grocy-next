@@ -18,6 +18,9 @@ Task completion, task undo, battery charging, charge undo, and battery details u
 Grocy controllers and services. Each action has a separate PHP user context. Native permission
 checks and SQL use the application database. The action process stops before the request returns.
 Set `TZ` to select the same server time zone for Python and the PHP workers.
+User, permission, and single-setting operations also use the original Grocy controller.
+User passwords use PHP's native password hash. Profile edits require the native fields.
+The `/api/v2/user/settings` extension supports bulk setting changes and deletion.
 Set `GROCY_PHP_EXECUTABLE` if PHP is not available as `php` on `PATH`.
 The Docker image includes this runtime.
 

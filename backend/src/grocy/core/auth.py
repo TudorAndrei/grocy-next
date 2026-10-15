@@ -138,7 +138,9 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
     action = path.rsplit("/", 1)[-1]
     write = request.method not in {"GET", "HEAD", "OPTIONS"}
     if (
-        path.startswith(("v2/mcp", "v2/files/", "user/settings", "files/", "system"))
+        path.startswith(
+            ("v2/mcp", "v2/files/", "v2/user/settings", "user/settings", "files/", "system")
+        )
         or path == "user"
     ):
         return ""

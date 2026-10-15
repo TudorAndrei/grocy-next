@@ -31,6 +31,7 @@
     "controllers/FilesApiController.php": "f87e6d4523367ac15b9ec65b865b42f9ed09df8a8741707d3977a5a41b30d142",
     "services/FilesService.php": "5e163f6bfbe47c1f8055ae7630f5c59040f3e87559bf25a2b2a6f587939e02b7",
     "controllers/Users/User.php": "00f2cdba6eb6ce9ac2688baf2ebde71142e0da9eff22ba2ff66a85b082b6c45e",
-    "controllers/Users/PermissionMissingException.php": "2937a51c8e128f6448fe205985d2abe216330e44f0483929a2375e7aecf0621d"
+    "controllers/Users/PermissionMissingException.php": "2937a51c8e128f6448fe205985d2abe216330e44f0483929a2375e7aecf0621d",
+    "controllers/UsersApiController.php": "25a3599907fa84219021b82066511540aafd70000d5a699c01d12e0d5f4205c1"
   }
 }

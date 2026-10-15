@@ -49,13 +49,16 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "false")
     clear_settings_cache()
     with TestClient(create_app(), headers=api_headers) as old:
-        assert (
-            old.post("/api/users", json={"username": "Former", "password": "test"}).status_code
-            == 204
-        )
-        # Read fixture identity without the users_dto view added by the later upgrade.
+        # Store the legacy user before the native permission views exist.
         with sqlite3.connect(database) as connection:
-            user = connection.execute("SELECT id FROM users WHERE username='Former'").fetchone()[0]
+            user = connection.execute(
+                "INSERT INTO users(username,password,row_created_timestamp) VALUES ('Former','',?)",
+                ("2026-01-04 12:34:56",),
+            ).lastrowid
+            assert user is not None
+            connection.execute(
+                "INSERT INTO user_permissions(user_id,permission_id) VALUES (?,1)", (user,)
+            )
         key = old.post("/api/v2/api-keys", json={"user_id": user}).json()["api_key"]
         old.headers["GROCY-API-KEY"] = key
         assert old.put("/api/user/settings/kept", json={"value": "saved"}).status_code == 204
@@ -99,7 +102,7 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
         )
         assert invalid_task.status_code == 400, invalid_task.text
         duplicate = upgraded.post("/api/users", json={"username": "Former", "password": "test"})
-        assert duplicate.status_code == 409, duplicate.text
+        assert duplicate.status_code == 400, duplicate.text
         response = upgraded.delete(f"/api/users/{user}", headers={"GROCY-API-KEY": key})
         assert response.status_code == 204, response.text
         assert upgraded.get("/api/user", headers={"GROCY-API-KEY": key}).status_code == 401

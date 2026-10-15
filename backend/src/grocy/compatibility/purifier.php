@@ -31,7 +31,6 @@ try {
         mkdir(GROCY_DATAPATH . '/viewcache', 0700, true);
     }
     $nativeSchema = nativeSchema();
-    $pdo = new PDO('sqlite::memory:');
     $config = HTMLPurifier_Config::createDefault();
     $config->set('Cache.SerializerPath', $argv[1]);
     $config->set('HTML.Allowed', 'div,b,strong,i,em,u,a[href|title|target],iframe[src|width|height|frameborder],ul,ol,li,p[style],br,span[style],img[style|width|height|alt|src],table[border|width|style],tbody,tr,td,th,blockquote,*[style|class|id],h1,h2,h3,h4,h5,h6');
@@ -68,10 +67,6 @@ while (($line = fgets(STDIN)) !== false) {
             continue;
         }
         $raw = base64_decode($request['json'], true);
-        if (($request['operation'] ?? 'purify') === 'permissions') {
-            reply(['id' => $id, 'ok' => true, 'body' => permissionQuery($request, $raw, $purifier, $pdo)]);
-            continue;
-        }
         $body = filteredBody(parsedBody($raw, 'POST', 'application/json'), $purifier);
         if (substr(ltrim($raw), 0, 1) === '{' && is_array($body)) {
             $body = (object)$body;

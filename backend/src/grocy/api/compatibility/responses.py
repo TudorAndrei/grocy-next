@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.generic import NativeStatements
 from grocy.compatibility.purifier import InputPurifier
+from grocy.core.config import get_settings
 
 
 def native_response(result: dict[str, Any]) -> Response:
@@ -42,6 +43,8 @@ async def native_action_response(
         method=request.method,
         body=await request.body(),
         content_type=request.headers.get("content-type"),
+        query_string=request.scope["query_string"],
+        default_permissions=get_settings().default_permissions,
         execute=NativeStatements(session, runtime).execute,
     )
     return native_response(result)

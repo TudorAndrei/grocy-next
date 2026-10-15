@@ -3,9 +3,12 @@
 // Native permission checks use the same application connection as each action.
 function nativeAction(array $request, NativeDatabase $database): array
 {
+    global $GROCY_DEFAULT_USER_SETTINGS;
+    $GROCY_DEFAULT_USER_SETTINGS = json_decode(file_get_contents(__DIR__ . '/grocy_4_5_0_client_defaults.json'), true, 512, JSON_THROW_ON_ERROR)['user_settings'];
+    define('GROCY_DEFAULT_PERMISSIONS', $request['default_permissions']);
     (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
     $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
-        $request['method'], 'http://localhost/api/'
+        $request['method'], 'http://localhost/api/?' . base64_decode($request['query_string'], true)
     );
     $http = $http->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(
         base64_decode($request['json'], true)
@@ -22,6 +25,18 @@ function nativeAction(array $request, NativeDatabase $database): array
             'battery_charge' => [new NativeBatteriesController($database), 'TrackChargeCycle', ['batteryId' => $request['object_id']]],
             'battery_undo' => [new NativeBatteriesController($database), 'UndoChargeCycle', ['chargeCycleId' => $request['object_id']]],
             'battery_details' => [new NativeBatteriesController($database), 'BatteryDetails', ['batteryId' => $request['object_id']]],
+            'user_current' => [new NativeUsersController($database), 'CurrentUser', []],
+            'users' => [new NativeUsersController($database), 'GetUsers', []],
+            'user_create' => [new NativeUsersController($database), 'CreateUser', []],
+            'user_edit' => [new NativeUsersController($database), 'EditUser', ['userId' => $request['object_id']]],
+            'user_delete' => [new NativeUsersController($database), 'DeleteUser', ['userId' => $request['object_id']]],
+            'permissions_get' => [new NativeUsersController($database), 'ListPermissions', ['userId' => $request['object_id']]],
+            'permission_add' => [new NativeUsersController($database), 'AddPermission', ['userId' => $request['object_id']]],
+            'permissions_set' => [new NativeUsersController($database), 'SetPermissions', ['userId' => $request['object_id']]],
+            'settings' => [new NativeUsersController($database), 'GetUserSettings', []],
+            'setting_get' => [new NativeUsersController($database), 'GetUserSetting', ['settingKey' => $request['object_id']]],
+            'setting_set' => [new NativeUsersController($database), 'SetUserSetting', ['settingKey' => $request['object_id']]],
+            'setting_delete' => [new NativeUsersController($database), 'DeleteUserSetting', ['settingKey' => $request['object_id']]],
             default => throw new RuntimeException('Unknown native action route'),
         };
         $response = $controller->$method($http, $response, $args);

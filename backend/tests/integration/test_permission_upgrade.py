@@ -46,16 +46,18 @@ def test_existing_permission_rows_keep_their_counter_after_replacement(tmp_path:
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "false")
     clear_settings_cache()
     headers = {"GROCY-API-KEY": "dev-key"}
-    with TestClient(create_app(), headers=headers) as old:
-        assert (
-            old.post("/api/users", json={"username": "Legacy", "password": "test"}).status_code
-            == 204
-        )
-        # Read fixture identity without the users_dto view added by the later upgrade.
+    with TestClient(create_app(), headers=headers):
+        # Store the legacy user and permission before native permission views exist.
         with sqlite3.connect(database) as connection:
-            user = connection.execute("SELECT id FROM users WHERE username='Legacy'").fetchone()[0]
+            user = connection.execute(
+                "INSERT INTO users(username,password,row_created_timestamp) VALUES ('Legacy','',?)",
+                ("2026-01-04 12:34:56",),
+            ).lastrowid
+            previous = connection.execute(
+                "INSERT INTO user_permissions(user_id,permission_id) VALUES (?,1)", (user,)
+            ).lastrowid
+            assert user is not None and previous is not None
         path = f"/api/users/{user}/permissions"
-        previous = old.get(path).json()[0]["id"]
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "true")
     clear_settings_cache()
     reset_engine()

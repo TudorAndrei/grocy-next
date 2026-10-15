@@ -40,6 +40,7 @@ def test_execution_records_actor_date_and_rotates_assignments(
             headers=api_headers,
             json={
                 "username": "second",
+                "password": "",
                 "first_name": "Zoe",
             },
         ).status_code

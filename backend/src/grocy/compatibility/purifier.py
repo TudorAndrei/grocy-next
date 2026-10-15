@@ -77,19 +77,6 @@ class InputPurifier:
     async def purify(self, body: bytes) -> Any:
         return await self._request(body, {})
 
-    async def permission_query(
-        self, body: bytes, *, user_id: str, method: str, content_type: str | None
-    ) -> dict[str, Any]:
-        return await self._request(
-            body,
-            {
-                "operation": "permissions",
-                "user_id": user_id,
-                "method": method,
-                "content_type": content_type,
-            },
-        )
-
     async def generic_write(
         self,
         *,
@@ -197,6 +184,8 @@ class InputPurifier:
         method: str,
         body: bytes,
         content_type: str | None,
+        query_string: bytes,
+        default_permissions: list[str],
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
     ) -> dict[str, Any]:
         # Grocy's current user is a PHP constant. Each action owns its request context.
@@ -210,6 +199,8 @@ class InputPurifier:
                     "object_id": object_id,
                     "method": method,
                     "content_type": content_type,
+                    "query_string": base64.b64encode(query_string).decode("ascii"),
+                    "default_permissions": default_permissions,
                 },
                 execute=execute,
             )

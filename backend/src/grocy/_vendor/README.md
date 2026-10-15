@@ -39,3 +39,8 @@ Task and battery actions also use the pinned controllers and services. The
 included `Users/User.php` and `PermissionMissingException.php` retain their
 permission checks. A request-specific worker sets Grocy's current user constant.
 The adapter supplies the application connection to the native database service.
+
+`UsersApiController` now handles user, permission, and setting requests. The
+adapter supplies the configured default permission names and pinned setting
+defaults. Request parsing, password hashes, write order, and PHP array keys
+remain in the original controller and user service.

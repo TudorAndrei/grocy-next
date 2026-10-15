@@ -1,6 +1,6 @@
 <?php
 
-// Supply the application connection to the unchanged Grocy read services.
+// Supply the application connection to the unchanged Grocy services.
 trait NativeListContext
 {
     public function __construct(private NativeDatabase $database)
@@ -60,6 +60,7 @@ class NativeChoresController extends Grocy\Controllers\ChoresApiController { use
 class NativeBatteriesController extends Grocy\Controllers\BatteriesApiController { use NativeListContext; }
 class NativeStockController extends Grocy\Controllers\StockApiController { use NativeListContext; }
 class NativeRecipesController extends Grocy\Controllers\RecipesApiController { use NativeListContext; }
+class NativeUsersController extends Grocy\Controllers\UsersApiController { use NativeListContext; }
 
 // DatabaseService executes its original raw SELECT calls through this reader.
 class NativeRawReader
@@ -92,21 +93,6 @@ class NativeReadDatabaseService extends Grocy\Services\DatabaseService
     }
 }
 
-class NativeUsersListController extends Grocy\Controllers\BaseApiController
-{
-    use NativeListContext;
-
-    public function GetUsers($request, $response, $args)
-    {
-        // Python has checked USERS_READ before this call. Keep GetUsers' exception boundary.
-        try {
-            return $this->FilteredApiResponse($response, $this->getUsersService()->GetUsersAsDto(), $request->getQueryParams());
-        } catch (Exception $error) {
-            return $this->GenericErrorResponse($response, $error->getMessage());
-        }
-    }
-}
-
 function nativeListRead(array $request, NativeDatabase $database): array
 {
     $http = nativeGetRequest($request);
@@ -114,7 +100,6 @@ function nativeListRead(array $request, NativeDatabase $database): array
         'tasks' => [new NativeTasksController($database), 'Current', []],
         'chores' => [new NativeChoresController($database), 'Current', []],
         'batteries' => [new NativeBatteriesController($database), 'Current', []],
-        'users' => [new NativeUsersListController($database), 'GetUsers', []],
         'recipes' => [new NativeRecipesController($database), 'GetRecipeFulfillment', []],
         'stock' => [new NativeStockController($database), 'CurrentStock', []],
         'volatile' => [new NativeStockController($database), 'CurrentVolatileStock', []],
