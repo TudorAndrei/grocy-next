@@ -7,1223 +7,1512 @@
     "api_keys": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "api_key": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "user_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "expires": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "last_used": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "key_type": {
         "nullable": false,
-        "default": "'default'"
+        "default": "'default'",
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     },
     "batteries": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "used_in": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "charge_interval_days": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "battery_charge_cycles": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "battery_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "tracked_time": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "undone": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "undone_timestamp": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "cache__products_average_price": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "price": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       }
     },
     "cache__products_last_purchased": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "amount": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "best_before_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "purchased_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "price": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "shopping_location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       }
     },
     "chores": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "period_type": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "period_days": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "period_config": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "track_date_only": {
         "nullable": true,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "rollover": {
         "nullable": true,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "assignment_type": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "assignment_config": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "next_execution_assigned_to_user_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "consume_product_on_execution": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TINYINT"
       },
       "product_amount": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "REAL"
       },
       "period_interval": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "INTEGER"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       },
       "start_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "rescheduled_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "rescheduled_next_execution_assigned_to_user_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       }
     },
     "chores_log": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "chore_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "tracked_time": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "done_by_user_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "undone": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "undone_timestamp": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "skipped": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "scheduled_execution_time": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       }
     },
     "equipment": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "instruction_manual_file_name": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "locations": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "is_freezer": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "meal_plan": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "day": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "type": {
         "nullable": true,
-        "default": "'recipe'"
+        "default": "'recipe'",
+        "type": "TEXT"
       },
       "recipe_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "recipe_servings": {
         "nullable": true,
-        "default": "1"
+        "default": "1",
+        "type": "INTEGER"
       },
       "note": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_amount": {
         "nullable": true,
-        "default": "0"
+        "default": "0",
+        "type": "REAL"
       },
       "product_qu_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "done": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "section_id": {
         "nullable": false,
-        "default": "-1"
+        "default": "-1",
+        "type": "INTEGER"
       }
     },
     "meal_plan_sections": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "sort_number": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "time_info": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     },
     "product_barcodes": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "barcode": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "qu_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "amount": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "REAL"
       },
       "shopping_location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "last_price": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "note": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     },
     "product_groups": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "products": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "product_group_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       },
       "location_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "shopping_location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "qu_id_purchase": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "qu_id_stock": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "min_stock_amount": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "default_best_before_days": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "default_best_before_days_after_open": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "default_best_before_days_after_freezing": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "default_best_before_days_after_thawing": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "picture_file_name": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "enable_tare_weight_handling": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "tare_weight": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "REAL"
       },
       "not_check_stock_fulfillment_for_recipes": {
         "nullable": true,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "parent_product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "calories": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "cumulate_min_stock_amount_of_sub_products": {
         "nullable": true,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "due_type": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       },
       "quick_consume_amount": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "REAL"
       },
       "hide_on_stock_overview": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "default_stock_label_type": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "should_not_be_frozen": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "treat_opened_as_out_of_stock": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       },
       "no_own_stock": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "default_consume_location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "move_on_open": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "qu_id_consume": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "auto_reprint_stock_label": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "quick_open_amount": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "REAL"
       },
       "qu_id_price": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "disable_open": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "default_purchase_price_type": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "quantity_unit_conversions": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "from_qu_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "to_qu_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "factor": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "REAL"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "quantity_units": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "name_plural": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "plural_forms": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "recipes": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "picture_file_name": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "base_servings": {
         "nullable": true,
-        "default": "1"
+        "default": "1",
+        "type": "INTEGER"
       },
       "desired_servings": {
         "nullable": true,
-        "default": "1"
+        "default": "1",
+        "type": "INTEGER"
       },
       "not_check_shoppinglist": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "type": {
         "nullable": true,
-        "default": "'normal'"
+        "default": "'normal'",
+        "type": "TEXT"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       }
     },
     "recipes_nestings": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "recipe_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "includes_recipe_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "servings": {
         "nullable": true,
-        "default": "1"
+        "default": "1",
+        "type": "INTEGER"
       }
     },
     "recipes_pos": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "recipe_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "amount": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "REAL"
       },
       "note": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "qu_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "only_check_single_unit_in_stock": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "ingredient_group": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "not_check_stock_fulfillment": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "variable_amount": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "price_factor": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "REAL"
       },
       "round_up": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       }
     },
     "shopping_list": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "note": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "amount": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "DECIMAL(15, 2)"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "shopping_list_id": {
         "nullable": true,
-        "default": "1"
+        "default": "1",
+        "type": "INT"
       },
       "done": {
         "nullable": true,
-        "default": "0"
+        "default": "0",
+        "type": "INT"
       },
       "qu_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       }
     },
     "shopping_lists": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "shopping_locations": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "stock": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "amount": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "best_before_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "purchased_date": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATE"
       },
       "stock_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "price": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "open": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "opened_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "shopping_location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "note": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     },
     "stock_log": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "product_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "amount": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "best_before_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "purchased_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "used_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATE"
       },
       "spoiled": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "INTEGER"
       },
       "stock_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "transaction_type": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "price": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DECIMAL(15, 2)"
       },
       "undone": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "undone_timestamp": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "opened_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "recipe_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "correlation_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "transaction_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "stock_row_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "shopping_location_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "user_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "note": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     },
     "task_categories": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "active": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       }
     },
     "tasks": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "due_date": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "done": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "done_timestamp": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "DATETIME"
       },
       "category_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "assigned_to_user_id": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "user_permissions": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "permission_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "user_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       }
     },
     "user_settings": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "user_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "key": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "value": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "row_updated_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "userentities": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "caption": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "description": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "show_in_sidebar_menu": {
         "nullable": false,
-        "default": "1"
+        "default": "1",
+        "type": "TINYINT"
       },
       "icon_css_class": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "userfield_values": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "field_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "object_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "value": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "userfields": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "entity": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "name": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "caption": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "type": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "show_as_column_in_tables": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "config": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "sort_number": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "input_required": {
         "nullable": false,
-        "default": "0"
+        "default": "0",
+        "type": "TINYINT"
       },
       "default_value": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     },
     "userobjects": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "userentity_id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       }
     },
     "users": {
       "id": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "INTEGER"
       },
       "username": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "first_name": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "last_name": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "password": {
         "nullable": false,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       },
       "row_created_timestamp": {
         "nullable": true,
-        "default": "datetime('now', 'localtime')"
+        "default": "datetime('now', 'localtime')",
+        "type": "DATETIME"
       },
       "picture_file_name": {
         "nullable": true,
-        "default": null
+        "default": null,
+        "type": "TEXT"
       }
     }
   },

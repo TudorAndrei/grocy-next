@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 from sqlalchemy import Text
 from sqlalchemy.engine import Dialect
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import TypeDecorator
 
 
@@ -32,3 +33,8 @@ class DateOrDateTime(TypeDecorator[date | datetime]):
         if value is None:
             return None
         return date.fromisoformat(value) if len(value) == 10 else datetime.fromisoformat(value)
+
+
+@compiles(DateOrDateTime, "sqlite")
+def _date_storage(_column_type, _compiler, **_kwargs) -> str:
+    return "DATETIME"
