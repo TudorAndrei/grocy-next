@@ -8,7 +8,7 @@ uv run grocy-cli validate-import /path/to/grocy.db
 uv run grocy-cli import /path/to/grocy.db /path/to/grocy-next.db
 ```
 
-The importer checks SQLite integrity and the required core tables. It takes a SQLite backup, including committed WAL pages. It copies supported table columns, converts dates, maps upstream custom field values, checks references, and records the current schema revision. An import failure removes the incomplete destination and snapshot.
+The importer checks SQLite integrity and the required core tables. It takes a SQLite backup, including committed WAL pages. It copies supported table columns, converts dates, maps upstream custom field values, checks active destination constraints, and records the current schema revision. An import failure removes the incomplete destination and snapshot.
 
 The command returns the destination path, source snapshot path, copied row counts, and archived tables and columns. Data outside the active application schema remains in the exact source snapshot. Review this report before you use the new database.
 
@@ -49,3 +49,9 @@ An older project table without a saved counter starts from its highest remaining
 Revision 0015 adds all 27 pinned Grocy `CHECK` expressions to the 16 affected modeled tables. It keeps rows, ID counters, existing constraints, indexes, views, and triggers. The table copy includes unnamed check constraints explicitly, as required by [Alembic's batch guidance](https://alembic.sqlalchemy.org/en/latest/batch.html#including-check-constraints).
 
 An older project database can contain values that Grocy rejects. For example, earlier project versions accepted task `done=2`. Such a record makes revision 0015 fail. The transaction then restores the original schema, records, counters, and revision. Correct the invalid values through the previous application version before you repeat the upgrade. The upgrade does not change those values automatically.
+
+Revision 0016 removes 36 project foreign keys across 15 native tables. Grocy 4.5.0 has no database foreign keys in the 33 modeled native tables. ORM links remain available. Nutrition constraints and custom database references remain active. Imports retain native records without their referenced parent rows.
+
+The revision also installs nine pinned native validation and default triggers. Recipe ingredient units become nullable. Meal section names become unique. A database without the required default meal section receives row -1 with its native name and sort number. Existing rows, counters, custom constraints, views, indexes, and triggers remain saved.
+
+Duplicate meal section names from an earlier project version can make revision 0016 fail. The failed copy restores the full original database, including its revision and ID counters. Resolve duplicate names through the previous application version before you repeat the upgrade. The default meal section cannot be deleted, as in Grocy.

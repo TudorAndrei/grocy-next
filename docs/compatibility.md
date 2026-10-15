@@ -73,7 +73,7 @@ Recipe checks support child stock, rounded ingredient amounts, price factors, an
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.
 
-Calculated view fields and row IDs follow the pinned SQLite definitions. Import checks compared all six exposed SQLite views with the reference database. Purchase price caches are stored and imported. Domain services implement writes. Internal recipe caches and other upstream triggers are not imported as active behavior.
+Calculated view fields and row IDs follow the pinned SQLite definitions. Import checks compared all six exposed SQLite views with the reference database. Purchase price caches are stored and imported. Domain services and nine pinned validation and default triggers implement writes. Other upstream triggers and internal caches are not imported as active behavior.
 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 
@@ -88,6 +88,12 @@ All 33 modeled native tables now use Grocy's SQLite allocation counters. Later i
 The modeled tables also use all 27 native `CHECK` expressions across 16 tables. These include boolean values, due types, purchase price types, and the positive chore interval. Checked numeric inputs use SQLite affinity. For example, task completion accepts `"1e0"` as 1 and rejects `"invalid"`. A rejected insert or update returns 400 with the native SQLite error message. The rejected update keeps the saved record.
 
 Generic object creation returns only `created_object_id`, as a string. Clients can read the new record through its object URL. The frontend uses this response type. Other generic validation and reference rules still need comparison.
+
+Generic names accept empty text and preserve spaces. Empty text reads as null, as in PDO. An empty object body returns ID `"0"` and inserts no row. A nonempty body that omits a required name returns the native database error. Meal section names are unique. The required default section has ID -1, an empty name, and sort number -1. Its delete guard returns 500, as in Grocy.
+
+The native tables keep ORM links without the 36 extra database foreign keys from earlier project versions. Tasks can retain an unknown category ID. Other native references can also remain without a parent row. Imports preserve those records. Nutrition and custom foreign keys remain active. Native triggers retain the separate insert rules for barcodes and recipe ingredients. Some updates can keep references that those insert rules reject.
+
+Nine unmodified native trigger definitions handle unit defaults, barcode and ingredient insert validation, conversion duplicates, and the default meal section delete guard. An orphan shopping item with no supplied unit keeps null. Recipe ingredient units can also be null when the native insert rules permit that state. Revision 0016 applies these rules to existing project databases.
 
 Chore merging requires `MASTER_DATA_EDIT`. An administrator can replace their own permissions and remove their own administrator access. The next request uses those permissions, as in Grocy 4.5.0.
 
@@ -123,7 +129,7 @@ Chore consumption uses the gross tare amount. Chore tracking saves its log befor
 
 Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
 
-The audit still needs more input coercion, validation, and combined error cases. Some generic validation and foreign key rules remain stricter than Grocy. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. ID gaps from rejected or repeated writes and internal write order need more checks. More response edge cases need checks. These gaps remain outside the verified behavior.
+The audit still needs more input coercion, validation, and combined error cases. Generic uniqueness rules still have differences. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. ID gaps from rejected or repeated writes and internal write order need more checks. More response edge cases need checks. These gaps remain outside the verified behavior.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
 
