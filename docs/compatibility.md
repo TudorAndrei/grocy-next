@@ -47,6 +47,8 @@ Purchase comparisons cover supplied purchase dates, price history, weighted pric
 
 Stock entry edits return an old booking and a new booking. Undo restores the prior entry. Later stock changes must be undone first. Price caches keep their last value when an undo leaves no calculated price row, as in Grocy 4.5.0.
 
+Transfers return linked `transfer_from` and `transfer_to` bookings. They keep the stock ID, store, and note. Freeze and thaw settings set the new due date. Booking undo restores its linked pair. Transaction undo restores all active bookings in that transaction.
+
 ## Boundaries
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.
@@ -56,3 +58,5 @@ Calculated view fields and row IDs follow the pinned SQLite definitions. Import 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 
 Calendar subscription keys grant calendar access only. Revoke a subscription key through API key management. Server configuration responses omit API keys and the database URL.
+
+Transfer undo keeps the original source location and store. Grocy 4.5.0 can use the current default location and omit the store when it restores a fully transferred entry. This implementation keeps the original booking data in that case.

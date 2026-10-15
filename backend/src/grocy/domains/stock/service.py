@@ -87,6 +87,12 @@ class StockService:
                 raise GrocyError("Gross amount must exceed stock plus tare weight")
         if best_before_date is None:
             days = product.default_best_before_days
+            if location_id is not None:
+                location = await self.session.get(Location, location_id)
+                if location is None:
+                    raise NotFoundError("Location not found")
+                if location.is_freezer and product.default_best_before_days_after_freezing >= -1:
+                    days = product.default_best_before_days_after_freezing
             best_before_date = (
                 date(2999, 12, 31) if days == -1 else date.today() + timedelta(days=days)
             )
@@ -103,7 +109,7 @@ class StockService:
             stock_id=stock_id,
             price=price,
             location_id=location_id or product.location_id,
-            shopping_location_id=shopping_location_id or product.shopping_location_id,
+            shopping_location_id=shopping_location_id,
             note=note,
         )
         self.session.add(entry)
@@ -330,76 +336,121 @@ class StockService:
         amount: Decimal,
         location_id_from: int,
         location_id_to: int,
+        *,
+        stock_entry_id: str | None = None,
     ) -> dict:
         if location_id_from == location_id_to:
             raise GrocyError(
-                "source and destination locations must differ",
-                code="invalid_transfer",
+                "source and destination locations must differ", code="invalid_transfer"
             )
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get(product_id)
         if product.enable_tare_weight_handling:
             raise GrocyError("Cannot transfer a tare weight product")
-        for location_id in (location_id_from, location_id_to):
-            if await self.session.get(Location, location_id) is None:
-                raise NotFoundError("Location not found")
-        remaining = amount
+        source = await self.session.get(Location, location_id_from)
+        target = await self.session.get(Location, location_id_to)
+        if source is None or target is None:
+            raise NotFoundError("Location not found")
         entries = await self._ordered_entries(product_id, location_id=location_id_from)
-        total = sum((e.amount for e in entries), Decimal("0"))
-        if total < amount:
-            raise GrocyError(
-                f"insufficient stock at source: have {total}, need {amount}",
-                code="insufficient_stock",
-            )
+        if stock_entry_id and stock_entry_id != "default":
+            entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
+        if sum((entry.amount for entry in entries), Decimal("0")) < amount:
+            raise GrocyError("insufficient stock at source", code="insufficient_stock")
         transaction_id = uuid.uuid4().hex
+        remaining = amount
         last_log_id = None
         for entry in entries:
             if remaining <= 0:
                 break
             take = min(entry.amount, remaining)
             before = self._serialize_entry(entry)
-            entry.amount -= take
-            remaining -= take
-            dest = StockEntry(
+            expiry = entry.best_before_date
+            frozen_days = product.default_best_before_days_after_freezing
+            if (
+                not source.is_freezer
+                and target.is_freezer
+                and (frozen_days > 0 or frozen_days == -1)
+            ):
+                expiry = (
+                    date(2999, 12, 31)
+                    if frozen_days == -1
+                    else date.today() + timedelta(days=frozen_days)
+                )
+            elif (
+                source.is_freezer
+                and not target.is_freezer
+                and product.default_best_before_days_after_thawing > 0
+            ):
+                expiry = date.today() + timedelta(
+                    days=product.default_best_before_days_after_thawing
+                )
+            correlation_id = uuid.uuid4().hex
+            await self._add_log(
+                actor=actor,
                 product_id=product_id,
-                amount=take,
+                amount=-take,
+                transaction_type="transfer_from",
+                stock_id=entry.stock_id,
                 best_before_date=entry.best_before_date,
                 purchased_date=entry.purchased_date,
-                stock_id=uuid.uuid4().hex,
                 price=entry.price,
-                open=entry.open,
                 opened_date=entry.opened_date,
-                location_id=location_id_to,
+                location_id=source.id,
+                shopping_location_id=entry.shopping_location_id,
+                note=entry.note,
+                stock_row_id=entry.id,
+                transaction_id=transaction_id,
+                correlation_id=correlation_id,
+                undo_data=json.dumps({"before": before}),
             )
-            self.session.add(dest)
+            if take == entry.amount:
+                destination = entry
+                destination.location_id = target.id
+                destination.best_before_date = expiry
+            else:
+                entry.amount -= take
+                destination = StockEntry(
+                    product_id=product_id,
+                    amount=take,
+                    stock_id=entry.stock_id,
+                    best_before_date=expiry,
+                    purchased_date=entry.purchased_date,
+                    price=entry.price,
+                    open=entry.open,
+                    opened_date=entry.opened_date,
+                    location_id=target.id,
+                    shopping_location_id=entry.shopping_location_id,
+                    note=entry.note,
+                )
+                self.session.add(destination)
             await self.session.flush()
             log = await self._add_log(
                 actor=actor,
                 product_id=product_id,
                 amount=take,
-                transaction_type="transfer",
-                stock_id=dest.stock_id,
-                best_before_date=entry.best_before_date,
-                purchased_date=entry.purchased_date,
-                price=entry.price,
-                location_id=location_id_to,
-                stock_row_id=dest.id,
+                transaction_type="transfer_to",
+                stock_id=destination.stock_id,
+                best_before_date=expiry,
+                purchased_date=destination.purchased_date,
+                price=destination.price,
+                opened_date=destination.opened_date,
+                location_id=target.id,
+                shopping_location_id=destination.shopping_location_id,
+                note=destination.note,
+                stock_row_id=destination.id,
                 transaction_id=transaction_id,
-                undo_data=json.dumps({"before": before}),
+                correlation_id=correlation_id,
             )
             last_log_id = log.id
-            if entry.amount == 0:
-                await self.session.delete(entry)
+            remaining -= take
         await self.session.commit()
         return {
             "id": last_log_id,
             "product_id": product_id,
             "amount": float(amount),
-            "transaction_type": "transfer",
+            "transaction_type": "transfer_to",
             "transaction_id": transaction_id,
-            "location_id_from": location_id_from,
-            "location_id_to": location_id_to,
         }
 
     async def inventory(
@@ -534,7 +585,9 @@ class StockService:
                 await self.session.execute(
                     select(StockLog)
                     .where(
-                        StockLog.transaction_id == log.transaction_id,
+                        StockLog.correlation_id == log.correlation_id
+                        if log.correlation_id
+                        else StockLog.id == log.id,
                         StockLog.undone == 0,
                     )
                     .order_by(StockLog.id.desc())
@@ -961,14 +1014,14 @@ class StockService:
         amount: Decimal,
         location_id_from: int,
         location_id_to: int,
+        **kwargs: Any,
     ) -> dict:
         product = await self.products.get_by_barcode(barcode)
+        code = parse_product_code(barcode)
+        if code and code[1]:
+            kwargs["stock_entry_id"] = code[1]
         return await self.transfer(
-            actor,
-            product.id,
-            amount,
-            location_id_from,
-            location_id_to,
+            actor, product.id, amount, location_id_from, location_id_to, **kwargs
         )
 
     async def inventory_by_barcode(
@@ -1144,6 +1197,22 @@ class StockService:
                 expiry = snapshot.get("best_before_date")
                 if snapshot:
                     entry.best_before_date = date.fromisoformat(expiry) if expiry else None
+        elif log.transaction_type == "transfer_to":
+            entry = await self.session.scalar(
+                select(StockEntry)
+                .where(
+                    StockEntry.stock_id == log.stock_id,
+                    StockEntry.location_id == log.location_id,
+                )
+                .order_by(StockEntry.id)
+            )
+            if entry is None or entry.amount < log.amount:
+                raise GrocyError("Undo later stock changes first", code="dependent_booking")
+            entry.amount -= log.amount
+            if entry.amount == 0:
+                await self.session.delete(entry)
+        elif log.transaction_type == "transfer_from":
+            await self._restore_amount(log, snapshot, abs(log.amount))
         elif log.transaction_type == "transfer":
             entry = await self.session.get(StockEntry, log.stock_row_id)
             if entry is None or entry.amount < abs(log.amount):
@@ -1162,7 +1231,15 @@ class StockService:
 
     async def _restore_amount(self, log: StockLog, snapshot: dict, amount: Decimal) -> None:
         stock_id = snapshot.get("stock_id") or log.stock_id or uuid.uuid4().hex
-        entry = await self.session.scalar(select(StockEntry).where(StockEntry.stock_id == stock_id))
+        location_id = snapshot.get("location_id", log.location_id)
+        entry = await self.session.scalar(
+            select(StockEntry)
+            .where(
+                StockEntry.stock_id == stock_id,
+                StockEntry.location_id == location_id,
+            )
+            .order_by(StockEntry.id)
+        )
         if entry is not None:
             entry.amount += amount
             return

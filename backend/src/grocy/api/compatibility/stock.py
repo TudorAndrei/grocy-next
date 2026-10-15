@@ -38,6 +38,7 @@ class TransferBody(BaseModel):
     amount: Decimal = Field(gt=0)
     location_id_from: int
     location_id_to: int
+    stock_entry_id: str | None = None
 
 
 class InventoryBody(BaseModel):
@@ -238,6 +239,7 @@ async def stock_transfer(
         body.amount,
         body.location_id_from,
         body.location_id_to,
+        stock_entry_id=body.stock_entry_id,
     )
     return await _bookings(stock, result)
 
@@ -361,6 +363,7 @@ async def stock_transfer_by_barcode(
         body.amount,
         body.location_id_from,
         body.location_id_to,
+        stock_entry_id=body.stock_entry_id,
     )
     return await _bookings(stock, result)
 

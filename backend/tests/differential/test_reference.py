@@ -673,3 +673,136 @@ def test_reference_product_units_and_barcode_stock_selection(
         )
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+def test_reference_freezing_transfer_bookings_and_undo(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    name = f"Freezing {uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        fridge = create(app, "locations", {"name": name})
+        freezer = create(app, "locations", {"name": f"{name} freezer", "is_freezer": 1})
+        store = create(app, "shopping_locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": fridge,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "default_best_before_days": 7,
+                "default_best_before_days_after_freezing": 90,
+                "default_best_before_days_after_thawing": 3,
+            },
+        )
+        base = f"/api/stock/products/{product}"
+        assert (
+            app.post(
+                f"{base}/add",
+                json={
+                    "amount": 3,
+                    "location_id": freezer,
+                    "price": 2.5,
+                    "shopping_location_id": store,
+                    "note": "frozen batch",
+                },
+            ).status_code
+            == 200
+        )
+        original = app.get(f"{base}/entries").json()[0]
+        states: list[object] = [original["best_before_date"]]
+        code = f"grcy:p:{product}:{original['stock_id']}"
+        thawed = app.post(
+            f"/api/stock/products/by-barcode/{code}/transfer",
+            json={"amount": 1, "location_id_from": freezer, "location_id_to": fridge},
+        )
+        assert thawed.status_code == 200, thawed.text
+        bookings = thawed.json()
+        states.append(
+            [
+                (
+                    row["transaction_type"],
+                    row["amount"],
+                    row["best_before_date"],
+                    row["price"],
+                    row["note"],
+                )
+                for row in bookings
+            ]
+        )
+        assert all(row["correlation_id"] == bookings[0]["correlation_id"] for row in bookings)
+        entries = app.get(f"{base}/entries").json()
+        states.append(
+            sorted(
+                (
+                    row["amount"],
+                    row["best_before_date"],
+                    row["note"],
+                    row["stock_id"] == original["stock_id"],
+                    row["shopping_location_id"] == store,
+                )
+                for row in entries
+            )
+        )
+        assert app.post(f"/api/stock/bookings/{bookings[0]['id']}/undo").status_code == 204
+        entries = app.get(f"{base}/entries").json()
+        states.append(
+            [
+                (row["amount"], row["best_before_date"], row["location_id"] == freezer, row["note"])
+                for row in entries
+            ]
+        )
+        assert (
+            app.put(f"/api/objects/products/{product}", json={"location_id": freezer}).status_code
+            == 204
+        )
+        assert (
+            app.post(
+                f"{base}/add",
+                json={
+                    "amount": 2,
+                    "location_id": freezer,
+                    "price": 4,
+                    "note": "second batch",
+                    "best_before_date": "2999-12-31",
+                },
+            ).status_code
+            == 200
+        )
+        moved = app.post(
+            f"{base}/transfer",
+            json={
+                "amount": 4,
+                "location_id_from": freezer,
+                "location_id_to": fridge,
+            },
+        )
+        assert moved.status_code == 200
+        assert len(moved.json()) == 4
+        assert app.post(f"/api/stock/bookings/{moved.json()[0]['id']}/undo").status_code == 204
+        entries = app.get(f"{base}/entries").json()
+        states.append(
+            (
+                sum(row["amount"] for row in entries if row["location_id"] == freezer),
+                sum(row["amount"] for row in entries if row["location_id"] == fridge),
+            )
+        )
+        assert (
+            app.post(
+                f"/api/stock/transactions/{moved.json()[0]['transaction_id']}/undo"
+            ).status_code
+            == 204
+        )
+        entries = app.get(f"{base}/entries").json()
+        states.append(
+            (
+                sum(row["amount"] for row in entries if row["location_id"] == freezer),
+                sum(row["amount"] for row in entries if row["location_id"] == fridge),
+            )
+        )
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]

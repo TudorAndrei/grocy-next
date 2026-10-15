@@ -51,19 +51,29 @@ def test_inventory_at_one_location_preserves_other_stock(client: TestClient, api
 
 
 def test_transfer_undo_restores_open_and_price(client: TestClient, api_headers: dict):
+    store = client.post(
+        "/api/objects/shopping_locations", headers=api_headers, json={"name": "Transfer store"}
+    ).json()["id"]
     client.post(
         "/api/stock/products/1/add",
         headers=api_headers,
-        json={"amount": 4, "location_id": 1, "price": 2.5, "best_before_date": "2027-01-01"},
+        json={
+            "amount": 4,
+            "location_id": 2,
+            "price": 2.5,
+            "best_before_date": "2027-01-01",
+            "shopping_location_id": store,
+            "note": "Keep this batch",
+        },
     )
     client.post("/api/stock/products/1/open", headers=api_headers, json={"amount": 4})
     transfer = client.post(
         "/api/stock/products/1/transfer",
         headers=api_headers,
         json={
-            "amount": 2,
-            "location_id_from": 1,
-            "location_id_to": 2,
+            "amount": 4,
+            "location_id_from": 2,
+            "location_id_to": 1,
         },
     ).json()[0]
     response = client.post(
@@ -71,8 +81,9 @@ def test_transfer_undo_restores_open_and_price(client: TestClient, api_headers: 
     )
     assert response.status_code == 204
     rows = client.get("/api/stock/products/1/entries", headers=api_headers).json()
-    assert sum(r["amount"] for r in rows if r["location_id"] == 1 and r["open"]) == 4
+    assert sum(r["amount"] for r in rows if r["location_id"] == 2 and r["open"]) == 4
     assert all(r["price"] == 2.5 for r in rows)
+    assert all(r["shopping_location_id"] == store and r["note"] == "Keep this batch" for r in rows)
 
 
 def test_missing_ingredients_do_not_duplicate_shopping_quantities(
