@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select, text, update
+from sqlalchemy import case, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
@@ -167,17 +167,16 @@ class StockService:
         if amount <= 0:
             raise GrocyError("Amount to consume must be positive")
         remaining = amount
-        entries = await self._ordered_entries(product_id, location_id=location_id)
+        entries = await self._ordered_entries(
+            product_id,
+            location_id=location_id,
+            include_sub_products=allow_subproduct_substitution,
+        )
         if stock_entry_id and stock_entry_id != "default":
             entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
         if allow_subproduct_substitution:
             from grocy.domains.units.service import UnitsService
 
-            ids = await self.products.child_ids(product_id)
-            for child_id in ids:
-                if child_id == product_id:
-                    continue
-                entries.extend(await self._ordered_entries(child_id, location_id=location_id))
             units = UnitsService(self.session)
             factors = {}
             for entry in entries:
@@ -244,18 +243,29 @@ class StockService:
         amount: Decimal = Decimal("1"),
         *,
         stock_entry_id: str | None = None,
+        allow_subproduct_substitution: bool = False,
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get(product_id)
+        if product.disable_open:
+            raise GrocyError("Product cannot be opened")
         if product.enable_tare_weight_handling:
             raise GrocyError("Cannot open a tare weight product")
         remaining = amount
-        entries = await self._ordered_entries(product_id)
+        entries = await self._ordered_entries(
+            product_id, include_sub_products=allow_subproduct_substitution
+        )
         if stock_entry_id and stock_entry_id != "default":
             entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
         closed = [e for e in entries if not e.open]
-        available = sum((e.amount for e in closed), Decimal("0"))
+        factors = {}
+        for entry in closed:
+            child = await self.products.get(entry.product_id)
+            factors[child.id] = await UnitsService(self.session).convert(
+                Decimal("1"), child.qu_id_stock, product.qu_id_stock, product_id=child.id
+            )
+        available = sum((e.amount * factors[e.product_id] for e in closed), Decimal("0"))
         if available < amount:
             raise GrocyError(
                 f"insufficient unopened stock: have {available}, need {amount}",
@@ -267,12 +277,9 @@ class StockService:
             if remaining <= 0:
                 break
             before = self._serialize_entry(entry)
-            take = min(entry.amount, remaining)
-            open_location = (
-                product.default_consume_location_id
-                if product.move_on_open and product.default_consume_location_id
-                else entry.location_id
-            )
+            split_stock_id = None
+            factor = factors[entry.product_id]
+            take = min(entry.amount, remaining / factor)
             expiry = entry.best_before_date
             if product.default_best_before_days_after_open > 0:
                 opened_expiry = date.today() + timedelta(
@@ -282,44 +289,57 @@ class StockService:
             if take < entry.amount:
                 new_entry = StockEntry(
                     product_id=entry.product_id,
-                    amount=take,
-                    best_before_date=expiry,
+                    amount=entry.amount - take,
+                    best_before_date=entry.best_before_date,
                     purchased_date=entry.purchased_date,
                     stock_id=uuid.uuid4().hex,
                     price=entry.price,
-                    open=1,
-                    opened_date=datetime.now(),
-                    location_id=open_location,
+                    open=0,
+                    location_id=entry.location_id,
+                    shopping_location_id=entry.shopping_location_id,
+                    note=entry.note,
                 )
-                entry.amount -= take
                 self.session.add(new_entry)
-                await self.session.flush()
-                stock_row_id = new_entry.id
-                stock_id = new_entry.stock_id
-            else:
-                entry.location_id = open_location
-                entry.best_before_date = expiry
-                entry.open = 1
-                entry.opened_date = datetime.now()
-                stock_row_id = entry.id
-                stock_id = entry.stock_id
-            remaining -= take
+                split_stock_id = new_entry.stock_id
+            entry.amount = take
+            entry.best_before_date = expiry
+            entry.open = 1
+            entry.opened_date = datetime.combine(date.today(), datetime.min.time())
+            remaining -= take * factor
             log = await self._add_log(
                 actor=actor,
-                product_id=product_id,
+                product_id=entry.product_id,
                 amount=take,
                 transaction_type="product-opened",
-                stock_id=stock_id,
+                stock_id=entry.stock_id,
                 location_id=entry.location_id,
-                stock_row_id=stock_row_id,
+                stock_row_id=entry.id,
                 transaction_id=transaction_id,
-                undo_data=json.dumps({"before": before}),
+                undo_data=json.dumps({"before": before, "split_stock_id": split_stock_id}),
                 best_before_date=before["best_before_date"]
                 and date.fromisoformat(before["best_before_date"]),
                 purchased_date=entry.purchased_date,
                 price=entry.price,
+                shopping_location_id=entry.shopping_location_id,
+                note=entry.note,
             )
             last_log_id = log.id
+            if (
+                product.move_on_open
+                and product.default_consume_location_id
+                and entry.location_id is not None
+                and product.default_consume_location_id != entry.location_id
+            ):
+                await self.transfer(
+                    actor,
+                    entry.product_id,
+                    take,
+                    entry.location_id,
+                    product.default_consume_location_id,
+                    stock_entry_id=entry.stock_id,
+                    transaction_id=transaction_id,
+                    commit=False,
+                )
         await self.session.commit()
         return {
             "id": last_log_id,
@@ -338,6 +358,8 @@ class StockService:
         location_id_to: int,
         *,
         stock_entry_id: str | None = None,
+        transaction_id: str | None = None,
+        commit: bool = True,
     ) -> dict:
         if location_id_from == location_id_to:
             raise GrocyError(
@@ -357,7 +379,7 @@ class StockService:
             entries = [entry for entry in entries if entry.stock_id == stock_entry_id]
         if sum((entry.amount for entry in entries), Decimal("0")) < amount:
             raise GrocyError("insufficient stock at source", code="insufficient_stock")
-        transaction_id = uuid.uuid4().hex
+        transaction_id = transaction_id or uuid.uuid4().hex
         remaining = amount
         last_log_id = None
         for entry in entries:
@@ -444,7 +466,10 @@ class StockService:
             )
             last_log_id = log.id
             remaining -= take
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         return {
             "id": last_log_id,
             "product_id": product_id,
@@ -1129,8 +1154,8 @@ class StockService:
         raw_snapshot = log.undo_data or (
             log.note if log.note and log.note.startswith("{") else None
         )
-        if raw_snapshot:
-            snapshot = json.loads(raw_snapshot).get("before", {})
+        details = json.loads(raw_snapshot) if raw_snapshot else {}
+        snapshot = details.get("before", {})
         if log.transaction_type in {"stock-edit-new", "stock-edit-old"}:
             later = await self.session.scalar(
                 select(StockLog.id)
@@ -1183,7 +1208,15 @@ class StockService:
         elif log.transaction_type in {"consume", "inventory-correction"} and log.amount < 0:
             await self._restore_amount(log, snapshot, abs(log.amount))
         elif log.transaction_type == "product-opened":
-            entry = await self.session.get(StockEntry, log.stock_row_id)
+            entry = await self.session.scalar(
+                select(StockEntry)
+                .where(
+                    StockEntry.stock_id == log.stock_id,
+                    StockEntry.open == 1,
+                    StockEntry.amount >= log.amount,
+                )
+                .order_by((StockEntry.location_id == log.location_id).desc(), StockEntry.id)
+            )
             if entry is None or entry.amount < log.amount:
                 raise GrocyError("Undo later stock changes first", code="dependent_booking")
             if snapshot.get("stock_id") and snapshot["stock_id"] != entry.stock_id:
@@ -1197,6 +1230,20 @@ class StockService:
                 expiry = snapshot.get("best_before_date")
                 if snapshot:
                     entry.best_before_date = date.fromisoformat(expiry) if expiry else None
+                if details.get("split_stock_id"):
+                    remainder = await self.session.scalar(
+                        select(StockEntry).where(StockEntry.stock_id == details["split_stock_id"])
+                    )
+                    if remainder is not None:
+                        current = self._serialize_entry(remainder)
+                        same_fields = all(
+                            value == current.get(key)
+                            for key, value in snapshot.items()
+                            if key not in {"id", "stock_id", "amount", "row_created_timestamp"}
+                        )
+                        if same_fields:
+                            entry.amount += remainder.amount
+                            await self.session.delete(remainder)
         elif log.transaction_type == "transfer_to":
             entry = await self.session.scalar(
                 select(StockEntry)
@@ -1265,14 +1312,23 @@ class StockService:
         product_id: int,
         *,
         location_id: int | None = None,
+        include_sub_products: bool = False,
     ) -> list[StockEntry]:
-        stmt = select(StockEntry).where(StockEntry.product_id == product_id)
+        ids = await self.products.child_ids(product_id) if include_sub_products else [product_id]
+        stmt = select(StockEntry).join(Product).where(StockEntry.product_id.in_(ids))
         if location_id is not None:
             stmt = stmt.where(StockEntry.location_id == location_id)
-        stmt = stmt.order_by(
+        order = (
+            case((Product.default_consume_location_id == StockEntry.location_id, 0), else_=1),
             StockEntry.open.desc(),
-            StockEntry.best_before_date.is_(None),
             StockEntry.best_before_date.asc(),
+            StockEntry.purchased_date.asc(),
+        )
+        stmt = stmt.order_by(
+            func.row_number().over(partition_by=StockEntry.product_id, order_by=order),
+            StockEntry.open.desc(),
+            StockEntry.best_before_date.asc(),
+            StockEntry.purchased_date.asc(),
             StockEntry.id.asc(),
         )
         return list((await self.session.execute(stmt)).scalars().all())

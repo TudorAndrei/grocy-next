@@ -222,7 +222,13 @@ async def stock_open(
     actor: CurrentActor,
     stock: StockSvc,
 ) -> list[dict[str, Any]]:
-    result = await stock.open(actor, product_id, body.amount, stock_entry_id=body.stock_entry_id)
+    result = await stock.open(
+        actor,
+        product_id,
+        body.amount,
+        stock_entry_id=body.stock_entry_id,
+        allow_subproduct_substitution=body.allow_subproduct_substitution,
+    )
     return await _bookings(stock, result)
 
 
@@ -345,7 +351,11 @@ async def stock_open_by_barcode(
     stock: StockSvc,
 ) -> list[dict[str, Any]]:
     result = await stock.open_by_barcode(
-        actor, barcode, body.amount, stock_entry_id=body.stock_entry_id
+        actor,
+        barcode,
+        body.amount,
+        stock_entry_id=body.stock_entry_id,
+        allow_subproduct_substitution=body.allow_subproduct_substitution,
     )
     return await _bookings(stock, result)
 

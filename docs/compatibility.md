@@ -53,6 +53,8 @@ Stock entry edits return an old booking and a new booking. Undo restores the pri
 
 Transfers return linked `transfer_from` and `transfer_to` bookings. They keep the stock ID, store, and note. Freeze and thaw settings set the new due date. Booking undo restores its linked pair. Transaction undo restores all active bookings in that transaction.
 
+Partial opening keeps the scanned stock ID on the opened amount. The closed remainder keeps its store, price, and note. Opening supports child products, product restrictions, and linked transfers. Stock selection uses the default consume location, opened state, due date, and purchase date.
+
 ## Boundaries
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.

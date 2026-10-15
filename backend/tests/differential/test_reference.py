@@ -38,6 +38,90 @@ def create(client, entity: str, body: dict) -> int:
     return int(response.json()["created_object_id"])
 
 
+@pytest.mark.parametrize("move_on_open", [0, 1])
+def test_reference_partial_open_keeps_scanned_entry_and_metadata(
+    client: TestClient, api_headers: dict, reference, move_on_open: int
+):
+    client.headers.update(api_headers)
+    snapshots = []
+    for app in (reference, client):
+        name = f"Opening {uuid4().hex[:8]}"
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        target = create(app, "locations", {"name": f"{name} opened"})
+        store = create(app, "shopping_locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "disable_open": 1,
+                "move_on_open": move_on_open,
+                "default_consume_location_id": target,
+            },
+        )
+        base = f"/api/stock/products/{product}"
+        assert (
+            app.post(
+                f"{base}/add",
+                json={
+                    "amount": 3,
+                    "best_before_date": "2027-01-01",
+                    "purchased_date": "2026-01-01",
+                    "shopping_location_id": store,
+                    "note": "sealed batch",
+                    "price": 2.5,
+                },
+            ).status_code
+            == 200
+        )
+        original = app.get(f"{base}/entries").json()[0]
+        blocked = app.post(f"{base}/open", json={"amount": 1})
+        assert blocked.status_code == 400
+        assert (
+            app.put(f"/api/objects/products/{product}", json={"disable_open": 0}).status_code == 204
+        )
+        opened = app.post(
+            f"/api/stock/products/by-barcode/grcy:p:{product}:{original['stock_id']}/open",
+            json={"amount": 1},
+        )
+        assert opened.status_code == 200
+        entries = app.get(f"{base}/entries").json()
+        selected = next(row for row in entries if row["stock_id"] == original["stock_id"])
+        closed = next(row for row in entries if not row["open"])
+        snapshots.append(
+            (
+                float(selected["amount"]),
+                int(selected["open"]),
+                float(closed["amount"]),
+                selected["shopping_location_id"] == closed["shopping_location_id"] == store,
+                selected["note"],
+                closed["note"],
+                float(selected["price"]),
+                opened.json()[0]["stock_id"] == original["stock_id"],
+                selected["location_id"] == (target if move_on_open else location),
+                [row["transaction_type"] for row in opened.json()],
+            )
+        )
+        assert (
+            app.post(
+                f"/api/stock/transactions/{opened.json()[0]['transaction_id']}/undo"
+            ).status_code
+            == 204
+        )
+        assert sum(float(row["amount"]) for row in app.get(f"{base}/entries").json()) == 3
+        assert app.get(base).json()["stock_amount_opened"] == 0
+    types = ["product-opened"] + (["transfer_from", "transfer_to"] if move_on_open else [])
+    assert (
+        snapshots[0]
+        == snapshots[1]
+        == (1, 1, 2, True, "sealed batch", "sealed batch", 2.5, True, True, types)
+    )
+
+
 def test_reference_stock_recipe_and_household_state(
     client: TestClient, api_headers: dict, reference
 ):
@@ -581,6 +665,31 @@ def test_reference_parent_stock_and_volatile_records(
             }
         )
         snapshots.append(states)
+        selected = app.get(f"/api/stock/products/{children[1]}/entries").json()[0]
+        assert (
+            app.post(
+                f"/api/stock/products/{parent}/open",
+                json={
+                    "amount": 1,
+                    "stock_entry_id": selected["stock_id"],
+                    "allow_subproduct_substitution": True,
+                },
+            ).status_code
+            == 200
+        )
+        assert (
+            app.post(
+                f"/api/stock/products/{parent}/consume",
+                json={
+                    "amount": 1,
+                    "stock_entry_id": selected["stock_id"],
+                    "allow_subproduct_substitution": True,
+                },
+            ).status_code
+            == 200
+        )
+        assert app.get(f"/api/stock/products/{children[1]}").json()["stock_amount"] == 0
+        assert app.get(f"/api/stock/products/{children[0]}").json()["stock_amount"] == 2
     assert snapshots[0] == snapshots[1]
 
 
