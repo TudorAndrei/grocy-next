@@ -55,7 +55,7 @@ def test_transfer_undo_uses_grocy_defaults_and_preserves_price(
 ):
     store = client.post(
         "/api/objects/shopping_locations", headers=api_headers, json={"name": "Transfer store"}
-    ).json()["id"]
+    ).json()["created_object_id"]
     client.post(
         "/api/stock/products/1/add",
         headers=api_headers,

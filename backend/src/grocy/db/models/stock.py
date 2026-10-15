@@ -4,12 +4,16 @@ from decimal import Decimal
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
 
 
 class StockEntry(Base, TimestampMixin):
     __tablename__ = "stock"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("stock"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
@@ -27,7 +31,10 @@ class StockEntry(Base, TimestampMixin):
 
 class StockLog(Base):
     __tablename__ = "stock_log"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("stock_log"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)

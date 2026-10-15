@@ -18,15 +18,13 @@ def test_meal_product_units_and_completion(client: TestClient, api_headers: dict
         },
     )
     assert meal.status_code == 200
-    response = client.post(f"/api/v2/meal-plan/{meal.json()['id']}/consume", headers=api_headers)
+    meal_id = meal.json()["created_object_id"]
+    response = client.post(f"/api/v2/meal-plan/{meal_id}/consume", headers=api_headers)
     assert response.status_code == 200
     assert response.json()["done"] is True
     assert client.get("/api/stock/products/2", headers=api_headers).json()["stock_amount"] == 1000
     assert (
-        client.post(
-            f"/api/v2/meal-plan/{meal.json()['id']}/consume", headers=api_headers
-        ).status_code
-        == 400
+        client.post(f"/api/v2/meal-plan/{meal_id}/consume", headers=api_headers).status_code == 400
     )
 
 
@@ -36,12 +34,13 @@ def test_object_validation_filters_and_recipe_cycle(client: TestClient, api_head
         headers=api_headers,
         json={
             "name": "Bad",
-            "location_id": 999,
+            "location_id": 1,
             "qu_id_purchase": 1,
             "qu_id_stock": 1,
+            "due_type": 0,
         },
     )
-    assert bad.status_code == 409
+    assert bad.status_code == 400
     assert (
         client.post("/api/objects/locations", headers=api_headers, json={"name": ""}).status_code
         == 400
@@ -53,7 +52,7 @@ def test_object_validation_filters_and_recipe_cycle(client: TestClient, api_head
     assert rows[0]["name"] == "Whole Milk"
     second = client.post(
         "/api/objects/recipes", headers=api_headers, json={"name": "Second"}
-    ).json()["id"]
+    ).json()["created_object_id"]
     assert (
         client.post(
             "/api/objects/recipes_nestings",
@@ -83,9 +82,9 @@ def test_print_output_and_equipment_roundtrip(client: TestClient, api_headers: d
     )
     assert equipment.status_code == 200
     assert (
-        client.get(f"/api/objects/equipment/{equipment.json()['id']}", headers=api_headers).json()[
-            "name"
-        ]
+        client.get(
+            f"/api/objects/equipment/{equipment.json()['created_object_id']}", headers=api_headers
+        ).json()["name"]
         == "Coffee maker"
     )
     product = client.get("/api/stock/products/1/printlabel", headers=api_headers)

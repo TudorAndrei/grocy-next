@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
+from sqlalchemy.exc import DBAPIError
 
 from grocy.api.compatibility.filtering import filter_rows
 from grocy.api.compatibility.input import CompatibilityRoute, filtered_body
@@ -40,7 +41,12 @@ async def create_object(
     _actor: CurrentActor,
     session: DbSession,
 ) -> dict[str, Any]:
-    return await GenericObjectsService(session).create_entity(entity, body)
+    try:
+        result = await GenericObjectsService(session).create_entity(entity, body)
+    except DBAPIError as error:
+        await session.rollback()
+        raise _database_error(error) from error
+    return {"created_object_id": str(result["created_object_id"])}
 
 
 @router.get("/api/objects/{entity}/{object_id}")
@@ -67,8 +73,18 @@ async def update_object(
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
-    await GenericObjectsService(session).update_entity(entity, object_id, body)
+    try:
+        await GenericObjectsService(session).update_entity(entity, object_id, body)
+    except DBAPIError as error:
+        await session.rollback()
+        raise _database_error(error) from error
     return Response(status_code=204)
+
+
+def _database_error(error: DBAPIError) -> GrocyError:
+    number = getattr(error.orig, "sqlite_errorcode", 1) & 255
+    state = "23000]: Integrity constraint violation" if number == 19 else "HY000]: General error"
+    return GrocyError(f"SQLSTATE[{state}: {number} {error.orig}", code=None)
 
 
 @router.delete("/api/objects/{entity}/{object_id}", status_code=204)

@@ -3,12 +3,16 @@ from decimal import Decimal
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
 
 
 class Location(Base, TimestampMixin):
     __tablename__ = "locations"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("locations"),
+        {"sqlite_autoincrement": True},
+    )
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -20,7 +24,10 @@ class Location(Base, TimestampMixin):
 
 class QuantityUnit(Base, TimestampMixin):
     __tablename__ = "quantity_units"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("quantity_units"),
+        {"sqlite_autoincrement": True},
+    )
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -33,7 +40,10 @@ class QuantityUnit(Base, TimestampMixin):
 
 class ProductGroup(Base, TimestampMixin):
     __tablename__ = "product_groups"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("product_groups"),
+        {"sqlite_autoincrement": True},
+    )
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -44,7 +54,10 @@ class ProductGroup(Base, TimestampMixin):
 
 class Product(Base, TimestampMixin):
     __tablename__ = "products"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("products"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -132,7 +145,10 @@ class ProductBarcode(Base, TimestampMixin):
 
 class ShoppingLocation(Base, TimestampMixin):
     __tablename__ = "shopping_locations"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("shopping_locations"),
+        {"sqlite_autoincrement": True},
+    )
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

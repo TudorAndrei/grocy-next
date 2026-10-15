@@ -92,9 +92,9 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
     with TestClient(create_app(), headers=api_headers) as upgraded:
         assert upgraded.get("/api/stock/products/1").status_code == 200
         invalid_task = upgraded.post(
-            "/api/objects/tasks", json={"name": "Invalid category", "category_id": 2147483647}
+            "/api/objects/tasks", json={"name": "Invalid completion", "done": 2}
         )
-        assert invalid_task.status_code == 409, invalid_task.text
+        assert invalid_task.status_code == 400, invalid_task.text
         duplicate = upgraded.post("/api/users", json={"username": "Former", "password": "test"})
         assert duplicate.status_code == 409, duplicate.text
         response = upgraded.delete(f"/api/users/{user}", headers={"GROCY-API-KEY": key})

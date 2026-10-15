@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
 
 
@@ -38,7 +39,11 @@ class UserfieldValue(Base, TimestampMixin):
 
 class UserfieldDefinition(Base, TimestampMixin):
     __tablename__ = "userfields"
-    __table_args__ = (UniqueConstraint("entity", "name"), {"sqlite_autoincrement": True})
+    __table_args__ = (
+        *native_checks("userfields"),
+        UniqueConstraint("entity", "name"),
+        {"sqlite_autoincrement": True},
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     entity: Mapped[str] = mapped_column(String(128), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

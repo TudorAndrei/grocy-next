@@ -135,17 +135,18 @@ def test_custom_fields_and_records_roundtrip(client: TestClient, api_headers: di
         "/api/objects/userobjects",
         headers=api_headers,
         json={
-            "userentity_id": entity["id"],
+            "userentity_id": entity["created_object_id"],
             "userfields": {"serial": "ABC123"},
         },
     ).json()
-    values = client.get(f"/api/userfields/userobjects/{row['id']}", headers=api_headers)
+    object_id = row["created_object_id"]
+    values = client.get(f"/api/userfields/userobjects/{object_id}", headers=api_headers)
     assert values.json() == {"serial": "ABC123"}
     updated = client.put(
-        f"/api/userfields/userobjects/{row['id']}", headers=api_headers, json={"serial": "XYZ789"}
+        f"/api/userfields/userobjects/{object_id}", headers=api_headers, json={"serial": "XYZ789"}
     )
     assert updated.status_code == 204
-    fetched = client.get(f"/api/objects/userobjects/{row['id']}", headers=api_headers)
+    fetched = client.get(f"/api/objects/userobjects/{object_id}", headers=api_headers)
     assert fetched.json()["userfields"]["serial"] == "XYZ789"
 
 

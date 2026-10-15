@@ -1,11 +1,13 @@
 """Keep the SQLite allocation history in native imports and project upgrades."""
 
 import json
+import re
 import sqlite3
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 
@@ -47,7 +49,7 @@ def test_import_keeps_all_native_allocation_history(tmp_path: Path, monkeypatch)
     with TestClient(create_app(), headers={"GROCY-API-KEY": "import-owner"}) as app:
         location = app.post("/api/objects/locations", json={"name": "Next"})
         assert location.status_code == 200, location.text
-        assert location.json()["created_object_id"] == expected["locations"] + 1
+        assert int(location.json()["created_object_id"]) == expected["locations"] + 1
         purchase = app.post("/api/stock/products/1/add", json={"amount": 1, "price": 2})
         assert purchase.status_code == 200, purchase.text
         assert purchase.json()[0]["id"] == expected["stock_log"] + 1
@@ -176,6 +178,12 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert nutrition.status_code == 200, nutrition.text
     with sqlite3.connect(database) as connection:
         connection.execute("INSERT INTO saved_product_reference VALUES (1)")
+        connection.execute("UPDATE sqlite_sequence SET seq=9000 WHERE name='tasks'")
+        # This old table has no recorded counter until revision 0014 creates it.
+        connection.execute(
+            "INSERT INTO sqlite_sequence (name,seq) SELECT 'tasks',9000 "
+            "WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name='tasks')"
+        )
     before = _data_snapshot(database)
     result = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
@@ -196,9 +204,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert upgraded.delete(f"/api/objects/locations/{location}").status_code == 204
         next_location = upgraded.post("/api/objects/locations", json={"name": "Saved spare"})
         assert next_location.status_code == 200, next_location.text
-        assert next_location.json()["created_object_id"] > location
+        assert int(next_location.json()["created_object_id"]) > int(location)
         task = upgraded.post("/api/objects/tasks", json={"name": "After upgrade"})
         assert task.status_code == 200, task.text
+        assert int(task.json()["created_object_id"]) == 9001
         nutrition = upgraded.put(
             "/api/v2/products/2/nutrition",
             json={
@@ -221,6 +230,15 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             "SELECT name FROM sqlite_master WHERE name='saved_product_description'"
         ).fetchone() == ("saved_product_description",)
         assert connection.execute("SELECT COUNT(*) FROM saved_graph").fetchone()[0] > 0
+        native = json.loads((FIXTURES / "grocy-4.5.0-counter-tables.json").read_text())["tables"]
+        for table, ddl in native.items():
+            if not before.get(table):
+                continue
+            for expression in re.findall(r"CHECK\((\w+(?: IN \([^)]*\)| > 0))\)", ddl):
+                column = expression.split()[0]
+                invalid = 0 if expression.endswith("> 0") or "IN (1," in expression else 9
+                with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed"):
+                    connection.execute(f'UPDATE "{table}" SET "{column}"=?', (invalid,))
         try:
             connection.execute("INSERT INTO equipment (name) VALUES ('')")
         except sqlite3.IntegrityError as error:
@@ -229,7 +247,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             raise AssertionError("The saved equipment check must still reject an empty name")
 
 
-def test_failed_counter_upgrade_restores_the_original_schema_and_rows(tmp_path: Path, monkeypatch):
+@pytest.mark.parametrize("revision", ["20261015_0013", "20261015_0014"])
+def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
+    tmp_path: Path, monkeypatch, revision: str
+):
     database = tmp_path / "failed-upgrade.db"
     with sqlite3.connect(database) as connection:
         connection.executescript((FIXTURES / "project-0013-counters.sql").read_text())
@@ -241,15 +262,33 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(tmp_path: 
             CREATE TRIGGER saved_equipment_trigger AFTER INSERT ON equipment BEGIN
                 INSERT INTO copied_names VALUES (NEW.name);
             END;
-            PRAGMA ignore_check_constraints=ON;
-            INSERT INTO equipment (id, name) VALUES (1, '');
-            PRAGMA ignore_check_constraints=OFF;
         """)
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
+    command = [sys.executable, "-m", "alembic", "upgrade"]
+    if revision == "20261015_0014":
+        result = subprocess.run(
+            [*command, revision],
+            cwd=Path(__file__).parents[2],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
+    with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA ignore_check_constraints=ON")
+        if revision == "20261015_0013":
+            connection.execute("INSERT INTO equipment (id, name) VALUES (1, '')")
+        else:
+            connection.execute("INSERT INTO tasks (name,done) VALUES ('Invalid task',2)")
+            connection.execute("UPDATE sqlite_sequence SET seq=9000 WHERE name='tasks'")
+        connection.execute("PRAGMA ignore_check_constraints=OFF")
         schema = connection.execute(
             "SELECT type,name,sql FROM sqlite_master ORDER BY type,name"
         ).fetchall()
+        counters = connection.execute(
+            "SELECT name,seq FROM sqlite_sequence ORDER BY name"
+        ).fetchall()
     before = _data_snapshot(database)
-    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
     result = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=Path(__file__).parents[2],
@@ -268,5 +307,9 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(tmp_path: 
             == schema
         )
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "20261015_0013",
+            revision,
+        )
+        assert (
+            connection.execute("SELECT name,seq FROM sqlite_sequence ORDER BY name").fetchall()
+            == counters
         )

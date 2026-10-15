@@ -52,8 +52,7 @@ def test_core_object_crud_roundtrip(client: TestClient, api_headers: dict[str, s
     )
     assert created.status_code == 200
     body = created.json()
-    object_id = body.get("created_object_id") or body.get("id")
-    assert object_id
+    object_id = int(body["created_object_id"])
 
     listed = client.get("/api/objects/locations", headers=api_headers)
     assert listed.status_code == 200

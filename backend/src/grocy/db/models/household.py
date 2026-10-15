@@ -4,13 +4,17 @@ from decimal import Decimal
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
 from grocy.db.types import DateOrDateTime
 
 
 class Chore(Base, TimestampMixin):
     __tablename__ = "chores"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("chores"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -38,6 +42,7 @@ class Chore(Base, TimestampMixin):
 class ChoreLog(Base):
     __tablename__ = "chores_log"
     __table_args__ = (
+        *native_checks("chores_log"),
         Index("ix_chores_log_performance1", "chore_id", "undone", "tracked_time"),
         {"sqlite_autoincrement": True},
     )
@@ -59,7 +64,10 @@ class ChoreLog(Base):
 
 class TaskCategory(Base, TimestampMixin):
     __tablename__ = "task_categories"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("task_categories"),
+        {"sqlite_autoincrement": True},
+    )
 
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -70,7 +78,10 @@ class TaskCategory(Base, TimestampMixin):
 
 class Task(Base, TimestampMixin):
     __tablename__ = "tasks"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("tasks"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -84,7 +95,10 @@ class Task(Base, TimestampMixin):
 
 class Battery(Base, TimestampMixin):
     __tablename__ = "batteries"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("batteries"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -96,7 +110,10 @@ class Battery(Base, TimestampMixin):
 
 class BatteryChargeCycle(Base):
     __tablename__ = "battery_charge_cycles"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("battery_charge_cycles"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     battery_id: Mapped[int] = mapped_column(ForeignKey("batteries.id"), nullable=False)

@@ -3,6 +3,7 @@ from decimal import Decimal
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
 
 
@@ -34,7 +35,10 @@ class Recipe(Base, TimestampMixin):
 
 class RecipePosition(Base, TimestampMixin):
     __tablename__ = "recipes_pos"
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        *native_checks("recipes_pos"),
+        {"sqlite_autoincrement": True},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"), nullable=False)

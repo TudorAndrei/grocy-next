@@ -214,7 +214,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0014"
+            == "20261015_0015"
         )
 
 
@@ -244,7 +244,7 @@ def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api
         assert created.status_code == 200
         after = app.get("/api/system/db-changed-time").json()["changed_time"]
         assert datetime.fromisoformat(after) > datetime.fromisoformat(before)
-        saved = app.get(f"/api/objects/locations/{created.json()['id']}").json()
+        saved = app.get(f"/api/objects/locations/{created.json()['created_object_id']}").json()
         assert saved["name"] == "WAL location"
 
 

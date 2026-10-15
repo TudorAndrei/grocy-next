@@ -95,7 +95,7 @@ export const api = {
   objects: (entity: string) =>
     request<import("./entities").EntityRow[]>(`/api/objects/${entity}`),
   createObject: (entity: string, body: Record<string, unknown>) =>
-    request<import("./entities").EntityRow>(`/api/objects/${entity}`, {
+    request<{ created_object_id: string }>(`/api/objects/${entity}`, {
       method: "POST",
       body: JSON.stringify(body),
     }),

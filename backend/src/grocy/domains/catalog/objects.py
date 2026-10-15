@@ -8,6 +8,7 @@ from sqlalchemy import Date, DateTime, Integer, Numeric, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.db.grocy_checks import GROCY_450_CHECKS
 from grocy.db.models.catalog import (
     Location,
     Product,
@@ -343,13 +344,17 @@ class GenericObjectsService:
 
     def _apply_payload(self, row: Any, payload: dict[str, Any]) -> None:
         columns = {column.name: column for column in row.__table__.columns}
+        checked = {
+            expression.split()[0] for expression in GROCY_450_CHECKS.get(row.__tablename__, ())
+        }
         for key, raw in payload.items():
             if key == "id" or key.startswith("row_"):
                 continue
             if key not in columns:
                 raise GrocyError(f"Unknown field '{key}'", code="invalid_field")
             try:
-                value = self._coerce_value(columns[key], raw)
+                # SQLite applies integer affinity before its native CHECK expressions.
+                value = raw if key in checked else self._coerce_value(columns[key], raw)
             except (ValueError, TypeError, InvalidOperation) as exc:
                 raise GrocyError(f"Invalid value for '{key}'", code="invalid_field") from exc
             if value is None and not columns[key].nullable:
@@ -390,8 +395,6 @@ class GenericObjectsService:
                 "adaptive",
             }:
                 raise GrocyError("Invalid chore period")
-            if row.period_interval is not None and row.period_interval <= 0:
-                raise GrocyError("Repeat interval must be positive")
             if (
                 row.period_type == "monthly"
                 and row.period_days is not None

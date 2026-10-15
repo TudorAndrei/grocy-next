@@ -808,6 +808,122 @@ def test_deleted_product_stock_history_id_is_not_reused(api, catalog):
     assert second.json()[0]["id"] == first.json()[0]["id"] + 1
 
 
+@pytest.mark.parametrize(
+    "entity,field,valid,invalid,expression",
+    [
+        *[
+            (entity, "active", 0, 2, "active IN (0, 1)")
+            for entity in (
+                "batteries",
+                "chores",
+                "locations",
+                "product_groups",
+                "products",
+                "quantity_units",
+                "shopping_locations",
+                "task_categories",
+            )
+        ],
+        ("chores", "period_interval", 2, 0, "period_interval > 0"),
+        ("tasks", "done", 1, 2, "done IN (0, 1)"),
+        ("meal_plan", "done", 1, 2, "done IN (0, 1)"),
+        ("recipes_pos", "round_up", 1, 2, "round_up IN (0, 1)"),
+        ("userfields", "input_required", 1, 2, "input_required IN (0, 1)"),
+        *[
+            ("products", field, 1, 2, f"{field} IN (0, 1)")
+            for field in (
+                "hide_on_stock_overview",
+                "should_not_be_frozen",
+                "treat_opened_as_out_of_stock",
+                "no_own_stock",
+                "move_on_open",
+                "auto_reprint_stock_label",
+                "disable_open",
+            )
+        ],
+        ("products", "due_type", 2, 0, "due_type IN (1, 2)"),
+        (
+            "products",
+            "default_purchase_price_type",
+            3,
+            0,
+            "default_purchase_price_type IN (1, 2, 3)",
+        ),
+    ],
+)
+def test_generic_check_constraints_preserve_rejected_records(
+    api, catalog, entity, field, valid, invalid, expression
+):
+    product, unit, _other, location = catalog
+    name = uuid4().hex
+    body = {"name": name}
+    if entity == "products":
+        body.update(location_id=location, qu_id_stock=unit, qu_id_purchase=unit)
+    elif entity == "chores":
+        body["period_type"] = "manually"
+    elif entity == "userfields":
+        body.update(entity="locations", caption=name, type="text-single-line")
+    elif entity == "meal_plan":
+        body = {"day": "2027-01-04", "type": "note", "note": name}
+    elif entity == "recipes_pos":
+        body = {
+            "recipe_id": create(api, "recipes", name=name),
+            "product_id": product,
+            "qu_id": unit,
+            "amount": 1,
+        }
+    path = f"/api/objects/{entity}"
+    expected = {
+        "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+        f"CHECK constraint failed: {expression}"
+    }
+    rejected = api.post(path, json={**body, field: invalid})
+    assert rejected.status_code == 400, rejected.text
+    assert rejected.json() == expected
+    record = create(api, entity, **body, **{field: valid})
+    path += f"/{record}"
+    before = api.get(path).json()
+    rejected = api.put(path, json={field: invalid})
+    assert rejected.status_code == 400, rejected.text
+    assert rejected.json() == expected
+    assert api.get(path).json() == before
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("1e0", 1),
+        (" 1 ", 1),
+        ("0.0", 0),
+        (True, 1),
+        (None, None),
+        ("invalid", None),
+        (0.5, None),
+        ("0_1", None),
+    ],
+)
+def test_generic_checked_numbers_use_sqlite_affinity(api, value, expected):
+    response = api.post("/api/objects/tasks", json={"name": uuid4().hex, "done": value})
+    if expected is None:
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint "
+            "violation: 19 CHECK constraint failed: done IN (0, 1)"
+        }
+    else:
+        assert response.status_code == 200, response.text
+        record = response.json()["created_object_id"]
+        assert api.get(f"/api/objects/tasks/{record}").json()["done"] == expected
+
+
+def test_generic_creation_returns_the_native_id_response(api):
+    response = api.post("/api/objects/locations", json={"name": uuid4().hex})
+    assert response.status_code == 200, response.text
+    record = response.json()["created_object_id"]
+    assert response.json() == {"created_object_id": str(record)}
+    assert api.get(f"/api/objects/locations/{record}").status_code == 200
+
+
 def test_disabled_feature_flags_control_dates_calendar_and_labels(api, catalog, monkeypatch):
     from datetime import date, timedelta
 
