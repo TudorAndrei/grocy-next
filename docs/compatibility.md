@@ -67,6 +67,8 @@ Calculated view fields and row IDs follow the pinned SQLite definitions. Import 
 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 
+Stock label modes follow the pinned OpenAPI values: 1 for no label, 2 for one label, and 3 for one label per unit. Upstream PHP uses 0, 1, and 2 for these modes. Per-unit bookings share a transaction ID and preserve fractional remainders. Stock counts also accept a purchase date and use the same receipt rules.
+
 Calendar subscription keys grant calendar access only. Revoke a subscription key through API key management. Server configuration responses omit API keys and the database URL.
 
 Transfer undo keeps the original source location and store. Grocy 4.5.0 can use the current default location and omit the store when it restores a fully transferred entry. This implementation keeps the original booking data in that case.

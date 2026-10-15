@@ -76,13 +76,15 @@ class StockService:
         note: str | None = None,
         transaction_type: str = "purchase",
         commit: bool = True,
+        exact_amount: bool = False,
+        stock_label_type: int = 1,
     ) -> dict:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get(product_id)
         if transaction_type not in {"purchase", "inventory-correction", "self-production"}:
             raise GrocyError("Invalid purchase transaction type")
-        if product.enable_tare_weight_handling:
+        if product.enable_tare_weight_handling and not exact_amount:
             amount -= await self.products.stock_amount(product_id) + product.tare_weight
             if amount <= 0:
                 raise GrocyError("Gross amount must exceed stock plus tare weight")
@@ -101,45 +103,56 @@ class StockService:
             raise GrocyError("Price must be non-negative")
         if not product.active or product.no_own_stock:
             raise GrocyError("Product cannot have its own stock")
-        stock_id = uuid.uuid4().hex
-        entry = StockEntry(
-            product_id=product.id,
-            amount=amount,
-            best_before_date=best_before_date,
-            purchased_date=purchased_date or date.today(),
-            stock_id=stock_id,
-            price=price,
-            location_id=location_id or product.location_id,
-            shopping_location_id=shopping_location_id,
-            note=note,
-        )
-        self.session.add(entry)
-        await self.session.flush()
-        log = await self._add_log(
-            actor=actor,
-            product_id=product.id,
-            amount=amount,
-            transaction_type=transaction_type,
-            stock_id=stock_id,
-            best_before_date=best_before_date,
-            purchased_date=purchased_date or date.today(),
-            price=price,
-            location_id=entry.location_id,
-            stock_row_id=entry.id,
-            shopping_location_id=entry.shopping_location_id,
-            note=note,
-        )
+        if stock_label_type not in {1, 2, 3}:
+            raise GrocyError("Invalid stock label type")
+        transaction_id = uuid.uuid4().hex
+        remaining = amount
+        last_log_id = None
+        stock_id = ""
+        while remaining > 0:
+            portion = min(Decimal("1"), remaining) if stock_label_type == 3 else remaining
+            stock_id = uuid.uuid4().hex
+            entry = StockEntry(
+                product_id=product.id,
+                amount=portion,
+                best_before_date=best_before_date,
+                purchased_date=purchased_date or date.today(),
+                stock_id=stock_id,
+                price=price,
+                location_id=location_id or product.location_id,
+                shopping_location_id=shopping_location_id,
+                note=note,
+            )
+            self.session.add(entry)
+            await self.session.flush()
+            log = await self._add_log(
+                actor=actor,
+                product_id=product.id,
+                amount=portion,
+                transaction_type=transaction_type,
+                stock_id=stock_id,
+                best_before_date=best_before_date,
+                purchased_date=purchased_date or date.today(),
+                price=price,
+                location_id=entry.location_id,
+                stock_row_id=entry.id,
+                shopping_location_id=entry.shopping_location_id,
+                note=note,
+                transaction_id=transaction_id,
+            )
+            last_log_id = log.id
+            remaining -= portion
         if commit:
             await self.session.commit()
         else:
             await self.session.flush()
         return {
-            "id": log.id,
+            "id": last_log_id,
             "product_id": product.id,
             "amount": float(amount),
             "stock_id": stock_id,
             "transaction_type": transaction_type,
-            "transaction_id": log.transaction_id,
+            "transaction_id": transaction_id,
         }
 
     async def consume(
@@ -490,10 +503,12 @@ class StockService:
         new_amount: Decimal,
         *,
         best_before_date: date | None = None,
+        purchased_date: date | None = None,
         location_id: int | None = None,
         price: Decimal | None = None,
         shopping_location_id: int | None = None,
         note: str | None = None,
+        stock_label_type: int = 1,
     ) -> dict:
         if not new_amount.is_finite() or new_amount < 0:
             raise GrocyError("new amount must be non-negative", code="invalid_amount")
@@ -518,45 +533,23 @@ class StockService:
             }
         loc = location_id or product.location_id
         if delta > 0:
-            if best_before_date is None:
-                best_before_date = date.today() + timedelta(
-                    days=max(0, product.default_best_before_days)
-                )
-            stock_id = uuid.uuid4().hex
-            entry = StockEntry(
-                product_id=product_id,
-                amount=delta,
+            result = await self.purchase(
+                actor,
+                product_id,
+                delta,
                 best_before_date=best_before_date,
-                purchased_date=date.today(),
-                stock_id=stock_id,
+                purchased_date=purchased_date,
                 location_id=loc,
                 price=price,
                 shopping_location_id=shopping_location_id,
                 note=note,
-            )
-            self.session.add(entry)
-            await self.session.flush()
-            log = await self._add_log(
-                actor=actor,
-                product_id=product_id,
-                amount=delta,
+                exact_amount=True,
                 transaction_type="inventory-correction",
-                stock_id=stock_id,
-                best_before_date=best_before_date,
-                purchased_date=date.today(),
-                location_id=loc,
-                stock_row_id=entry.id,
-                price=price,
-                shopping_location_id=shopping_location_id,
-                note=note,
+                stock_label_type=stock_label_type,
             )
-            await self.session.commit()
             return {
-                "id": log.id,
-                "product_id": product_id,
+                **result,
                 "amount": float(new_amount),
-                "transaction_type": "inventory-correction",
-                "transaction_id": log.transaction_id,
                 "delta": float(delta),
             }
 

@@ -12,9 +12,14 @@ from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
 router = APIRouter(tags=["stock"])
 
 
-async def _bookings(stock: StockSvc, result: dict) -> list[dict]:
+async def _bookings(stock: StockSvc, result: dict, *, stock_label_type: int = 1) -> list[dict]:
     transaction_id = result.get("transaction_id")
-    return await stock.get_transaction(transaction_id) if transaction_id else []
+    rows = await stock.get_transaction(transaction_id) if transaction_id else []
+    if stock_label_type > 1:
+        for row in rows:
+            if row["amount"] > 0 and row.get("stock_row_id"):
+                await label(stock.session, "stock", row["stock_row_id"])
+    return rows
 
 
 class AmountBody(BaseModel):
@@ -42,6 +47,7 @@ class TransferBody(BaseModel):
 
 
 class InventoryBody(BaseModel):
+    purchased_date: date | None = None
     price: Decimal | None = None
     shopping_location_id: int | None = None
     note: str | None = None
@@ -189,8 +195,9 @@ async def stock_add(
         shopping_location_id=body.shopping_location_id,
         note=body.note,
         transaction_type=body.transaction_type or "purchase",
+        stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result)
+    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
 
 
 @router.post("/api/stock/products/{product_id}/consume")
@@ -262,12 +269,14 @@ async def stock_inventory(
         product_id,
         body.new_amount,
         best_before_date=body.best_before_date,
+        purchased_date=body.purchased_date,
         location_id=body.location_id,
         price=body.price,
         shopping_location_id=body.shopping_location_id,
         note=body.note,
+        stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result)
+    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
 
 
 @router.get("/api/stock/products/{product_id}/printlabel")
@@ -317,8 +326,9 @@ async def stock_add_by_barcode(
         shopping_location_id=body.shopping_location_id,
         note=body.note,
         transaction_type=body.transaction_type or "purchase",
+        stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result)
+    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/consume")
@@ -390,12 +400,14 @@ async def stock_inventory_by_barcode(
         barcode,
         body.new_amount,
         best_before_date=body.best_before_date,
+        purchased_date=body.purchased_date,
         location_id=body.location_id,
         price=body.price,
         shopping_location_id=body.shopping_location_id,
         note=body.note,
+        stock_label_type=body.stock_label_type,
     )
-    return await _bookings(stock, result)
+    return await _bookings(stock, result, stock_label_type=body.stock_label_type)
 
 
 @router.get("/api/stock/locations/{location_id}/entries")
