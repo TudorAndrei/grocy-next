@@ -10,7 +10,17 @@ The `/api/v2` API adds nutrition, API key management, and meal completion. MCP a
 
 ## Verification
 
-The normal test suite checks API routes, response types, storage, stock quantities, recipe units, undo, permissions, files, calendars, import, and MCP startup. It also tests the positive workflows after record deletion or state reversal. It does not use tests that only assert the absence of removed code.
+The normal test suite checks API routes, response types, storage, stock quantities, recipe units, undo, permissions, files, calendars, import, and MCP startup.
+
+To run the PHP comparisons with a new reference database:
+
+```bash
+uv run --project backend python scripts/check-reference.py
+```
+
+This command requires PHP and the modules that Grocy lists as required. It downloads the v4.5.0 release, verifies its SHA-256 checksum, starts a local reference server, and runs the comparison suite. It removes the temporary database and stops the server after the run. The `php-reference` CI job uses the same command.
+
+Use `--php /path/to/php` to select another PHP executable. Use `--release /path/to/grocy_4.5.0.zip` to use an existing archive. `--dry-run` checks local inputs. `--output json` writes a machine-readable result to standard output and sends test output to standard error.
 
 To compare state with upstream PHP, start a disposable Grocy v4.5.0 instance and supply its key:
 

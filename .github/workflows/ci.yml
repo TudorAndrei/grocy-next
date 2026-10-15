@@ -39,3 +39,19 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  php-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install PHP modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli php-curl php-gd php-intl php-mbstring php-sqlite3 php-xml php-zip
+      - name: Sync backend
+        run: uv sync --project backend --frozen
+      - name: Compare with Grocy 4.5.0
+        run: uv run --project backend python scripts/check-reference.py
