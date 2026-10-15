@@ -51,7 +51,9 @@ class HouseholdService:
                     "is_reassigned": bool(chore.rescheduled_next_execution_assigned_to_user_id),
                     "next_execution_assigned_to_user_id": assigned,
                     "next_execution_assigned_user": await self._user(assigned),
-                    "last_tracked_time": last.isoformat() if last else None,
+                    "last_tracked_time": last.isoformat(sep=" ", timespec="seconds")
+                    if last
+                    else None,
                     "next_estimated_execution_time": await self._next_chore_time(chore, logs),
                 }
             )
@@ -65,8 +67,12 @@ class HouseholdService:
         assigned = chore.next_execution_assigned_to_user_id
         return {
             "chore": self._serialize_chore(chore),
-            "last_tracked": last.tracked_time.isoformat() if last else None,
-            "last_tracked_time": last.tracked_time.isoformat() if last else None,
+            "last_tracked": last.tracked_time.isoformat(sep=" ", timespec="seconds")
+            if last
+            else None,
+            "last_tracked_time": last.tracked_time.isoformat(sep=" ", timespec="seconds")
+            if last
+            else None,
             "tracked_count": len(completed),
             "track_count": len(completed),
             "last_done_by": await self._user(last.done_by_user_id if last else None),
@@ -127,13 +133,15 @@ class HouseholdService:
         return {
             "id": log.id,
             "chore_id": chore_id,
-            "tracked_time": log.tracked_time.isoformat(),
+            "tracked_time": log.tracked_time.isoformat(sep=" ", timespec="seconds"),
             "done_by_user_id": log.done_by_user_id,
             "skipped": bool(log.skipped),
             "undone": log.undone,
             "undone_timestamp": None,
             "scheduled_execution_time": due,
-            "row_created_timestamp": log.row_created_timestamp.isoformat(),
+            "row_created_timestamp": log.row_created_timestamp.isoformat(
+                sep=" ", timespec="seconds"
+            ),
         }
 
     async def undo_chore_execution(self, execution_id: int) -> dict:
@@ -168,7 +176,9 @@ class HouseholdService:
                         "name": category.name,
                         "description": category.description,
                         "active": category.active,
-                        "row_created_timestamp": category.row_created_timestamp.isoformat(),
+                        "row_created_timestamp": category.row_created_timestamp.isoformat(
+                            sep=" ", timespec="seconds"
+                        ),
                     }
                     if category and category.active
                     else None,
@@ -212,7 +222,9 @@ class HouseholdService:
                     **self._serialize_battery(battery),
                     "battery_id": battery.id,
                     "battery": self._serialize_battery(battery),
-                    "last_tracked_time": last.isoformat() if last else None,
+                    "last_tracked_time": last.isoformat(sep=" ", timespec="seconds")
+                    if last
+                    else None,
                     "next_estimated_charge_time": self._next_battery_time(battery, last),
                 }
             )
@@ -225,8 +237,8 @@ class HouseholdService:
         last = await self._last_battery_charge(battery_id)
         return {
             "battery": self._serialize_battery(battery),
-            "last_tracked_time": last.isoformat() if last else None,
-            "last_charged": last.isoformat() if last else None,
+            "last_tracked_time": last.isoformat(sep=" ", timespec="seconds") if last else None,
+            "last_charged": last.isoformat(sep=" ", timespec="seconds") if last else None,
             "charge_cycles_count": await self.session.scalar(
                 select(func.count())
                 .select_from(BatteryChargeCycle)
@@ -312,10 +324,12 @@ class HouseholdService:
         return {
             "id": cycle.id,
             "battery_id": battery_id,
-            "tracked_time": cycle.tracked_time.isoformat(),
+            "tracked_time": cycle.tracked_time.isoformat(sep=" ", timespec="seconds"),
             "undone": cycle.undone,
             "undone_timestamp": None,
-            "row_created_timestamp": cycle.row_created_timestamp.isoformat(),
+            "row_created_timestamp": cycle.row_created_timestamp.isoformat(
+                sep=" ", timespec="seconds"
+            ),
         }
 
     async def undo_battery_charge(self, charge_cycle_id: int) -> dict:
@@ -397,18 +411,24 @@ class HouseholdService:
         due = next_execution(
             chore, last, self._average_frequency(logs), datetime.now(), weekly_last=weekly_last
         )
-        return due.isoformat() if due else None
+        return due.isoformat(sep=" ", timespec="seconds") if due else None
 
     def _next_battery_time(self, battery: Battery, last: datetime | None) -> str | None:
         if not battery.active:
             return None
         if not battery.charge_interval_days:
-            return UNSCHEDULED.isoformat()
-        return (last + timedelta(days=battery.charge_interval_days)).isoformat() if last else None
+            return UNSCHEDULED.isoformat(sep=" ", timespec="seconds")
+        return (
+            (last + timedelta(days=battery.charge_interval_days)).isoformat(
+                sep=" ", timespec="seconds"
+            )
+            if last
+            else None
+        )
 
     def _serialize_chore(self, chore: Chore) -> dict:
         return {
-            column.name: value.isoformat()
+            column.name: value.isoformat(sep=" ", timespec="seconds")
             if isinstance(value, datetime)
             else float(value)
             if hasattr(value, "as_tuple")
@@ -422,12 +442,18 @@ class HouseholdService:
             "id": task.id,
             "name": task.name,
             "description": task.description,
-            "due_date": task.due_date.isoformat() if task.due_date else None,
+            "due_date": task.due_date.isoformat(sep=" ", timespec="seconds")
+            if task.due_date
+            else None,
             "done": task.done,
-            "done_timestamp": task.done_timestamp.isoformat() if task.done_timestamp else None,
+            "done_timestamp": task.done_timestamp.isoformat(sep=" ", timespec="seconds")
+            if task.done_timestamp
+            else None,
             "category_id": task.category_id,
             "assigned_to_user_id": task.assigned_to_user_id,
-            "row_created_timestamp": task.row_created_timestamp.isoformat(),
+            "row_created_timestamp": task.row_created_timestamp.isoformat(
+                sep=" ", timespec="seconds"
+            ),
         }
 
     def _serialize_battery(self, battery: Battery) -> dict:
@@ -438,5 +464,7 @@ class HouseholdService:
             "used_in": battery.used_in,
             "charge_interval_days": battery.charge_interval_days,
             "active": battery.active,
-            "row_created_timestamp": battery.row_created_timestamp.isoformat(),
+            "row_created_timestamp": battery.row_created_timestamp.isoformat(
+                sep=" ", timespec="seconds"
+            ),
         }

@@ -198,7 +198,9 @@ class UnitsService:
             "description": unit.description,
             "active": unit.active,
             "plural_forms": unit.plural_forms,
-            "row_created_timestamp": unit.row_created_timestamp.isoformat(),
+            "row_created_timestamp": unit.row_created_timestamp.isoformat(
+                sep=" ", timespec="seconds"
+            ),
         }
 
     def serialize_conversion(self, row: QuantityUnitConversion) -> dict:

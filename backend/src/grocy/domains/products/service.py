@@ -120,7 +120,7 @@ class ProductsService:
                 continue
             value = getattr(product, column.name)
             payload[column.name] = (
-                value.isoformat()
+                value.isoformat(sep=" ", timespec="seconds")
                 if hasattr(value, "isoformat")
                 else float(value)
                 if isinstance(value, Decimal)

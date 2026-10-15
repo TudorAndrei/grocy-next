@@ -127,7 +127,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         assert chore.status_code == 200
         assert chore.json()["chore"]["period_interval"] == 3
         assert chore.json()["tracked_count"] == 1
-        assert chore.json()["next_estimated_execution_time"] == "2027-01-07T15:00:00"
+        assert chore.json()["next_estimated_execution_time"] == "2027-01-07 15:00:00"
         assert upgraded.get("/api/objects/equipment", headers=headers).status_code == 200
         assert upgraded.get("/api/userfields/products/1", headers=headers).json() == {
             "origin": "Farm"

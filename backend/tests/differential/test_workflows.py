@@ -2,6 +2,7 @@
 
 import base64
 import os
+import re
 from io import BytesIO
 from uuid import uuid4
 
@@ -150,6 +151,7 @@ def test_user_dto_shapes_and_permission_row_ids(api):
     users = api.get("/api/users", params={"query[]": f"username={name}"}).json()
     assert len(users) == 1
     user = users[0]
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", user["row_created_timestamp"])
     assert user["first_name"] is None
     assert user["last_name"] is None
     assert user["picture_file_name"] is None
@@ -243,6 +245,7 @@ def test_household_actions_return_the_stored_log(api, entity, action, log_entity
     )
     assert response.status_code == 200, response.text
     payload = response.json()
+    assert payload["tracked_time"] == "2027-02-03 14:15:16"
     stored = api.get(f"/api/objects/{log_entity}/{payload['id']}").json()
     stored.pop("userfields", None)
     assert payload == stored

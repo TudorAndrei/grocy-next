@@ -554,7 +554,13 @@ class GenericObjectsService:
         data: dict[str, Any] = {}
         for column in row.__table__.columns:
             value = getattr(row, column.name)
-            if hasattr(value, "isoformat"):
+            if isinstance(value, datetime):
+                value = (
+                    value.date().isoformat()
+                    if column.name == "opened_date"
+                    else value.isoformat(sep=" ", timespec="seconds")
+                )
+            elif hasattr(value, "isoformat"):
                 value = value.isoformat()
             elif hasattr(value, "as_tuple"):
                 value = float(value)

@@ -730,7 +730,9 @@ class StockService:
                     if barcode.last_price is not None
                     else None,
                     "shopping_location_id": barcode.shopping_location_id,
-                    "row_created_timestamp": barcode.row_created_timestamp.isoformat(),
+                    "row_created_timestamp": barcode.row_created_timestamp.isoformat(
+                        sep=" ", timespec="seconds"
+                    ),
                 }
                 for barcode in product.barcodes
             ],
@@ -938,7 +940,9 @@ class StockService:
                         "id": store.id,
                         "name": store.name,
                         "description": store.description,
-                        "row_created_timestamp": store.row_created_timestamp.isoformat(),
+                        "row_created_timestamp": store.row_created_timestamp.isoformat(
+                            sep=" ", timespec="seconds"
+                        ),
                     }
                     if store
                     else None,
