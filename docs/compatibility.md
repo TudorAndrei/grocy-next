@@ -79,6 +79,8 @@ File image requests support bounded resizing. Generic queries support the upstre
 
 File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
+Chore execution filters input before its permission check. Missing chore execution and undo permissions return 400. User permission reads and writes return 403. Their caught errors include the upstream permission name in `error_message`. Task and battery permissions run before input checks.
+
 Request filtering uses the pinned Grocy HTML, CSS, URI, and entity settings. PHP parses the original JSON bytes. Top-level scalar values pass through HTMLPurifier; booleans and arrays remain intact. Empty optional numeric and date values use the handler defaults. Filtered routes require the exact `application/json` content type. The backend keeps the upstream rules for null bodies, PHP array keys, and large numeric exponents. Empty database text is read as null, as in PDO.
 
 A file upload cannot replace an existing file. Reads use the inline disposition and upstream cache duration. Only `force_serve_as=picture` enables image resizing. Resizing keeps the image format. List filters support SQLite wildcards, ASCII case matching, text values with leading zeros, and upstream null rules. The query parser also copies ignored operators and value truncation. Invalid generic object queries return the upstream status 500.

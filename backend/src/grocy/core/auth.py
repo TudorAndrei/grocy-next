@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
-from grocy.core.errors import UnauthorizedError
+from grocy.core.errors import GrocyError, UnauthorizedError
 from grocy.core.permissions import resolve_permissions
 from grocy.db.models.users import ApiKey, UserPermission
 from grocy.db.session import get_session_factory
@@ -36,6 +36,14 @@ async def require_api_key(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     grocy_api_key: Annotated[str | None, Header(alias="GROCY-API-KEY")] = None,
 ) -> Actor:
+    actor = await authenticate_request(request, session, grocy_api_key)
+    require_request_permission(request, actor)
+    return actor
+
+
+async def authenticate_request(
+    request: Request, session: AsyncSession, grocy_api_key: str | None = None
+) -> Actor:
     if actor := getattr(request.state, "grocy_actor", None):
         return actor
     settings = get_settings()
@@ -57,9 +65,25 @@ async def require_api_key(
             actor = await authenticate_key(session, candidate, key_type=key_type)
         except UnauthorizedError:
             continue
-        actor.require(request_permission(request, actor.user_id))
         return actor
     raise UnauthorizedError("Invalid API key")
+
+
+def require_request_permission(request: Request, actor: Actor) -> None:
+    permission = request_permission(request, actor.user_id)
+    try:
+        actor.require(permission)
+    except GrocyError:
+        path = request.url.path.removeprefix("/api/")
+        action = path.rsplit("/", 1)[-1]
+        # These upstream controllers catch PermissionMissingException and return JSON.
+        if path.startswith("chores/") and action in {"execute", "undo"}:
+            raise GrocyError(f"Permission missing: {permission}", code=None) from None
+        if path.startswith("users/") and action == "permissions":
+            raise GrocyError(
+                f"Permission missing: {permission}", status_code=403, code=None
+            ) from None
+        raise
 
 
 async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "default") -> Actor:

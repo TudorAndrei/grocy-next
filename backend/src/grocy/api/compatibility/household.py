@@ -66,7 +66,7 @@ async def get_chore(
 
 
 @router.post("/api/chores/{chore_id}/execute")
-@filtered_body(null_status=500)
+@filtered_body(null_status=500, permission_before_filter=False)
 async def execute_chore(
     chore_id: int,
     actor: CurrentActor,

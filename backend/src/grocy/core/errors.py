@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 
 class GrocyError(Exception):
-    def __init__(self, message: str, *, status_code: int = 400, code: str = "error") -> None:
+    def __init__(self, message: str, *, status_code: int = 400, code: str | None = "error") -> None:
         super().__init__(message)
         self.message = message
         self.status_code = status_code
@@ -27,7 +27,7 @@ class ConflictError(GrocyError):
 
 async def grocy_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, GrocyError)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error_message": exc.message, "error_code": exc.code},
-    )
+    content = {"error_message": exc.message}
+    if exc.code is not None:
+        content["error_code"] = exc.code
+    return JSONResponse(status_code=exc.status_code, content=content)

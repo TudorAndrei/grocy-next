@@ -13,7 +13,7 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel, model_validator
 
 from grocy.compatibility.purifier import InputPurifier
-from grocy.core.auth import get_db_session, require_api_key
+from grocy.core.auth import authenticate_request, get_db_session, require_request_permission
 from grocy.core.errors import GrocyError
 
 _FILTER_MARKER = "grocy_filtered_body"
@@ -41,11 +41,14 @@ class CompatibilityBody(BaseModel):
 @dataclass(frozen=True)
 class BodyFilter:
     null_status: int | None
+    permission_before_filter: bool
 
 
-def filtered_body[T: Callable[..., Any]](*, null_status: int | None = 400) -> Callable[[T], T]:
+def filtered_body[T: Callable[..., Any]](
+    *, null_status: int | None = 400, permission_before_filter: bool = True
+) -> Callable[[T], T]:
     def decorate(endpoint: T) -> T:
-        setattr(endpoint, _FILTER_MARKER, BodyFilter(null_status))
+        setattr(endpoint, _FILTER_MARKER, BodyFilter(null_status, permission_before_filter))
         return endpoint
 
     return decorate
@@ -70,9 +73,11 @@ class CompatibilityRoute(APIRoute):
         async def handle(request: Request) -> Response:
             async with aclosing(get_db_session(request)) as sessions:
                 session = await anext(sessions)
-                actor = await require_api_key(
+                actor = await authenticate_request(
                     request, session, request.headers.get("GROCY-API-KEY")
                 )
+                if rule.permission_before_filter:
+                    require_request_permission(request, actor)
                 request.state.grocy_session = session
                 request.state.grocy_actor = actor
                 try:
@@ -80,6 +85,8 @@ class CompatibilityRoute(APIRoute):
                         raise GrocyError("Bad Content-Type")
                     purifier: InputPurifier = request.app.state.input_purifier
                     body = await purifier.purify(await request.body())
+                    if not rule.permission_before_filter:
+                        require_request_permission(request, actor)
                     if body is None:
                         if rule.null_status is not None:
                             raise GrocyError(

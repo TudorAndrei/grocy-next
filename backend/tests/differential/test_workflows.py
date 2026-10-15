@@ -248,6 +248,8 @@ def test_authenticated_access_without_module_permissions(api, catalog):
     product, *_ = catalog
     recipe = create(api, "recipes", name=uuid4().hex)
     chore = create(api, "chores", name=uuid4().hex, period_type="manually")
+    task = create(api, "tasks", name=uuid4().hex)
+    battery = create(api, "batteries", name=uuid4().hex)
     username = uuid4().hex
     assert (
         api.post("/api/users", json={"username": username, "password": "test"}).status_code == 204
@@ -293,6 +295,41 @@ def test_authenticated_access_without_module_permissions(api, catalog):
         assert api.get("/api/users").status_code == 403
         assert api.post(f"/api/stock/products/{product}/add", json={"amount": 1}).status_code == 403
         assert api.post("/api/objects/products", json={"name": uuid4().hex}).status_code == 403
+        for resource, record, action in (
+            ("chores", chore, "execute"),
+            ("tasks", task, "complete"),
+            ("batteries", battery, "charge"),
+        ):
+            for content, content_type in (
+                (b"{}", None),
+                (b"{}", "application/json; charset=utf-8"),
+                (b"null", "application/json"),
+                (b"{}", "application/json"),
+            ):
+                headers = {"Content-Type": content_type} if content_type else {}
+                response = api.post(
+                    f"/api/{resource}/{record}/{action}", content=content, headers=headers
+                )
+                expected = 400 if resource == "chores" else 403
+                assert response.status_code == expected, (resource, content_type, response.text)
+                if resource == "chores" and content_type == "application/json":
+                    assert response.json() == {
+                        "error_message": "Permission missing: CHORE_TRACK_EXECUTION"
+                    }
+        for method, path, permission, body in (
+            ("POST", "/api/chores/executions/0/undo", "CHORE_UNDO_EXECUTION", {}),
+            ("GET", f"/api/users/{user}/permissions", "ADMIN", None),
+            ("POST", f"/api/users/{user}/permissions", "ADMIN", {"permission_id": 1}),
+            ("PUT", f"/api/users/{user}/permissions", "ADMIN", {"permissions": [1]}),
+        ):
+            response = api.request(method, path, json=body)
+            assert response.status_code == (400 if permission != "ADMIN" else 403), (
+                method, path, response.text
+            )
+            assert response.json() == {"error_message": f"Permission missing: {permission}"}
+        assert rows(api, "chores_log", chore_id=chore) == []
+        assert rows(api, "battery_charge_cycles", battery_id=battery) == []
+        assert api.get(f"/api/objects/tasks/{task}").json()["done"] == 0
         assert api.post(f"/api/recipes/{recipe}/copy").status_code == 200
         response = api.post(
             "/api/chores/executions/calculate-next-assignments", json={"chore_id": chore}
