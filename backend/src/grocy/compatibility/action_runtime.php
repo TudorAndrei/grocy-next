@@ -37,6 +37,11 @@ function nativeAction(array $request, NativeDatabase $database): array
             'setting_get' => [new NativeUsersController($database), 'GetUserSetting', ['settingKey' => $request['object_id']]],
             'setting_set' => [new NativeUsersController($database), 'SetUserSetting', ['settingKey' => $request['object_id']]],
             'setting_delete' => [new NativeUsersController($database), 'DeleteUserSetting', ['settingKey' => $request['object_id']]],
+            'chore_details' => [new NativeChoresController($database), 'ChoreDetails', ['choreId' => $request['object_id']]],
+            'chore_execute' => [new NativeChoresController($database), 'TrackChoreExecution', ['choreId' => $request['object_id']]],
+            'chore_undo' => [new NativeChoresController($database), 'UndoChoreExecution', ['executionId' => $request['object_id']]],
+            'chore_assign' => [new NativeChoresController($database), 'CalculateNextExecutionAssignments', []],
+            'chore_merge' => [new NativeChoresController($database), 'MergeChores', ['choreIdToKeep' => $request['object_id'], 'choreIdToRemove' => $request['arguments']['remove_id']]],
             default => throw new RuntimeException('Unknown native action route'),
         };
         $response = $controller->$method($http, $response, $args);

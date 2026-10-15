@@ -209,11 +209,23 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         assert chore.status_code == 200
         assert chore.json()["chore"]["period_interval"] == 3
         assert chore.json()["tracked_count"] == 1
-        assert chore.json()["next_estimated_execution_time"] == "2027-01-07 15:00:00"
+        assert chore.json()["next_estimated_execution_time"] is None
+        assert (
+            upgraded.put(
+                "/api/objects/chores/1",
+                headers=headers,
+                json={"start_date": "2027-01-01 15:00:00"},
+            ).status_code
+            == 204
+        )
+        assert (
+            upgraded.get("/api/chores/1", headers=headers).json()["next_estimated_execution_time"]
+            == "2027-01-07 15:00:00"
+        )
         date_chore = upgraded.get("/api/chores/2", headers=headers)
         assert date_chore.status_code == 200
         assert date_chore.json()["last_tracked"] == "2027-01-04"
-        assert date_chore.json()["next_estimated_execution_time"] == "2027-01-07 00:00:00"
+        assert date_chore.json()["next_estimated_execution_time"] is None
         assert upgraded.get("/api/objects/equipment", headers=headers).status_code == 200
         assert upgraded.get("/api/userfields/products/1", headers=headers).json() == {
             "origin": "Farm"

@@ -10,7 +10,8 @@ from pathlib import Path
 def generate(source: Path, output: Path) -> None:
     if json.loads((source / "version.json").read_text())["Version"] != "4.5.0":
         raise ValueError("Expected Grocy v4.5.0 source")
-    sql = (source / "migrations/0167.sql").read_text()
+    frequency_sql = (source / "migrations/0167.sql").read_text()
+    sql = (source / "migrations/0185.sql").read_text()
     cases = [
         ("first execution", {"period_type": "daily", "period_interval": 3}, []),
         (
@@ -54,6 +55,7 @@ def generate(source: Path, output: Path) -> None:
             ["2027-01-04 00:00:00"],
         ),
         ("manual after tracking", {"period_type": "manually"}, ["2027-01-04 10:30:00"]),
+        ("manual before tracking", {"period_type": "manually"}, []),
         (
             "overdue daily rollover",
             {"period_type": "daily", "rollover": 1},
@@ -85,11 +87,12 @@ def generate(source: Path, output: Path) -> None:
             CREATE TABLE chores (id INTEGER PRIMARY KEY, name TEXT, period_type TEXT,
                 period_interval INTEGER, period_days INTEGER, period_config TEXT,
                 start_date TEXT, track_date_only INTEGER, rollover INTEGER, active INTEGER,
-                next_execution_assigned_to_user_id INTEGER);
+                next_execution_assigned_to_user_id INTEGER, rescheduled_date TEXT);
             CREATE TABLE chores_log (id INTEGER PRIMARY KEY, chore_id INTEGER, tracked_time TEXT,
                 undone INTEGER DEFAULT 0);
             CREATE VIEW chores_current AS SELECT id FROM chores;
         """)
+        conn.executescript(frequency_sql)
         conn.executescript(sql)
         results = []
         for index, (name, fields, times) in enumerate(cases, start=1):
@@ -129,7 +132,7 @@ def generate(source: Path, output: Path) -> None:
                     "chore": body,
                     "tracked_times": times,
                     "next_execution": "TODAY" + next_time[10:]
-                    if body["rollover"]
+                    if body["rollover"] and next_time is not None
                     else next_time,
                 }
             )
@@ -137,8 +140,14 @@ def generate(source: Path, output: Path) -> None:
         json.dumps(
             {
                 "baseline": "v4.5.0",
-                "source": "migrations/0167.sql",
-                "source_sha256": hashlib.sha256(sql.encode()).hexdigest(),
+                "source": "migrations/0185.sql",
+                "source_sha256": hashlib.sha256(
+                    (source / "migrations/0185.sql").read_bytes()
+                ).hexdigest(),
+                "frequency_source": "migrations/0167.sql",
+                "frequency_source_sha256": hashlib.sha256(
+                    (source / "migrations/0167.sql").read_bytes()
+                ).hexdigest(),
                 "cases": results,
             },
             indent=2,

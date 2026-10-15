@@ -7,6 +7,7 @@ import re
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -3644,3 +3645,324 @@ def test_native_user_self_edit_uses_php_id_comparison(api, id_form):
     finally:
         api.headers["GROCY-API-KEY"] = original
         api.delete(f"/api/users/{user}")
+
+
+@pytest.mark.parametrize(
+    "value,skipped", [("invalid", 0), ([], 0), ({}, 0), ("yes", 1), (False, 0)]
+)
+def test_native_chore_skip_values_use_php_boolean_filter(api, value, skipped):
+    chore = create(api, "chores", name=uuid4().hex, period_type="daily")
+    try:
+        response = api.post(f"/api/chores/{chore}/execute", json={"skipped": value})
+        assert response.status_code == 200, response.text
+        assert response.json()["skipped"] == skipped
+        assert type(response.json()["skipped"]) is int
+        assert response.headers["access-control-allow-origin"] == "*"
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("value", [[], {}, "invalid", "1e0"])
+def test_native_chore_done_by_keeps_php_and_sql_values(api, value):
+    chore = create(api, "chores", name=uuid4().hex, period_type="daily")
+    actor = api.get("/api/user").json()[0]["id"]
+    try:
+        response = api.post(f"/api/chores/{chore}/execute", json={"done_by": value})
+        if value == "invalid":
+            assert response.status_code == 400, response.text
+            assert response.json() == {"error_message": "User does not exist"}
+            assert rows(api, "chores_log", chore_id=chore) == []
+        else:
+            assert response.status_code == 200, response.text
+            assert response.json()["done_by_user_id"] == (1 if value == "1e0" else actor)
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("value", ["0000-01-04", "0000-01-04 16:20:00"])
+def test_native_chore_dates_keep_year_zero(api, value):
+    chore = create(api, "chores", name=uuid4().hex, period_type="daily", track_date_only=0)
+    try:
+        response = api.post(f"/api/chores/{chore}/execute", json={"tracked_time": value})
+        assert response.status_code == 200, response.text
+        assert response.json()["tracked_time"] == value
+        details = api.get(f"/api/chores/{chore}")
+        assert details.status_code == 200, details.text
+        assert details.json()["last_tracked"] == value
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("form", ["exponent", "fraction"])
+def test_native_chore_ids_use_php_conversion_and_sql_undo(api, form):
+    chore = create(api, "chores", name=uuid4().hex, period_type="daily")
+    token = f"{chore}e0" if form == "exponent" else f"{chore}.9"
+    try:
+        details = api.get(f"/api/chores/{token}")
+        assert details.status_code == 200, details.text
+        assert details.json()["chore"]["id"] == chore
+        response = api.post(f"/api/chores/{token}/execute", json={})
+        assert response.status_code == 200, response.text
+        log_id = response.json()["id"]
+        undone = api.post(f"/api/chores/executions/{log_id}e0/undo")
+        assert undone.status_code == 204 and undone.content == b"", undone.text
+        assert api.get(f"/api/objects/chores_log/{log_id}").json()["undone"] == 1
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize(
+    "raw,content_type,message",
+    [
+        (
+            b"{",
+            "application/json",
+            "array_key_exists(): Argument #2 ($array) must be of type array, null given",
+        ),
+        (
+            b"null",
+            "application/json",
+            "array_key_exists(): Argument #2 ($array) must be of type array, null given",
+        ),
+        (
+            b'{"tracked_time":[]}',
+            "application/json",
+            "DateTime::createFromFormat(): Argument #2 ($datetime) "
+            "must be of type string, array given",
+        ),
+        (b"{}", "application/json; charset=utf-8", "Bad Content-Type"),
+    ],
+)
+def test_native_chore_body_errors_keep_diagnostics(api, raw, content_type, message):
+    chore = create(api, "chores", name=uuid4().hex, period_type="daily")
+    try:
+        response = api.post(
+            f"/api/chores/{chore}/execute", content=raw, headers={"Content-Type": content_type}
+        )
+        assert response.status_code == (400 if message == "Bad Content-Type" else 500), (
+            response.text
+        )
+        assert set(response.json()) == {"error_message", "error_details"}
+        assert response.json()["error_message"] == message
+        assert rows(api, "chores_log", chore_id=chore) == []
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("form", ["zero_prefix", "decimal", "exponent"])
+def test_native_chore_merge_rejects_noncanonical_integer_ids(api, form):
+    keep, remove = [create(api, "chores", name=uuid4().hex, period_type="daily") for _ in range(2)]
+    token = {"zero_prefix": f"0{keep}", "decimal": f"{keep}.0", "exponent": f"{keep}e0"}[form]
+    try:
+        response = api.post(f"/api/chores/{token}/merge/{remove}")
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "Provided {choreIdToKeep} or {choreIdToRemove} is not a valid integer"
+        }
+        assert api.get(f"/api/objects/chores/{keep}").status_code == 200
+        assert api.get(f"/api/objects/chores/{remove}").status_code == 200
+    finally:
+        api.delete(f"/api/objects/chores/{keep}")
+        api.delete(f"/api/objects/chores/{remove}")
+
+
+def test_native_chore_merge_moves_complete_execution_history(api):
+    keep, remove = [create(api, "chores", name=uuid4().hex, period_type="daily") for _ in range(2)]
+    try:
+        first = api.post(
+            f"/api/chores/{remove}/execute", json={"tracked_time": "2027-01-04 12:00:00"}
+        )
+        assert first.status_code == 200, first.text
+        assert api.post(f"/api/chores/{remove}/execute", json={"skipped": True}).status_code == 200
+        assert api.post(f"/api/chores/executions/{first.json()['id']}/undo").status_code == 204
+        before = rows(api, "chores_log", chore_id=remove)
+        merged = api.post(f"/api/chores/{keep}/merge/{remove}")
+        assert merged.status_code == 204 and merged.content == b"", merged.text
+        assert rows(api, "chores_log", chore_id=keep) == [
+            {**row, "chore_id": keep} for row in before
+        ]
+        assert api.get(f"/api/objects/chores/{remove}").status_code == 404
+    finally:
+        api.delete(f"/api/objects/chores/{keep}")
+        api.delete(f"/api/objects/chores/{remove}")
+
+
+@pytest.mark.parametrize("form", ["exponent", "fraction"])
+def test_native_chore_assignment_id_uses_php_numeric_conversion(api, form):
+    chore = create(
+        api,
+        "chores",
+        name=uuid4().hex,
+        period_type="daily",
+        assignment_type="in-alphabetical-order",
+        assignment_config="1",
+    )
+    value = f"{chore}e0" if form == "exponent" else chore + 0.9
+    try:
+        response = api.post(
+            "/api/chores/executions/calculate-next-assignments", json={"chore_id": value}
+        )
+        assert response.status_code == 204 and response.content == b"", response.text
+        assert (
+            api.get(f"/api/objects/chores/{chore}").json()["next_execution_assigned_to_user_id"]
+            == 1
+        )
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+def test_native_chore_assignment_error_keeps_earlier_execution_writes(api):
+    chore = create(
+        api,
+        "chores",
+        name=uuid4().hex,
+        period_type="daily",
+        assignment_type="random",
+        assignment_config="",
+        rescheduled_date="2030-01-04",
+    )
+    try:
+        response = api.post(
+            f"/api/chores/{chore}/execute", json={"tracked_time": "2027-01-04 12:00:00"}
+        )
+        assert response.status_code == 500, response.text
+        version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
+        description = "must not" if version >= (8, 4) else "cannot"
+        assert (
+            response.json()["error_message"]
+            == f"array_rand(): Argument #1 ($array) {description} be empty"
+        )
+        saved = rows(api, "chores_log", chore_id=chore)
+        assert len(saved) == 1 and saved[0]["tracked_time"] == "2027-01-04 12:00:00"
+        assert api.get(f"/api/objects/chores/{chore}").json()["rescheduled_date"] is None
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("failure", ["ABORT", "FAIL", "ROLLBACK"])
+def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure):
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if not hasattr(api, "portal") and not reference:
+        pytest.skip("The trigger fixture needs access to the disposable database")
+
+    def execute(statement):
+        if hasattr(api, "portal"):
+            from grocy.db.session import get_session_factory
+
+            async def run():
+                async with get_session_factory()() as session:
+                    connection = await session.connection()
+                    await connection.exec_driver_sql(statement)
+                    await session.commit()
+
+            api.portal.call(run)
+        else:
+            with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
+                database.execute(statement)
+
+    keep, remove = [create(api, "chores", name=uuid4().hex, period_type="daily") for _ in range(2)]
+    trigger = "merge_failure_" + uuid4().hex
+    try:
+        assert api.post(f"/api/chores/{remove}/execute", json={}).status_code == 200
+        before = rows(api, "chores_log", chore_id=remove)
+        execute(
+            f"CREATE TRIGGER {trigger} BEFORE DELETE ON chores WHEN OLD.id={remove} "
+            f"BEGIN SELECT RAISE({failure},'Merge blocked'); END"
+        )
+        response = api.post(f"/api/chores/{keep}/merge/{remove}")
+        assert response.status_code == 400, response.text
+        version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
+        assert response.json() == {
+            "error_message": (
+                ("There is no active transaction" if version >= (8, 4) else
+                 "SQLSTATE[HY000]: General error: 1 cannot rollback - no transaction is active")
+                if failure == "ROLLBACK"
+                else "SQLSTATE[23000]: Integrity constraint violation: 19 Merge blocked"
+            )
+        }
+        assert rows(api, "chores_log", chore_id=remove) == before
+        assert rows(api, "chores_log", chore_id=keep) == []
+        assert api.get(f"/api/objects/chores/{remove}").status_code == 200
+        execute(f"DROP TRIGGER {trigger}")
+        retry = api.post(f"/api/chores/{keep}/merge/{remove}")
+        assert retry.status_code == 204 and retry.content == b"", retry.text
+        assert rows(api, "chores_log", chore_id=keep) == [
+            {**row, "chore_id": keep} for row in before
+        ]
+    finally:
+        execute(f"DROP TRIGGER IF EXISTS {trigger}")
+        api.delete(f"/api/objects/chores/{keep}")
+        api.delete(f"/api/objects/chores/{remove}")
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads((Path(__file__).parents[1] / "fixtures/household-grocy-4.5.0.json").read_text())[
+        "cases"
+    ],
+    ids=lambda case: case["name"],
+)
+def test_native_chore_schedule_matches_release_view_and_calendar(api, case):
+    name = case["name"] + " " + uuid4().hex[:8]
+    chore = create(api, "chores", **{**case["chore"], "name": name})
+    try:
+        for tracked in case["tracked_times"]:
+            response = api.post(f"/api/chores/{chore}/execute", json={"tracked_time": tracked})
+            assert response.status_code == 200, response.text
+        details = api.get(f"/api/chores/{chore}")
+        assert details.status_code == 200, details.text
+        expected = case["next_execution"]
+        if expected and expected.startswith("TODAY"):
+            today = api.get("/api/system/time").json()["time_local_sqlite3"][:10]
+            expected = today + expected[5:]
+        assert details.json()["next_estimated_execution_time"] == expected
+        current = api.get("/api/chores", params={"query[]": f"chore_id={chore}"})
+        assert current.status_code == 200 and len(current.json()) == 1, current.text
+        assert current.json()[0]["next_estimated_execution_time"] == expected
+        calendar = api.get("/api/calendar/ical")
+        assert calendar.status_code == 200, calendar.text
+        events = [
+            event
+            for event in calendar.text.replace("\r\n ", "").split("BEGIN:VEVENT")
+            if f"SUMMARY:Chore due: {name}" in event
+        ]
+        if expected is None:
+            assert events == []
+        else:
+            assert len(events) == 1
+            start = re.search(r"(?m)^DTSTART[^:]*:([^\r\n]+)", events[0])
+            assert start is not None
+            value = expected[:10] if case["chore"]["track_date_only"] else expected
+            assert start.group(1).removesuffix("Z") == value.replace("-", "").replace(
+                ":", ""
+            ).replace(" ", "T")
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")
+
+
+@pytest.mark.parametrize("start", ["omitted", None, ""])
+def test_native_chore_default_start_clock_is_used_after_execution(api, start):
+    before = api.get("/api/system/time").json()["time_local_sqlite3"]
+    fields = {} if start == "omitted" else {"start_date": start}
+    chore = create(
+        api,
+        "chores",
+        name=uuid4().hex,
+        period_type="daily",
+        period_interval=2,
+        track_date_only=0,
+        **fields,
+    )
+    try:
+        saved = api.get(f"/api/objects/chores/{chore}").json()["start_date"]
+        after = api.get("/api/system/time").json()["time_local_sqlite3"]
+        assert before <= saved <= after
+        response = api.post(
+            f"/api/chores/{chore}/execute", json={"tracked_time": "2027-01-04 10:30:00"}
+        )
+        assert response.status_code == 200, response.text
+        details = api.get(f"/api/chores/{chore}")
+        assert details.status_code == 200, details.text
+        assert details.json()["next_estimated_execution_time"] == "2027-01-06 " + saved[11:]
+    finally:
+        api.delete(f"/api/objects/chores/{chore}")

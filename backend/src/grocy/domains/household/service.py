@@ -19,8 +19,9 @@ from grocy.db.models.household import (
 )
 from grocy.db.models.users import User
 from grocy.db.types import database_time
-from grocy.domains.household.schedule import UNSCHEDULED, next_execution
 from grocy.domains.stock.service import StockService
+
+UNSCHEDULED = datetime(2999, 12, 31, 23, 59, 59)
 
 
 def _datetime(value: date | datetime) -> datetime:
@@ -56,7 +57,7 @@ class HouseholdService:
                     "next_execution_assigned_to_user_id": assigned,
                     "next_execution_assigned_user": await self._user(assigned),
                     "last_tracked_time": database_time(last) if last else None,
-                    "next_estimated_execution_time": await self._next_chore_time(chore, logs),
+                    "next_estimated_execution_time": await self._next_chore_time(chore),
                 }
             )
         return result
@@ -74,7 +75,7 @@ class HouseholdService:
             "tracked_count": len(completed),
             "track_count": len(completed),
             "last_done_by": await self._user(last.done_by_user_id if last else None),
-            "next_estimated_execution_time": await self._next_chore_time(chore, logs),
+            "next_estimated_execution_time": await self._next_chore_time(chore),
             "next_execution_assigned_user": await self._user(assigned),
             "average_execution_frequency_hours": await self._average_frequency(chore_id),
         }
@@ -99,7 +100,7 @@ class HouseholdService:
             tracked = tracked.astimezone().replace(tzinfo=None)
         if chore.track_date_only:
             tracked = datetime.combine(tracked, datetime.min.time())
-        due = await self._next_chore_time(chore, await self._chore_logs(chore_id))
+        due = await self._next_chore_time(chore)
         log = ChoreLog(
             chore_id=chore_id,
             tracked_time=tracked,
@@ -367,26 +368,13 @@ class HouseholdService:
             {"chore_id": chore_id},
         )
 
-    async def _next_chore_time(self, chore: Chore, logs: list[ChoreLog]) -> str | None:
-        if not chore.active:
-            return None
-        last = _datetime(logs[-1].tracked_time) if logs else None
-        weekly_last = None
-        if chore.period_type == "weekly" and last is not None:
-            # Grocy 4.5.0's weekly SQL subquery includes undone executions.
-            weekly_last = await self.session.scalar(
-                select(func.max(ChoreLog.tracked_time)).where(ChoreLog.chore_id == chore.id)
-            )
-        if weekly_last is not None:
-            weekly_last = _datetime(weekly_last)
-        due = next_execution(
-            chore,
-            last,
-            await self._average_frequency(chore.id),
-            datetime.now(),
-            weekly_last=weekly_last,
+    async def _next_chore_time(self, chore: Chore) -> str | None:
+        return await self.session.scalar(
+            text(
+                "SELECT MIN(next_estimated_execution_time) FROM chores_current WHERE chore_id=:id"
+            ),
+            {"id": chore.id},
         )
-        return due.isoformat(sep=" ", timespec="seconds") if due else None
 
     def _next_battery_time(self, battery: Battery, last: datetime | None) -> str | None:
         if not battery.active:

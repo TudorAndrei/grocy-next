@@ -33,7 +33,13 @@ async def native_list_response(
 
 
 async def native_action_response(
-    request: Request, session: AsyncSession, route: str, object_id: str, user_id: int
+    request: Request,
+    session: AsyncSession,
+    route: str,
+    object_id: str,
+    user_id: int,
+    *,
+    arguments: dict[str, str] | None = None,
 ) -> Response:
     runtime: InputPurifier = request.app.state.input_purifier
     result = await runtime.native_action(
@@ -45,6 +51,7 @@ async def native_action_response(
         content_type=request.headers.get("content-type"),
         query_string=request.scope["query_string"],
         default_permissions=get_settings().default_permissions,
+        arguments=arguments,
         execute=NativeStatements(session, runtime).execute,
     )
     return native_response(result)

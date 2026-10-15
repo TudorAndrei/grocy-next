@@ -1,34 +1,4 @@
-import json
-from datetime import datetime
-from pathlib import Path
-
-import pytest
 from fastapi.testclient import TestClient
-
-GOLDENS = json.loads(
-    (Path(__file__).parents[1] / "fixtures/household-grocy-4.5.0.json").read_text()
-)
-
-
-@pytest.mark.parametrize("case", GOLDENS["cases"], ids=lambda case: case["name"])
-def test_chore_schedule_matches_pinned_grocy_view(client: TestClient, api_headers: dict, case):
-    created = client.post("/api/objects/chores", headers=api_headers, json=case["chore"])
-    assert created.status_code == 200, created.text
-    chore_id = created.json()["created_object_id"]
-    for tracked_time in case["tracked_times"]:
-        recorded = client.post(
-            f"/api/chores/{chore_id}/execute",
-            headers=api_headers,
-            json={"tracked_time": tracked_time},
-        )
-        assert recorded.status_code == 200, recorded.text
-    details = client.get(f"/api/chores/{chore_id}", headers=api_headers)
-    assert details.status_code == 200
-    actual = details.json()["next_estimated_execution_time"]
-    expected = case["next_execution"]
-    if expected.startswith("TODAY"):
-        expected = datetime.now().date().isoformat() + expected[5:]
-    assert datetime.fromisoformat(actual) == datetime.fromisoformat(expected)
 
 
 def test_execution_records_actor_date_and_rotates_assignments(

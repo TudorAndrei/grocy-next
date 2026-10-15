@@ -141,10 +141,6 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         )
         assert purchase.status_code == 200, purchase.text
         assert create_saved("tasks", name="Saved task", category_id=1).status_code == 200
-        assert (
-            old.post("/api/chores/1/execute", json={"tracked_time": "2027-01-04"}).status_code
-            == 200
-        )
         assert create_saved("shopping_list", product_id=1, amount=1, qu_id=1).status_code == 200
         field = create_saved(
             "userfields",
@@ -198,6 +194,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert nutrition.status_code == 200, nutrition.text
     with sqlite3.connect(database) as connection:
         connection.execute("INSERT INTO saved_product_reference VALUES (1)")
+        connection.execute(
+            "INSERT INTO chores_log(chore_id,tracked_time,done_by_user_id,skipped,undone) "
+            "VALUES (1,'2027-01-04',1,0,0)"
+        )
         # Store the old record before upgrading. Native API permission views did not
         # exist in revision 0013, so the current charge handler cannot seed this schema.
         connection.execute(

@@ -62,7 +62,7 @@ class NativeStockController extends Grocy\Controllers\StockApiController { use N
 class NativeRecipesController extends Grocy\Controllers\RecipesApiController { use NativeListContext; }
 class NativeUsersController extends Grocy\Controllers\UsersApiController { use NativeListContext; }
 
-// DatabaseService executes its original raw SELECT calls through this reader.
+// DatabaseService retains its raw SQL and explicit transaction calls.
 class NativeRawReader
 {
     public function __construct(private NativeDatabase $database)
@@ -71,13 +71,27 @@ class NativeRawReader
 
     public function exec($query)
     {
-        $this->database->readQuery($query);
-        return 0;
+        return $this->database->executeQuery($query)->rowCount();
     }
 
     public function query($query)
     {
         return $this->database->readQuery($query);
+    }
+
+    public function beginTransaction()
+    {
+        return $this->database->transaction('begin');
+    }
+
+    public function commit()
+    {
+        return $this->database->transaction('commit');
+    }
+
+    public function rollBack()
+    {
+        return $this->database->transaction('rollback');
     }
 }
 

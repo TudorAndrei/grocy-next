@@ -187,6 +187,7 @@ class InputPurifier:
         query_string: bytes,
         default_permissions: list[str],
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+        arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         # Grocy's current user is a PHP constant. Each action owns its request context.
         worker = InputPurifier(self.executable, user_id=user_id)
@@ -201,6 +202,7 @@ class InputPurifier:
                     "content_type": content_type,
                     "query_string": base64.b64encode(query_string).decode("ascii"),
                     "default_permissions": default_permissions,
+                    "arguments": arguments or {},
                 },
                 execute=execute,
             )

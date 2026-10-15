@@ -69,8 +69,12 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
             json={"name": "Saved task", "assigned_to_user_id": user, "done": 0},
         )
         assert task.status_code == 200, task.text
-        chore = old.post("/api/chores/1/execute", json={"tracked_time": "2027-01-04"})
-        assert chore.status_code == 200, chore.text
+        with sqlite3.connect(database) as connection:
+            chore_log = connection.execute(
+                "INSERT INTO chores_log(chore_id,tracked_time,done_by_user_id,skipped,undone) "
+                "VALUES (1,'2027-01-04',?,0,0)",
+                (user,),
+            ).lastrowid
         proposal = old.post(
             "/api/v2/nutrition/proposals",
             json={
@@ -132,7 +136,7 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
             (task.json()["created_object_id"],),
         ).fetchone() == (user,)
         assert connection.execute(
-            "SELECT done_by_user_id, tracked_time FROM chores_log WHERE id=?", (chore.json()["id"],)
+            "SELECT done_by_user_id, tracked_time FROM chores_log WHERE id=?", (chore_log,)
         ).fetchone() == (user, "2027-01-04")
         assert connection.execute(
             "SELECT user_id FROM stock_log WHERE id=?", (booking.json()[0]["id"],)

@@ -46,6 +46,46 @@ class NativeDatabase extends LessQL\Database
         return $statement;
     }
 
+    public function executeQuery(string $query)
+    {
+        $this->context = ['action' => 'execute', 'table' => ''];
+        $statement = $this->prepare($query);
+        $statement->execute();
+        return $statement;
+    }
+
+    public function transaction(string $action)
+    {
+        $method = match ($action) {
+            'begin' => 'beginTransaction', 'commit' => 'commit', 'rollback' => 'rollBack',
+        };
+        if ($action === 'begin') {
+            $this->schema->beginTransaction();
+        } elseif (!$this->schema->inTransaction()) {
+            // Let this PHP runtime produce its own PDO transaction error.
+            return $this->schema->$method();
+        }
+        try {
+            $result = (new NativeStatement($this, '', ['action' => $action, 'table' => ''], null))->execute();
+        } catch (Throwable $error) {
+            if ($action === 'begin' && $this->schema->inTransaction()) {
+                $this->schema->rollBack();
+            }
+            throw $error;
+        }
+        if ($action !== 'begin') {
+            $this->schema->$method();
+        }
+        return $result;
+    }
+
+    public function sqliteAbortedTransaction(): void
+    {
+        // PDO 8.3 and 8.4 report implicit SQLite rollback differently. Retain the
+        // actual driver's state by applying the same rollback to the private PDO.
+        $this->schema->exec('ROLLBACK');
+    }
+
     public function insert($table, $rows, $method = null)
     {
         $this->context = ['action' => 'insert', 'table' => $table];
@@ -75,6 +115,7 @@ class NativeStatement
 {
     private array $rows = [];
     private int $position = 0;
+    private int $affectedRows = 0;
 
     public function __construct(
         private NativeDatabase $database,
@@ -94,6 +135,9 @@ class NativeStatement
         $result = Fiber::suspend([
             'query' => $this->query, 'parameters' => $parameters ?? [], 'context' => $this->context,
         ]);
+        if ($result['transaction_aborted'] ?? false) {
+            $this->database->sqliteAbortedTransaction();
+        }
         if (isset($result['error'])) {
             if (($result['error_kind'] ?? null) === 'error') {
                 throw new Error($result['error']);
@@ -119,7 +163,13 @@ class NativeStatement
             }, $this->rows);
         }
         $this->position = 0;
+        $this->affectedRows = $result['row_count'] ?? 0;
         return true;
+    }
+
+    public function rowCount(): int
+    {
+        return $this->affectedRows;
     }
 
     public function fetchAll($mode = PDO::FETCH_ASSOC)
@@ -154,7 +204,7 @@ function nativeSchema(): PDO
     $schema->sqliteCreateFunction('regexp', fn($pattern, $value) => nativeSqliteFunction('regexp', [$pattern, $value]), 2);
     $schema->sqliteCreateFunction('ceil', fn($value) => ceil($value), 1);
     $definitions = json_decode(file_get_contents(__DIR__ . '/../db/compatibility/grocy_4_5_0_schema.json'), true, 512, JSON_THROW_ON_ERROR);
-    foreach (['ddl', 'views'] as $kind) {
+    foreach (['ddl', 'views', 'triggers'] as $kind) {
         foreach ($definitions[$kind] as $statement) {
             $schema->exec($statement);
         }

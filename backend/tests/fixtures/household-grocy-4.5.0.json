@@ -1,7 +1,9 @@
 {
   "baseline": "v4.5.0",
-  "source": "migrations/0167.sql",
-  "source_sha256": "45aa4f45c611fe7ca85b12e0d64f796e4ce77917165ffb9823be5f5c3edefbfb",
+  "source": "migrations/0185.sql",
+  "source_sha256": "20f76a062cd0365b0831f0950719c0f175883f6abd78f1aab0bcd1e5d4624e89",
+  "frequency_source": "migrations/0167.sql",
+  "frequency_source_sha256": "a3be8bdd22880f240117dcfa576824ff86e5521b74b57863e948a3a5a1515f29",
   "cases": [
     {
       "name": "first execution",
@@ -53,7 +55,7 @@
       "tracked_times": [
         "2027-01-04 10:30:00"
       ],
-      "next_execution": "2027-01-06 10:30:00"
+      "next_execution": "2027-01-06 10:00:00"
     },
     {
       "name": "weekly weekdays",
@@ -179,7 +181,23 @@
       "tracked_times": [
         "2027-01-04 10:30:00"
       ],
-      "next_execution": "2999-12-31 23:59:59"
+      "next_execution": null
+    },
+    {
+      "name": "manual before tracking",
+      "chore": {
+        "name": "manual before tracking",
+        "period_type": "manually",
+        "period_interval": 1,
+        "period_days": 1,
+        "period_config": null,
+        "start_date": "2027-01-01 10:00:00",
+        "track_date_only": 0,
+        "rollover": 0,
+        "active": 1
+      },
+      "tracked_times": [],
+      "next_execution": null
     },
     {
       "name": "overdue daily rollover",
@@ -197,7 +215,7 @@
       "tracked_times": [
         "2020-01-01 10:30:00"
       ],
-      "next_execution": "TODAY 10:30:00"
+      "next_execution": "TODAY 10:00:00"
     },
     {
       "name": "date-only rollover",
