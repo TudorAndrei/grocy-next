@@ -19,7 +19,7 @@ GROCY_DATABASE_URL=sqlite+aiosqlite:////absolute/path/to/grocy-next.db
 GROCY_SEED_DEMO_DATA=false
 ```
 
-Copy the source files separately to `GROCY_FILES_ROOT`. Database import does not copy manuals, images, or other files. Existing API keys and permissions transfer with their records. If the source has no permission table, imported users receive the administrator permission.
+Copy the source files separately to `GROCY_FILES_ROOT`. Database import does not copy manuals, images, or other files. Existing API keys and permissions transfer with their records. The importer also keeps keys, settings, and permissions for deleted users. It preserves the source user ID sequence, so later users cannot receive those deleted user IDs. If the source has no permission table, imported users receive the administrator permission.
 
 ## Project schema upgrades
 
@@ -31,3 +31,9 @@ uv run alembic upgrade head
 ```
 
 The contract field migration keeps added fields on downgrade to preserve user data. For a full rollback, stop the application and restore a database backup. Keep the database and file directory together in backups. Use SQLite backup commands for a running database, or stop the service before copying its files.
+
+Revision 0012 changes user references to match Grocy 4.5.0. Deleting a user keeps related keys, settings, permissions, assignments, and history. Retained keys return 401. Nutrition records also keep their saved contributor IDs. The upgrade keeps the other reference constraints, indexes, custom views, and triggers.
+
+Startup and manual upgrades use a SQLite transaction. They turn foreign key checks off before the transaction and restore them afterward. This permits the required table rebuilds, as described in [Alembic's batch upgrade guidance](https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys).
+
+Deleting the last user keeps the database without users after restart. Demo data creation does not replace a deleted user. New databases still receive demo data when that setting is enabled.

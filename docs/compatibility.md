@@ -79,6 +79,8 @@ File image requests support bounded resizing. Generic queries support the upstre
 
 File paths accept the Base64 file names from the contract. Plain file names remain available for existing Grocy Next clients. Both forms use the same path checks. Calendar exports include stock due dates, all-day tasks, chore schedules and assignments, battery charges, and meal section times.
 
+User deletion removes only the user row, including when the current user deletes their own row. Saved keys, settings, permissions, assignments, and history keep their user IDs. A key for a deleted user returns 401. A retained header key whose user was deleted also prevents a query key from replacing it. A missing user delete returns 500. New user IDs do not reuse deleted IDs. Upgrades and imports preserve these records and the user ID sequence. The last user stays deleted after restart.
+
 Chore merging requires `MASTER_DATA_EDIT`. An administrator can replace their own permissions and remove their own administrator access. The next request uses those permissions, as in Grocy 4.5.0.
 
 Chore execution filters input before its permission check. Missing chore execution and undo permissions return 400. User permission reads and writes return 403. Their caught errors include the upstream permission name in `error_message`. Task and battery permissions run before input checks.
