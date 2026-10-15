@@ -3,7 +3,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 
-def test_permissions_keys_and_mcp_use_stored_identity(client: TestClient, api_headers: dict):
+def test_permissions_keys_and_mcp_use_stored_identity(
+    client: TestClient, api_headers: dict, monkeypatch
+):
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "default_permissions", [])
     created = client.post(
         "/api/users", headers=api_headers, json={"username": "Reader", "password": "secret"}
     )
@@ -138,3 +143,82 @@ def test_picture_response_preserves_original_and_aspect_ratio(
         client.get("/api/files/productpictures/photo.png", headers=api_headers).content
         == original.getvalue()
     )
+
+
+def test_user_defaults_and_operation_permissions(client: TestClient, api_headers: dict):
+    client.headers.update(api_headers)
+    assert (
+        client.post("/api/users", json={"username": "Profile user", "password": "keep"}).status_code
+        == 204
+    )
+    user = next(row for row in client.get("/api/users").json() if row["username"] == "Profile user")
+    user_id = user["id"]
+    assert client.get(f"/api/users/{user_id}/permissions").json() == [
+        {"user_id": user_id, "permission_id": 1}
+    ]
+    key = client.post("/api/v2/api-keys", json={"user_id": user_id}).json()["api_key"]
+    headers = {"GROCY-API-KEY": key}
+    assert (
+        client.put(f"/api/users/{user_id}/permissions", json={"permissions": [6]}).status_code
+        == 204
+    )
+    assert (
+        client.put(
+            f"/api/users/{user_id}", headers=headers, json={"first_name": "Updated", "password": ""}
+        ).status_code
+        == 204
+    )
+    assert client.get("/api/user", headers=headers).json()["first_name"] == "Updated"
+    assert (
+        client.put("/api/users/1", headers=headers, json={"first_name": "Wrong user"}).status_code
+        == 403
+    )
+    assert client.get(f"/api/users/{user_id}/permissions", headers=headers).status_code == 403
+    assert (
+        client.put(f"/api/users/{user_id}/permissions", json={"permissions": [3]}).status_code
+        == 204
+    )
+    assert (
+        client.post(
+            "/api/users", headers=headers, json={"username": "Created by manager"}
+        ).status_code
+        == 204
+    )
+    assert (
+        client.put(f"/api/users/{user_id}/permissions", json={"permissions": [5]}).status_code
+        == 204
+    )
+    assert (
+        client.post("/api/users", headers=headers, json={"username": "Read only"}).status_code
+        == 403
+    )
+
+
+async def test_empty_profile_password_preserves_stored_password(
+    client: TestClient, api_headers: dict
+):
+    from sqlalchemy import select
+
+    from grocy.db.models.users import User
+    from grocy.db.session import get_session_factory
+
+    client.headers.update(api_headers)
+    assert (
+        client.post(
+            "/api/users", json={"username": "Password user", "password": "keep"}
+        ).status_code
+        == 204
+    )
+    async with get_session_factory()() as session:
+        user = await session.scalar(select(User).where(User.username == "Password user"))
+        assert user is not None
+        user_id, password = user.id, user.password
+    for value in ("", None):
+        assert (
+            client.put(
+                f"/api/users/{user_id}", json={"password": value, "first_name": "Updated"}
+            ).status_code
+            == 204
+        )
+        async with get_session_factory()() as session:
+            assert await session.scalar(select(User.password).where(User.id == user_id)) == password

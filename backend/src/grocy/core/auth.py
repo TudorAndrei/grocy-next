@@ -45,7 +45,7 @@ async def require_api_key(
     actor = await authenticate_key(
         session, key, key_type="calendar" if use_calendar_secret else "default"
     )
-    actor.require(request_permission(request))
+    actor.require(request_permission(request, actor.user_id))
     return actor
 
 
@@ -79,14 +79,24 @@ async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "
     )
 
 
-def request_permission(request: Request) -> str:
+def request_permission(request: Request, user_id: int | None = None) -> str:
     path = request.url.path.removeprefix("/api/")
     action = path.rsplit("/", 1)[-1]
     write = request.method not in {"GET", "HEAD", "OPTIONS"}
     if path.startswith("v2/mcp") or path == "user" or path.startswith("user/settings"):
         return ""
-    if path.startswith("users") or path.startswith("v2/api-keys"):
-        return "USERS_READ" if not write else "USERS"
+    if path.startswith("v2/api-keys"):
+        return "ADMIN"
+    if path.startswith("users"):
+        if action == "permissions":
+            return "ADMIN"
+        if not write:
+            return "USERS_READ"
+        if request.method == "POST":
+            return "USERS_CREATE"
+        if request.method == "PUT" and action == str(user_id):
+            return "USERS_EDIT_SELF"
+        return "USERS_EDIT"
     if write:
         actions = {
             ("chores", "execute"): "CHORE_TRACK_EXECUTION",
@@ -103,9 +113,19 @@ def request_permission(request: Request) -> str:
             return "STOCK_CONSUME"
         if action == "add-not-fulfilled-products-to-shoppinglist":
             return "SHOPPINGLIST_ITEMS_ADD"
-    if path.startswith("stock/shoppinglist") or path.startswith("v2/shopping"):
+    if path.startswith("stock/shoppinglist"):
+        return (
+            "SHOPPINGLIST_ITEMS_DELETE"
+            if action in {"clear", "remove-product"}
+            else "SHOPPINGLIST_ITEMS_ADD"
+        )
+    if path.startswith("v2/shopping"):
         return "SHOPPINGLIST"
     if path.startswith("stock"):
+        if "/external-lookup/" in path:
+            return "MASTER_DATA_EDIT"
+        if write and (action == "undo" or path.startswith("stock/entry/") or "/merge/" in path):
+            return "STOCK_EDIT"
         actions = {
             "add": "PURCHASE",
             "consume": "CONSUME",
@@ -114,6 +134,8 @@ def request_permission(request: Request) -> str:
             "transfer": "TRANSFER",
         }
         return f"STOCK_{actions[action]}" if write and action in actions else "STOCK"
+    if path.startswith("chores/") and action == "reschedule":
+        return "MASTER_DATA_EDIT"
     if "nutrition" in path:
         return "STOCK" if not write or action == "proposals" else "MASTER_DATA_EDIT"
     if "meal-plan" in path:
@@ -124,6 +146,20 @@ def request_permission(request: Request) -> str:
             return "ADMIN"
         if entity == "permission_hierarchy":
             return ""
+        if write and entity in {"shopping_list", "shopping_lists"}:
+            return (
+                "SHOPPINGLIST_ITEMS_DELETE"
+                if request.method == "DELETE"
+                else "SHOPPINGLIST_ITEMS_ADD"
+            )
+        if write and entity in {
+            "chores",
+            "batteries",
+            "tasks",
+            "task_categories",
+            "meal_plan_sections",
+        }:
+            return "MASTER_DATA_EDIT"
         groups = {
             "meal_plan": "RECIPES_MEALPLAN",
             "meal_plan_sections": "RECIPES_MEALPLAN",

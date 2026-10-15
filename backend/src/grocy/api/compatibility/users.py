@@ -11,6 +11,7 @@ from sqlalchemy import delete, select
 from grocy.api.compatibility.filtering import filter_rows
 from grocy.compatibility import client_defaults
 from grocy.core.auth import CurrentActor
+from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.core.permissions import PERMISSIONS
@@ -194,6 +195,17 @@ async def create_user(
         picture_file_name=body.get("picture_file_name"),
     )
     session.add(user)
+    await session.flush()
+    defaults = get_settings().default_permissions
+    if any(name not in {record[0] for record in PERMISSIONS.values()} for name in defaults):
+        raise GrocyError("Unknown default permission")
+    session.add_all(
+        [
+            UserPermission(user_id=user.id, permission_id=permission_id)
+            for permission_id, (name, _) in PERMISSIONS.items()
+            if name in defaults
+        ]
+    )
     await session.commit()
     return Response(status_code=204)
 
@@ -212,7 +224,7 @@ async def update_user(
         user.first_name = body["first_name"]
     if "last_name" in body:
         user.last_name = body["last_name"]
-    if "password" in body:
+    if body.get("password"):
         user.password = _hash_password(str(body["password"]))
     if "picture_file_name" in body:
         user.picture_file_name = body["picture_file_name"]

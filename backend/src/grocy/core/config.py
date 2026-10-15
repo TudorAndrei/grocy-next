@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     app_name: str = "grocy-next"
     currency: str = "USD"
+    default_permissions: list[str] = ["ADMIN"]
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
     database_busy_timeout_ms: int = 5000

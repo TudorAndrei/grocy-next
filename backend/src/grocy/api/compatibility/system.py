@@ -63,6 +63,7 @@ async def system_config(actor: CurrentActor, session: DbSession) -> dict[str, An
         DISABLE_AUTH=False,
         MODE="production",
         CURRENCY=settings.currency,
+        DEFAULT_PERMISSIONS=settings.default_permissions,
         FEATURE_FLAG_LABEL_PRINTER=bool(settings.label_printer_webhook),
         FEATURE_FLAG_THERMAL_PRINTER=bool(
             settings.thermal_printer_host or settings.thermal_printer_device
