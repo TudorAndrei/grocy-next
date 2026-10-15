@@ -20,7 +20,9 @@ async def list_objects(
     service = GenericObjectsService(session)
     rows = await service.list_entity(entity)
     for row in rows:
-        row["userfields"] = await service.userfields(entity, row["id"])
+        row["userfields"] = await service.userfields(
+            entity, row["stock_id"] if entity == "stock" else row["id"]
+        )
     return filter_rows(rows, request.query_params)
 
 
@@ -43,7 +45,9 @@ async def get_object(
 ) -> dict[str, Any]:
     service = GenericObjectsService(session)
     row = await service.get_entity(entity, object_id)
-    row["userfields"] = await service.userfields(entity, object_id)
+    row["userfields"] = await service.userfields(
+        entity, row["stock_id"] if entity == "stock" else object_id
+    )
     return row
 
 

@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Integer, Numeric, select
+from sqlalchemy import Date, DateTime, Integer, Numeric, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.errors import GrocyError, NotFoundError
@@ -32,8 +32,10 @@ from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.db.models.users import ApiKey, User
+from grocy.domains.catalog.effects import CatalogEffects
 from grocy.domains.catalog.views import VIEW_ENTITIES, list_view
 from grocy.domains.products.service import ProductsService
+from grocy.domains.recipes.mealplan import sync_meal_plan_recipes
 from grocy.domains.recipes.service import RecipesService
 from grocy.domains.units.service import UnitsService
 
@@ -76,12 +78,13 @@ class GenericObjectsService:
         self.products = ProductsService(session)
         self.units = UnitsService(session)
         self.recipes = RecipesService(session)
+        self.effects = CatalogEffects(session)
 
     def supported_entities(self) -> list[str]:
         return sorted(set(ENTITY_MODELS) | VIEW_ENTITIES)
 
-    def _require_writable(self, entity: str) -> type:
-        if entity in READ_ONLY_ENTITIES:
+    def _require_writable(self, entity: str, *, deleting: bool = False) -> type:
+        if entity in READ_ONLY_ENTITIES or (entity == "api_keys" and not deleting):
             raise GrocyError(f"Entity '{entity}' is read-only", code="read_only")
         model = ENTITY_MODELS.get(entity)
         if model is None:
@@ -89,6 +92,8 @@ class GenericObjectsService:
         return model
 
     async def list_entity(self, entity: str) -> list[dict[str, Any]]:
+        if entity == "api_keys":
+            raise GrocyError("API keys cannot be read through generic objects", code="no_listing")
         if entity in VIEW_ENTITIES:
             return await list_view(self.session, entity)
         if entity == "products":
@@ -110,6 +115,8 @@ class GenericObjectsService:
         return [self._serialize_row(entity, row) for row in rows]
 
     async def get_entity(self, entity: str, object_id: int) -> dict[str, Any]:
+        if entity == "api_keys":
+            raise GrocyError("API keys cannot be read through generic objects", code="no_listing")
         if entity in VIEW_ENTITIES:
             row = next(
                 (row for row in await list_view(self.session, entity) if row["id"] == object_id),
@@ -143,7 +150,19 @@ class GenericObjectsService:
         await self.session.flush()
         if isinstance(row, Product):
             await self.units.ensure_product_conversions(row)
+        if isinstance(row, QuantityUnitConversion):
+            await self.units.sync_inverse(row)
+        if isinstance(row, Product) and row.cumulate_min_stock_amount_of_sub_products:
+            await self.session.execute(
+                update(Product)
+                .where(Product.parent_product_id == row.id)
+                .values(min_stock_amount=0)
+            )
+        if isinstance(row, MealPlanEntry):
+            await sync_meal_plan_recipes(self.session, row.day)
         await self.write_userfields(entity, row.id, payload.get("userfields", {}))
+        if isinstance(row, Product):
+            await self.recipes.shopping.auto_add_missing()
         await self.session.commit()
         await self.session.refresh(row)
         data = self._serialize_row(entity, row)
@@ -160,22 +179,45 @@ class GenericObjectsService:
         row = await self.session.get(model, object_id)
         if row is None:
             raise NotFoundError(f"{entity} {object_id} not found")
-        self._apply_payload(row, {k: v for k, v in payload.items() if k != "userfields"})
-        await self._validate(row)
+        old_unit = row.qu_id_stock if isinstance(row, Product) else None
+        old_day = row.day if isinstance(row, MealPlanEntry) else None
+        old_conversion = (
+            (row.from_qu_id, row.to_qu_id, row.product_id)
+            if isinstance(row, QuantityUnitConversion)
+            else None
+        )
+        with self.session.no_autoflush:
+            self._apply_payload(row, {k: v for k, v in payload.items() if k != "userfields"})
+            await self._validate(row)
+            if isinstance(row, Product) and old_unit is not None:
+                await self.effects.change_stock_unit(row, old_unit)
+        await self.session.flush()
+        if isinstance(row, QuantityUnitConversion):
+            await self.units.sync_inverse(row, previous=old_conversion)
+        if isinstance(row, Product) and row.cumulate_min_stock_amount_of_sub_products:
+            await self.session.execute(
+                update(Product)
+                .where(Product.parent_product_id == row.id)
+                .values(min_stock_amount=0)
+            )
+        if isinstance(row, MealPlanEntry) and old_day is not None:
+            await sync_meal_plan_recipes(self.session, old_day, row.day)
         await self.write_userfields(entity, row.id, payload.get("userfields", {}))
+        if isinstance(row, Product):
+            await self.recipes.shopping.auto_add_missing()
         await self.session.commit()
         await self.session.refresh(row)
         return self._serialize_row(entity, row)
 
     async def delete_entity(self, entity: str, object_id: int) -> None:
-        model = self._require_writable(entity)
+        model = self._require_writable(entity, deleting=True)
         row = await self.session.get(model, object_id)
         if row is None:
             raise NotFoundError(f"{entity} {object_id} not found")
-        await self.session.delete(row)
+        await self.effects.delete(entity, row)
         await self.session.commit()
 
-    async def write_userfields(self, entity: str, object_id: int, values: dict) -> None:
+    async def write_userfields(self, entity: str, object_id: int | str, values: dict) -> None:
         if not isinstance(values, dict):
             raise GrocyError("Userfields must be an object")
         definitions = {
@@ -186,36 +228,71 @@ class GenericObjectsService:
                 raise GrocyError(f"Field '{name}' is not defined for this record")
             if isinstance(value, (list, dict)):
                 raise GrocyError("Custom field values must be scalar values")
-        for name, value in values.items():
-            field_entity = definitions[name].entity
-            stored = (
-                None
-                if value is None
-                else str(int(value))
-                if isinstance(value, bool)
-                else str(value)
-            )
-            row = await self.session.scalar(
-                select(UserfieldValue).where(
-                    UserfieldValue.entity == field_entity,
-                    UserfieldValue.object_id == object_id,
-                    UserfieldValue.name == name,
+        references: list[int | str] = [object_id]
+        stock_transaction = False
+        if entity == "stock":
+            stock_ids = (
+                await self.session.scalars(
+                    select(StockLog.stock_id)
+                    .where(
+                        StockLog.transaction_id == str(object_id),
+                        StockLog.transaction_type.in_(
+                            ["purchase", "inventory-correction", "stock-edit-new"]
+                        ),
+                    )
+                    .distinct()
                 )
-            )
-            if row is None:
-                self.session.add(
-                    UserfieldValue(
-                        entity=field_entity,
-                        object_id=object_id,
-                        name=name,
-                        value=stored,
+            ).all()
+            if stock_ids:
+                references = list(stock_ids)
+                stock_transaction = True
+        for reference in references:
+            for name, value in values.items():
+                field_entity = definitions[name].entity
+                stored = (
+                    None
+                    if value is None
+                    else str(int(value))
+                    if isinstance(value, bool)
+                    else str(value)
+                )
+                row = await self.session.scalar(
+                    select(UserfieldValue).where(
+                        UserfieldValue.entity == field_entity,
+                        UserfieldValue.object_id == reference,
+                        UserfieldValue.name == name,
                     )
                 )
-            else:
-                row.value = stored
+                if row is None:
+                    if entity == "stock" and not stock_transaction:
+                        continue
+                    self.session.add(
+                        UserfieldValue(
+                            entity=field_entity,
+                            object_id=reference,
+                            name=name,
+                            value=stored,
+                        )
+                    )
+                else:
+                    row.value = stored
 
-    async def validate_userfield_object(self, entity: str, object_id: int) -> None:
-        if entity.startswith("userentity-"):
+    async def validate_userfield_object(self, entity: str, object_id: int | str) -> None:
+        if entity == "stock":
+            entry = await self.session.scalar(
+                select(StockEntry.id).where(StockEntry.stock_id == str(object_id)).limit(1)
+            )
+            if entry is None:
+                transaction = await self.session.scalar(
+                    select(StockLog.id)
+                    .where(
+                        StockLog.transaction_id == str(object_id),
+                    )
+                    .limit(1)
+                )
+                if transaction is None:
+                    raise NotFoundError("Stock entry or transaction not found")
+        elif entity.startswith("userentity-"):
             definition = await self.session.scalar(
                 select(UserEntity).where(UserEntity.name == entity.removeprefix("userentity-"))
             )
@@ -226,10 +303,10 @@ class GenericObjectsService:
             if await self.session.get(User, object_id) is None:
                 raise NotFoundError("User not found")
         else:
-            await self.get_entity(entity, object_id)
+            await self.get_entity(entity, int(object_id))
 
     async def _userfield_definitions(
-        self, entity: str, object_id: int
+        self, entity: str, object_id: int | str
     ) -> list[UserfieldDefinition]:
         entities = [entity]
         if entity == "userobjects":
@@ -247,7 +324,7 @@ class GenericObjectsService:
             ).all()
         )
 
-    async def userfields(self, entity: str, object_id: int) -> dict[str, str | None]:
+    async def userfields(self, entity: str, object_id: int | str) -> dict[str, str | None]:
         definitions = await self._userfield_definitions(entity, object_id)
         rows = (
             (
@@ -292,7 +369,12 @@ class GenericObjectsService:
             "product_amount",
         ):
             value = getattr(row, field, None)
-            if value is not None and (not Decimal(str(value)).is_finite() or value <= 0):
+            zero_allowed = field == "amount" and isinstance(row, (ShoppingListItem, RecipePosition))
+            if value is not None and (
+                not Decimal(str(value)).is_finite()
+                or value < 0
+                or (value == 0 and not zero_allowed)
+            ):
                 raise GrocyError(f"'{field}' must be positive", code="invalid_amount")
         if isinstance(row, Chore):
             if not row.start_date:
@@ -332,12 +414,38 @@ class GenericObjectsService:
             and row.charge_interval_days < 0
         ):
             raise GrocyError("Charge interval cannot be negative")
+        if isinstance(row, (RecipePosition, ProductBarcode, ShoppingListItem)) and row.product_id:
+            product = await self.products.get(row.product_id)
+            if not row.qu_id:
+                row.qu_id = (
+                    product.qu_id_purchase
+                    if isinstance(row, ShoppingListItem)
+                    else product.qu_id_stock
+                )
+            if isinstance(row, RecipePosition) and not row.only_check_single_unit_in_stock:
+                await self.units.convert(
+                    Decimal("1"), row.qu_id, product.qu_id_stock, product_id=product.id
+                )
+        if isinstance(row, MealPlanEntry):
+            if row.recipe_servings is None:
+                row.recipe_servings = Decimal("1")
+            if row.type == "product" and row.product_id and not row.product_qu_id:
+                row.product_qu_id = (await self.products.get(row.product_id)).qu_id_stock
         if isinstance(row, Product):
             if not row.qu_id_consume:
                 row.qu_id_consume = row.qu_id_stock
             if not row.qu_id_price:
                 row.qu_id_price = row.qu_id_purchase
         if isinstance(row, Product) and row.parent_product_id:
+            if row.id is not None:
+                with self.session.no_autoflush:
+                    child = await self.session.scalar(
+                        select(Product.id).where(Product.parent_product_id == row.id).limit(1)
+                    )
+                if child is not None:
+                    raise GrocyError(
+                        "Only one product nesting level is supported", code="product_cycle"
+                    )
             pending = row.parent_product_id
             seen = {row.id} if row.id else set()
             while pending:
@@ -347,8 +455,24 @@ class GenericObjectsService:
                 with self.session.no_autoflush:
                     parent = await self.session.get(Product, pending)
                 pending = parent.parent_product_id if parent else None
-        if isinstance(row, QuantityUnitConversion) and row.from_qu_id == row.to_qu_id:
-            raise GrocyError("Quantity units must differ", code="invalid_conversion")
+        if isinstance(row, QuantityUnitConversion):
+            if row.from_qu_id == row.to_qu_id:
+                raise GrocyError("Quantity units must differ", code="invalid_conversion")
+            with self.session.no_autoflush:
+                duplicate = await self.session.scalar(
+                    select(QuantityUnitConversion.id)
+                    .where(
+                        QuantityUnitConversion.from_qu_id == row.from_qu_id,
+                        QuantityUnitConversion.to_qu_id == row.to_qu_id,
+                        QuantityUnitConversion.product_id == row.product_id,
+                        QuantityUnitConversion.id != row.id,
+                    )
+                    .limit(1)
+                )
+            if duplicate is not None:
+                raise GrocyError(
+                    "Quantity unit conversion already exists", code="invalid_conversion"
+                )
         if isinstance(row, RecipeNesting):
             if row.recipe_id == row.includes_recipe_id:
                 raise GrocyError("Recipe nesting cycle", code="recipe_cycle")

@@ -13,10 +13,10 @@ from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
 router = APIRouter(tags=["stock"])
 
 
-async def _bookings(stock: StockSvc, result: dict, *, stock_label_type: int = 1) -> list[dict]:
+async def _bookings(stock: StockSvc, result: dict, *, stock_label_type: int = 0) -> list[dict]:
     transaction_id = result.get("transaction_id")
     rows = await stock.get_transaction(transaction_id) if transaction_id else []
-    if stock_label_type > 1:
+    if stock_label_type > 0:
         for row in rows:
             if row["amount"] > 0 and row.get("stock_row_id"):
                 await label(stock.session, "stock", row["stock_row_id"])
@@ -37,7 +37,7 @@ class AmountBody(BaseModel):
     exact_amount: bool = False
     allow_subproduct_substitution: bool = False
     note: str | None = None
-    stock_label_type: int = Field(default=1, ge=1, le=3)
+    stock_label_type: int = Field(default=0, ge=0, le=2)
 
 
 class TransferBody(BaseModel):
@@ -52,7 +52,7 @@ class InventoryBody(BaseModel):
     price: Decimal | None = None
     shopping_location_id: int | None = None
     note: str | None = None
-    stock_label_type: int = Field(default=1, ge=1, le=3)
+    stock_label_type: int = Field(default=0, ge=0, le=2)
     new_amount: Decimal = Field(ge=0)
     best_before_date: date | None = None
     location_id: int | None = None

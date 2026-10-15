@@ -163,7 +163,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == (None, "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0009"
+            == "20261015_0010"
         )
 
 
@@ -186,3 +186,52 @@ def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api
         assert datetime.fromisoformat(after) > datetime.fromisoformat(before)
         saved = app.get(f"/api/objects/locations/{created.json()['id']}").json()
         assert saved["name"] == "WAL location"
+
+
+def test_upgrade_restores_derived_meals_and_inverse_conversions(tmp_path: Path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.main import create_app
+
+    database = tmp_path / "previous-schema.db"
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
+    clear_settings_cache()
+    headers = {"GROCY-API-KEY": "dev-key"}
+    with TestClient(create_app()) as app:
+        assert (
+            app.post(
+                "/api/objects/meal_plan",
+                headers=headers,
+                json={"day": "2036-04-01", "type": "recipe", "recipe_id": 1, "recipe_servings": 2},
+            ).status_code
+            == 200
+        )
+    with sqlite3.connect(database) as connection:
+        connection.executescript("""
+            DELETE FROM recipes_nestings WHERE recipe_id IN
+                (SELECT id FROM recipes WHERE type LIKE 'mealplan-%');
+            DELETE FROM recipes_pos WHERE recipe_id IN
+                (SELECT id FROM recipes WHERE type LIKE 'mealplan-%');
+            DELETE FROM recipes WHERE type LIKE 'mealplan-%';
+            DELETE FROM quantity_unit_conversions WHERE from_qu_id = 2 AND to_qu_id = 3;
+            UPDATE alembic_version SET version_num = '20261015_0009';
+        """)
+    clear_settings_cache()
+    with TestClient(create_app()) as app:
+        recipes = app.get(
+            "/api/objects/recipes",
+            headers=headers,
+            params={"query[]": "type=mealplan-day"},
+        ).json()
+        assert len(recipes) == 1
+        status = app.get(f"/api/recipes/{recipes[0]['id']}/fulfillment", headers=headers).json()
+        assert status["costs"] == 0
+        assert status["missing_products_count"] == 3
+        conversions = app.get(
+            "/api/objects/quantity_unit_conversions",
+            headers=headers,
+            params=[("query[]", "from_qu_id=2"), ("query[]", "to_qu_id=3")],
+        ).json()
+        assert len(conversions) == 1
+        assert conversions[0]["factor"] == pytest.approx(0.001)

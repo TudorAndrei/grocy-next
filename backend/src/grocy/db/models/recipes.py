@@ -37,7 +37,7 @@ class RecipePosition(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"), nullable=False)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
-    amount: Mapped[Decimal] = mapped_column(Numeric(15, 6), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 6), nullable=False, default=Decimal("0"))
     qu_id: Mapped[int] = mapped_column(ForeignKey("quantity_units.id"), nullable=False)
     only_check_single_unit_in_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ingredient_group: Mapped[str | None] = mapped_column(String(255))

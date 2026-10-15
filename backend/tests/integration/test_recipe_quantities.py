@@ -20,7 +20,8 @@ def test_recipe_units_duplicates_and_partial_consumption(client: TestClient, api
     ).json()
     client.post(f"/api/stock/products/{oats['id']}/add", headers=api_headers, json={"amount": 1200})
     status = client.get(f"/api/recipes/{recipe['id']}/fulfillment", headers=api_headers).json()
-    assert status["need_fulfilled"] is False
+    # Grocy checks each ingredient row independently for fulfillment.
+    assert status["need_fulfilled"] is True
     assert status["positions"][0]["amount_needed"] == 1500
     consumed = client.post(f"/api/recipes/{recipe['id']}/consume", headers=api_headers)
     assert consumed.status_code == 204
@@ -32,7 +33,7 @@ def test_recipe_units_duplicates_and_partial_consumption(client: TestClient, api
     assert remaining["stock_amount"] == 0
 
 
-def test_inventory_at_one_location_preserves_other_stock(client: TestClient, api_headers: dict):
+def test_inventory_counts_the_product_across_locations(client: TestClient, api_headers: dict):
     client.post(
         "/api/stock/products/1/add", headers=api_headers, json={"amount": 5, "location_id": 1}
     )
@@ -46,11 +47,12 @@ def test_inventory_at_one_location_preserves_other_stock(client: TestClient, api
     )
     assert response.status_code == 200
     rows = client.get("/api/stock/products/1/entries", headers=api_headers).json()
-    assert sum(r["amount"] for r in rows if r["location_id"] == 1) == 2
-    assert sum(r["amount"] for r in rows if r["location_id"] == 2) == 3
+    assert sum(r["amount"] for r in rows) == 2
 
 
-def test_transfer_undo_restores_open_and_price(client: TestClient, api_headers: dict):
+def test_transfer_undo_uses_grocy_defaults_and_preserves_price(
+    client: TestClient, api_headers: dict
+):
     store = client.post(
         "/api/objects/shopping_locations", headers=api_headers, json={"name": "Transfer store"}
     ).json()["id"]
@@ -81,9 +83,9 @@ def test_transfer_undo_restores_open_and_price(client: TestClient, api_headers: 
     )
     assert response.status_code == 204
     rows = client.get("/api/stock/products/1/entries", headers=api_headers).json()
-    assert sum(r["amount"] for r in rows if r["location_id"] == 2 and r["open"]) == 4
+    assert sum(r["amount"] for r in rows if r["location_id"] == 2 and not r["open"]) == 4
     assert all(r["price"] == 2.5 for r in rows)
-    assert all(r["shopping_location_id"] == store and r["note"] == "Keep this batch" for r in rows)
+    assert all(r["shopping_location_id"] is None and r["note"] == "Keep this batch" for r in rows)
 
 
 def test_missing_ingredients_do_not_duplicate_shopping_quantities(

@@ -9,10 +9,12 @@ CONTRACT = Path(__file__).resolve().parents[3] / "contracts" / "grocy.openapi.js
 def test_contract_entities_and_derived_records(client: TestClient, api_headers: dict):
     spec = json.loads(CONTRACT.read_text())
     entities = spec["components"]["schemas"]["ExposedEntity"]["enum"]
+    no_listing = spec["components"]["schemas"]["ExposedEntityNoListing"]["enum"]
     for entity in entities:
         response = client.get(f"/api/objects/{entity}", headers=api_headers)
-        assert response.status_code == 200, entity
-        assert isinstance(response.json(), list), entity
+        assert response.status_code == (400 if entity in no_listing else 200), entity
+        if entity not in no_listing:
+            assert isinstance(response.json(), list), entity
     bought = client.post(
         "/api/stock/products/1/add",
         headers=api_headers,
@@ -102,7 +104,8 @@ def test_tare_weight_and_open_undo_preserve_stock(client: TestClient, api_header
         client.post(f"/api/stock/bookings/{logs[0]['id']}/undo", headers=api_headers).status_code
         == 204
     )
-    assert client.get("/api/stock/products/1", headers=api_headers).json()["stock_amount"] == 0
+    # Grocy leaves the closed split after undo of its original purchase.
+    assert client.get("/api/stock/products/1", headers=api_headers).json()["stock_amount"] == 3
 
 
 def test_calculated_due_status_uses_each_users_settings(client: TestClient, api_headers: dict):

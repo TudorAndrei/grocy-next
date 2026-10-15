@@ -72,7 +72,7 @@ class Product(Base, TimestampMixin):
     not_check_stock_fulfillment_for_recipes: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
-    treat_opened_as_out_of_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    treat_opened_as_out_of_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     auto_reprint_stock_label: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     no_own_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     should_not_be_frozen: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -84,7 +84,7 @@ class Product(Base, TimestampMixin):
     default_best_before_days_after_thawing: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
-    calories: Mapped[int | None] = mapped_column(Integer)
+    calories: Mapped[float | None] = mapped_column(Integer)
     cumulate_min_stock_amount_of_sub_products: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -113,35 +113,84 @@ class ShoppingService:
             )
         return missing
 
-    async def add_missing_products(self, *, shopping_list_id: int = 1) -> None:
+    async def add_missing_products(self, *, shopping_list_id: int = 1, commit: bool = True) -> None:
         from grocy.domains.stock.service import StockService
 
         await self._ensure_list(shopping_list_id)
-        stock = StockService(self.session)
-        volatile = await stock.volatile()
-        for item in volatile["missing_products"]:
-            amount = Decimal(str(item["amount_missing"]))
-            await self.ensure_item(item["id"], amount, shopping_list_id=shopping_list_id)
+        volatile = await StockService(self.session).volatile()
+        for missing in volatile["missing_products"]:
+            product = await self.products.get(missing["id"])
+            amount = Decimal(str(missing["amount_missing"])).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            item = await self.session.scalar(
+                select(ShoppingListItem)
+                .where(ShoppingListItem.product_id == product.id)
+                .order_by(ShoppingListItem.id)
+                .limit(1)
+            )
+            if item is None:
+                self.session.add(
+                    ShoppingListItem(
+                        product_id=product.id,
+                        amount=amount,
+                        qu_id=product.qu_id_purchase,
+                        shopping_list_id=shopping_list_id,
+                    )
+                )
+            elif item.amount < amount:
+                item.amount = amount
+                item.shopping_list_id = shopping_list_id
+        await self.session.flush()
+        if commit:
+            await self.session.commit()
+
+    async def auto_add_missing(self) -> None:
+        from grocy.compatibility import client_defaults
+        from grocy.db.models.settings import UserSetting
+
+        user_id = self.session.info.get("actor_user_id", 1)
+        stored = (
+            await self.session.scalars(select(UserSetting).where(UserSetting.user_id == user_id))
+        ).all()
+        settings = {**client_defaults()["user_settings"], **{row.key: row.value for row in stored}}
+        enabled = settings.get("shopping_list_auto_add_below_min_stock_amount")
+        if enabled and enabled != "0":
+            await self.add_missing_products(
+                shopping_list_id=int(
+                    settings["shopping_list_auto_add_below_min_stock_amount_list_id"]
+                ),
+                commit=False,
+            )
 
     async def add_overdue_products(self, *, shopping_list_id: int = 1) -> None:
-        from grocy.domains.stock.service import StockService
-
-        await self._ensure_list(shopping_list_id)
-        stock = StockService(self.session)
-        volatile = await stock.volatile()
-        for row in volatile["overdue_products"]:
-            product_id = row["product_id"]
-            await self.ensure_item(product_id, Decimal("1"), shopping_list_id=shopping_list_id)
+        await self._add_due_products("overdue_products", shopping_list_id)
 
     async def add_expired_products(self, *, shopping_list_id: int = 1) -> None:
+        await self._add_due_products("expired_products", shopping_list_id)
+
+    async def _add_due_products(self, key: str, shopping_list_id: int) -> None:
         from grocy.domains.stock.service import StockService
 
         await self._ensure_list(shopping_list_id)
-        stock = StockService(self.session)
-        volatile = await stock.volatile()
-        for row in volatile["expired_products"]:
-            product_id = row["product_id"]
-            await self.ensure_item(product_id, Decimal("1"), shopping_list_id=shopping_list_id)
+        volatile = await StockService(self.session).volatile()
+        for row in volatile[key]:
+            product = await self.products.get(row["product_id"])
+            existing = await self.session.scalar(
+                select(ShoppingListItem.id)
+                .where(ShoppingListItem.product_id == product.id)
+                .limit(1)
+            )
+            if existing is None:
+                self.session.add(
+                    ShoppingListItem(
+                        product_id=product.id,
+                        amount=Decimal("1"),
+                        qu_id=product.qu_id_purchase,
+                        shopping_list_id=shopping_list_id,
+                    )
+                )
+        await self.session.commit()
 
     async def clear_list(
         self,
@@ -167,18 +216,33 @@ class ShoppingService:
     ) -> None:
         await self._ensure_list(shopping_list_id)
         product = await self.products.get(product_id)
-        if qu_id is not None:
-            from grocy.domains.units.service import UnitsService
-
-            amount = await UnitsService(self.session).convert(
-                amount, qu_id, product.qu_id_stock, product_id=product_id
+        if not product.active:
+            raise GrocyError("Product is inactive")
+        if not amount.is_finite() or amount <= 0:
+            raise GrocyError("Amount must be positive", code="invalid_amount")
+        item = await self.session.scalar(
+            select(ShoppingListItem)
+            .where(
+                ShoppingListItem.product_id == product_id,
+                ShoppingListItem.shopping_list_id == shopping_list_id,
             )
-        await self._upsert_item(
-            product_id,
-            amount,
-            shopping_list_id=shopping_list_id,
-            note=note,
+            .order_by(ShoppingListItem.id)
+            .limit(1)
         )
+        if item is None:
+            self.session.add(
+                ShoppingListItem(
+                    product_id=product_id,
+                    amount=amount,
+                    qu_id=product.qu_id_purchase if qu_id in (None, -1) else qu_id,
+                    shopping_list_id=shopping_list_id,
+                    note=note,
+                )
+            )
+        else:
+            item.amount += amount
+            item.note = note
+        await self.session.commit()
 
     async def remove_product(
         self,
@@ -188,16 +252,30 @@ class ShoppingService:
         shopping_list_id: int = 1,
     ) -> None:
         await self._ensure_list(shopping_list_id)
-        stmt = select(ShoppingListItem).where(
-            ShoppingListItem.shopping_list_id == shopping_list_id,
-            ShoppingListItem.product_id == product_id,
+        stmt = (
+            select(ShoppingListItem)
+            .where(
+                ShoppingListItem.product_id == product_id,
+            )
+            .order_by(ShoppingListItem.id)
         )
         item = (await self.session.execute(stmt)).scalars().first()
         if item is None:
             await self.session.commit()
             return
+        from grocy.compatibility import client_defaults
+        from grocy.db.models.settings import UserSetting
+
+        precision = await self.session.scalar(
+            select(UserSetting.value).where(
+                UserSetting.user_id == self.session.info.get("actor_user_id", 1),
+                UserSetting.key == "stock_decimal_places_amounts",
+            )
+        )
+        if precision is None:
+            precision = client_defaults()["user_settings"]["stock_decimal_places_amounts"]
         item.amount -= amount
-        if item.amount <= 0:
+        if item.amount < Decimal("10") ** -max(1, int(precision)):
             await self.session.delete(item)
         await self.session.commit()
 
@@ -228,6 +306,7 @@ class ShoppingService:
                 amount=amount,
                 shopping_list_id=shopping_list_id,
                 note=note,
+                qu_id=(await self.products.get(product_id)).qu_id_stock,
             )
             self.session.add(item)
         else:

@@ -13,6 +13,7 @@ from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
 from grocy.domains.household.service import HouseholdService
 from grocy.domains.shopping.service import ShoppingService
+from grocy.domains.stock.service import StockService
 
 router = APIRouter(tags=["print"])
 
@@ -32,13 +33,17 @@ async def label(session: DbSession, entity: str, object_id: int) -> dict[str, An
         details = await HouseholdService(session).get_chore(object_id)
     elif entity == "batteries":
         details = await HouseholdService(session).get_battery(object_id)
-    if entity == "stock":
-        product = await GenericObjectsService(session).get_entity("products", product_id)
-        name = product["name"]
+    stock_entry = details if entity == "stock" else None
+    if entity in {"stock", "products"}:
+        details = await StockService(session).product_details(product_id)
+        name = details["product"]["name"]
     grocycode = f"grcy:{code}:{product_id}"
-    if entity == "stock":
-        grocycode += f":{details['stock_id']}"
+    if stock_entry is not None:
+        grocycode += f":{stock_entry['stock_id']}"
     payload = {kind: name, "grocycode": grocycode, "details": details}
+    if stock_entry:
+        payload["stock_entry"] = stock_entry
+        payload["due_date"] = f"DD: {stock_entry['best_before_date']}"
     webhook = get_settings().label_printer_webhook
     if webhook:
         try:

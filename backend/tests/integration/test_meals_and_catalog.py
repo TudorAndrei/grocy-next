@@ -105,7 +105,7 @@ def test_print_output_and_equipment_roundtrip(client: TestClient, api_headers: d
     assert printed.json()["result"] == "READY"
 
 
-def test_stock_label_modes_preserve_amounts_and_send_entry_codes(
+def test_stock_label_modes_follow_runtime_amounts_and_send_entry_codes(
     client: TestClient, api_headers: dict, monkeypatch
 ):
     from grocy.core.config import get_settings
@@ -124,32 +124,36 @@ def test_stock_label_modes_preserve_amounts_and_send_entry_codes(
     )
     monkeypatch.setattr(get_settings(), "label_printer_webhook", "https://printer.example/labels")
     client.headers.update(api_headers)
-    response = client.post("/api/stock/products/1/add", json={"amount": 2.5, "stock_label_type": 3})
+    response = client.post("/api/stock/products/1/add", json={"amount": 2.5, "stock_label_type": 2})
     assert response.status_code == 200
     bookings = response.json()
-    assert [row["amount"] for row in bookings] == [1, 1, 0.5]
+    assert [row["amount"] for row in bookings] == [1, 1]
     assert len({row["transaction_id"] for row in bookings}) == 1
     assert [payload["grocycode"] for payload in sent] == [
         f"grcy:p:1:{row['stock_id']}" for row in bookings
     ]
-    assert [payload["details"]["amount"] for payload in sent] == [1, 1, 0.5]
-    assert client.get("/api/stock/products/1").json()["stock_amount"] == 2.5
+    assert [payload["stock_entry"]["amount"] for payload in sent] == [1, 1]
+    assert client.get("/api/stock/products/1").json()["stock_amount"] == 2
     assert (
         client.post(f"/api/stock/transactions/{bookings[0]['transaction_id']}/undo").status_code
         == 204
     )
     assert client.get("/api/stock/products/1").json()["stock_amount"] == 0
     sent.clear()
-    for mode in (1, 2):
+    for mode in (0, 1):
         assert (
             client.post(
                 "/api/stock/products/1/inventory",
-                json={"new_amount": mode, "stock_label_type": mode, "purchased_date": "2026-01-01"},
+                json={
+                    "new_amount": mode + 1,
+                    "stock_label_type": mode,
+                    "purchased_date": "2026-01-01",
+                },
             ).status_code
             == 200
         )
     assert len(sent) == 1
-    assert sent[0]["details"]["purchased_date"] == "2026-01-01"
+    assert sent[0]["stock_entry"]["purchased_date"] == "2026-01-01"
 
 
 def test_thermal_printer_device_receives_output(

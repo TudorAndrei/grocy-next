@@ -1,0 +1,537 @@
+"""Public workflows checked against both implementations of the pinned Grocy API."""
+
+import os
+from uuid import uuid4
+
+import httpx
+import pytest
+
+
+@pytest.fixture(params=["local", "php"])
+def api(request, client, api_headers):
+    if request.param == "local":
+        client.headers.update(api_headers)
+        yield client
+        return
+    url = os.getenv("GROCY_REFERENCE_URL")
+    if not url:
+        pytest.skip("Set GROCY_REFERENCE_URL for PHP comparison")
+    if os.getenv("GROCY_REFERENCE_DISPOSABLE") != "1":
+        pytest.fail("The reference database must be disposable")
+    with httpx.Client(
+        base_url=url,
+        headers={"GROCY-API-KEY": os.environ["GROCY_REFERENCE_API_KEY"]},
+        timeout=15,
+    ) as reference:
+        assert reference.get("/api/system/info").json()["grocy_version"]["Version"] == "4.5.0"
+        yield reference
+
+
+def create(api, resource, **fields):
+    response = api.post(f"/api/objects/{resource}", json=fields)
+    assert response.status_code == 200, response.text
+    return int(response.json()["created_object_id"])
+
+
+def rows(api, entity, **filters):
+    response = api.get(
+        f"/api/objects/{entity}",
+        params=[("query[]", f"{key}={value}") for key, value in filters.items()],
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+@pytest.fixture
+def catalog(api):
+    name = f"Parity {uuid4().hex}"
+    unit = create(api, "quantity_units", name=name)
+    other = create(api, "quantity_units", name=name + " small")
+    location = create(api, "locations", name=name)
+    product = create(
+        api, "products", name=name, location_id=location, qu_id_stock=unit, qu_id_purchase=unit
+    )
+    return product, unit, other, location
+
+
+def test_stock_unit_change_converts_history_and_undo(api, catalog):
+    product, unit, other, _ = catalog
+    create(api, "quantity_unit_conversions", from_qu_id=unit, to_qu_id=other, factor=10)
+    base = f"/api/stock/products/{product}"
+    assert api.post(base + "/add", json={"amount": 2, "price": 4}).status_code == 200
+    used = api.post(base + "/consume", json={"amount": 1})
+    assert used.status_code == 200, used.text
+    assert (
+        api.put(f"/api/objects/products/{product}", json={"qu_id_stock": other}).status_code == 204
+    )
+    details = api.get(base).json()
+    assert details["stock_amount"] == 10
+    assert details["last_price"] == pytest.approx(0.4)
+    logs = rows(api, "stock_log", product_id=product)
+    assert sorted(log["amount"] for log in logs) == [-10, 20]
+    assert api.post(f"/api/stock/bookings/{used.json()[0]['id']}/undo").status_code == 204
+    entries = api.get(base + "/entries").json()
+    assert sum(row["amount"] for row in entries) == 20
+    assert all(row["price"] == pytest.approx(0.4) for row in entries)
+
+
+def test_stock_unit_change_requires_conversion_after_purchase(api, catalog):
+    product, unit, other, _ = catalog
+    base = f"/api/stock/products/{product}"
+    assert api.post(base + "/add", json={"amount": 2}).status_code == 200
+    response = api.put(f"/api/objects/products/{product}", json={"qu_id_stock": other})
+    assert response.status_code == 400, response.text
+    assert api.get(f"/api/objects/products/{product}").json()["qu_id_stock"] == unit
+    assert api.get(base).json()["stock_amount"] == 2
+
+
+def test_conversion_inverse_tracks_edits_and_delete(api, catalog):
+    _, unit, other, _ = catalog
+    conversion = create(
+        api, "quantity_unit_conversions", from_qu_id=unit, to_qu_id=other, factor=10
+    )
+    inverse = rows(api, "quantity_unit_conversions", from_qu_id=other, to_qu_id=unit)
+    assert len(inverse) == 1
+    assert inverse[0]["factor"] == pytest.approx(0.1)
+    assert (
+        api.put(
+            f"/api/objects/quantity_unit_conversions/{conversion}", json={"factor": 4}
+        ).status_code
+        == 204
+    )
+    assert rows(api, "quantity_unit_conversions", from_qu_id=other, to_qu_id=unit)[0][
+        "factor"
+    ] == pytest.approx(0.25)
+    assert api.delete(f"/api/objects/quantity_unit_conversions/{conversion}").status_code == 204
+    assert rows(api, "quantity_unit_conversions", from_qu_id=other, to_qu_id=unit) == []
+
+
+def test_catalog_defaults_and_zero_shopping_amount(api, catalog):
+    product, unit, _, _ = catalog
+    assert api.get(f"/api/objects/products/{product}").json()["treat_opened_as_out_of_stock"] == 1
+    barcode = create(api, "product_barcodes", product_id=product, barcode=uuid4().hex)
+    assert api.get(f"/api/objects/product_barcodes/{barcode}").json()["qu_id"] == unit
+    recipe = create(api, "recipes", name=uuid4().hex)
+    ingredient = create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2)
+    assert api.get(f"/api/objects/recipes_pos/{ingredient}").json()["qu_id"] == unit
+    item = create(api, "shopping_list", product_id=product, amount=0)
+    assert api.get(f"/api/objects/shopping_list/{item}").json()["qu_id"] == unit
+
+
+def test_delete_product_cascades_current_records(api, catalog):
+    product, unit, _, _ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex, product_id=product)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2, qu_id=unit)
+    create(api, "product_barcodes", product_id=product, barcode=uuid4().hex)
+    create(api, "shopping_list", product_id=product, amount=1)
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 2}).status_code == 200
+    assert api.delete(f"/api/objects/products/{product}").status_code == 204
+    assert api.get(f"/api/objects/recipes/{recipe}").json()["product_id"] is None
+    for entity in ("stock", "stock_log", "product_barcodes", "shopping_list", "recipes_pos"):
+        assert rows(api, entity, product_id=product) == []
+
+
+def test_meal_plan_internal_recipes_follow_servings(api, catalog):
+    product, unit, _, _ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex, base_servings=2)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=6, qu_id=unit)
+    day = "2036-03-17"
+    entry = create(api, "meal_plan", day=day, type="recipe", recipe_id=recipe, recipe_servings=4)
+    day_recipes = rows(api, "recipes", name=day, type="mealplan-day")
+    assert len(day_recipes) == 1
+    resolved = rows(api, "recipes_pos_resolved", recipe_id=day_recipes[0]["id"])
+    assert resolved[0]["recipe_amount"] == 12
+    shadow = rows(api, "recipes", name=f"{day}#{entry}", type="mealplan-shadow")
+    assert len(shadow) == 1
+    assert (
+        api.put(f"/api/objects/recipes/{recipe}", json={"product_id": product}).status_code == 204
+    )
+    assert api.post(f"/api/recipes/{shadow[0]['id']}/consume").status_code == 204
+    assert api.get(f"/api/stock/products/{product}").json()["stock_amount"] == 4
+    assert (
+        api.put(f"/api/objects/meal_plan/{entry}", json={"recipe_servings": 2}).status_code == 204
+    )
+    day_recipe = rows(api, "recipes", name=day, type="mealplan-day")[0]
+    assert rows(api, "recipes_pos_resolved", recipe_id=day_recipe["id"])[0]["recipe_amount"] == 6
+    assert api.delete(f"/api/objects/meal_plan/{entry}").status_code == 204
+    day_recipe = rows(api, "recipes", name=day, type="mealplan-day")[0]
+    assert rows(api, "recipes_pos_resolved", recipe_id=day_recipe["id"]) == []
+
+
+def test_recipe_shopping_excludes_supplied_product_ids(api, catalog):
+    product, unit, _, location = catalog
+    other_product = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    recipe = create(api, "recipes", name=uuid4().hex)
+    for product_id in (product, other_product):
+        create(api, "recipes_pos", recipe_id=recipe, product_id=product_id, amount=2, qu_id=unit)
+    response = api.post(
+        f"/api/recipes/{recipe}/add-not-fulfilled-products-to-shoppinglist",
+        json={"excludedProductIds": [product]},
+    )
+    assert response.status_code == 204, response.text
+    assert rows(api, "shopping_list", product_id=product) == []
+    assert rows(api, "shopping_list", product_id=other_product)[0]["amount"] == 2
+
+
+def test_inventory_increase_uses_last_price_and_store(api, catalog):
+    product, _, _, _ = catalog
+    store = create(api, "shopping_locations", name=uuid4().hex)
+    base = f"/api/stock/products/{product}"
+    assert (
+        api.post(
+            base + "/add", json={"amount": 2, "price": 3, "shopping_location_id": store}
+        ).status_code
+        == 200
+    )
+    inventory = api.post(base + "/inventory", json={"new_amount": 4})
+    assert inventory.status_code == 200, inventory.text
+    assert inventory.json()[0]["price"] == 3
+    assert inventory.json()[0]["shopping_location_id"] == store
+
+
+def test_stock_entry_label_has_product_details_and_entry(api, catalog):
+    product, _, _, _ = catalog
+    base = f"/api/stock/products/{product}"
+    assert (
+        api.post(base + "/add", json={"amount": 2, "best_before_date": "2036-01-01"}).status_code
+        == 200
+    )
+    entry = api.get(base + "/entries").json()[0]
+    label = api.get(f"/api/stock/entry/{entry['id']}/printlabel").json()
+    assert label["details"]["product"]["id"] == product
+    assert label["stock_entry"]["stock_id"] == entry["stock_id"]
+    assert label["due_date"] == "DD: 2036-01-01"
+
+
+def test_recipe_fulfillment_has_costs_calories_and_price_state(api, catalog):
+    product, unit, _, _ = catalog
+    assert api.put(f"/api/objects/products/{product}", json={"calories": 80}).status_code == 204
+    assert (
+        api.post(f"/api/stock/products/{product}/add", json={"amount": 3, "price": 2}).status_code
+        == 200
+    )
+    recipe = create(api, "recipes", name=uuid4().hex, base_servings=2)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2, qu_id=unit)
+    response = api.get(f"/api/recipes/{recipe}/fulfillment")
+    assert response.status_code == 200
+    result = response.json()
+    assert result["costs_per_serving"] == 2
+    assert result["calories"] == 80
+    assert result["prices_incomplete"] == 0
+    assert result["need_fulfilled"] == 1
+    assert (
+        result["product_names_comma_separated"]
+        == api.get(f"/api/objects/products/{product}").json()["name"]
+    )
+
+
+def test_shopping_api_preserves_the_requested_unit(api, catalog):
+    product, unit, other, _ = catalog
+    create(
+        api,
+        "quantity_unit_conversions",
+        product_id=product,
+        from_qu_id=other,
+        to_qu_id=unit,
+        factor=10,
+    )
+    assert (
+        api.put(f"/api/objects/products/{product}", json={"qu_id_purchase": other}).status_code
+        == 204
+    )
+    body = {"product_id": product, "product_amount": 2, "note": "first"}
+    assert api.post("/api/stock/shoppinglist/add-product", json=body).status_code == 204
+    item = rows(api, "shopping_list", product_id=product)[0]
+    assert (item["amount"], item["qu_id"]) == (2, other)
+    assert (
+        api.post(
+            "/api/stock/shoppinglist/add-product", json={"product_id": product, "product_amount": 1}
+        ).status_code
+        == 204
+    )
+    item = rows(api, "shopping_list", product_id=product)[0]
+    assert item["amount"] == 3
+    assert item["note"] is None
+
+
+def test_minimum_stock_setting_adds_shopping_after_consumption(api, catalog):
+    product, unit, _, _ = catalog
+    shopping_list = create(api, "shopping_lists", name=uuid4().hex)
+    settings = {
+        "shopping_list_auto_add_below_min_stock_amount": True,
+        "shopping_list_auto_add_below_min_stock_amount_list_id": shopping_list,
+    }
+    for key, value in settings.items():
+        assert api.put(f"/api/user/settings/{key}", json={"value": value}).status_code == 204
+    try:
+        assert api.post(f"/api/stock/products/{product}/add", json={"amount": 3}).status_code == 200
+        assert (
+            api.put(f"/api/objects/products/{product}", json={"min_stock_amount": 2}).status_code
+            == 204
+        )
+        assert (
+            api.post(f"/api/stock/products/{product}/consume", json={"amount": 2}).status_code
+            == 200
+        )
+        item = rows(api, "shopping_list", product_id=product)[0]
+        assert (item["amount"], item["qu_id"], item["shopping_list_id"]) == (1, unit, shopping_list)
+        assert (
+            api.post(f"/api/stock/products/{product}/consume", json={"amount": 1}).status_code
+            == 200
+        )
+        assert rows(api, "shopping_list", product_id=product)[0]["amount"] == 2
+    finally:
+        for key in settings:
+            assert api.delete(f"/api/user/settings/{key}").status_code == 204
+
+
+def test_merge_products_converts_quantities_and_output_references(api, catalog):
+    product, unit, other, location = catalog
+    keep = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=other,
+        qu_id_purchase=other,
+    )
+    create(
+        api,
+        "quantity_unit_conversions",
+        product_id=product,
+        from_qu_id=unit,
+        to_qu_id=other,
+        factor=10,
+    )
+    recipe = create(api, "recipes", name=uuid4().hex, product_id=product)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=2, qu_id=unit)
+    assert (
+        api.post(f"/api/stock/products/{product}/add", json={"amount": 2, "price": 4}).status_code
+        == 200
+    )
+    merged = api.post(f"/api/stock/products/{keep}/merge/{product}")
+    assert merged.status_code == 204, merged.text
+    assert api.get(f"/api/stock/products/{keep}").json()["stock_amount"] == 20
+    assert api.get(f"/api/objects/recipes/{recipe}").json()["product_id"] == keep
+    assert rows(api, "recipes_pos", recipe_id=recipe)[0]["amount"] == 20
+
+
+def test_presence_only_recipe_keeps_an_unrelated_shopping_unit(api, catalog):
+    product, unit, other, location = catalog
+    recipe = create(api, "recipes", name=uuid4().hex)
+    create(
+        api,
+        "recipes_pos",
+        recipe_id=recipe,
+        product_id=product,
+        amount=2,
+        qu_id=other,
+        only_check_single_unit_in_stock=1,
+    )
+    response = api.post(
+        f"/api/recipes/{recipe}/add-not-fulfilled-products-to-shoppinglist", json={}
+    )
+    assert response.status_code == 204, response.text
+    item = rows(api, "shopping_list", product_id=product)[0]
+    assert (item["amount"], item["qu_id"]) == (2, other)
+    second_product = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=other,
+    )
+    conversions = rows(api, "quantity_unit_conversions", product_id=second_product)
+    assert {(row["from_qu_id"], row["to_qu_id"]) for row in conversions} == {
+        (unit, other),
+        (other, unit),
+    }
+
+
+def test_inventory_counts_all_locations_and_rejects_an_unchanged_count(api, catalog):
+    product, _, _, location = catalog
+    second = create(api, "locations", name=uuid4().hex)
+    base = f"/api/stock/products/{product}"
+    for place, amount in ((location, 5), (second, 3)):
+        assert (
+            api.post(base + "/add", json={"amount": amount, "location_id": place}).status_code
+            == 200
+        )
+    assert (
+        api.post(base + "/inventory", json={"new_amount": 2, "location_id": location}).status_code
+        == 200
+    )
+    assert api.get(base).json()["stock_amount"] == 2
+    assert api.post(base + "/inventory", json={"new_amount": 2}).status_code == 400
+
+
+def test_shopping_removal_uses_the_configured_decimal_threshold(api, catalog):
+    product, unit, _, _ = catalog
+    item = create(api, "shopping_list", product_id=product, amount=1.005, qu_id=unit)
+    assert (
+        api.put("/api/user/settings/stock_decimal_places_amounts", json={"value": 2}).status_code
+        == 204
+    )
+    try:
+        assert (
+            api.post(
+                "/api/stock/shoppinglist/remove-product",
+                json={"product_id": product, "product_amount": 1},
+            ).status_code
+            == 204
+        )
+        assert api.get(f"/api/objects/shopping_list/{item}").status_code == 404
+    finally:
+        assert api.delete("/api/user/settings/stock_decimal_places_amounts").status_code == 204
+
+
+def test_child_stock_locations_keep_each_product_id(api, catalog):
+    product, unit, _, location = catalog
+    child = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+        parent_product_id=product,
+    )
+    for identifier, amount in ((product, 2), (child, 3)):
+        assert (
+            api.post(f"/api/stock/products/{identifier}/add", json={"amount": amount}).status_code
+            == 200
+        )
+    response = api.get(
+        f"/api/stock/products/{product}/locations", params={"include_sub_products": True}
+    )
+    assert response.status_code == 200
+    assert sorted((row["product_id"], row["amount"]) for row in response.json()) == [
+        (product, 2),
+        (child, 3),
+    ]
+
+
+def test_equivalent_purchases_compact_and_follow_reference_undo(api, catalog):
+    product, _, _, _ = catalog
+    base = f"/api/stock/products/{product}"
+    bookings = []
+    for amount in (2, 3):
+        response = api.post(
+            base + "/add",
+            json={"amount": amount, "price": 2, "best_before_date": "2037-01-01", "note": "{"},
+        )
+        assert response.status_code == 200, response.text
+        bookings.append(response.json()[0]["id"])
+    entries = api.get(base + "/entries").json()
+    assert len(entries) == 1
+    assert entries[0]["amount"] == 5
+    logs = rows(api, "stock_log", product_id=product)
+    assert len({row["stock_id"] for row in logs}) == 1
+    for booking, expected in zip(reversed(bookings), (0, 0), strict=True):
+        assert api.post(f"/api/stock/bookings/{booking}/undo").status_code == 204
+        assert api.get(base).json()["stock_amount"] == expected
+
+
+def test_stock_custom_fields_use_booking_transactions_and_prevent_compaction(api, catalog):
+    product, _, _, _ = catalog
+    field = "batch_" + uuid4().hex
+    create(api, "userfields", entity="stock", name=field, caption="Batch", type="text-single-line")
+    base = f"/api/stock/products/{product}"
+    body = {"amount": 2, "price": 2, "best_before_date": "2037-02-01"}
+    purchase = api.post(base + "/add", json=body)
+    assert purchase.status_code == 200
+    entry = api.get(base + "/entries").json()[0]
+    path = f"/api/userfields/stock/{entry['stock_id']}"
+    response = api.put(
+        f"/api/userfields/stock/{purchase.json()[0]['transaction_id']}", json={field: "Batch A"}
+    )
+    assert response.status_code == 204, response.text
+    assert api.get(path).json() == {field: "Batch A"}
+    assert api.post(base + "/add", json=body).status_code == 200
+    assert len(api.get(base + "/entries").json()) == 2
+    stored = api.get(f"/api/objects/stock/{entry['id']}").json()
+    assert stored["userfields"] == {field: "Batch A"}
+
+
+@pytest.mark.parametrize(("mode", "amounts"), [(0, [2.5]), (1, [2.5]), (2, [1, 1])])
+def test_stock_labels_follow_php_modes_and_fractional_amounts(api, catalog, mode, amounts):
+    product, _, _, _ = catalog
+    response = api.post(
+        f"/api/stock/products/{product}/add", json={"amount": 2.5, "stock_label_type": mode}
+    )
+    assert response.status_code == 200, response.text
+    assert [row["amount"] for row in response.json()] == amounts
+    assert api.get(f"/api/stock/products/{product}").json()["stock_amount"] == sum(amounts)
+
+
+def test_full_transfer_undo_uses_grocy_default_location_and_open_state(api, catalog):
+    product, _, _, default_location = catalog
+    source = create(api, "locations", name=uuid4().hex)
+    store = create(api, "shopping_locations", name=uuid4().hex)
+    base = f"/api/stock/products/{product}"
+    assert (
+        api.post(
+            base + "/add", json={"amount": 3, "location_id": source, "shopping_location_id": store}
+        ).status_code
+        == 200
+    )
+    assert api.post(base + "/open", json={"amount": 3}).status_code == 200
+    transfer = api.post(
+        base + "/transfer",
+        json={"amount": 3, "location_id_from": source, "location_id_to": default_location},
+    )
+    assert transfer.status_code == 200
+    assert api.post(f"/api/stock/bookings/{transfer.json()[0]['id']}/undo").status_code == 204
+    entry = api.get(base + "/entries").json()[0]
+    assert (
+        entry["amount"],
+        entry["location_id"],
+        entry["open"],
+        entry["shopping_location_id"],
+    ) == (3, default_location, 0, None)
+
+
+def test_recipe_copy_uses_the_grocy_name_and_serving_defaults(api, catalog):
+    product, unit, _, _ = catalog
+    name = uuid4().hex
+    recipe = create(api, "recipes", name=name, base_servings=2)
+    assert (
+        api.put(f"/api/objects/recipes/{recipe}", json={"desired_servings": 6}).status_code == 204
+    )
+    create(
+        api, "recipes_pos", recipe_id=recipe, product_id=product, amount=1.5, qu_id=unit, round_up=1
+    )
+    response = api.post(f"/api/recipes/{recipe}/copy")
+    assert response.status_code == 200
+    copied = response.json()["created_object_id"]
+    row = api.get(f"/api/objects/recipes/{copied}").json()
+    assert row["name"] == f"Copy of {name}"
+    assert row["desired_servings"] == 2
+    ingredient = rows(api, "recipes_pos", recipe_id=copied)[0]
+    assert (ingredient["amount"], ingredient["round_up"]) == (1.5, 0)
+
+
+def test_stock_edit_undo_after_consumption_restores_the_original_amount(api, catalog):
+    product, _, _, _ = catalog
+    base = f"/api/stock/products/{product}"
+    assert api.post(base + "/add", json={"amount": 4, "price": 2}).status_code == 200
+    assert api.post(base + "/consume", json={"amount": 1}).status_code == 200
+    entry = api.get(base + "/entries").json()[0]
+    edited = api.put(
+        f"/api/stock/entry/{entry['id']}",
+        json={"amount": 5, "price": 3, "open": False, "purchased_date": entry["purchased_date"]},
+    )
+    assert edited.status_code == 200, edited.text
+    assert api.post(base + "/consume", json={"amount": 1}).status_code == 200
+    undone = api.post(f"/api/stock/bookings/{edited.json()[0]['id']}/undo")
+    assert undone.status_code == 204, undone.text
+    assert api.get(base).json()["stock_amount"] == 3
+    assert api.get(base + "/entries").json()[0]["price"] == 2

@@ -20,7 +20,7 @@ class ShoppingListItem(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
     note: Mapped[str | None] = mapped_column(Text)
-    amount: Mapped[Decimal] = mapped_column(Numeric(15, 6), nullable=False, default=Decimal("1"))
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 6), nullable=False, default=Decimal("0"))
     shopping_list_id: Mapped[int] = mapped_column(
         ForeignKey("shopping_lists.id"), nullable=False, default=1
     )

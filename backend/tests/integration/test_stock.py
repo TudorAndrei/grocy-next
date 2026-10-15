@@ -85,7 +85,9 @@ def test_purchase_history_keeps_dates_weighted_prices_and_undo(
     assert restored["stock_value"] == 4 * first_price
 
 
-def test_stock_entry_edit_and_dependent_booking_undo(client: TestClient, api_headers: dict):
+def test_stock_entry_edit_undo_follows_correlated_booking_rules(
+    client: TestClient, api_headers: dict
+):
     client.headers.update(api_headers)
     base = "/api/stock/products/1"
     assert (
@@ -112,11 +114,8 @@ def test_stock_entry_edit_and_dependent_booking_undo(client: TestClient, api_hea
     assert [row["price"] for row in bookings] == [2.5, 3.25]
     consumed = client.post(f"{base}/consume", json={"amount": 1})
     assert consumed.status_code == 200
-    blocked = client.post(f"/api/stock/bookings/{bookings[0]['id']}/undo")
-    assert blocked.status_code == 400
-    assert client.get(base).json()["stock_amount"] == 4
-    assert client.post(f"/api/stock/bookings/{consumed.json()[0]['id']}/undo").status_code == 204
-    assert client.post(f"/api/stock/bookings/{bookings[0]['id']}/undo").status_code == 204
+    undone = client.post(f"/api/stock/bookings/{bookings[0]['id']}/undo")
+    assert undone.status_code == 204
     restored = client.get(f"/api/stock/entry/{entry['id']}").json()
     assert (
         restored["amount"],

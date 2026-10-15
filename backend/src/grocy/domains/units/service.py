@@ -57,9 +57,32 @@ class UnitsService:
             product_id=product_id,
         )
         self.session.add(row)
+        await self.session.flush()
+        await self.sync_inverse(row)
         await self.session.commit()
         await self.session.refresh(row)
         return row
+
+    async def sync_inverse(
+        self, row: QuantityUnitConversion, *, previous: tuple[int, int, int | None] | None = None
+    ) -> None:
+        source, target, product_id = previous or (row.from_qu_id, row.to_qu_id, row.product_id)
+        inverse = await self.session.scalar(
+            select(QuantityUnitConversion).where(
+                QuantityUnitConversion.from_qu_id == target,
+                QuantityUnitConversion.to_qu_id == source,
+                QuantityUnitConversion.product_id == product_id,
+                QuantityUnitConversion.id != row.id,
+            )
+        )
+        if inverse is None:
+            inverse = QuantityUnitConversion()
+            self.session.add(inverse)
+        inverse.from_qu_id = row.to_qu_id
+        inverse.to_qu_id = row.from_qu_id
+        inverse.product_id = row.product_id
+        inverse.factor = Decimal("1") / row.factor
+        await self.session.flush()
 
     async def convert(
         self,
@@ -139,15 +162,15 @@ class UnitsService:
                 {"product_id": product.id, "from_id": source, "to_id": product.qu_id_stock},
             )
             if existing is None:
-                self.session.add(
-                    QuantityUnitConversion(
-                        from_qu_id=source,
-                        to_qu_id=product.qu_id_stock,
-                        product_id=product.id,
-                        factor=factor,
-                    )
+                row = QuantityUnitConversion(
+                    from_qu_id=source,
+                    to_qu_id=product.qu_id_stock,
+                    product_id=product.id,
+                    factor=factor,
                 )
+                self.session.add(row)
                 await self.session.flush()
+                await self.sync_inverse(row)
 
     async def _conversion_edges(
         self,

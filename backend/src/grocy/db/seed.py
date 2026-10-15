@@ -10,6 +10,7 @@ from grocy.db.models.recipes import Recipe, RecipePosition
 from grocy.db.models.shopping import ShoppingList
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.db.models.users import ApiKey, User, UserPermission
+from grocy.domains.units.service import UnitsService
 
 
 async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> None:
@@ -36,14 +37,15 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
     milliliter = QuantityUnit(name="Milliliter", name_plural="Milliliters", description="Volume")
     session.add_all([piece, gram, kilogram, milliliter])
     await session.flush()
-    session.add(
-        QuantityUnitConversion(
-            from_qu_id=kilogram.id,
-            to_qu_id=gram.id,
-            factor=Decimal("1000"),
-            product_id=None,
-        )
+    conversion = QuantityUnitConversion(
+        from_qu_id=kilogram.id,
+        to_qu_id=gram.id,
+        factor=Decimal("1000"),
+        product_id=None,
     )
+    session.add(conversion)
+    await session.flush()
+    await UnitsService(session).sync_inverse(conversion)
 
     pantry = Location(name="Pantry", description="Dry goods")
     fridge = Location(name="Fridge", description="Cold storage")

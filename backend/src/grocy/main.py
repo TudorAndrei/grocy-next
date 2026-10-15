@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from grocy import __version__
@@ -12,8 +13,10 @@ from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
+from grocy.db.models.mealplan import MealPlanEntry
 from grocy.db.seed import seed_if_empty
 from grocy.db.session import configure_sqlite, get_engine, get_session_factory, upgrade_schema
+from grocy.domains.recipes.mealplan import sync_meal_plan_recipes
 
 
 @asynccontextmanager
@@ -30,6 +33,12 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
         factory = get_session_factory(settings)
         async with factory() as session:
             await seed_if_empty(session, api_key=settings.dev_open_api_key)
+    if settings.auto_create_schema:
+        async with get_session_factory(settings)() as session:
+            days = (await session.scalars(select(MealPlanEntry.day).distinct())).all()
+            if days:
+                await sync_meal_plan_recipes(session, *days)
+                await session.commit()
     yield
     await engine.dispose()
 

@@ -11,6 +11,10 @@ from grocy.core.deps import RecipesSvc
 router = APIRouter(tags=["recipes"])
 
 
+class RecipeShoppingBody(BaseModel):
+    excludedProductIds: list[int] = Field(default_factory=list)
+
+
 class RecipeCreateBody(BaseModel):
     name: str
     description: str | None = None
@@ -54,9 +58,14 @@ async def recipe_add_missing(
     recipe_id: int,
     _actor: CurrentActor,
     recipes: RecipesSvc,
+    body: RecipeShoppingBody | None = None,
     servings: Annotated[Decimal | None, Query()] = None,
 ) -> Response:
-    await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+    await recipes.add_missing_to_shopping_list(
+        recipe_id,
+        servings=servings,
+        excluded_product_ids=body.excludedProductIds if body else None,
+    )
     return Response(status_code=204)
 
 
