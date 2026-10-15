@@ -19,6 +19,7 @@ from grocy.db.models.shopping import ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.domains.products.service import ProductsService
+from grocy.domains.stock.history import StockHistory
 
 
 class StockService:
@@ -81,6 +82,7 @@ class StockService:
         amount: Decimal,
         *,
         best_before_date: date | None = None,
+        purchased_date: date | None = None,
         price: Decimal | None = None,
         location_id: int | None = None,
         shopping_location_id: int | None = None,
@@ -90,7 +92,7 @@ class StockService:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get(product_id)
-        if transaction_type not in {"purchase", "inventory-correction"}:
+        if transaction_type not in {"purchase", "inventory-correction", "self-production"}:
             raise GrocyError("Invalid purchase transaction type")
         if product.enable_tare_weight_handling:
             amount -= await self.products.stock_amount(product_id) + product.tare_weight
@@ -110,7 +112,7 @@ class StockService:
             product_id=product.id,
             amount=amount,
             best_before_date=best_before_date,
-            purchased_date=date.today(),
+            purchased_date=purchased_date or date.today(),
             stock_id=stock_id,
             price=price,
             location_id=location_id or product.location_id,
@@ -126,7 +128,7 @@ class StockService:
             transaction_type=transaction_type,
             stock_id=stock_id,
             best_before_date=best_before_date,
-            purchased_date=date.today(),
+            purchased_date=purchased_date or date.today(),
             price=price,
             location_id=entry.location_id,
             stock_row_id=entry.id,
@@ -570,17 +572,18 @@ class StockService:
         logs = list(
             (
                 await self.session.execute(
-                    select(StockLog)
-                    .where(StockLog.product_id == product_id, StockLog.undone == 0)
-                    .order_by(StockLog.id)
+                    select(StockLog).where(StockLog.product_id == product_id).order_by(StockLog.id)
                 )
             )
             .scalars()
             .all()
         )
-        purchases = [log for log in logs if log.transaction_type == "purchase"]
-        uses = [log for log in logs if log.transaction_type == "consume"]
-        prices = [log.price for log in purchases if log.price is not None]
+        history = StockHistory(logs)
+        last_purchase = history.last.log if history.last else None
+        uses = [log for log in logs if log.transaction_type == "consume" and not log.undone]
+        last_price = history.last_price
+        average_price = history.average_price
+        current_price = entries[0].price if entries and entries[0].price is not None else last_price
         dates = [e.best_before_date for e in entries if e.best_before_date]
         units = {}
         for key, unit_id in [
@@ -605,24 +608,33 @@ class StockService:
             **units,
             "stock_amount_opened": float(opened),
             "stock_amount_aggregated": float(amount),
-            "last_purchased": purchases[-1].purchased_date.isoformat()
-            if purchases and purchases[-1].purchased_date
+            "stock_value": float(
+                sum(
+                    (entry.amount * (entry.price or Decimal("0")) for entry in entries),
+                    Decimal("0"),
+                )
+            ),
+            "stock_amount_opened_aggregated": float(opened),
+            "is_aggregated_amount": False,
+            "last_purchased": last_purchase.purchased_date.isoformat()
+            if last_purchase and last_purchase.purchased_date
             else None,
-            "last_used": uses[-1].used_date.isoformat() if uses and uses[-1].used_date else None,
-            "last_price": float(prices[-1]) if prices else None,
-            "avg_price": float(sum(prices) / len(prices)) if prices else None,
-            "current_price": float(entries[0].price)
-            if entries and entries[0].price is not None
+            "last_used": max((log.used_date for log in uses if log.used_date), default=None),
+            "last_price": float(last_price) if last_price is not None else None,
+            "avg_price": float(average_price) if average_price is not None else None,
+            "current_price": float(current_price) if current_price is not None else None,
+            "oldest_price": float(current_price) if current_price is not None else None,
+            "last_shopping_location_id": last_purchase.shopping_location_id
+            if last_purchase
             else None,
-            "oldest_price": float(prices[0]) if prices else None,
-            "last_shopping_location_id": purchases[-1].shopping_location_id if purchases else None,
+            "default_shopping_location_id": product.shopping_location_id,
             "next_due_date": min(dates).isoformat() if dates else None,
             "location": loc,
             "default_location": loc,
             "has_childs": len(await self.products.child_ids(product_id)) > 1,
             "qu_conversion_factor_purchase_to_stock": float(product.qu_factor_purchase_to_stock),
             "qu_conversion_factor_price_to_stock": 1,
-            "average_shelf_life_days": None,
+            "average_shelf_life_days": history.average_shelf_life,
             "spoil_rate_percent": (
                 100
                 * sum(abs(log.amount) for log in uses if log.spoiled)
@@ -759,11 +771,11 @@ class StockService:
         )
         rows = (await self.session.execute(stmt)).all()
         aggregated: dict[int | None, dict] = {}
-        for location_id, name, is_freezer, amount, entry_id in rows:
+        for location_id, name, is_freezer, amount, _entry_id in rows:
             key = location_id
             if key not in aggregated:
                 aggregated[key] = {
-                    "id": entry_id,
+                    "id": 1,
                     "product_id": product_id,
                     "amount": Decimal("0"),
                     "location_id": location_id,
@@ -779,26 +791,42 @@ class StockService:
         return result
 
     async def price_history(self, product_id: int) -> list[dict]:
+        from grocy.db.models.catalog import ShoppingLocation
+
         await self.products.get(product_id)
-        stmt = (
-            select(StockLog)
-            .where(
-                StockLog.product_id == product_id,
-                StockLog.transaction_type == "purchase",
-                StockLog.price.is_not(None),
-                StockLog.undone == 0,
+        logs = list(
+            (
+                await self.session.execute(
+                    select(StockLog).where(StockLog.product_id == product_id).order_by(StockLog.id)
+                )
             )
-            .order_by(StockLog.row_created_timestamp.desc())
+            .scalars()
+            .all()
         )
-        logs = (await self.session.execute(stmt)).scalars().all()
-        return [
-            {
-                "date": log.row_created_timestamp.isoformat(sep=" ", timespec="seconds"),
-                "price": float(log.price) if log.price is not None else None,
-                "shopping_location": None,
-            }
-            for log in logs
-        ]
+        history = StockHistory(logs)
+        result = []
+        for purchase in history.priced:
+            log = purchase.log
+            store = (
+                await self.session.get(ShoppingLocation, log.shopping_location_id)
+                if log.shopping_location_id
+                else None
+            )
+            result.append(
+                {
+                    "date": log.purchased_date.isoformat() if log.purchased_date else None,
+                    "price": float(log.price) if log.price is not None else None,
+                    "shopping_location": {
+                        "id": store.id,
+                        "name": store.name,
+                        "description": store.description,
+                        "row_created_timestamp": store.row_created_timestamp.isoformat(),
+                    }
+                    if store
+                    else None,
+                }
+            )
+        return result
 
     async def merge_products(self, actor: Actor, keep_id: int, remove_id: int) -> None:
         _ = actor
@@ -991,7 +1019,10 @@ class StockService:
         )
         if raw_snapshot:
             snapshot = json.loads(raw_snapshot).get("before", {})
-        if log.transaction_type in {"purchase", "inventory-correction"} and log.amount > 0:
+        if (
+            log.transaction_type in {"purchase", "inventory-correction", "self-production"}
+            and log.amount > 0
+        ):
             entries = list(
                 (
                     await self.session.execute(

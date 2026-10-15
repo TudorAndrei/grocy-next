@@ -6,10 +6,11 @@ from sqlalchemy import select
 
 from grocy.core.errors import GrocyError
 from grocy.core.permissions import PERMISSIONS
-from grocy.db.models.catalog import ProductBarcode
+from grocy.db.models.catalog import Product, ProductBarcode
 from grocy.db.models.stock import StockLog
 from grocy.domains.products.service import ProductsService
 from grocy.domains.recipes.service import RecipesService
+from grocy.domains.stock.history import StockHistory
 from grocy.domains.stock.service import StockService
 from grocy.domains.units.service import UnitsService
 
@@ -38,42 +39,20 @@ async def list_view(session, entity: str) -> list[dict]:
             result.extend(await stock.product_locations(product.id))
         return result
     if entity in {"products_last_purchased", "products_average_price"}:
-        rows = (
-            (
-                await session.execute(
-                    select(StockLog)
-                    .where(StockLog.transaction_type == "purchase", StockLog.undone == 0)
-                    .order_by(StockLog.id)
-                )
-            )
-            .scalars()
-            .all()
-        )
+        rows = list((await session.execute(select(StockLog).order_by(StockLog.id))).scalars().all())
         grouped: dict[int, list] = {}
         for row in rows:
             grouped.setdefault(row.product_id, []).append(row)
         result = []
         for pid, logs in grouped.items():
-            last = logs[-1]
-            priced = [log for log in logs if log.price is not None]
-            weight = sum((log.amount for log in priced), Decimal("0"))
-            average = (
-                sum((log.amount * log.price for log in priced), Decimal("0")) / weight
-                if weight
-                else None
-            )
-            result.append(
-                {
-                    "id": pid,
-                    "product_id": pid,
-                    "last_purchased": last.purchased_date.isoformat()
-                    if last.purchased_date
-                    else None,
-                    "last_price": float(last.price) if last.price is not None else None,
-                    "last_shopping_location_id": last.shopping_location_id,
-                    "avg_price": float(average) if average is not None else None,
-                }
-            )
+            history = StockHistory(logs)
+            if entity == "products_last_purchased":
+                last = history.last_purchased_row(pid)
+                if last:
+                    result.append(last)
+            elif history.average_price is not None:
+                price = float(history.average_price)
+                result.append({"id": 1, "product_id": pid, "price": price, "avg_price": price})
         return result
     if entity == "product_barcodes_view":
         rows = (
@@ -97,6 +76,20 @@ async def list_view(session, entity: str) -> list[dict]:
                     "shopping_location_id": row.shopping_location_id,
                 }
             )
+        all_products = (await session.execute(select(Product).order_by(Product.id))).scalars().all()
+        result.extend(
+            {
+                "id": product.id,
+                "product_id": product.id,
+                "barcode": f"grcy:p:{product.id}",
+                "qu_id": product.qu_id_stock,
+                "amount": None,
+                "shopping_location_id": None,
+                "last_price": None,
+                "note": None,
+            }
+            for product in all_products
+        )
         return result
     if entity == "recipes_pos_resolved":
         recipes = RecipesService(session)

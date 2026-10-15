@@ -186,3 +186,84 @@ def test_reference_household_schedule_and_tracking(
             states.append((label.json()[kind], label.json()["details"][kind]["name"]))
         snapshots.append(states)
     assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize("first_price", [2, 2.25])
+def test_reference_purchase_prices_and_catalog_views(
+    client: TestClient, api_headers: dict, reference, first_price
+):
+    client.headers.update(api_headers)
+    name = f"Price comparison {uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        store = create(app, "shopping_locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {"name": name, "location_id": location, "qu_id_purchase": unit, "qu_id_stock": unit},
+        )
+        base = f"/api/stock/products/{product}"
+        for body in (
+            {
+                "amount": 4,
+                "price": first_price,
+                "purchased_date": "2027-01-10",
+                "best_before_date": "2027-02-06",
+            },
+            {
+                "amount": 1,
+                "price": 10,
+                "purchased_date": "2027-01-01",
+                "best_before_date": "2027-01-15",
+            },
+        ):
+            result = app.post(f"{base}/add", json={**body, "shopping_location_id": store})
+            assert result.status_code == 200, result.text
+        details = app.get(base).json()
+        states: list[object] = [
+            {
+                key: details[key]
+                for key in (
+                    "last_purchased",
+                    "last_price",
+                    "avg_price",
+                    "current_price",
+                    "oldest_price",
+                    "stock_value",
+                    "average_shelf_life_days",
+                )
+            }
+        ]
+        history = app.get(f"{base}/price-history").json()
+        states.append(
+            [
+                (row["date"], float(row["price"]), row["shopping_location"]["name"])
+                for row in history
+            ]
+        )
+        for entity, keys in (
+            (
+                "products_last_purchased",
+                ("id", "amount", "best_before_date", "purchased_date", "price"),
+            ),
+            ("products_average_price", ("id", "price")),
+            ("stock_current_locations", ("id", "amount", "location_name")),
+        ):
+            rows = app.get(
+                f"/api/objects/{entity}", params={"query[]": f"product_id={product}"}
+            ).json()
+            states.append([{key: row[key] for key in keys} for row in rows])
+        barcode = f"{uuid4().int % 1000000000000:012d}"
+        create(app, "product_barcodes", {"product_id": product, "barcode": barcode, "qu_id": unit})
+        rows = app.get(
+            "/api/objects/product_barcodes_view", params={"query[]": f"product_id={product}"}
+        ).json()
+        states.append(
+            sorted(
+                "grocycode" if row["barcode"].startswith("grcy:p:") else "retail" for row in rows
+            )
+        )
+        snapshots.append(states)
+    assert snapshots[0] == snapshots[1]

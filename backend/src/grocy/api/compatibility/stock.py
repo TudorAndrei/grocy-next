@@ -20,6 +20,7 @@ async def _bookings(stock: StockSvc, result: dict) -> list[dict]:
 class AmountBody(BaseModel):
     amount: Decimal = Field(gt=0)
     best_before_date: date | None = None
+    purchased_date: date | None = None
     price: Decimal | None = None
     location_id: int | None = None
     spoiled: bool = False
@@ -181,6 +182,7 @@ async def stock_add(
         product_id,
         body.amount,
         best_before_date=body.best_before_date,
+        purchased_date=body.purchased_date,
         price=body.price,
         location_id=body.location_id,
         shopping_location_id=body.shopping_location_id,
