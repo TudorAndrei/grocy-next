@@ -925,6 +925,59 @@ def test_generic_creation_returns_the_native_id_response(api):
     assert api.get(f"/api/objects/locations/{record}").status_code == 200
 
 
+@pytest.mark.parametrize(
+    "entity,empty_name",
+    [
+        ("equipment", False),
+        ("equipment", True),
+        ("shopping_lists", False),
+        ("shopping_lists", True),
+        ("recipes_nestings", False),
+    ],
+)
+def test_generic_unique_values_reject_duplicate_writes_and_keep_saved_rows(
+    api, catalog, entity, empty_name
+):
+    name = f"Unique {uuid4().hex}"
+    path = f"/api/objects/{entity}"
+    if entity == "recipes_nestings":
+        first_body = generic_body(api, catalog, entity)
+        second_body = {**first_body, "includes_recipe_id": create(api, "recipes", name=name)}
+        update = {"includes_recipe_id": first_body["includes_recipe_id"], "servings": 3}
+        alternate = {**first_body, "recipe_id": create(api, "recipes", name=name + " parent")}
+        columns = "recipes_nestings.recipe_id, recipes_nestings.includes_recipe_id"
+    else:
+        missing = api.post(path, json={"description": name})
+        assert missing.status_code == 400, missing.text
+        assert missing.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+            f"NOT NULL constraint failed: {entity}.name"
+        }
+        first_body = {"name": "" if empty_name else name, "description": "First"}
+        second_body = {"name": name + " second", "description": "Second"}
+        update = {"name": first_body["name"], "description": "Rejected change"}
+        alternate = {"name": "   " if empty_name else name.upper()}
+        columns = f"{entity}.name"
+    first = create(api, entity, **first_body)
+    second = create(api, entity, **second_body)
+    before = [api.get(f"{path}/{record}").json() for record in (first, second)]
+    expected = {
+        "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+        f"UNIQUE constraint failed: {columns}"
+    }
+    duplicate = api.post(path, json=first_body)
+    assert duplicate.status_code == 400, duplicate.text
+    assert duplicate.json() == expected
+    duplicate = api.put(f"{path}/{second}", json=update)
+    assert duplicate.status_code == 400, duplicate.text
+    assert duplicate.json() == expected
+    assert [api.get(f"{path}/{record}").json() for record in (first, second)] == before
+    third = create(api, entity, **alternate)
+    assert third == second + 1
+    for record in (first, second, third):
+        assert api.delete(f"{path}/{record}").status_code == 204
+
+
 def generic_body(api, catalog, entity) -> dict[str, Any]:
     product, unit, other, location = catalog
     name = uuid4().hex

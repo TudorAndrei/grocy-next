@@ -251,6 +251,15 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             "SELECT name FROM sqlite_master WHERE name='saved_product_description'"
         ).fetchone() == ("saved_product_description",)
         assert connection.execute("SELECT COUNT(*) FROM saved_graph").fetchone()[0] > 0
+        for table, columns in (
+            ("equipment", "name"),
+            ("shopping_lists", "name"),
+            ("recipes_nestings", "recipe_id,includes_recipe_id,servings"),
+        ):
+            with pytest.raises(sqlite3.IntegrityError, match="UNIQUE constraint failed"):
+                connection.execute(
+                    f'INSERT INTO "{table}" ({columns}) SELECT {columns} FROM "{table}" LIMIT 1'
+                )
         for table, columns in references.items():
             for column in columns:
                 assert connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] > 0
@@ -285,7 +294,9 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             raise AssertionError("The saved equipment check must still reject an empty name")
 
 
-@pytest.mark.parametrize("revision", ["20261015_0013", "20261015_0014", "20261015_0015"])
+@pytest.mark.parametrize(
+    "revision", ["20261015_0013", "20261015_0014", "20261015_0015", "20261015_0016"]
+)
 def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
     tmp_path: Path, monkeypatch, revision: str
 ):
@@ -319,12 +330,21 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
         elif revision == "20261015_0014":
             connection.execute("INSERT INTO tasks (name,done) VALUES ('Invalid task',2)")
             connection.execute("UPDATE sqlite_sequence SET seq=9000 WHERE name='tasks'")
-        else:
+        elif revision == "20261015_0015":
             connection.execute(
                 "INSERT INTO meal_plan_sections (name,sort_number) VALUES ('Duplicate',0)"
             )
             connection.execute(
                 "INSERT INTO meal_plan_sections (name,sort_number) VALUES ('Duplicate',0)"
+            )
+        else:
+            connection.execute(
+                "INSERT INTO recipes_nestings (recipe_id,includes_recipe_id,servings) "
+                "VALUES (1,2,1)"
+            )
+            connection.execute(
+                "INSERT INTO recipes_nestings (recipe_id,includes_recipe_id,servings) "
+                "VALUES (1,2,1)"
             )
         connection.execute("PRAGMA ignore_check_constraints=OFF")
         schema = connection.execute(
@@ -342,7 +362,7 @@ def test_failed_counter_upgrade_restores_the_original_schema_and_rows(
         timeout=30,
     )
     assert result.returncode != 0
-    constraint = "UNIQUE" if revision == "20261015_0015" else "CHECK"
+    constraint = "UNIQUE" if revision in {"20261015_0015", "20261015_0016"} else "CHECK"
     assert f"{constraint} constraint failed" in result.stderr
     assert _data_snapshot(database) == before
     with sqlite3.connect(database) as connection:
