@@ -103,3 +103,58 @@ def test_tare_weight_and_open_undo_preserve_stock(client: TestClient, api_header
         == 204
     )
     assert client.get("/api/stock/products/1", headers=api_headers).json()["stock_amount"] == 0
+
+
+def test_calculated_due_status_uses_each_users_settings(client: TestClient, api_headers: dict):
+    from datetime import date, timedelta
+
+    assert (
+        client.post(
+            "/api/stock/products/1/add",
+            headers=api_headers,
+            json={
+                "amount": 2,
+                "best_before_date": (date.today() + timedelta(days=3)).isoformat(),
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            "/api/user/settings", headers=api_headers, json={"stock_due_soon_days": "1"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/api/users", headers=api_headers, json={"username": "Due status user"}
+        ).status_code
+        == 204
+    )
+    user_id = next(
+        user["id"]
+        for user in client.get("/api/users", headers=api_headers).json()
+        if user["username"] == "Due status user"
+    )
+    assert (
+        client.put(
+            f"/api/users/{user_id}/permissions", headers=api_headers, json={"permission_ids": [1]}
+        ).status_code
+        == 204
+    )
+    key = client.post("/api/v2/api-keys", headers=api_headers, json={"user_id": user_id}).json()[
+        "api_key"
+    ]
+    other_headers = {"GROCY-API-KEY": key}
+    assert (
+        client.put(
+            "/api/user/settings", headers=other_headers, json={"stock_due_soon_days": "10"}
+        ).status_code
+        == 200
+    )
+    path = "/api/objects/recipes_pos_resolved?query[]=recipe_id=1&query[]=product_id=1"
+    scores = [
+        client.get(path, headers=headers).json()[0]["due_score"]
+        for headers in (api_headers, other_headers, api_headers)
+    ]
+    assert scores == [0, 1, 0]

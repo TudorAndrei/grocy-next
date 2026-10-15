@@ -137,6 +137,8 @@ class GenericObjectsService:
         row = model()
         self._apply_payload(row, {k: v for k, v in payload.items() if k != "userfields"})
         await self._validate(row)
+        if isinstance(row, Recipe):
+            row.desired_servings = row.base_servings or Decimal("1")
         self.session.add(row)
         await self.session.flush()
         await self.write_userfields(entity, row.id, payload.get("userfields", {}))

@@ -4,6 +4,8 @@ The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21
 
 The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 34 exposed entities, including calculated view records. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. The `§` operator uses regular expressions with a match timeout.
 
+The six exposed SQLite views use 17 pinned Grocy view definitions, including their dependencies. Quantity conversion and recipe views read current records instead of upstream caches. The permission hierarchy uses the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
+
 The `/api/v2` API adds nutrition, API key management, and meal completion. MCP and the web application use the same domain services as the compatibility API.
 
 ## Verification
@@ -39,7 +41,7 @@ Stock entry edits return an old booking and a new booking. Undo restores the pri
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.
 
-Calculated views come from application services. Some extra fields and row IDs can differ from upstream SQLite views. Purchase price caches are stored and imported. Internal recipe cache records and other upstream triggers are not imported as active behavior.
+Calculated view fields and row IDs follow the pinned SQLite definitions. Import checks compared all six exposed SQLite views with the reference database. Purchase price caches are stored and imported. Domain services implement writes. Internal recipe caches and other upstream triggers are not imported as active behavior.
 
 File image requests support bounded resizing. Generic queries support the upstream regular expression operator. A label request returns Grocycode data and can send it to a configured HTTP printer. Thermal printing uses a configured TCP printer or a local printer device. Without a thermal printer, the API returns `READY` and printable text.
 

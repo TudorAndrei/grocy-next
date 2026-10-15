@@ -60,6 +60,7 @@ async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "
         raise UnauthorizedError("Invalid API key")
     if row.expires is not None and row.expires < datetime.now(UTC).replace(tzinfo=None):
         raise UnauthorizedError("API key expired")
+    session.info["actor_user_id"] = row.user_id
     ids = set(
         (
             await session.execute(

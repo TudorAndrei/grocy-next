@@ -389,3 +389,98 @@ def test_reference_catalog_options(
         listed = app.get(f"/api/objects/{entity}").json()
         assert any(int(row["id"]) == record_id for row in listed)
     assert snapshots[0] == snapshots[1] == fields
+
+
+def test_reference_resolved_recipe_and_conversion_records(
+    client: TestClient, api_headers: dict, reference
+):
+    client.headers.update(api_headers)
+    name = f"Resolved records {uuid4().hex[:8]}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        other_unit = create(app, "quantity_units", {"name": f"{name} larger"})
+        location = create(app, "locations", {"name": name})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_purchase": unit,
+                "qu_id_stock": unit,
+                "calories": 120,
+            },
+        )
+        create(
+            app,
+            "quantity_unit_conversions",
+            {"from_qu_id": unit, "to_qu_id": other_unit, "factor": 2.5},
+        )
+        recipe = create(app, "recipes", {"name": name, "base_servings": 2, "desired_servings": 3})
+        assert app.get(f"/api/objects/recipes/{recipe}").json()["desired_servings"] == 2
+        assert (
+            app.put(f"/api/objects/recipes/{recipe}", json={"desired_servings": 3}).status_code
+            == 204
+        )
+        position = create(
+            app,
+            "recipes_pos",
+            {
+                "recipe_id": recipe,
+                "product_id": product,
+                "qu_id": unit,
+                "amount": 0.75,
+                "price_factor": 2,
+                "round_up": 1,
+            },
+        )
+        assert (
+            app.post(
+                f"/api/stock/products/{product}/add",
+                json={"amount": 3, "price": 3.25, "best_before_date": "2027-12-31"},
+            ).status_code
+            == 200
+        )
+        rows = app.get(
+            "/api/objects/recipes_pos_resolved", params={"query[]": f"recipe_id={recipe}"}
+        ).json()
+        assert len(rows) == 1
+        row = rows[0]
+        for key, record_id in (
+            ("id", position),
+            ("recipe_pos_id", position),
+            ("recipe_id", recipe),
+            ("child_recipe_id", recipe),
+            ("product_id", product),
+            ("product_id_effective", product),
+            ("qu_id", unit),
+        ):
+            assert row[key] == record_id
+            row[key] = 1
+        conversions = app.get(
+            "/api/objects/quantity_unit_conversions_resolved",
+            params={"query[]": [f"product_id={product}", f"from_qu_id={unit}"]},
+        ).json()
+        normalized = []
+        for conversion in conversions:
+            conversion.pop("userfields", None)
+            assert conversion["product_id"] == product
+            conversion["product_id"] = 1
+            conversion["from_qu_id"] = 1
+            conversion["to_qu_id"] = {unit: 1, other_unit: 2}[conversion["to_qu_id"]]
+            conversion["path"] = (
+                "/"
+                + "/".join(
+                    str({unit: 1, other_unit: 2}[int(part)])
+                    for part in conversion["path"].split("/")
+                    if part
+                )
+                + "/"
+            )
+            normalized.append(conversion)
+        snapshots.append((row, sorted(normalized, key=lambda item: item["to_qu_id"])))
+    expected, actual = snapshots
+    assert actual[1] == expected[1]
+    for key, value in expected[0].items():
+        assert actual[0][key] == value, key

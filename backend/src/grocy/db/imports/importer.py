@@ -9,6 +9,7 @@ from pathlib import Path
 
 from sqlalchemy import Date, DateTime, create_engine, event
 
+from grocy.db.compatibility_views import install_compatibility_views
 from grocy.db.imports.validate import validate_grocy_sqlite
 from grocy.db.models import Base
 
@@ -53,6 +54,7 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
 
         Base.metadata.create_all(engine)
         with closing(sqlite3.connect(snapshot)) as source_db, engine.begin() as conn:
+            install_compatibility_views(conn)
             source_db.row_factory = sqlite3.Row
             conn.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
             source_tables = {
@@ -114,7 +116,7 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
             conn.exec_driver_sql(
                 "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"
             )
-            conn.exec_driver_sql("INSERT INTO alembic_version VALUES ('20261015_0006')")
+            conn.exec_driver_sql("INSERT INTO alembic_version VALUES ('20261015_0007')")
             if conn.exec_driver_sql("PRAGMA foreign_key_check").fetchone():
                 raise ValueError("Imported database has invalid references")
         engine.dispose()
