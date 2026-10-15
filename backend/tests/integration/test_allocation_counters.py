@@ -5,6 +5,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from grocy.core.config import clear_settings_cache
 from grocy.db.compatibility_views import install_compatibility_views
 from grocy.db.imports.importer import import_grocy_sqlite
 from grocy.db.session import reset_engine
+from grocy.domains.catalog.objects import ENTITY_MODELS
 from grocy.main import create_app
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
@@ -108,61 +110,62 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
     engine = create_engine(f"sqlite:///{database}")
     with engine.begin() as connection:
         install_compatibility_views(connection)
+        connection.exec_driver_sql("""
+            CREATE TRIGGER saved_price_view INSTEAD OF DELETE ON products_average_price BEGIN
+                INSERT INTO counter_audit VALUES ('price-view', OLD.product_id);
+            END
+        """)
     engine.dispose()
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "false")
     clear_settings_cache()
     headers = {"GROCY-API-KEY": "dev-key"}
     with TestClient(create_app(), headers=headers) as old:
-        location = old.post("/api/objects/locations", json={"name": "Saved spare"}).json()[
-            "created_object_id"
-        ]
+
+        def create_saved(table: str, **body):
+            # Revision 0013 had ORM defaults, before native SQL defaults were installed.
+            defaults = {
+                column.name: float(column.default.arg)
+                if isinstance(column.default.arg, Decimal)
+                else column.default.arg
+                for column in ENTITY_MODELS[table].__table__.columns
+                if column.default is not None and not callable(column.default.arg)
+            }
+            response = old.post(f"/api/objects/{table}", json={**defaults, **body})
+            assert response.status_code == 200, response.text
+            return response
+
+        location = create_saved("locations", name="Saved spare").json()["created_object_id"]
         purchase = old.post(
             "/api/stock/products/1/add", json={"amount": 2, "price": 3.25, "note": "Saved note"}
         )
         assert purchase.status_code == 200, purchase.text
-        assert (
-            old.post(
-                "/api/objects/tasks", json={"name": "Saved task", "category_id": 1}
-            ).status_code
-            == 200
-        )
+        assert create_saved("tasks", name="Saved task", category_id=1).status_code == 200
         assert (
             old.post("/api/chores/1/execute", json={"tracked_time": "2027-01-04"}).status_code
             == 200
         )
         assert old.post("/api/batteries/1/charge", json={}).status_code == 200
-        assert (
-            old.post(
-                "/api/objects/shopping_list", json={"product_id": 1, "amount": 1, "qu_id": 1}
-            ).status_code
-            == 200
-        )
-        field = old.post(
-            "/api/objects/userfields",
-            json={
-                "entity": "products",
-                "name": "origin",
-                "caption": "Origin",
-                "type": "text-single-line",
-            },
+        assert create_saved("shopping_list", product_id=1, amount=1, qu_id=1).status_code == 200
+        field = create_saved(
+            "userfields",
+            entity="products",
+            name="origin",
+            caption="Origin",
+            type="text-single-line",
         )
         assert field.status_code == 200, field.text
         assert old.put("/api/userfields/products/1", json={"origin": "Farm"}).status_code == 204
         assert old.put("/api/user/settings/kept", json={"value": "saved"}).status_code == 204
-        entity = old.post(
-            "/api/objects/userentities", json={"name": "saved", "caption": "Saved"}
-        ).json()["created_object_id"]
-        assert (
-            old.post("/api/objects/userobjects", json={"userentity_id": entity}).status_code == 200
-        )
-        section = old.post("/api/objects/meal_plan_sections", json={"name": "Saved meal"}).json()[
+        entity = create_saved("userentities", name="saved", caption="Saved").json()[
             "created_object_id"
         ]
+        assert create_saved("userobjects", userentity_id=entity).status_code == 200
+        section = create_saved("meal_plan_sections", name="Saved meal").json()["created_object_id"]
         assert (
-            old.post(
-                "/api/objects/meal_plan",
-                json={
+            create_saved(
+                "meal_plan",
+                **{
                     "day": "2027-01-04",
                     "type": "recipe",
                     "recipe_id": 1,
@@ -172,12 +175,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             ).status_code
             == 200
         )
-        assert (
-            old.post("/api/objects/equipment", json={"name": "Saved equipment"}).status_code == 200
-        )
-        product_meal = old.post(
-            "/api/objects/meal_plan",
-            json={
+        assert create_saved("equipment", name="Saved equipment").status_code == 200
+        product_meal = create_saved(
+            "meal_plan",
+            **{
                 "day": "2027-01-04",
                 "type": "product",
                 "product_id": 2,
@@ -225,12 +226,23 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         timeout=30,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _data_snapshot(database) == before
+    after = _data_snapshot(database)
+    assert {name for name in after if name not in before} == {
+        "cache__quantity_unit_conversions_resolved",
+        "migrations",
+        "permission_hierarchy",
+        "sessions",
+    }
+    for name, rows in before.items():
+        if name in {"recipes", "recipes_nestings", "recipes_pos"}:
+            assert all(row in after[name] for row in rows)
+        else:
+            assert after[name] == rows
     clear_settings_cache()
     reset_engine()
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "true")
     with TestClient(create_app(), headers=headers) as upgraded:
-        assert _data_snapshot(database) == before
+        assert _data_snapshot(database) == after
         assert upgraded.get("/api/stock/products/1").json()["stock_amount"] == 2
         assert upgraded.get("/api/userfields/products/1").json()["origin"] == "Farm"
         assert upgraded.delete(f"/api/objects/locations/{location}").status_code == 204
@@ -259,6 +271,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert connection.execute(
             "SELECT kind FROM counter_audit ORDER BY rowid DESC LIMIT 2"
         ).fetchall() == [("nutrition",), ("task",)]
+        connection.execute("DELETE FROM products_average_price WHERE product_id=1")
+        assert connection.execute(
+            "SELECT kind,value FROM counter_audit ORDER BY rowid DESC LIMIT 1"
+        ).fetchone() == ("price-view", 1)
         assert connection.execute(
             "SELECT name FROM sqlite_master WHERE name='saved_product_description'"
         ).fetchone() == ("saved_product_description",)
@@ -276,10 +292,19 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             for column in columns:
                 assert connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] > 0
                 connection.execute("SAVEPOINT orphan_reference")
-                connection.execute(
+                statement = (
                     f'UPDATE "{table}" SET "{column}"=2147483647 '
                     f'WHERE rowid=(SELECT MIN(rowid) FROM "{table}")'
                 )
+                if (table, column) == ("products", "qu_id_stock"):
+                    with pytest.raises(
+                        sqlite3.IntegrityError, match="qu_id_stock can only be changed"
+                    ):
+                        connection.execute(statement)
+                    connection.execute("ROLLBACK TO orphan_reference")
+                    connection.execute("RELEASE orphan_reference")
+                    continue
+                connection.execute(statement)
                 assert connection.execute(
                     f'SELECT "{column}" FROM "{table}" ORDER BY rowid LIMIT 1'
                 ).fetchone() == (2147483647,)

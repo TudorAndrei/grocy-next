@@ -1138,7 +1138,6 @@ class StockService:
                 update(model).where(model.product_id == remove.id).values(**values)
             )
         await self.session.delete(remove)
-        await self._update_price_cache(keep.id)
         await self.session.commit()
 
     async def product_by_barcode(self, barcode: str) -> dict:
@@ -1426,7 +1425,6 @@ class StockService:
         log.undone = 1
         log.undone_timestamp = datetime.now()
         await self.session.flush()
-        await self._update_price_cache(log.product_id)
 
     async def _restore_amount(self, log: StockLog, snapshot: dict, amount: Decimal) -> None:
         stock_id = snapshot.get("stock_id") or log.stock_id or uuid.uuid4().hex
@@ -1608,46 +1606,7 @@ class StockService:
         )
         self.session.add(log)
         await self.session.flush()
-        await self._update_price_cache(product_id)
         return log
-
-    async def _update_price_cache(self, product_id: int) -> None:
-        logs = list(
-            (
-                await self.session.execute(
-                    select(StockLog).where(StockLog.product_id == product_id).order_by(StockLog.id)
-                )
-            )
-            .scalars()
-            .all()
-        )
-        history = StockHistory(logs)
-        if history.average_price is not None:
-            average = await self.session.scalar(
-                select(CachedAveragePrice).where(CachedAveragePrice.product_id == product_id)
-            )
-            if average is None:
-                average = CachedAveragePrice(product_id=product_id)
-                self.session.add(average)
-            average.price = history.average_price
-        if history.last is not None:
-            last = await self.session.scalar(
-                select(CachedLastPurchase).where(CachedLastPurchase.product_id == product_id)
-            )
-            if last is None:
-                last = CachedLastPurchase(product_id=product_id)
-                self.session.add(last)
-            log = history.last.log
-            for key in (
-                "amount",
-                "best_before_date",
-                "purchased_date",
-                "location_id",
-                "shopping_location_id",
-            ):
-                setattr(last, key, getattr(log, key))
-            last.price = history.last_price
-        await self.session.flush()
 
     def _serialize_log(self, log: StockLog) -> dict:
         result = {}

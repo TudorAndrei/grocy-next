@@ -4,10 +4,10 @@ import os
 import sqlite3
 import tempfile
 from contextlib import closing
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
-from sqlalchemy import Date, DateTime, create_engine, event
+from sqlalchemy import Date, DateTime, Text, create_engine, event, literal
 
 from grocy.db.compatibility_views import install_compatibility_views
 from grocy.db.imports.validate import validate_grocy_sqlite
@@ -99,11 +99,12 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                             and (column.default is not None or column.server_default is not None)
                         ):
                             continue
-                        if isinstance(value, str) and value:
-                            if isinstance(column.type, DateTime):
-                                value = datetime.fromisoformat(value)
-                            elif isinstance(column.type, Date):
-                                value = date.fromisoformat(value[:10])
+                        if isinstance(column.type, DateTime):
+                            # Import SQLite values without the runtime timestamp codec.
+                            # Native values can include fractions and PHP year 0000.
+                            value = literal(value, type_=Text())
+                        elif isinstance(value, str) and value and isinstance(column.type, Date):
+                            value = date.fromisoformat(value[:10])
                         values[column.name] = value
                     if table.name == "userfield_values":
                         if "field_id" not in columns:

@@ -10,7 +10,6 @@ from grocy.db.models.recipes import Recipe, RecipePosition
 from grocy.db.models.shopping import ShoppingList
 from grocy.db.models.units import QuantityUnitConversion
 from grocy.db.models.users import ApiKey, User, UserPermission
-from grocy.domains.units.service import UnitsService
 
 
 async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> None:
@@ -54,7 +53,6 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
     )
     session.add(conversion)
     await session.flush()
-    await UnitsService(session).sync_inverse(conversion)
 
     pantry = Location(name="Pantry", description="Dry goods")
     fridge = Location(name="Fridge", description="Cold storage")

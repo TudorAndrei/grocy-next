@@ -71,15 +71,6 @@ async def configure_sqlite(engine: AsyncEngine, settings: Settings) -> None:
         await conn.exec_driver_sql(f"PRAGMA busy_timeout={settings.database_busy_timeout_ms}")
 
 
-async def create_schema(engine: AsyncEngine | None = None) -> None:
-    from grocy.db import models  # noqa: F401
-    from grocy.db.models import Base
-
-    eng = engine or get_engine()
-    async with eng.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
 async def session_scope() -> AsyncIterator[AsyncSession]:
     factory = get_session_factory()
     async with factory() as session:

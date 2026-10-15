@@ -21,6 +21,8 @@ try {
     }
     require __DIR__ . '/../_vendor/htmlpurifier/library/HTMLPurifier.auto.php';
     require __DIR__ . '/request_runtime.php';
+    require __DIR__ . '/generic_runtime.php';
+    $nativeSchema = nativeSchema();
     $pdo = new PDO('sqlite::memory:');
     $config = HTMLPurifier_Config::createDefault();
     $config->set('Cache.SerializerPath', $argv[1]);
@@ -43,6 +45,10 @@ while (($line = fgets(STDIN)) !== false) {
     try {
         $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
         $id = $request['id'];
+        if (($request['operation'] ?? 'purify') === 'generic') {
+            reply(['id' => $id, 'ok' => true, 'body' => genericWrite($request, $nativeSchema)]);
+            continue;
+        }
         if (($request['operation'] ?? 'purify') === 'userfields') {
             reply(['id' => $id, 'ok' => true, 'body' => userfieldResponses($request)]);
             continue;

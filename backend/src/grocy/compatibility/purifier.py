@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import json
+from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -101,7 +102,34 @@ class InputPurifier:
             },
         )
 
-    async def _request(self, body: bytes, fields: dict[str, Any]) -> Any:
+    async def generic_write(
+        self,
+        *,
+        entity: str,
+        method: str,
+        object_id: int | str | None,
+        body: dict[str, Any],
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        return await self._request(
+            b"",
+            {
+                "operation": "generic",
+                "entity": entity,
+                "method": method,
+                "object_id": object_id,
+                "body": body,
+            },
+            execute=execute,
+        )
+
+    async def _request(
+        self,
+        body: bytes,
+        fields: dict[str, Any],
+        *,
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+    ) -> Any:
         async with self._lock:
             self._sequence += 1
             message = json.dumps(
@@ -115,26 +143,41 @@ class InputPurifier:
                     raise RuntimeError("The PHP purifier is not running")
                 process.stdin.write(message + b"\n")
                 await process.stdin.drain()
-                data = bytearray()
-                while not data.endswith(b"\n"):
-                    chunk = await process.stdout.read(65536)
-                    if not chunk:
-                        raise RuntimeError("The PHP purifier stopped before it sent a response")
-                    data.extend(chunk)
-                response = json.loads(data)
-                if (
-                    not isinstance(response, dict)
-                    or response.get("id") != self._sequence
-                    or response.get("ok") is not True
-                ):
-                    raise RuntimeError("The PHP purifier could not process this request")
-                return response["body"]
+                while True:
+                    data = bytearray()
+                    while not data.endswith(b"\n"):
+                        chunk = await process.stdout.read(65536)
+                        if not chunk:
+                            raise RuntimeError("The PHP purifier stopped before it sent a response")
+                        data.extend(chunk)
+                    response = json.loads(data)
+                    if (
+                        not isinstance(response, dict)
+                        or response.get("id") != self._sequence
+                        or response.get("ok") is not True
+                    ):
+                        raise RuntimeError("The PHP purifier could not process this request")
+                    if "query" not in response:
+                        return response["body"]
+                    if execute is None:
+                        raise RuntimeError("The PHP worker requested an unexpected SQL query")
+                    result = await execute(response["query"])
+                    process.stdin.write(
+                        json.dumps(
+                            {"id": self._sequence, "resume": result}, separators=(",", ":")
+                        ).encode()
+                        + b"\n"
+                    )
+                    await process.stdin.drain()
             except asyncio.CancelledError:
                 await self._stop()
                 raise
             except (OSError, RuntimeError, ValueError, KeyError) as error:
                 await self._stop()
                 raise GrocyError("Input purifier is unavailable", status_code=503) from error
+            except BaseException:
+                await self._stop()
+                raise
 
     async def _stop(self) -> None:
         process, self._process = self._process, None

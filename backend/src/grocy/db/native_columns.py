@@ -5,7 +5,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import DefaultClause, MetaData, Numeric, text
+from sqlalchemy import DateTime, DefaultClause, MetaData, Numeric, text
+from sqlalchemy.dialects.sqlite import DATETIME
 from sqlalchemy.ext.compiler import compiles
 
 
@@ -65,6 +66,10 @@ def configure_native_columns(metadata: MetaData) -> None:
             default = rule["default"]
             column.server_default = DefaultClause(text(default)) if default is not None else None
             native_type = rule.get("type")
+            if native_type is not None and isinstance(column.type, DateTime):
+                column.type = column.type.with_variant(
+                    DATETIME(truncate_microseconds=True), "sqlite"
+                )
             if (
                 native_type is not None
                 and isinstance(column.type, Numeric)

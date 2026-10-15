@@ -44,11 +44,14 @@ async def list_objects(
 async def create_object(
     entity: str,
     body: dict[str, Any],
+    request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> dict[str, Any]:
     try:
-        result = await GenericObjectsService(session).create_entity(entity, body)
+        result = await GenericObjectsService(session).create_entity(
+            entity, body, request.app.state.input_purifier
+        )
     except DBAPIError as error:
         await session.rollback()
         raise _database_error(error) from error
@@ -81,11 +84,14 @@ async def update_object(
     entity: str,
     object_id: str,
     body: dict[str, Any],
+    request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
     try:
-        await GenericObjectsService(session).update_entity(entity, object_id, body)
+        await GenericObjectsService(session).update_entity(
+            entity, object_id, body, request.app.state.input_purifier
+        )
     except DBAPIError as error:
         await session.rollback()
         raise _database_error(error) from error
@@ -102,11 +108,14 @@ def _database_error(error: DBAPIError) -> GrocyError:
 async def delete_object(
     entity: str,
     object_id: str,
+    request: Request,
     _actor: CurrentActor,
     session: DbSession,
 ) -> Response:
     try:
-        await GenericObjectsService(session).delete_entity(entity, object_id)
+        await GenericObjectsService(session).delete_entity(
+            entity, object_id, request.app.state.input_purifier
+        )
     except DBAPIError as error:
         await session.rollback()
         raise GrocyError(_database_error(error).message, status_code=500, code=None) from error

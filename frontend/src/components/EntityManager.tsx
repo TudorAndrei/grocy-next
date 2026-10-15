@@ -113,9 +113,12 @@ export function EntityManager({
   const query = useQuery({
     queryKey: ["entity-manager", entity],
     queryFn: async () => {
-      const [rows, types] = await Promise.all([
+      const [rows, types, conversions] = await Promise.all([
         api.objects(entity),
         entity === "userobjects" ? api.objects("userentities") : [],
+        entity === "products"
+          ? api.objects("quantity_unit_conversions_resolved")
+          : [],
       ]);
       return Promise.all(
         rows.map(async (row): Promise<EntityRow> => {
@@ -134,7 +137,19 @@ export function EntityManager({
             for (const [key, value] of Object.entries(values))
               fields[`custom:${namespace}:${key}`] = value;
           }
-          return { ...row, custom_values: fields };
+          const purchase = conversions.find(
+            (conversion) =>
+              conversion.product_id === row.id &&
+              conversion.from_qu_id === row.qu_id_purchase &&
+              conversion.to_qu_id === row.qu_id_stock,
+          );
+          return {
+            ...row,
+            ...(entity === "products"
+              ? { qu_factor_purchase_to_stock: Number(purchase?.factor ?? 1) }
+              : {}),
+            custom_values: fields,
+          };
         }),
       );
     },
@@ -157,12 +172,50 @@ export function EntityManager({
     }) => {
       if (operation.kind === "delete")
         return api.deleteObject(entity, operation.id!);
+      const body = { ...operation.body };
+      const purchaseFactor = body.qu_factor_purchase_to_stock;
+      if (entity === "products") delete body.qu_factor_purchase_to_stock;
       let id = editing!;
       if (editing === null) {
-        const created = await api.createObject(entity, operation.body!);
+        const created = await api.createObject(entity, body);
         id = Number(created.created_object_id);
         setEditing(id);
-      } else await api.updateObject(entity, id, operation.body!);
+      } else await api.updateObject(entity, id, body);
+      if (
+        entity === "products" &&
+        purchaseFactor != null &&
+        body.qu_id_purchase !== body.qu_id_stock
+      ) {
+        const conversions = await api.objects("quantity_unit_conversions");
+        const conversion = conversions.find(
+          (row) =>
+            row.product_id === id &&
+            row.from_qu_id === body.qu_id_purchase &&
+            row.to_qu_id === body.qu_id_stock,
+        );
+        if (conversion)
+          await api.updateObject("quantity_unit_conversions", conversion.id, {
+            factor: purchaseFactor,
+          });
+        else {
+          const resolved = await api.objects(
+            "quantity_unit_conversions_resolved",
+          );
+          const current = resolved.find(
+            (row) =>
+              row.product_id === id &&
+              row.from_qu_id === body.qu_id_purchase &&
+              row.to_qu_id === body.qu_id_stock,
+          );
+          if (Number(current?.factor) !== Number(purchaseFactor))
+            await api.createObject("quantity_unit_conversions", {
+              product_id: id,
+              from_qu_id: body.qu_id_purchase,
+              to_qu_id: body.qu_id_stock,
+              factor: purchaseFactor,
+            });
+        }
+      }
       for (const [namespace, values] of Object.entries(operation.fields ?? {}))
         await request(`/api/userfields/${encodeURIComponent(namespace)}/${id}`, {
           method: "PUT",

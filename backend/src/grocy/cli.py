@@ -31,7 +31,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     from grocy.core.config import get_settings
     from grocy.db.models.users import ApiKey, User, UserPermission
-    from grocy.db.session import create_schema, get_engine, get_session_factory
+    from grocy.db.session import get_engine, get_session_factory, upgrade_schema
 
     async def initialize():
         settings = get_settings()
@@ -44,7 +44,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
                 Path(database).parent.mkdir(parents=True, exist_ok=True)
         engine = get_engine()
-        await create_schema(engine)
+        await upgrade_schema(engine)
         async with get_session_factory()() as session:
             if await session.scalar(select(User.id).limit(1)) is not None:
                 raise ValueError("Database already has users")

@@ -60,7 +60,8 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
         booking = old.post("/api/stock/products/1/add", json={"amount": 1})
         assert booking.status_code == 200, booking.text
         task = old.post(
-            "/api/objects/tasks", json={"name": "Saved task", "assigned_to_user_id": user}
+            "/api/objects/tasks",
+            json={"name": "Saved task", "assigned_to_user_id": user, "done": 0},
         )
         assert task.status_code == 200, task.text
         chore = old.post("/api/chores/1/execute", json={"tracked_time": "2027-01-04"})

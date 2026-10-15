@@ -27,7 +27,7 @@ class DateOrDateTime(TypeDecorator[date | datetime]):
     ) -> str | None:
         if value is None or isinstance(value, str):
             return value
-        return value.isoformat(sep=" ") if isinstance(value, datetime) else value.isoformat()
+        return database_time(value)
 
     def process_result_value(self, value: str | None, dialect: Dialect) -> date | datetime | None:
         if value is None:

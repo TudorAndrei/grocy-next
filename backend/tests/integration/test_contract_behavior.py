@@ -106,7 +106,7 @@ def test_contract_entities_and_derived_records(client: TestClient, api_headers: 
     assert details["quantity_unit_stock"]["name"] == "Piece"
     assert details["last_price"] == 2
     average = client.get("/api/objects/products_average_price", headers=api_headers).json()
-    assert average[0]["avg_price"] == 2
+    assert average[0]["price"] == 2
     booking = bought.json()[0]["id"]
     assert (
         client.post(f"/api/stock/bookings/{booking}/undo", headers=api_headers).status_code == 204
@@ -136,10 +136,13 @@ def test_custom_fields_and_records_roundtrip(client: TestClient, api_headers: di
         headers=api_headers,
         json={
             "userentity_id": entity["created_object_id"],
-            "userfields": {"serial": "ABC123"},
         },
     ).json()
     object_id = row["created_object_id"]
+    saved = client.put(
+        f"/api/userfields/userobjects/{object_id}", headers=api_headers, json={"serial": "ABC123"}
+    )
+    assert saved.status_code == 204
     values = client.get(f"/api/userfields/userobjects/{object_id}", headers=api_headers)
     assert values.json() == {"serial": "ABC123"}
     updated = client.put(

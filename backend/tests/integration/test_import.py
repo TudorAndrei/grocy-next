@@ -49,6 +49,10 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
     with sqlite3.connect(source) as connection:
         connection.execute("INSERT INTO userfield_values VALUES (2,999,'001','Retained orphan')")
         connection.executescript("""
+            ALTER TABLE locations ADD COLUMN row_created_timestamp DATETIME;
+            UPDATE locations SET row_created_timestamp='2027-01-04 12:34:56.123456';
+            ALTER TABLE products ADD COLUMN row_created_timestamp DATETIME;
+            UPDATE products SET row_created_timestamp='0000-01-01 00:00:00';
             CREATE TABLE chores (id INTEGER PRIMARY KEY, name TEXT, period_type TEXT);
             CREATE TABLE chores_log (id INTEGER PRIMARY KEY, chore_id INTEGER, tracked_time TEXT,
                                     undone INTEGER DEFAULT 0, skipped INTEGER DEFAULT 0);
@@ -63,6 +67,12 @@ def test_import_preserves_data_source_and_existing_destination(tmp_path: Path):
     assert "legacy_data" in result["archived_tables"]
     assert source.read_bytes() == original
     with sqlite3.connect(target) as conn:
+        assert conn.execute("SELECT row_created_timestamp FROM locations").fetchone() == (
+            "2027-01-04 12:34:56.123456",
+        )
+        assert conn.execute("SELECT row_created_timestamp FROM products").fetchone() == (
+            "0000-01-01 00:00:00",
+        )
         assert conn.execute("SELECT amount FROM stock").fetchone()[0] == 3
         assert conn.execute("SELECT tracked_time FROM chores_log ORDER BY id").fetchall() == [
             ("2027-01-04",),
@@ -239,7 +249,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0020"
+            == "20261015_0021"
         )
 
 
@@ -293,6 +303,11 @@ def test_upgrade_restores_derived_meals_and_inverse_conversions(tmp_path: Path, 
             == 200
         )
     with sqlite3.connect(database) as connection:
+        # Reproduce revision 0009 before native delete triggers existed.
+        for (name,) in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='trigger'"
+        ).fetchall():
+            connection.execute(f'DROP TRIGGER "{name}"')
         connection.executescript("""
             DELETE FROM recipes_nestings WHERE recipe_id IN
                 (SELECT id FROM recipes WHERE type LIKE 'mealplan-%');

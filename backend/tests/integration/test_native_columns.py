@@ -97,7 +97,10 @@ def _old_columns(database: Path, *, invalid_section: bool = False) -> None:
             );
             CREATE TABLE meal_plan (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, day DATE NOT NULL,
-                section_id INTEGER, done INTEGER NOT NULL
+                section_id INTEGER, done INTEGER NOT NULL,
+                type TEXT, recipe_id INTEGER, recipe_servings INTEGER, note TEXT,
+                product_id INTEGER, product_amount REAL, product_qu_id INTEGER,
+                row_created_timestamp DATETIME
             );
             CREATE TABLE userentities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
@@ -115,7 +118,8 @@ def _old_columns(database: Path, *, invalid_section: bool = False) -> None:
             END;
         """)
         db.execute(
-            "INSERT INTO meal_plan VALUES (40,'2027-01-01',?,0)", (None if invalid_section else -1,)
+            "INSERT INTO meal_plan (id,day,section_id,done) VALUES (40,'2027-01-01',?,0)",
+            (None if invalid_section else -1,),
         )
 
 

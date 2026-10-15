@@ -1041,8 +1041,9 @@ def test_generic_field_lists_use_numeric_object_comparison(api, custom_field):
     record = create(api, "userobjects", userentity_id=entity)
     custom_field(entity="userobjects", name="saved", caption="Saved", type="text-single-line")
     assert (
-        api.put(f"/api/userfields/userobjects/0{record}", json={"saved": "Leading zero"})
-        .status_code
+        api.put(
+            f"/api/userfields/userobjects/0{record}", json={"saved": "Leading zero"}
+        ).status_code
         == 204
     )
     assert api.get(f"/api/userfields/userobjects/{record}").json() == {"saved": None}
@@ -2525,3 +2526,149 @@ def test_empty_chore_options_keep_the_current_actor_and_default_flags(api):
     assert response.status_code == 200, response.text
     assert response.json()["done_by_user_id"] == 1
     assert not response.json()["skipped"]
+
+
+@pytest.mark.parametrize("method", ["post", "put"])
+@pytest.mark.parametrize(
+    "field,value,error,kept",
+    [
+        (
+            "userfields",
+            {"serial": "Value"},
+            "table locations has no column named userfields_id",
+            False,
+        ),
+        ("userfields", [], "table locations has no column named userfields_id", False),
+        ("userfields", None, "table locations has no column named userfields", False),
+        ("userfields", "Value", "table locations has no column named userfields", False),
+        ("locationsList", [], None, True),
+        (
+            "locationsList",
+            [{"name": "Child"}],
+            "table locations has no column named locations_id",
+            True,
+        ),
+        (
+            "nutrition_proposalsList",
+            [{"note": "Child"}],
+            "no such table: nutrition_proposals",
+            True,
+        ),
+        (
+            "description",
+            {"name": "Child"},
+            "table locations has no column named description_id",
+            False,
+        ),
+    ],
+)
+def test_native_generic_structures_keep_statement_order(
+    api, custom_field, method, field, value, error, kept
+):
+    custom_field(entity="locations", name="serial", caption="Serial", type="text-single-line")
+    name = "structure_" + uuid4().hex
+    original = create(api, "locations", name=name + "_old") if method == "put" else None
+    path = "/api/objects/locations" + (f"/{original}" if original is not None else "")
+    response = getattr(api, method)(path, json={"name": name, field: value})
+    if error is None:
+        assert response.status_code == (200 if method == "post" else 204), response.text
+    else:
+        assert response.status_code == 400, response.text
+        if (
+            method == "put"
+            and not kept
+            and error.startswith("table locations has no column named ")
+        ):
+            error = "no such column: " + error.removeprefix("table locations has no column named ")
+        assert response.json() == {"error_message": "SQLSTATE[HY000]: General error: 1 " + error}
+    saved = rows(api, "locations", name=name)
+    assert len(saved) == int(kept)
+    if original is not None:
+        stored = api.get(f"/api/objects/locations/{original}").json()
+        assert stored["name"] == (name if kept else name + "_old")
+    elif kept:
+        following = create(api, "locations", name=name + "_next")
+        assert following == saved[0]["id"] + 1
+
+
+@pytest.mark.parametrize("method", ["post", "put"])
+def test_native_nested_shopping_rows_return_last_insert_and_parent_links(api, method):
+    marker = "structure_" + uuid4().hex
+    root = create(api, "shopping_list", note=marker + "_old") if method == "put" else None
+    body = {
+        "note": marker + "_root",
+        "shopping_listList": [
+            {"note": marker + "_first"},
+            {"note": marker + "_second", "shopping_listList": [{"note": marker + "_last"}]},
+        ],
+    }
+    path = "/api/objects/shopping_list" + (f"/{root}" if root is not None else "")
+    response = getattr(api, method)(path, json=body)
+    assert response.status_code == (200 if method == "post" else 204), response.text
+    saved = api.get("/api/objects/shopping_list", params={"query[]": "note~" + marker}).json()
+    indexed = {row["note"].removeprefix(marker): row for row in saved}
+    assert set(indexed) == {"_root", "_first", "_second", "_last"}
+    assert indexed["_first"]["shopping_list_id"] == indexed["_root"]["id"]
+    assert indexed["_second"]["shopping_list_id"] == indexed["_root"]["id"]
+    assert indexed["_last"]["shopping_list_id"] == indexed["_second"]["id"]
+    if method == "post":
+        assert response.json() == {"created_object_id": str(indexed["_last"]["id"])}
+    else:
+        assert indexed["_root"]["id"] == root
+
+
+@pytest.mark.parametrize(
+    "entity,body,field,expected",
+    [
+        (
+            "userfields",
+            {"entity": "locations", "caption": "Native", "type": "text-single-line"},
+            "sort_number",
+            None,
+        ),
+        ("chores", {"period_type": "manually"}, "assignment_type", None),
+        ("meal_plan_sections", {}, "sort_number", None),
+        ("recipes", {"base_servings": -2}, "desired_servings", -2),
+        ("batteries", {"charge_interval_days": -2}, "charge_interval_days", -2),
+    ],
+)
+def test_native_generic_omissions_and_scalar_values(
+    api, custom_field, entity, body, field, expected
+):
+    name = "scalar_" + uuid4().hex
+    if entity == "userfields":
+        record = custom_field(name=name, **body)
+    else:
+        record = create(api, entity, name=name, **body)
+    assert api.get(f"/api/objects/{entity}/{record}").json()[field] == expected
+
+
+def test_native_generic_primary_keys_and_unparsed_timestamps(api):
+    marker = "explicit_" + uuid4().hex
+    existing = api.get("/api/objects/locations").json()
+    original = max(row["id"] for row in existing) + 1000
+    response = api.post(
+        "/api/objects/locations",
+        json={
+            "id": original,
+            "name": marker,
+            "row_created_timestamp": "not a timestamp",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"created_object_id": str(original)}
+    saved = api.get(f"/api/objects/locations/{original}").json()
+    assert saved["row_created_timestamp"] == "not a timestamp"
+    changed = api.put(
+        f"/api/objects/locations/{original}",
+        json={
+            "id": original + 1,
+            "row_created_timestamp": None,
+        },
+    )
+    assert changed.status_code == 204, changed.text
+    assert api.get(f"/api/objects/locations/{original}").status_code == 404
+    moved = api.get(f"/api/objects/locations/{original + 1}").json()
+    assert moved["name"] == marker and moved["row_created_timestamp"] is None
+    following = create(api, "locations", name=marker + "_next")
+    assert following == original + 2

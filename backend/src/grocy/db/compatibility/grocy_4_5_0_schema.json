@@ -1,0 +1,686 @@
+{
+  "baseline": "Grocy 4.5.0",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "release_sha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95",
+  "license": "../../compatibility/LICENSE.grocy",
+  "tables": {
+    "migrations": [
+      "migration",
+      "execution_time_timestamp"
+    ],
+    "locations": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp",
+      "is_freezer",
+      "active"
+    ],
+    "quantity_units": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp",
+      "name_plural",
+      "plural_forms",
+      "active"
+    ],
+    "chores": [
+      "id",
+      "name",
+      "description",
+      "period_type",
+      "period_days",
+      "row_created_timestamp",
+      "period_config",
+      "track_date_only",
+      "rollover",
+      "assignment_type",
+      "assignment_config",
+      "next_execution_assigned_to_user_id",
+      "consume_product_on_execution",
+      "product_id",
+      "product_amount",
+      "period_interval",
+      "active",
+      "start_date",
+      "rescheduled_date",
+      "rescheduled_next_execution_assigned_to_user_id"
+    ],
+    "batteries": [
+      "id",
+      "name",
+      "description",
+      "used_in",
+      "charge_interval_days",
+      "row_created_timestamp",
+      "active"
+    ],
+    "recipes": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp",
+      "picture_file_name",
+      "base_servings",
+      "desired_servings",
+      "not_check_shoppinglist",
+      "type",
+      "product_id"
+    ],
+    "users": [
+      "id",
+      "username",
+      "first_name",
+      "last_name",
+      "password",
+      "row_created_timestamp",
+      "picture_file_name"
+    ],
+    "sessions": [
+      "id",
+      "session_key",
+      "user_id",
+      "expires",
+      "last_used",
+      "row_created_timestamp"
+    ],
+    "api_keys": [
+      "id",
+      "api_key",
+      "user_id",
+      "expires",
+      "last_used",
+      "row_created_timestamp",
+      "key_type",
+      "description"
+    ],
+    "chores_log": [
+      "id",
+      "chore_id",
+      "tracked_time",
+      "done_by_user_id",
+      "row_created_timestamp",
+      "undone",
+      "undone_timestamp",
+      "skipped",
+      "scheduled_execution_time"
+    ],
+    "task_categories": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp",
+      "active"
+    ],
+    "product_groups": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp",
+      "active"
+    ],
+    "user_settings": [
+      "id",
+      "user_id",
+      "key",
+      "value",
+      "row_created_timestamp",
+      "row_updated_timestamp"
+    ],
+    "equipment": [
+      "id",
+      "name",
+      "description",
+      "instruction_manual_file_name",
+      "row_created_timestamp"
+    ],
+    "recipes_nestings": [
+      "id",
+      "recipe_id",
+      "includes_recipe_id",
+      "row_created_timestamp",
+      "servings"
+    ],
+    "recipes_pos": [
+      "id",
+      "recipe_id",
+      "product_id",
+      "amount",
+      "note",
+      "qu_id",
+      "only_check_single_unit_in_stock",
+      "ingredient_group",
+      "not_check_stock_fulfillment",
+      "row_created_timestamp",
+      "variable_amount",
+      "price_factor",
+      "round_up"
+    ],
+    "stock": [
+      "id",
+      "product_id",
+      "amount",
+      "best_before_date",
+      "purchased_date",
+      "stock_id",
+      "price",
+      "open",
+      "opened_date",
+      "row_created_timestamp",
+      "location_id",
+      "shopping_location_id",
+      "note"
+    ],
+    "shopping_list": [
+      "id",
+      "product_id",
+      "note",
+      "amount",
+      "row_created_timestamp",
+      "shopping_list_id",
+      "done",
+      "qu_id"
+    ],
+    "shopping_lists": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp"
+    ],
+    "userfields": [
+      "id",
+      "entity",
+      "name",
+      "caption",
+      "type",
+      "show_as_column_in_tables",
+      "row_created_timestamp",
+      "config",
+      "sort_number",
+      "input_required",
+      "default_value"
+    ],
+    "quantity_unit_conversions": [
+      "id",
+      "from_qu_id",
+      "to_qu_id",
+      "factor",
+      "product_id",
+      "row_created_timestamp"
+    ],
+    "userentities": [
+      "id",
+      "name",
+      "caption",
+      "description",
+      "show_in_sidebar_menu",
+      "icon_css_class",
+      "row_created_timestamp"
+    ],
+    "userobjects": [
+      "id",
+      "userentity_id",
+      "row_created_timestamp"
+    ],
+    "meal_plan": [
+      "id",
+      "day",
+      "type",
+      "recipe_id",
+      "recipe_servings",
+      "note",
+      "product_id",
+      "product_amount",
+      "product_qu_id",
+      "row_created_timestamp",
+      "done",
+      "section_id"
+    ],
+    "shopping_locations": [
+      "id",
+      "name",
+      "description",
+      "row_created_timestamp",
+      "active"
+    ],
+    "product_barcodes": [
+      "id",
+      "product_id",
+      "barcode",
+      "qu_id",
+      "amount",
+      "shopping_location_id",
+      "last_price",
+      "row_created_timestamp",
+      "note"
+    ],
+    "user_permissions": [
+      "id",
+      "permission_id",
+      "user_id"
+    ],
+    "permission_hierarchy": [
+      "id",
+      "name",
+      "parent"
+    ],
+    "tasks": [
+      "id",
+      "name",
+      "description",
+      "due_date",
+      "done",
+      "done_timestamp",
+      "category_id",
+      "assigned_to_user_id",
+      "row_created_timestamp"
+    ],
+    "battery_charge_cycles": [
+      "id",
+      "battery_id",
+      "tracked_time",
+      "undone",
+      "undone_timestamp",
+      "row_created_timestamp"
+    ],
+    "meal_plan_sections": [
+      "id",
+      "name",
+      "sort_number",
+      "row_created_timestamp",
+      "time_info"
+    ],
+    "stock_log": [
+      "id",
+      "product_id",
+      "amount",
+      "best_before_date",
+      "purchased_date",
+      "used_date",
+      "spoiled",
+      "stock_id",
+      "transaction_type",
+      "price",
+      "undone",
+      "undone_timestamp",
+      "opened_date",
+      "location_id",
+      "recipe_id",
+      "correlation_id",
+      "transaction_id",
+      "stock_row_id",
+      "shopping_location_id",
+      "user_id",
+      "row_created_timestamp",
+      "note"
+    ],
+    "userfield_values": [
+      "id",
+      "field_id",
+      "object_id",
+      "value",
+      "row_created_timestamp"
+    ],
+    "products": [
+      "id",
+      "name",
+      "description",
+      "product_group_id",
+      "active",
+      "location_id",
+      "shopping_location_id",
+      "qu_id_purchase",
+      "qu_id_stock",
+      "min_stock_amount",
+      "default_best_before_days",
+      "default_best_before_days_after_open",
+      "default_best_before_days_after_freezing",
+      "default_best_before_days_after_thawing",
+      "picture_file_name",
+      "enable_tare_weight_handling",
+      "tare_weight",
+      "not_check_stock_fulfillment_for_recipes",
+      "parent_product_id",
+      "calories",
+      "cumulate_min_stock_amount_of_sub_products",
+      "due_type",
+      "quick_consume_amount",
+      "hide_on_stock_overview",
+      "default_stock_label_type",
+      "should_not_be_frozen",
+      "treat_opened_as_out_of_stock",
+      "no_own_stock",
+      "default_consume_location_id",
+      "move_on_open",
+      "row_created_timestamp",
+      "qu_id_consume",
+      "auto_reprint_stock_label",
+      "quick_open_amount",
+      "qu_id_price",
+      "disable_open",
+      "default_purchase_price_type"
+    ],
+    "cache__quantity_unit_conversions_resolved": [
+      "id",
+      "product_id",
+      "from_qu_id",
+      "from_qu_name",
+      "from_qu_name_plural",
+      "to_qu_id",
+      "to_qu_name",
+      "to_qu_name_plural",
+      "factor",
+      "path"
+    ],
+    "cache__products_average_price": [
+      "id",
+      "product_id",
+      "price"
+    ],
+    "cache__products_last_purchased": [
+      "id",
+      "product_id",
+      "amount",
+      "best_before_date",
+      "purchased_date",
+      "price",
+      "location_id",
+      "shopping_location_id"
+    ]
+  },
+  "views": {
+    "tasks_current": "CREATE VIEW tasks_current\r\nAS\r\nSELECT *\r\nFROM tasks\r\nWHERE done = 0",
+    "chores_execution_users_statistics": "CREATE VIEW chores_execution_users_statistics\r\nAS\r\nSELECT\r\n\tc.id AS id, -- Dummy, LessQL needs an id column\r\n\tc.id AS chore_id,\r\n\tcaur.user_id AS user_id,\r\n\t(SELECT COUNT(1) FROM chores_log WHERE chore_id = c.id AND done_by_user_id = caur.user_id AND undone = 0) AS execution_count\r\nFROM chores c\r\nJOIN chores_assigned_users_resolved caur\r\n\tON c.id = caur.chore_id\r\nGROUP BY c.id, caur.user_id",
+    "stock_current_locations": "CREATE VIEW stock_current_locations\r\nAS\r\nSELECT\r\n\t1 AS id, -- Dummy, LessQL needs an id column\r\n\ts.product_id,\r\n        SUM(s.amount) as amount,\r\n\ts.location_id AS location_id,\r\n\tl.name AS location_name,\r\n\tl.is_freezer AS location_is_freezer\r\nFROM stock s\r\nJOIN locations l\r\n\tON s.location_id = l.id\r\nGROUP BY s.product_id, s.location_id, l.name",
+    "stock_current_location_content": "CREATE VIEW stock_current_location_content\r\nAS\r\nSELECT\r\n\tIFNULL(s.location_id, p.location_id) AS location_id,\r\n\ts.product_id,\r\n\tSUM(s.amount) AS amount,\r\n\tROUND(SUM(IFNULL(s.price, 0) * s.amount), 2) AS value,\r\n\tMIN(s.best_before_date) AS best_before_date,\r\n\tIFNULL((SELECT SUM(amount) FROM stock WHERE product_id = s.product_id AND location_id = s.location_id AND open = 1), 0) AS amount_opened\r\nFROM stock s\r\nJOIN products p\r\n\tON s.product_id = p.id\r\n\tAND p.active = 1\r\nGROUP BY IFNULL(s.location_id, p.location_id), s.product_id",
+    "products_resolved": "CREATE VIEW products_resolved\r\nAS\r\nSELECT\r\n    CASE\r\n        WHEN p.parent_product_id IS NULL THEN\r\n            p.id\r\n        ELSE\r\n            p.parent_product_id\r\n    END AS parent_product_id,\r\n    p.id as sub_product_id\r\nFROM products p\r\nWHERE p.active = 1",
+    "permission_tree": "CREATE VIEW permission_tree\r\nAS\r\nWITH RECURSIVE perm AS (\r\n\tSELECT id AS root, id AS child, name, parent\r\n\tFROM permission_hierarchy\r\n\tUNION\r\n\tSELECT perm.root, ph.id, ph.name, ph.id\r\n\tFROM permission_hierarchy ph, perm\r\n\tWHERE ph.parent = perm.child\r\n)\r\nSELECT root AS id, name AS name\r\nFROM perm",
+    "user_permissions_resolved": "CREATE VIEW user_permissions_resolved\r\nAS\r\nSELECT\r\n\tu.id AS id, -- Dummy for LessQL\r\n\tu.id AS user_id,\r\n\tpt.name AS permission_name\r\nFROM permission_tree pt, users u\r\nWHERE pt.id IN (SELECT permission_id FROM user_permissions sub_up WHERE sub_up.user_id = u.id)",
+    "uihelper_user_permissions": "CREATE VIEW uihelper_user_permissions\r\nAS\r\nSELECT\r\n\tph.id AS id,\r\n\tu.id AS user_id,\r\n\tph.name AS permission_name,\r\n\tph.id AS permission_id,\r\n\t(ph.name IN (\r\n\t\t\tSELECT pc.permission_name\r\n\t\t\tFROM user_permissions_resolved pc\r\n\t\t\tWHERE pc.user_id = u.id\r\n\t\t)\r\n\t) AS has_permission,\r\n\tph.parent AS parent\r\nFROM users u, permission_hierarchy ph",
+    "userfield_values_resolved": "CREATE VIEW userfield_values_resolved\r\nAS\r\nSELECT\r\n\tu.id, -- Dummy, LessQL needs an id column\r\n\tu.entity,\r\n\tu.name,\r\n\tu.caption,\r\n\tu.type,\r\n\tu.show_as_column_in_tables,\r\n\tu.row_created_timestamp,\r\n\tu.config,\r\n\tuv.object_id,\r\n\tuv.value\r\nFROM userfields u\r\nJOIN userfield_values uv\r\n\tON u.id = uv.field_id\r\n\r\nUNION\r\n\r\n-- Kind of a hack, include userentity userfields also for the table userobjects\r\nSELECT\r\n\tu.id, -- Dummy, LessQL needs an id column,\r\n\t'userobjects',\r\n\tu.name,\r\n\tu.caption,\r\n\tu.type,\r\n\tu.show_as_column_in_tables,\r\n\tu.row_created_timestamp,\r\n\tu.config,\r\n\tuv.object_id,\r\n\tuv.value\r\nFROM userfields u\r\nJOIN userfield_values uv\r\n\tON u.id = uv.field_id\r\nWHERE u.entity like 'userentity-%'",
+    "uihelper_stock_journal_summary": "CREATE VIEW uihelper_stock_journal_summary\r\nAS\r\nSELECT\r\n\tuser_id AS id, -- Dummy, LessQL needs an id column\r\n\tuser_id, u.display_name AS user_display_name,\r\n\tp.name AS product_name,\r\n\tproduct_id,\r\n\ttransaction_type,\r\n\tqu.name AS qu_name,\r\n\tqu.name_plural AS qu_name_plural,\r\n\tSUM(amount) AS amount\r\nFROM stock_log sl\r\nJOIN users_dto u\r\n\ton sl.user_id = u.id\r\nJOIN products p\r\n\tON sl.product_id = p.id\r\nJOIN quantity_units qu\r\n\tON p.qu_id_stock = qu.id\r\nWHERE undone = 0\r\nGROUP BY user_id, product_id, transaction_type",
+    "product_barcodes_comma_separated": "CREATE VIEW product_barcodes_comma_separated\r\nAS\r\nSELECT\r\n\tpb.id, -- Dummy, LessQL needs an id column\r\n\tpb.product_id,\r\n\tGROUP_CONCAT(pb.barcode) AS barcodes\r\nFROM product_barcodes pb\r\nJOIN products p\r\n\tON pb.product_id = p.id\r\nWHERE p.active = 1\r\nGROUP BY pb.product_id",
+    "chores_assigned_users_resolved": "CREATE VIEW chores_assigned_users_resolved\r\nAS\r\nSELECT\r\n\tc.id AS chore_id,\r\n\tu.id AS user_id\r\nFROM chores c\r\nJOIN users u\r\n\tON ',' || c.assignment_config || ',' LIKE '%,' || CAST(u.id AS TEXT) || ',%'\r\nWHERE c.active = 1",
+    "users_dto": "CREATE VIEW users_dto\r\nAS\r\nSELECT\r\n\tid,\r\n\tusername,\r\n\tfirst_name,\r\n\tlast_name,\r\n\trow_created_timestamp,\r\n\t(CASE\r\n\t\tWHEN IFNULL(first_name, '') = '' AND IFNULL(last_name, '') != '' THEN last_name\r\n\t\tWHEN IFNULL(last_name, '') = '' AND IFNULL(first_name, '') != '' THEN first_name\r\n\t\tWHEN IFNULL(last_name, '') != '' AND IFNULL(first_name, '') != '' THEN first_name || ' ' || last_name\r\n\t\tELSE username\r\n\tEND\r\n\t) AS display_name,\r\n\tpicture_file_name\r\nFROM users",
+    "quantity_units_resolved": "CREATE VIEW quantity_units_resolved\r\nAS\r\n-- This view builds the relationship between QUs based on their (default) conversions\r\n\r\nSELECT\r\n\t-1 AS id, -- Dummy, LessQL needs an id column\r\n\tqu.id AS qu_id,\r\n\tquc.to_qu_id AS related_qu_id,\r\n\tquc.factor\r\nFROM quantity_units qu\r\nJOIN quantity_unit_conversions quc\r\n\tON qu.id = quc.from_qu_id\r\n\tAND quc.product_id IS NULL",
+    "product_qu_relations": "CREATE VIEW product_qu_relations\r\nAS\r\n-- This view builds which product is related to which QU, direct or indirect, based on QU conversions\r\n\r\n-- The products stock QU\r\nSELECT\r\n\t-1 AS id, -- Dummy, LessQL needs an id column\r\n\tp.id AS product_id,\r\n\tp.qu_id_stock AS qu_id\r\nFROM products p\r\n\r\nUNION\r\n\r\n-- The products purchase QU\r\nSELECT\r\n\t-1 AS id, -- Dummy, LessQL needs an id column\r\n\tp.id AS product_id,\r\n\tp.qu_id_purchase AS qu_id\r\nFROM products p\r\n\r\nUNION\r\n\r\n-- All (direct) product conversions (product overrides)\r\nSELECT\r\n\t-1 AS id, -- Dummy, LessQL needs an id column\r\n\tquc.product_id,\r\n\tquc.to_qu_id AS qu_id\r\nFROM quantity_unit_conversions quc\r\nWHERE quc.product_id IS NOT NULL\r\n\r\nUNION\r\n\r\n-- All (indirect) default QU conversions\r\nSELECT\r\n\t-1 AS id, -- Dummy, LessQL needs an id column\r\n\tp.id AS product_id,\r\n\tqur2.qu_id\r\nfrom products p\r\nJOIN quantity_unit_conversions quc\r\n\tON (p.qu_id_stock = quc.from_qu_id OR p.qu_id_purchase = quc.from_qu_id)\r\n\tAND p.id = quc.product_id\r\nJOIN quantity_units_resolved qur1\r\n\tON quc.to_qu_id = qur1.qu_id\r\nJOIN quantity_units_resolved qur2\r\n\tON qur1.related_qu_id = qur2.qu_id",
+    "recipes_missing_product_counts": "CREATE VIEW recipes_missing_product_counts\r\nAS\r\nSELECT\r\n\trecipe_id,\r\n\tCOUNT(*) AS missing_products_count\r\nFROM recipes_pos_resolved\r\nWHERE need_fulfilled = 0\r\nGROUP BY recipe_id",
+    "chores_execution_timeline": "CREATE VIEW chores_execution_timeline\r\nAS\r\n\r\nSELECT\r\n\tcl.chore_id,\r\n\tcl.tracked_time,\r\n\t(SELECT tracked_time FROM chores_log WHERE chore_id = cl.chore_id AND undone = 0 AND tracked_time < cl.tracked_time ORDER BY tracked_time DESC LIMIT 1) AS tracked_time_before,\r\n\tCAST((JULIANDAY(cl.tracked_time) - JULIANDAY((SELECT tracked_time FROM chores_log WHERE chore_id = cl.chore_id AND undone = 0 AND tracked_time < cl.tracked_time ORDER BY tracked_time DESC LIMIT 1))) * 24 AS INT) AS frequency_hours\r\nFROM chores_log cl\r\nWHERE cl.undone = 0",
+    "chores_execution_average_frequency": "CREATE VIEW chores_execution_average_frequency\r\nAS\r\n\r\nSELECT\r\n\tcet.chore_id,\r\n\tAVG(cet.frequency_hours) AS average_frequency_hours\r\nFROM chores_execution_timeline cet\r\nGROUP BY cet.chore_id",
+    "batteries_current": "CREATE VIEW batteries_current\r\nAS\r\nSELECT\r\n\tb.id, -- Dummy, LessQL needs an id column\r\n\tb.id AS battery_id,\r\n\tMAX(l.tracked_time) AS last_tracked_time,\r\n\tCASE WHEN b.charge_interval_days = 0\r\n\t\tTHEN '2999-12-31 23:59:59'\r\n\t\tELSE datetime(MAX(l.tracked_time), '+' || CAST(b.charge_interval_days AS TEXT) || ' day')\r\n\tEND AS next_estimated_charge_time\r\nFROM batteries b\r\nLEFT JOIN battery_charge_cycles l\r\n\tON b.id = l.battery_id\r\n\tAND l.undone = 0\r\nWHERE b.active = 1\r\nGROUP BY b.id, b.charge_interval_days",
+    "products_volatile_status": "CREATE VIEW products_volatile_status\r\nAS\r\nSELECT\r\n\t-1 AS id, -- Dummy\r\n\tp.id AS product_id,\r\n\tp.name AS product_name,\r\n\tCASE WHEN JULIANDAY(sc.best_before_date) - JULIANDAY('now', 'localtime') < 0 THEN\r\n\t\tCASE WHEN p.due_type = 1 THEN 'overdue' ELSE 'expired' END\r\n\tELSE\r\n\t\tCASE WHEN JULIANDAY(sc.best_before_date) - JULIANDAY('now', 'localtime') < CAST(grocy_user_setting('stock_due_soon_days') AS INT) THEN\r\n\t\t\t'due_soon'\r\n\t\tELSE\r\n\t\t\t'ok'\r\n\t\tEND\r\n\tEND AS current_due_status,\r\n\tCASE WHEN smp.id IS NOT NULL THEN 1 ELSE 0 END AS is_currently_below_min_stock_amount\r\nFROM products p\r\nLEFT JOIN stock_current sc\r\n\tON p.id = sc.product_id\r\nLEFT JOIN stock_missing_products smp\r\n\tON p.id = smp.id",
+    "stock_splits": "CREATE VIEW stock_splits\r\nAS\r\n\r\n/*\r\n\tHelper view which shows splitted stock rows which could be compacted\r\n\r\n\tStock entries with a stock_id starting with \"x\"\r\n\tand those with userfields shouldn't be compacted\r\n*/\r\n\r\nSELECT\r\n\ts.product_id,\r\n\tSUM(s.amount) AS total_amount,\r\n\tMIN(s.stock_id) AS stock_id_to_keep,\r\n\tMAX(s.id) AS id_to_keep,\r\n\tGROUP_CONCAT(s.id) AS id_group,\r\n\tGROUP_CONCAT(s.stock_id) AS stock_id_group,\r\n\ts.id -- Dummy\r\nFROM stock s\r\nWHERE s.stock_id NOT LIKE 'x%'\r\n\tAND NOT EXISTS(\r\n\t\tSELECT 1 FROM userfield_values\r\n\t\tWHERE object_id = s.stock_id\r\n\t\t\tAND field_id IN (SELECT id FROM userfields WHERE entity = 'stock')\r\n\t\t\tAND IFNULL(value, '') != ''\r\n\t\t)\r\nGROUP BY s.product_id, s.best_before_date, s.purchased_date, s.price, s.open, s.opened_date, s.location_id, s.shopping_location_id, IFNULL(s.note, '')\r\nHAVING COUNT(*) > 1",
+    "uihelper_stock_journal": "CREATE VIEW uihelper_stock_journal\r\nAS\r\nSELECT\r\n\tsl.id,\r\n\tsl.row_created_timestamp,\r\n\tsl.correlation_id,\r\n\tsl.undone,\r\n\tsl.undone_timestamp,\r\n\tsl.transaction_type,\r\n\tsl.spoiled,\r\n\tsl.amount,\r\n\tsl.location_id,\r\n\tl.name AS location_name,\r\n\tp.name AS product_name,\r\n\tqu.name AS qu_name,\r\n\tqu.name_plural AS qu_name_plural,\r\n\tu.display_name AS user_display_name,\r\n\tp.id AS product_id,\r\n\tsl.note,\r\n\tsl.stock_id\r\nFROM stock_log sl\r\nLEFT JOIN users_dto u\r\n\tON sl.user_id = u.id\r\nJOIN products p\r\n\tON sl.product_id = p.id\r\nJOIN locations l\r\n\tON sl.location_id = l.id\r\nJOIN quantity_units qu\r\n\tON p.qu_id_stock = qu.id",
+    "chores_current": "CREATE VIEW chores_current\r\nAS\r\nSELECT\r\n\tx.chore_id AS id, -- Dummy, LessQL needs an id column\r\n\tx.chore_id,\r\n\tx.chore_name,\r\n\tx.last_tracked_time,\r\n\tCASE WHEN x.rollover = 1 AND DATETIME('now', 'localtime') > x.next_estimated_execution_time THEN\r\n\t\tCASE WHEN IFNULL(x.track_date_only, 0) = 1 THEN\r\n\t\t\tDATETIME(STRFTIME('%Y-%m-%d', DATETIME('now', 'localtime')) || ' 23:59:59')\r\n\t\tELSE\r\n\t\t\tDATETIME(STRFTIME('%Y-%m-%d', DATETIME('now', 'localtime')) || ' ' || STRFTIME('%H:%M:%S', x.next_estimated_execution_time))\r\n\t\tEND\r\n\tELSE\r\n\t\tCASE WHEN IFNULL(x.track_date_only, 0) = 1 THEN\r\n\t\t\tDATETIME(STRFTIME('%Y-%m-%d', x.next_estimated_execution_time) || ' 23:59:59')\r\n\t\tELSE\r\n\t\t\tx.next_estimated_execution_time\r\n\t\tEND\r\n\tEND AS next_estimated_execution_time,\r\n\tx.track_date_only,\r\n\tx.next_execution_assigned_to_user_id,\r\n\tCASE WHEN IFNULL(x.rescheduled_date, '') != '' THEN 1 ELSE 0 END AS is_rescheduled,\r\n\tCASE WHEN IFNULL(x.rescheduled_next_execution_assigned_to_user_id, '') != '' THEN 1 ELSE 0 END AS is_reassigned\r\nFROM (\r\n\r\nSELECT\r\n\th.id AS chore_id,\r\n\th.name AS chore_name,\r\n\tMAX(l.tracked_time) AS last_tracked_time,\r\n\tCASE WHEN IFNULL(h.rescheduled_date, '') != '' THEN\r\n\t\th.rescheduled_date\r\n\tELSE\r\n\t\tCASE WHEN MAX(l.tracked_time) IS NULL AND h.period_type != 'manually' THEN\r\n\t\t\th.start_date\r\n\t\tELSE\r\n\t\t\tCASE h.period_type\r\n\t\t\t\tWHEN 'manually' THEN NULL\r\n\t\t\t\tWHEN 'hourly' THEN DATETIME(MAX(l.tracked_time), '+' || CAST(h.period_interval AS TEXT) || ' hour')\r\n\t\t\t\tWHEN 'daily' THEN DATETIME(SUBSTR(CAST(DATETIME(MAX(l.tracked_time), '+' || CAST(h.period_interval AS TEXT) || ' days') AS TEXT), 1, 11) || SUBSTR(CAST(h.start_date AS TEXT), -8))\r\n\t\t\t\tWHEN 'weekly' THEN (\r\n\t\t\t\t\tSELECT next\r\n\t\t\t\t\t\tFROM (\r\n\t\t\t\t\t\tSELECT 'sunday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 0') AS next\r\n\t\t\t\t\t\tUNION\r\n\t\t\t\t\t\tSELECT 'monday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 1') AS next\r\n\t\t\t\t\t\tUNION\r\n\t\t\t\t\t\tSELECT 'tuesday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 2') AS next\r\n\t\t\t\t\t\tUNION\r\n\t\t\t\t\t\tSELECT 'wednesday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 3') AS next\r\n\t\t\t\t\t\tUNION\r\n\t\t\t\t\t\tSELECT 'thursday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 4') AS next\r\n\t\t\t\t\t\tUNION\r\n\t\t\t\t\t\tSELECT 'friday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 5') AS next\r\n\t\t\t\t\t\tUNION\r\n\t\t\t\t\t\tSELECT 'saturday' AS day, DATETIME((SELECT tracked_time FROM chores_log WHERE chore_id = h.id ORDER BY tracked_time DESC LIMIT 1), '1 days', '+' || CAST((h.period_interval - 1) * 7 AS TEXT) || ' days', 'weekday 6') AS next\r\n\t\t\t\t\t)\r\n\t\t\t\t\tWHERE INSTR(period_config, day) > 0\r\n\t\t\t\t\tORDER BY next\r\n\t\t\t\t\tLIMIT 1\r\n\t\t\t\t)\r\n\t\t\t\tWHEN 'monthly' THEN DATETIME(MAX(l.tracked_time), 'start of month', '+' || CAST(h.period_interval AS TEXT) || ' month', '+' || CAST(h.period_days - 1 AS TEXT) || ' day')\r\n\t\t\t\tWHEN 'yearly' THEN DATETIME(SUBSTR(CAST(DATETIME(MAX(l.tracked_time), '+' || CAST(h.period_interval AS TEXT) || ' years') AS TEXT), 1, 4) || SUBSTR(CAST(h.start_date AS TEXT), 5, 6) || SUBSTR(CAST(DATETIME(MAX(l.tracked_time), '+' || CAST(h.period_interval AS TEXT) || ' years') AS TEXT), -9))\r\n\t\t\t\tWHEN 'adaptive' THEN DATETIME(MAX(l.tracked_time), '+' || CAST(IFNULL((SELECT average_frequency_hours FROM chores_execution_average_frequency WHERE chore_id = h.id), 0) AS TEXT) || ' hour')\r\n\t\t\tEND\r\n\t\tEND\r\n\tEND AS next_estimated_execution_time,\r\n\th.track_date_only,\r\n\th.rollover,\r\n\th.next_execution_assigned_to_user_id,\r\n\th.rescheduled_date,\r\n\th.rescheduled_next_execution_assigned_to_user_id\r\nFROM chores h\r\nLEFT JOIN chores_log l\r\n\tON h.id = l.chore_id\r\n\tAND l.undone = 0\r\nWHERE h.active = 1\r\nGROUP BY h.id, h.name, h.period_days\r\n) x",
+    "stock_average_product_shelf_life": "CREATE VIEW stock_average_product_shelf_life\r\nAS\r\nSELECT\r\n\tp.id,\r\n\tCASE WHEN x.product_id IS NULL THEN -1 ELSE AVG(x.shelf_life_days) END AS average_shelf_life_days\r\nFROM products p\r\nLEFT JOIN (\r\n\t\tSELECT\r\n\t\t\tsl_p.product_id,\r\n\t\t\tJULIANDAY(sl_p.best_before_date) - JULIANDAY(sl_p.purchased_date) AS shelf_life_days\r\n\t\tFROM stock_log sl_p\r\n\t\tWHERE sl_p.undone = 0\r\n\t\t\tAND (\r\n\t\t\t\t(sl_p.transaction_type IN ('purchase', 'inventory-correction', 'self-production') AND sl_p.stock_id NOT IN (SELECT stock_id FROM stock_edited_entries))\r\n\t\t\t\tOR (sl_p.transaction_type = 'stock-edit-new' AND sl_p.stock_id IN (SELECT stock_id FROM stock_edited_entries))\r\n\t\t\t)\r\n\t) x\r\n\tON p.id = x.product_id\r\nGROUP BY p.id",
+    "stock_next_use": "CREATE VIEW stock_next_use\r\nAS\r\n\r\n/*\r\n\tThe default consume rule is:\r\n\tOpened first, then first due first, then first in first out\r\n\tApart from that products at their default consume location should be consumed first\r\n\r\n\tThis orders the stock entries by that\r\n\t=> Highest \"priority\" per product = the stock entry to use next\r\n\t=> ORDER BY clause = ORDER BY priority DESC, open DESC, best_before_date ASC, purchased_date ASC\r\n*/\r\n\r\nSELECT\r\n\t(ROW_NUMBER() OVER(PARTITION BY s.product_id ORDER BY CASE WHEN IFNULL(p.default_consume_location_id, -1) = s.location_id THEN 0 ELSE 1 END ASC, s.open DESC, s.best_before_date ASC, s.purchased_date ASC)) * -1 AS priority,\r\n\ts.*\r\nFROM stock s\r\nJOIN products p\r\n\tON p.id = s.product_id\r\nORDER BY CASE WHEN IFNULL(p.default_consume_location_id, -1) = s.location_id THEN 0 ELSE 1 END ASC, s.open DESC, s.best_before_date ASC, s.purchased_date ASC",
+    "products_current_substitutions": "CREATE VIEW products_current_substitutions\r\nAS\r\n\r\n/*\r\n\tWhen a parent product is not in stock itself,\r\n\tany sub product (the next based on the default consume rule) should be used\r\n\r\n\tThis view lists all parent products and in the column \"product_id_effective\" either itself,\r\n\twhen the corresponding parent product is currently in stock itself, or otherwise the next sub product to use\r\n*/\r\n\r\nSELECT\r\n\t-1, -- Dummy\r\n\tp_sub.id AS parent_product_id,\r\n\tCASE WHEN p_sub.has_sub_products = 1 THEN\r\n\t\tCASE WHEN IFNULL(sc.amount, 0) = 0 THEN -- Parent product itself is currently not in stock => use the next sub product\r\n\t\t\t(\r\n\t\t\tSELECT x_snu.product_id\r\n\t\t\tFROM products_resolved x_pr\r\n\t\t\tJOIN stock_next_use x_snu\r\n\t\t\t\tON x_pr.sub_product_id = x_snu.product_id\r\n\t\t\tWHERE x_pr.parent_product_id = p_sub.id\r\n\t\t\t\tAND x_pr.parent_product_id != x_pr.sub_product_id\r\n\t\t\tORDER BY x_snu.priority DESC, x_snu.open DESC, x_snu.best_before_date ASC, x_snu.purchased_date ASC\r\n\t\t\tLIMIT 1\r\n\t\t\t)\r\n\t\tELSE -- Parent product itself is currently in stock => use it\r\n\t\t\tp_sub.id\r\n\t\tEND\r\n\tEND AS product_id_effective\r\nFROM products_view p\r\nJOIN products_resolved pr\r\n\tON p.id = pr.parent_product_id\r\nJOIN products_view p_sub\r\n\tON pr.sub_product_id = p_sub.id\r\nJOIN stock_current sc\r\n\tON p_sub.id = sc.product_id\r\nWHERE p_sub.has_sub_products = 1",
+    "stock_missing_products": "CREATE VIEW stock_missing_products\r\nAS\r\n\r\nSELECT *\r\nFROM (\r\n\r\n-- Products WITHOUT sub products where the amount of the sub products SHOULD NOT be cumulated\r\nSELECT\r\n\tp.id,\r\n\tMAX(p.name) AS name,\r\n\tp.min_stock_amount - IFNULL(SUM(s.amount), 0) + (CASE WHEN p.treat_opened_as_out_of_stock = 1 THEN IFNULL(SUM(s.amount_opened), 0) ELSE 0 END) AS amount_missing,\r\n\tCASE WHEN IFNULL(SUM(s.amount), 0) > 0 THEN 1 ELSE 0 END AS is_partly_in_stock\r\nFROM products_view p\r\nLEFT JOIN stock_current s\r\n\tON p.id = s.product_id\r\nWHERE p.min_stock_amount != 0\r\n\tAND p.cumulate_min_stock_amount_of_sub_products = 0\r\n\tAND p.has_sub_products = 0\r\n\tAND p.parent_product_id IS NULL\r\n\tAND IFNULL(p.active, 0) = 1\r\nGROUP BY p.id\r\n\r\nUNION\r\n\r\n-- Parent products WITH sub products where the amount of the sub products SHOULD be cumulated\r\nSELECT\r\n\tp.id,\r\n\tMAX(p.name) AS name,\r\n\tSUM(sub_p.min_stock_amount) - IFNULL(SUM(s.amount_aggregated), 0) + (CASE WHEN p.treat_opened_as_out_of_stock = 1 THEN IFNULL(SUM(s.amount_opened_aggregated), 0) ELSE 0 END) AS amount_missing,\r\n\tCASE WHEN IFNULL(SUM(s.amount), 0) > 0 THEN 1 ELSE 0 END AS is_partly_in_stock\r\nFROM products_view p\r\nJOIN products_resolved pr\r\n\tON p.id = pr.parent_product_id\r\nJOIN products sub_p\r\n\tON pr.sub_product_id = sub_p.id\r\nLEFT JOIN stock_current s\r\n\tON pr.sub_product_id = s.product_id\r\nWHERE sub_p.min_stock_amount != 0\r\n\tAND p.cumulate_min_stock_amount_of_sub_products = 1\r\n\tAND IFNULL(p.active, 0) = 1\r\nGROUP BY p.id\r\n\r\nUNION\r\n\r\n-- Sub products where the amount SHOULD NOT be cumulated into the parent product\r\nSELECT\r\n\tsub_p.id,\r\n\tMAX(sub_p.name) AS name,\r\n\tSUM(sub_p.min_stock_amount) - IFNULL(SUM(s.amount_aggregated), 0) + (CASE WHEN p.treat_opened_as_out_of_stock = 1 THEN IFNULL(SUM(s.amount_opened_aggregated), 0) ELSE 0 END) AS amount_missing,\r\n\tCASE WHEN IFNULL(SUM(s.amount), 0) > 0 THEN 1 ELSE 0 END AS is_partly_in_stock\r\nFROM products p\r\nJOIN products_resolved pr\r\n\tON p.id = pr.parent_product_id\r\nJOIN products sub_p\r\n\tON pr.sub_product_id = sub_p.id\r\nLEFT JOIN stock_current s\r\n\tON pr.sub_product_id = s.product_id\r\nWHERE sub_p.min_stock_amount != 0\r\n\tAND p.cumulate_min_stock_amount_of_sub_products = 0\r\n\tAND IFNULL(p.active, 0) = 1\r\nGROUP BY sub_p.id\r\n) x\r\nWHERE x.amount_missing > 0",
+    "meal_plan_internal_recipe_relation": "CREATE VIEW meal_plan_internal_recipe_relation\r\nAS\r\n\r\n-- Relation between a meal plan (day) and the corresponding internal recipe(s)\r\n\r\nSELECT mp.day, r.id AS recipe_id\r\nFROM meal_plan mp\r\nJOIN recipes r\r\n\tON r.name = CAST(mp.day AS TEXT)\r\n\tAND r.type = 'mealplan-day'\r\n\r\nUNION\r\n\r\nSELECT mp.day, r.id AS recipe_id\r\nFROM meal_plan mp\r\nJOIN recipes r\r\n\tON r.name = LTRIM(STRFTIME('%Y-%W', mp.day), '0')\r\n\tAND r.type = 'mealplan-week'\r\n\r\nUNION\r\n\r\nSELECT mp.day, r.id AS recipe_id\r\nFROM meal_plan mp\r\nJOIN recipes r\r\n\tON r.name = CAST(mp.day AS TEXT) || '#' || CAST(mp.id AS TEXT)\r\n\tAND r.type = 'mealplan-shadow'",
+    "uihelper_stock_entries": "CREATE VIEW uihelper_stock_entries\r\nAS\r\nSELECT\r\n\t*\r\nFROM stock s\r\nJOIN products_view p\r\n\tON s.product_id = p.id",
+    "products_view": "CREATE VIEW products_view\r\nAS\r\nSELECT\r\n\tp.*,\r\n\tCASE WHEN (SELECT 1 FROM products WHERE parent_product_id = p.id) NOTNULL THEN 1 ELSE 0 END AS has_sub_products,\r\n\tIFNULL(quc_purchase.factor, 1.0) AS qu_factor_purchase_to_stock,\r\n\tIFNULL(quc_consume.factor, 1.0) AS qu_factor_consume_to_stock,\r\n\tIFNULL(quc_price.factor, 1.0) AS qu_factor_price_to_stock\r\nFROM products p\r\nLEFT JOIN cache__quantity_unit_conversions_resolved quc_purchase\r\n\tON p.id = quc_purchase.product_id\r\n\tAND p.qu_id_purchase = quc_purchase.from_qu_id\r\n\tAND p.qu_id_stock = quc_purchase.to_qu_id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved quc_consume\r\n\tON p.id = quc_consume.product_id\r\n\tAND p.qu_id_consume = quc_consume.from_qu_id\r\n\tAND p.qu_id_stock = quc_consume.to_qu_id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved quc_price\r\n\tON p.id = quc_price.product_id\r\n\tAND p.qu_id_price = quc_price.from_qu_id\r\n\tAND p.qu_id_stock = quc_price.to_qu_id",
+    "products_current_price": "CREATE VIEW products_current_price\r\nAS\r\n\r\n/*\r\n\tCurrent price per product,\r\n\tbased on the stock entry to use next,\r\n\tor on the last price if the product is currently not in stock\r\n*/\r\n\r\nSELECT\r\n\t-1 AS id, -- Dummy,\r\n\tp.id AS product_id,\r\n\tIFNULL(snu.price, plp.price) AS price\r\nFROM products p\r\nLEFT JOIN (\r\n\tSELECT\r\n\t\tproduct_id,\r\n\t\tMAX(priority),\r\n\t\tprice -- Bare column, ref https://www.sqlite.org/lang_select.html#bare_columns_in_an_aggregate_query\r\n\tFROM stock_next_use\r\n\tGROUP BY product_id\r\n\tORDER BY priority DESC, open DESC, best_before_date ASC, purchased_date ASC\r\n\t) snu\r\n\tON p.id = snu.product_id\r\nLEFT JOIN cache__products_last_purchased plp\r\n\tON p.id = plp.product_id",
+    "stock_edited_entries": "CREATE VIEW stock_edited_entries\r\nAS\r\n/*\r\n\tReturns stock_id's which have been edited manually\r\n*/\r\nSELECT\r\n\tx.stock_id,\r\n\tx.stock_log_id_of_newest_edited_entry,\r\n\r\n\t-- When an origin entry was edited, the new origin amount is the one of the newest \"stock-edit-new\" + all\r\n\t-- previous consume transactions (mind that consume transaction amounts are negative, hence here - instead of +)\r\n\t(\r\n\t\tSELECT amount\r\n\t\tFROM stock_log sli\r\n\t\tWHERE sli.id = x.stock_log_id_of_newest_edited_entry\r\n\t)\r\n\t-\r\n\tIFNULL((\r\n\t\tSELECT SUM(amount)\r\n\t\tFROM stock_log sli_consumed\r\n\t\tWHERE sli_consumed.stock_id = x.stock_id\r\n\t\t\tAND sli_consumed.transaction_type IN ('consume', 'inventory-correction')\r\n\t\t\tAND sli_consumed.id < x.stock_log_id_of_newest_edited_entry\r\n\t\t\tAND sli_consumed.amount < 0\r\n\t\t\tAND sli_consumed.undone = 0), 0) AS edited_origin_amount\r\nFROM (\r\n\tSELECT\r\n\t\tsl_add.stock_id,\r\n\t\tMAX(sl_edit.id) AS stock_log_id_of_newest_edited_entry\r\n\tFROM stock_log sl_add\r\n\tJOIN stock_log sl_edit\r\n\t\tON sl_add.stock_id = sl_edit.stock_id\r\n\t\tAND sl_edit.transaction_type = 'stock-edit-new'\r\n\tWHERE sl_add.transaction_type IN ('purchase', 'inventory-correction', 'self-production')\r\n\t\tAND sl_add.amount > 0\r\nGROUP BY sl_add.stock_id\r\n) x\r\nJOIN stock_log sl_edit\r\n\tON x.stock_log_id_of_newest_edited_entry = sl_edit.id",
+    "products_average_price": "CREATE VIEW products_average_price\r\nAS\r\nSELECT\r\n\t1 AS id, -- Dummy, LessQL needs an id column\r\n\tsl.product_id,\r\n\tSUM(IFNULL(sl.edited_origin_amount, sl.amount) * sl.price) / SUM(IFNULL(sl.edited_origin_amount, sl.amount)) as price\r\nFROM (\r\n\tSELECT sl.*, CASE WHEN sl.transaction_type = 'stock-edit-new' THEN see.edited_origin_amount END AS edited_origin_amount\r\n\tFROM stock_log sl\r\n\tLEFT JOIN stock_edited_entries see\r\n\t\tON sl.stock_id = see.stock_id\r\n) sl\r\nWHERE sl.undone = 0\r\n\tAND (\r\n\t\t(sl.transaction_type IN ('purchase', 'inventory-correction', 'self-production') AND sl.stock_id NOT IN (SELECT stock_id FROM stock_edited_entries)) -- Unedited origin entries\r\n\t\tOR (sl.transaction_type = 'stock-edit-new' AND sl.id IN (SELECT stock_log_id_of_newest_edited_entry FROM stock_edited_entries)) -- Edited origin entries => take the newest \"stock-edit-new\" one\r\n\t)\r\n\tAND IFNULL(sl.price, 0) > 0\r\n\tAND IFNULL(sl.amount, 0) > 0\r\nGROUP BY sl.product_id",
+    "quantity_unit_conversions_resolved": "CREATE VIEW quantity_unit_conversions_resolved\r\nAS\r\n\r\nWITH RECURSIVE\r\n\r\n-- Default QU conversions are handled in a later CTE, as we can't determine yet, for which products they are applicable.\r\ndefault_conversions(from_qu_id, to_qu_id, factor)\r\nAS (\r\n\tSELECT\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tfactor\r\n\tFROM quantity_unit_conversions\r\n\tWHERE product_id IS NULL\r\n),\r\n\r\n-- First find the closure for all default conversions. This will allow for further pruning when looking for product closure.\r\ndefault_closure(depth, from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\t-- As a base case, select all available default conversions\r\n\tSELECT\r\n\t\t1 as depth,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tfactor,\r\n\t\t'/' || from_qu_id || '/' || to_qu_id || '/' -- We need to keep track of the conversion path in order to prevent cycles\r\n\tFROM default_conversions\r\n\r\n\tUNION\r\n\r\n\t-- Recursive case: Find all paths\r\n\tSELECT\r\n\t\tc.depth + 1,\r\n\t\tc.from_qu_id,\r\n\t\ts.to_qu_id,\r\n\t\tc.factor * s.factor,\r\n\t\tc.path || s.to_qu_id || '/'\r\n\tFROM default_closure c\r\n\tJOIN default_conversions s\r\n\t\tON c.to_qu_id = s.from_qu_id\r\n\tWHERE c.path NOT LIKE ('%/' || s.to_qu_id || '/%') -- Prevent cycles\r\n\t\tAND NOT EXISTS(SELECT 1 FROM default_conversions ci WHERE ci.from_qu_id = c.from_qu_id AND ci.to_qu_id = s.to_qu_id) -- Prune if one of the existing conversions repeats (saves a lot of processing time)\r\n\r\n),\r\n\r\ndefault_closure_distinct(from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\tSELECT DISTINCT\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tFIRST_VALUE(factor) OVER win AS factor,\r\n\t\tFIRST_VALUE(path) OVER win AS path\r\n\tFROM default_closure\r\n\tGROUP BY from_qu_id, to_qu_id\r\n\tWINDOW win AS (PARTITION BY from_qu_id, to_qu_id ORDER BY depth)\r\n\tORDER BY from_qu_id, to_qu_id\r\n),\r\n\r\nproduct_conversions(product_id, from_qu_id, to_qu_id, factor)\r\nAS (\r\n\t-- Priority 1: Product-specific QU overrides\r\n\t-- Note that the quantity_unit_conversions table already contains both conversion directions for every conversion.\r\n\tSELECT\r\n\t\tproduct_id,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tfactor\r\n\tFROM quantity_unit_conversions\r\n\tWHERE product_id IS NOT NULL\r\n\r\n\tUNION\r\n\r\n\t-- Priority 2: QU conversions with a factor of 1.0 from the stock unit to the stock unit\r\n\tSELECT\r\n\t\tid,\r\n\t\tqu_id_stock,\r\n\t\tqu_id_stock,\r\n\t\t1.0\r\n\tFROM products\r\n),\r\n\r\nproduct_closure(depth, product_id, from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\t-- As a base case, select all available product-specific conversions\r\n\tSELECT\r\n\t\t1 as depth,\r\n\t\tproduct_id,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tfactor,\r\n\t\t'/' || from_qu_id || '/' || to_qu_id || '/' -- We need to keep track of the conversion path in order to prevent cycles\r\n\tFROM product_conversions\r\n\r\n\tUNION\r\n\r\n\t-- Recursive case: Find all paths\r\n\tSELECT\r\n\t\tc.depth + 1,\r\n\t\tc.product_id,\r\n\t\tc.from_qu_id,\r\n\t\ts.to_qu_id,\r\n\t\tc.factor * s.factor,\r\n\t\tc.path || s.to_qu_id || '/'\r\n\tFROM product_closure c\r\n\tJOIN product_conversions s\r\n\t\tON c.product_id = s.product_id\r\n\t\tAND c.to_qu_id = s.from_qu_id\r\n\tWHERE c.path NOT LIKE ('%/' || s.to_qu_id || '/%') -- Prevent cycles\r\n\t\tAND NOT EXISTS(SELECT 1 FROM product_conversions ci WHERE ci.product_id = c.product_id AND ci.from_qu_id = c.from_qu_id AND ci.to_qu_id = s.to_qu_id) -- Prune if one of the existing conversions repeats (saves a lot of processing time)\r\n),\r\n\r\nproduct_closure_distinct(product_id, from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\tSELECT DISTINCT\r\n\t\tproduct_id,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tFIRST_VALUE(factor) OVER win AS factor,\r\n\t\tFIRST_VALUE(path) OVER win AS path\r\n\tFROM product_closure\r\n\tGROUP BY product_id, from_qu_id, to_qu_id\r\n\tWINDOW win AS (PARTITION BY product_id, from_qu_id, to_qu_id ORDER BY depth)\r\n\tORDER BY product_id, from_qu_id, to_qu_id\r\n),\r\n\r\n-- Now we connect the two closures by adding the reachable conversions from product specific conversions to default conversions\r\nproduct_reachable(product_id, from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\tSELECT\r\n\t\tproduct_id,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tfactor,\r\n\t\tpath\r\n\tFROM product_closure_distinct\r\n\r\n\tUNION\r\n\r\n\tSELECT\r\n\t\tcd.product_id,\r\n\t\tdcd.from_qu_id,\r\n\t\tdcd.to_qu_id,\r\n\t\tdcd.factor,\r\n\t\t'/' || dcd.from_qu_id || '/' || dcd.to_qu_id || '/'\r\n\tFROM product_closure_distinct cd\r\n\tJOIN default_closure_distinct dcd\r\n\t\tON cd.to_qu_id = dcd.from_qu_id\r\n\t\tOR cd.to_qu_id = dcd.to_qu_id\r\n\tWHERE NOT EXISTS(SELECT 1 FROM product_closure_distinct ci WHERE ci.product_id = cd.product_id AND ci.from_qu_id = dcd.from_qu_id AND ci.to_qu_id = dcd.to_qu_id)\r\n),\r\n\r\nproduct_reachable_distinct(product_id, from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\tSELECT DISTINCT\r\n\t\tproduct_id,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tFIRST_VALUE(factor) OVER win AS factor,\r\n\t\tFIRST_VALUE(path) OVER win AS path\r\n\tFROM product_reachable\r\n\tGROUP BY product_id, from_qu_id, to_qu_id\r\n\tWINDOW win AS (PARTITION BY product_id, from_qu_id, to_qu_id)\r\n\tORDER BY product_id, from_qu_id, to_qu_id\r\n),\r\n\r\n-- Finally we build the combined closure\r\nclosure_final(depth, product_id, from_qu_id, to_qu_id, factor, path)\r\nAS (\r\n\t-- As a base case, select the product closure\r\n\tSELECT\r\n\t\t1,\r\n\t\tproduct_id,\r\n\t\tfrom_qu_id,\r\n\t\tto_qu_id,\r\n\t\tfactor,\r\n\t\tpath -- We need to keep track of the conversion path in order to prevent cycles\r\n\tFROM product_reachable_distinct\r\n\r\n\tUNION\r\n\r\n\t-- Add a default unit conversion to the *end* of the conversion chain\r\n\tSELECT\r\n\t\tc.depth + 1,\r\n\t\tc.product_id,\r\n\t\tc.from_qu_id,\r\n\t\ts.to_qu_id,\r\n\t\tc.factor * s.factor,\r\n\t\tc.path || s.to_qu_id || '/'\r\n\tFROM closure_final c\r\n\tJOIN product_reachable_distinct s\r\n\t\tON c.product_id = s.product_id\r\n\t\tAND c.to_qu_id = s.from_qu_id\r\n\tWHERE c.path NOT LIKE ('%/' || s.to_qu_id || '/%') -- Prevent cycles\r\n\t\tAND NOT EXISTS(SELECT 1 FROM product_reachable_distinct ci WHERE ci.product_id = c.product_id AND ci.from_qu_id = c.from_qu_id AND ci.to_qu_id = s.to_qu_id) -- Prune (if already exists)\r\n)\r\n\r\nSELECT DISTINCT\r\n\t-1 AS id, -- Dummy, LessQL needs an id column\r\n\tc.product_id,\r\n\tc.from_qu_id,\r\n\tqu_from.name AS from_qu_name,\r\n\tqu_from.name_plural AS from_qu_name_plural,\r\n\tc.to_qu_id,\r\n\tqu_to.name AS to_qu_name,\r\n\tqu_to.name_plural AS to_qu_name_plural,\r\n\tFIRST_VALUE(c.factor) OVER win AS factor,\r\n\tFIRST_VALUE(c.path) OVER win AS path\r\nFROM closure_final c\r\nJOIN quantity_units qu_from\r\n\tON c.from_qu_id = qu_from.id\r\nJOIN quantity_units qu_to\r\n\tON c.to_qu_id = qu_to.id\r\nGROUP BY c.product_id, c.from_qu_id, c.to_qu_id\r\nWINDOW win AS (PARTITION BY c.product_id, c.from_qu_id, c.to_qu_id ORDER BY c.depth)\r\nORDER BY c.product_id, c.from_qu_id, c.to_qu_id",
+    "stock_current": "CREATE VIEW stock_current\r\nAS\r\nSELECT\r\n\tpr.parent_product_id AS product_id,\r\n\tIFNULL((SELECT SUM(amount) FROM stock WHERE product_id = pr.parent_product_id), 0) AS amount,\r\n\tSUM(s.amount * IFNULL(qucr.factor, 1.0)) AS amount_aggregated,\r\n\tIFNULL(ROUND((SELECT SUM(IFNULL(price,0) * amount) FROM stock WHERE product_id = pr.parent_product_id), 2), 0)  AS value,\r\n\tMIN(s.best_before_date) AS best_before_date,\r\n\tIFNULL((SELECT SUM(amount) FROM stock WHERE product_id = pr.parent_product_id AND open = 1), 0) AS amount_opened,\r\n\tIFNULL((SELECT SUM(amount) FROM stock WHERE product_id IN (SELECT sub_product_id FROM products_resolved WHERE parent_product_id = pr.parent_product_id) AND open = 1), 0) * IFNULL(qucr.factor, 1) AS amount_opened_aggregated,\r\n\tCASE WHEN COUNT(p_sub.parent_product_id) > 0  THEN 1 ELSE 0 END AS is_aggregated_amount,\r\n\tMAX(p_parent.due_type) AS due_type\r\nFROM products_resolved pr\r\nJOIN stock s\r\n\tON pr.sub_product_id = s.product_id\r\nJOIN products p_parent\r\n\tON pr.parent_product_id = p_parent.id\r\n\tAND p_parent.active = 1\r\nJOIN products p_sub\r\n\tON pr.sub_product_id = p_sub.id\r\n\tAND p_sub.active = 1\r\nLEFT JOIN cache__quantity_unit_conversions_resolved qucr\r\n\tON pr.sub_product_id = qucr.product_id\r\n\tAND p_sub.qu_id_stock = qucr.from_qu_id\r\n\tAND p_parent.qu_id_stock = qucr.to_qu_id\r\nGROUP BY pr.parent_product_id\r\nHAVING SUM(s.amount) > 0\r\n\r\nUNION\r\n\r\n-- This is the same as above but sub products not rolled up (no QU conversion and column is_aggregated_amount = 0 here)\r\nSELECT\r\n\tpr.sub_product_id AS product_id,\r\n\tSUM(s.amount) AS amount,\r\n\tSUM(s.amount) AS amount_aggregated,\r\n\tROUND(SUM(IFNULL(s.price, 0) * s.amount), 2) AS value,\r\n\tMIN(s.best_before_date) AS best_before_date,\r\n\tIFNULL((SELECT SUM(amount) FROM stock WHERE product_id = s.product_id AND open = 1), 0) AS amount_opened,\r\n\tIFNULL((SELECT SUM(amount) FROM stock WHERE product_id = s.product_id AND open = 1), 0) AS amount_opened_aggregated,\r\n\t0 AS is_aggregated_amount,\r\n\tMAX(p_sub.due_type) AS due_type\r\nFROM products_resolved pr\r\nJOIN stock s\r\n\tON pr.sub_product_id = s.product_id\r\nJOIN products p_sub\r\n\tON pr.sub_product_id = p_sub.id\r\n\tAND p_sub.active = 1\r\nWHERE pr.parent_product_id != pr.sub_product_id\r\nGROUP BY pr.sub_product_id\r\nHAVING SUM(s.amount) > 0",
+    "uihelper_product_details": "CREATE VIEW uihelper_product_details\r\nAS\r\nSELECT\r\n\tp.id,\r\n\tplp.purchased_date AS last_purchased_date,\r\n\tplp.price AS last_purchased_price,\r\n\tplp.shopping_location_id AS last_purchased_shopping_location_id,\r\n\tpap.price AS average_price,\r\n\tsl.average_shelf_life_days,\r\n\tpcp.price AS current_price,\r\n\tlast_used.used_date AS last_used_date,\r\n\tnext_due.best_before_date AS next_due_date,\r\n\tIFNULL((spoil_count.amount * 100.0) / consume_count.amount, 0) AS spoil_rate,\r\n\tCAST(IFNULL(quc_purchase2stock.factor, 1.0) AS REAL) AS qu_factor_purchase_to_stock,\r\n\tCAST(IFNULL(quc_price2stock.factor, 1.0) AS REAL) AS qu_factor_price_to_stock,\r\n\tCASE WHEN EXISTS(SELECT 1 FROM products px WHERE px.parent_product_id = p.id) THEN 1 ELSE 0 END AS has_childs\r\nFROM products p\r\nLEFT JOIN cache__products_last_purchased plp\r\n\tON p.id = plp.product_id\r\nLEFT JOIN cache__products_average_price pap\r\n\tON p.id = pap.product_id\r\nLEFT JOIN stock_average_product_shelf_life sl\r\n\tON p.id = sl.id\r\nLEFT JOIN products_current_price pcp\r\n\tON p.id = pcp.product_id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved quc_purchase2stock\r\n\tON p.id = quc_purchase2stock.product_id\r\n\tAND p.qu_id_purchase = quc_purchase2stock.from_qu_id\r\n\tAND p.qu_id_stock = quc_purchase2stock.to_qu_id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved quc_price2stock\r\n\tON p.id = quc_price2stock.product_id\r\n\tAND p.qu_id_price = quc_price2stock.from_qu_id\r\n\tAND p.qu_id_stock = quc_price2stock.to_qu_id\r\nLEFT JOIN (\r\n\tSELECT product_id, MAX(used_date) AS used_date\r\n\tFROM stock_log\r\n\tWHERE transaction_type = 'consume'\r\n\t\tAND undone = 0\r\n\tGROUP BY product_id\r\n) last_used\r\n\tON p.id = last_used.product_id\r\nLEFT JOIN (\r\n\tSELECT product_id,MIN(best_before_date) AS best_before_date\r\n\tFROM stock\r\n\tGROUP BY product_id\r\n) next_due\r\n\tON p.id = next_due.product_id\r\nLEFT JOIN (\r\n\tSELECT product_id, SUM(amount) AS amount\r\n\tFROM stock_log\r\n\tWHERE transaction_type = 'consume'\r\n\t\tAND undone = 0\r\n\tGROUP BY product_id\r\n) consume_count\r\n\tON p.id = consume_count.product_id\r\nLEFT JOIN (\r\n\tSELECT product_id, SUM(amount) AS amount\r\n\tFROM stock_log\r\n\tWHERE transaction_type = 'consume'\r\n\t\tAND undone = 0\r\n\t\tAND spoiled = 1\r\n\tGROUP BY product_id\r\n) spoil_count\r\n\tON p.id = spoil_count.product_id",
+    "shopping_lists_view": "CREATE VIEW shopping_lists_view\r\nAS\r\nSELECT\r\n\t*,\r\n\t(SELECT IFNULL(COUNT(*), 0) FROM shopping_list WHERE shopping_list_id = sl.id) AS item_count\r\nFROM shopping_lists sl",
+    "products_last_purchased": "CREATE VIEW products_last_purchased\r\nAS\r\nSELECT\r\n\t1 AS id, -- Dummy, LessQL needs an id column\r\n\tsl.product_id,\r\n\tsl.amount,\r\n\tsl.best_before_date,\r\n\tsl.purchased_date,\r\n\tsl.location_id,\r\n\tsl.shopping_location_id,\r\n\tIFNULL((SELECT price FROM products_price_history WHERE product_id = sl.product_id ORDER BY purchased_date DESC LIMIT 1), 0) AS price\r\nFROM stock_log sl\r\nJOIN (\r\n\t/*\r\n\t\tThis subquery gets the ID of the stock_log row (per product) which referes to the last purchase transaction,\r\n\t\twhile taking undone and edited transactions into account\r\n\t*/\r\n\tSELECT\r\n\t\tsl1.product_id,\r\n\t\tMAX(sl1.id) stock_log_id_of_last_purchase\r\n\tFROM stock_log sl1\r\n\tJOIN (\r\n\t\t/*\r\n\t\t\tThis subquery finds the last purchased date per product,\r\n\t\t\tthere can be multiple purchase transactions per day, therefore a JOIN by purchased_date\r\n\t\t\tfor the outer query on this and then take MAX id of stock_log (of that day)\r\n\t\t*/\r\n\t\tSELECT\r\n\t\t\tsl2.product_id,\r\n\t\t\tMAX(sl2.purchased_date) AS last_purchased_date\r\n\t\tFROM stock_log sl2\r\n\t\tWHERE sl2.undone = 0\r\n\t\t\tAND (\r\n\t\t\t\t(sl2.transaction_type IN ('purchase', 'inventory-correction', 'self-production') AND sl2.stock_id NOT IN (SELECT stock_id FROM stock_edited_entries))\r\n\t\t\t\tOR (sl2.transaction_type = 'stock-edit-new' AND sl2.stock_id IN (SELECT stock_id FROM stock_edited_entries) AND sl2.id IN (SELECT stock_log_id_of_newest_edited_entry FROM stock_edited_entries))\r\n\t\t\t)\r\n\t\tGROUP BY sl2.product_id\r\n\t) x2\r\n\t\tON sl1.product_id = x2.product_id\r\n\t\tAND sl1.purchased_date = x2.last_purchased_date\r\n\tWHERE sl1.undone = 0\r\n\t\tAND (\r\n\t\t\t(sl1.transaction_type IN ('purchase', 'inventory-correction', 'self-production') AND sl1.stock_id NOT IN (SELECT stock_id FROM stock_edited_entries))\r\n\t\t\tOR (sl1.transaction_type = 'stock-edit-new' AND sl1.stock_id IN (SELECT stock_id FROM stock_edited_entries) AND sl1.id IN (SELECT stock_log_id_of_newest_edited_entry FROM stock_edited_entries))\r\n\t\t)\r\n\tGROUP BY sl1.product_id\r\n) x\r\n\tON sl.product_id = x.product_id\r\n\tAND sl.id = x.stock_log_id_of_last_purchase",
+    "product_barcodes_view": "CREATE VIEW product_barcodes_view\r\nAS\r\nSELECT\r\n\tpb.id,\r\n\tpb.product_id,\r\n\tpb.barcode,\r\n\tpb.qu_id,\r\n\tpb.amount,\r\n\tpb.shopping_location_id,\r\n\tpb.last_price,\r\n\tpb.note\r\nFROM product_barcodes pb\r\n\r\nUNION ALL\r\n\r\n-- Product Grocycodes\r\nSELECT\r\n\tp.id,\r\n\tp.id AS product_id,\r\n\t'grcy:p:' || CAST(p.id AS TEXT) AS barcode,\r\n\tp.qu_id_stock AS qu_id,\r\n\tNULL AS amount,\r\n\tNULL AS shopping_location_id,\r\n\tNULL AS last_price,\r\n\tNULL AS note\r\nFROM products p",
+    "products_price_history": "CREATE VIEW products_price_history\r\nAS\r\nSELECT\r\n\tsl.product_id AS id, -- Dummy, LessQL needs an id column\r\n\tsl.product_id,\r\n\tsl.price,\r\n\tIFNULL(sl.edited_origin_amount, sl.amount) AS amount,\r\n\tsl.purchased_date,\r\n\tsl.shopping_location_id,\r\n\tsl.transaction_type\r\nFROM (\r\n\tSELECT sl.*, CASE WHEN sl.transaction_type = 'stock-edit-new' THEN see.edited_origin_amount END AS edited_origin_amount\r\n\tFROM stock_log sl\r\n\tLEFT JOIN stock_edited_entries see\r\n\t\tON sl.stock_id = see.stock_id\r\n) sl\r\nWHERE sl.undone = 0\r\n\tAND (\r\n\t\t(sl.transaction_type IN ('purchase', 'inventory-correction', 'self-production') AND sl.stock_id NOT IN (SELECT stock_id FROM stock_edited_entries)) -- Unedited origin entries\r\n\t\tOR (sl.transaction_type = 'stock-edit-new' AND sl.id IN (SELECT stock_log_id_of_newest_edited_entry FROM stock_edited_entries)) -- Edited origin entries => take the newest \"stock-edit-new\" one\r\n\t)\r\n\tAND IFNULL(sl.price, 0) > 0\r\n\tAND IFNULL(sl.amount, 0) > 0",
+    "recipes_nestings_resolved": "CREATE VIEW recipes_nestings_resolved\r\nAS\r\nWITH RECURSIVE r1(recipe_id, includes_recipe_id, includes_servings, level)\r\nAS (\r\n\tSELECT\r\n\t\tid AS recipe_id,\r\n\t\tid AS includes_recipe_id,\r\n\t\t1 AS includes_servings,\r\n\t\t0 AS level\r\n\tFROM recipes\r\n\r\n\tUNION ALL\r\n\r\n\tSELECT\r\n\t\trn.recipe_id,\r\n\t\tr1.includes_recipe_id,\r\n\t\trn.servings * r1.includes_servings AS includes_servings,\r\n\t\tr1.level + 1 AS level\r\n\tFROM recipes_nestings rn, r1 r1\r\n\tWHERE rn.includes_recipe_id = r1.recipe_id\r\n)\r\nSELECT\r\n\t*,\r\n\t1 AS id -- Dummy, LessQL needs an id column\r\nFROM r1",
+    "recipes_resolved": "CREATE VIEW recipes_resolved\r\nAS\r\nSELECT\r\n\t1 AS id, -- Dummy, LessQL needs an id column\r\n\tr.id AS recipe_id,\r\n\tIFNULL(MIN(rpr.need_fulfilled), 1) AS need_fulfilled,\r\n\tIFNULL(MIN(rpr.need_fulfilled_with_shopping_list), 1) AS need_fulfilled_with_shopping_list,\r\n\tIFNULL(rmpc.missing_products_count, 0) AS missing_products_count,\r\n\tIFNULL(SUM(rpr.costs), 0) AS costs,\r\n\tIFNULL(SUM(rpr.costs) / CASE WHEN IFNULL(r.desired_servings, 0) = 0 THEN 1 ELSE r.desired_servings END, 0) AS costs_per_serving,\r\n\tIFNULL(SUM(rpr.calories), 0) AS calories,\r\n\tIFNULL(SUM(rpr.due_score), 0) AS due_score,\r\n\tGROUP_CONCAT(rpr.product_name) AS product_names_comma_separated,\r\n\tCASE WHEN MIN(IFNULL(rpr.costs, 0)) = 0 THEN 1 ELSE 0 END AS prices_incomplete\r\nFROM recipes r\r\nLEFT JOIN recipes_pos_resolved rpr\r\n\tON r.id = rpr.recipe_id\r\nLEFT JOIN recipes_missing_product_counts rmpc\r\n\tON r.id = rmpc.recipe_id\r\nGROUP BY r.id",
+    "recipes_pos_resolved": "CREATE VIEW recipes_pos_resolved\r\nAS\r\n\r\n-- Multiplication by 1.0 to force conversion to float (REAL)\r\n\r\n-- Resolved amount (here used multiple times):\r\n-- CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END\r\n\r\nSELECT\r\n\tr.id AS recipe_id,\r\n\trp.id AS recipe_pos_id,\r\n\trp.product_id AS product_id,\r\n\tCASE WHEN rp.round_up = 1 THEN CEIL(CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END) ELSE CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END END AS recipe_amount,\r\n\tIFNULL(sc.amount_aggregated, 0) AS stock_amount,\r\n\tCASE WHEN IFNULL(sc.amount_aggregated, 0) >= CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN 0.00000001 ELSE CASE WHEN rp.round_up = 1 THEN CEIL(CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END) ELSE CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END END END THEN 1 ELSE 0 END AS need_fulfilled,\r\n\tCASE WHEN IFNULL(sc.amount_aggregated, 0) - CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN 0.00000001 ELSE CASE WHEN rp.round_up = 1 THEN CEIL(CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END) ELSE CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END END END < 0 THEN ABS(IFNULL(sc.amount_aggregated, 0) - (CASE WHEN rp.round_up = 1 THEN CEIL(CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END) ELSE CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END END)) ELSE 0 END AS missing_amount,\r\n\tIFNULL(sl.amount, 0) AS amount_on_shopping_list,\r\n\tCASE WHEN ROUND(IFNULL(sc.amount_aggregated, 0) + CASE WHEN r.not_check_shoppinglist = 1 THEN 0 ELSE IFNULL(sl.amount, 0) END, 2) >= ROUND(CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN 0.00000001 ELSE CASE WHEN rp.round_up = 1 THEN CEIL(CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END) ELSE CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END END END, 2) THEN 1 ELSE 0 END AS need_fulfilled_with_shopping_list,\r\n\trp.qu_id,\r\n\t(r.desired_servings*1.0 / r.base_servings*1.0) * CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN IFNULL(qucr.factor, 1.0) ELSE 1 END * (rnr.includes_servings*1.0 / CASE WHEN rnr.recipe_id != rnr.includes_recipe_id THEN rnrr.base_servings*1.0 ELSE 1 END) * rp.amount * IFNULL(pcp.price, 0) * rp.price_factor * CASE WHEN rp.product_id != p_effective.id THEN IFNULL(qucr.factor, 1.0) ELSE 1.0 END AS costs,\r\n\tCASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN 0 ELSE 1 END AS is_nested_recipe_pos,\r\n\trp.ingredient_group,\r\n\tpg.name as product_group,\r\n\trp.id, -- Just a dummy id column\r\n\tr.type as recipe_type,\r\n\trnr.includes_recipe_id as child_recipe_id,\r\n\trp.note,\r\n\trp.variable_amount AS recipe_variable_amount,\r\n\trp.only_check_single_unit_in_stock,\r\n\trp.amount * CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN IFNULL(qucr.factor, 1.0) ELSE 1 END / r.base_servings*1.0 * (rnr.includes_servings*1.0 / CASE WHEN rnr.recipe_id != rnr.includes_recipe_id THEN rnrr.base_servings*1.0 ELSE 1 END) * IFNULL(p_effective.calories, 0) * CASE WHEN rp.product_id != p_effective.id THEN IFNULL(qucr.factor, 1.0) ELSE 1.0 END AS calories,\r\n\tp.active AS product_active,\r\n\tCASE pvs.current_due_status\r\n\t\tWHEN 'ok' THEN 0\r\n\t\tWHEN 'due_soon' THEN 1\r\n\t\tWHEN 'overdue' THEN 10\r\n\t\tWHEN 'expired' THEN 20\r\n\tEND AS due_score,\r\n\tIFNULL(pcs.product_id_effective, rp.product_id) AS product_id_effective,\r\n\tp.name AS product_name\r\nFROM recipes r\r\nJOIN recipes_nestings_resolved rnr\r\n\tON r.id = rnr.recipe_id\r\nJOIN recipes rnrr\r\n\tON rnr.includes_recipe_id = rnrr.id\r\nJOIN recipes_pos rp\r\n\tON rnr.includes_recipe_id = rp.recipe_id\r\nJOIN products p\r\n\tON rp.product_id = p.id\r\nJOIN products_volatile_status pvs\r\n\tON rp.product_id = pvs.product_id\r\nLEFT JOIN product_groups pg\r\n\tON p.product_group_id = pg.id\r\nLEFT JOIN (\r\n\tSELECT product_id, SUM(amount) AS amount\r\n\tFROM shopping_list\r\n\tGROUP BY product_id) sl\r\n\tON rp.product_id = sl.product_id\r\nLEFT JOIN stock_current sc\r\n\tON rp.product_id = sc.product_id\r\nLEFT JOIN products_current_substitutions pcs\r\n\tON rp.product_id = pcs.parent_product_id\r\nLEFT JOIN products_current_price pcp\r\n\tON IFNULL(pcs.product_id_effective, rp.product_id) = pcp.product_id\r\nLEFT JOIN products p_effective\r\n\tON IFNULL(pcs.product_id_effective, rp.product_id) = p_effective.id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved qucr\r\n\tON IFNULL(pcs.product_id_effective, rp.product_id) = qucr.product_id\r\n\tAND CASE WHEN rp.product_id != p_effective.id THEN p.qu_id_stock ELSE rp.qu_id END = qucr.from_qu_id\r\n\tAND IFNULL(p_effective.qu_id_stock, p.qu_id_stock) = qucr.to_qu_id\r\nWHERE rp.not_check_stock_fulfillment = 0\r\n\r\nUNION\r\n\r\n-- Just add all recipe positions which should not be checked against stock with fulfilled need\r\n\r\nSELECT\r\n\tr.id AS recipe_id,\r\n\trp.id AS recipe_pos_id,\r\n\trp.product_id AS product_id,\r\n\tCASE WHEN rp.round_up = 1 THEN CEIL(CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END) ELSE CASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) ELSE rp.amount * ((r.desired_servings*1.0) / (r.base_servings*1.0)) * ((rnr.includes_servings*1.0) / (rnrr.base_servings*1.0)) END END AS recipe_amount,\r\n\tIFNULL(sc.amount_aggregated, 0) AS stock_amount,\r\n\t1 AS need_fulfilled,\r\n\t0 AS missing_amount,\r\n\tIFNULL(sl.amount, 0) AS amount_on_shopping_list,\r\n\t1 AS need_fulfilled_with_shopping_list,\r\n\trp.qu_id,\r\n\t(r.desired_servings*1.0 / r.base_servings*1.0) * CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN IFNULL(qucr.factor, 1.0) ELSE 1 END * (rnr.includes_servings*1.0 / CASE WHEN rnr.recipe_id != rnr.includes_recipe_id THEN rnrr.base_servings*1.0 ELSE 1 END) * rp.amount * IFNULL(pcp.price, 0) * rp.price_factor * CASE WHEN rp.product_id != p_effective.id THEN IFNULL(qucr.factor, 1.0) ELSE 1.0 END AS costs,\r\n\tCASE WHEN rnr.recipe_id = rnr.includes_recipe_id THEN 0 ELSE 1 END AS is_nested_recipe_pos,\r\n\trp.ingredient_group,\r\n\tpg.name as product_group,\r\n\trp.id, -- Just a dummy id column\r\n\tr.type as recipe_type,\r\n\trnr.includes_recipe_id as child_recipe_id,\r\n\trp.note,\r\n\trp.variable_amount AS recipe_variable_amount,\r\n\trp.only_check_single_unit_in_stock,\r\n\trp.amount * CASE WHEN rp.only_check_single_unit_in_stock = 1 THEN IFNULL(qucr.factor, 1.0) ELSE 1 END / r.base_servings*1.0 * (rnr.includes_servings*1.0 / CASE WHEN rnr.recipe_id != rnr.includes_recipe_id THEN rnrr.base_servings*1.0 ELSE 1 END) * IFNULL(p_effective.calories, 0) * CASE WHEN rp.product_id != p_effective.id THEN IFNULL(qucr.factor, 1.0) ELSE 1.0 END AS calories,\r\n\tp.active AS product_active,\r\n\tCASE pvs.current_due_status\r\n\t\tWHEN 'ok' THEN 0\r\n\t\tWHEN 'due_soon' THEN 1\r\n\t\tWHEN 'overdue' THEN 10\r\n\t\tWHEN 'expired' THEN 20\r\n\tEND AS due_score,\r\n\tIFNULL(pcs.product_id_effective, rp.product_id) AS product_id_effective,\r\n\tp.name AS product_name\r\nFROM recipes r\r\nJOIN recipes_nestings_resolved rnr\r\n\tON r.id = rnr.recipe_id\r\nJOIN recipes rnrr\r\n\tON rnr.includes_recipe_id = rnrr.id\r\nJOIN recipes_pos rp\r\n\tON rnr.includes_recipe_id = rp.recipe_id\r\nJOIN products p\r\n\tON rp.product_id = p.id\r\nJOIN products_volatile_status pvs\r\n\tON rp.product_id = pvs.product_id\r\nLEFT JOIN product_groups pg\r\n\tON p.product_group_id = pg.id\r\nLEFT JOIN (\r\n\tSELECT product_id, SUM(amount) AS amount\r\n\tFROM shopping_list\r\n\tGROUP BY product_id) sl\r\n\tON rp.product_id = sl.product_id\r\nLEFT JOIN stock_current sc\r\n\tON rp.product_id = sc.product_id\r\nLEFT JOIN products_current_substitutions pcs\r\n\tON rp.product_id = pcs.parent_product_id\r\nLEFT JOIN products_current_price pcp\r\n\tON IFNULL(pcs.product_id_effective, rp.product_id) = pcp.product_id\r\nLEFT JOIN products p_effective\r\n\tON IFNULL(pcs.product_id_effective, rp.product_id) = p_effective.id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved qucr\r\n\tON IFNULL(pcs.product_id_effective, rp.product_id) = qucr.product_id\r\n\tAND CASE WHEN rp.product_id != p_effective.id THEN p.qu_id_stock ELSE rp.qu_id END = qucr.from_qu_id\r\n\tAND IFNULL(p_effective.qu_id_stock, p.qu_id_stock) = qucr.to_qu_id\r\nWHERE rp.not_check_stock_fulfillment = 1",
+    "uihelper_shopping_list": "CREATE VIEW uihelper_shopping_list\r\nAS\r\nSELECT\r\n\tsl.*,\r\n\tp.name AS product_name,\r\n\tplp.price * IFNULL(quc.factor, 1.0) AS last_price_unit,\r\n\tplp.price * sl.amount AS last_price_total,\r\n\tplp.price AS price,\r\n\tst.name AS default_shopping_location_name,\r\n\tqu.name AS qu_name,\r\n\tqu.name_plural AS qu_name_plural,\r\n\tpg.id AS product_group_id,\r\n\tpg.name AS product_group_name,\r\n\tpbcs.barcodes AS product_barcodes\r\nFROM shopping_list sl\r\nLEFT JOIN products p\r\n\tON sl.product_id = p.id\r\nLEFT JOIN cache__products_last_purchased plp\r\n\tON sl.product_id = plp.product_id\r\nLEFT JOIN shopping_locations st\r\n\tON p.shopping_location_id = st.id\r\nLEFT JOIN quantity_units qu\r\n\tON sl.qu_id = qu.id\r\nLEFT JOIN product_groups pg\r\n\tON p.product_group_id = pg.id\r\nLEFT JOIN cache__quantity_unit_conversions_resolved quc\r\n\tON p.id = quc.product_id\r\n\tAND p.qu_id_stock = quc.to_qu_id\r\n\tAND sl.qu_id = quc.from_qu_id\r\nLEFT JOIN product_barcodes_comma_separated pbcs\r\n\tON sl.product_id = pbcs.product_id",
+    "uihelper_stock_current_overview": "CREATE VIEW uihelper_stock_current_overview\r\nAS\r\nSELECT\r\n\tp.id,\r\n\tsc.amount_opened AS amount_opened,\r\n\tp.tare_weight AS tare_weight,\r\n\tp.enable_tare_weight_handling AS enable_tare_weight_handling,\r\n\tsc.amount AS amount,\r\n\tsc.value as value,\r\n\tsc.product_id AS product_id,\r\n\tIFNULL(sc.best_before_date, '2888-12-31') AS best_before_date,\r\n\tEXISTS(SELECT id FROM stock_missing_products WHERE id = sc.product_id) AS product_missing,\r\n\tp.name AS product_name,\r\n\tpg.name AS product_group_name,\r\n\tsl.name AS default_store_name,\r\n\tEXISTS(SELECT * FROM shopping_list WHERE shopping_list.product_id = sc.product_id) AS on_shopping_list,\r\n\tqu_stock.name AS qu_stock_name,\r\n\tqu_stock.name_plural AS qu_stock_name_plural,\r\n\tqu_purchase.name AS qu_purchase_name,\r\n\tqu_purchase.name_plural AS qu_purchase_name_plural,\r\n\tqu_consume.name AS qu_consume_name,\r\n\tqu_consume.name_plural AS qu_consume_name_plural,\r\n\tqu_price.name AS qu_price_name,\r\n\tqu_price.name_plural AS qu_price_name_plural,\r\n\tsc.is_aggregated_amount,\r\n\tsc.amount_opened_aggregated,\r\n\tsc.amount_aggregated,\r\n\tp.calories AS product_calories,\r\n\tsc.amount * p.calories AS calories,\r\n\tsc.amount_aggregated * p.calories AS calories_aggregated,\r\n\tp.quick_consume_amount,\r\n\tp.quick_consume_amount / p.qu_factor_consume_to_stock AS quick_consume_amount_qu_consume,\r\n\tp.quick_open_amount,\r\n\tp.quick_open_amount / p.qu_factor_consume_to_stock AS quick_open_amount_qu_consume,\r\n\tp.due_type,\r\n\tplp.purchased_date AS last_purchased,\r\n\tplp.price AS last_price,\r\n\tpap.price as average_price,\r\n\tp.min_stock_amount,\r\n\tpbcs.barcodes AS product_barcodes,\r\n\tp.description AS product_description,\r\n\tl.name AS product_default_location_name,\r\n\tp_parent.id AS parent_product_id,\r\n\tp_parent.name AS parent_product_name,\r\n\tp.picture_file_name AS product_picture_file_name,\r\n\tp.no_own_stock AS product_no_own_stock,\r\n\tp.qu_factor_purchase_to_stock AS product_qu_factor_purchase_to_stock,\r\n\tp.qu_factor_price_to_stock AS product_qu_factor_price_to_stock,\r\n\tsc.is_in_stock_or_below_min_stock,\r\n\tp.disable_open\r\nFROM (\r\n\tSELECT *, 1 AS is_in_stock_or_below_min_stock\r\n\tFROM stock_current\r\n\tWHERE best_before_date IS NOT NULL\r\n\tUNION\r\n\tSELECT m.id, 0, 0, 0, null, 0, 0, 0, p.due_type, 1 AS is_in_stock_or_below_min_stock\r\n\tFROM stock_missing_products m\r\n\tJOIN products p\r\n\t\tON m.id = p.id\r\n\tWHERE m.id NOT IN (SELECT product_id FROM stock_current)\r\n\tUNION\r\n\tSELECT p2.id, 0, 0, 0, null, 0, 0, 0, p2.due_type, 0 AS is_in_stock_or_below_min_stock\r\n\tFROM products p2\r\n\tWHERE active = 1\r\n\t\tAND p2.id NOT IN (SELECT product_id FROM stock_current UNION SELECT id FROM stock_missing_products)\r\n\t) sc\r\nJOIN products_view p\r\n    ON sc.product_id = p.id\r\nJOIN locations l\r\n\tON p.location_id = l.id\r\nJOIN quantity_units qu_stock\r\n\tON p.qu_id_stock = qu_stock.id\r\nJOIN quantity_units qu_purchase\r\n\tON p.qu_id_purchase = qu_purchase.id\r\nJOIN quantity_units qu_consume\r\n\tON p.qu_id_consume = qu_consume.id\r\nJOIN quantity_units qu_price\r\n\tON p.qu_id_price = qu_price.id\r\nLEFT JOIN product_groups pg\r\n\tON p.product_group_id = pg.id\r\nLEFT JOIN shopping_locations sl\r\n\tON p.shopping_location_id = sl.id\r\nLEFT JOIN cache__products_last_purchased plp\r\n\tON sc.product_id = plp.product_id\r\nLEFT JOIN cache__products_average_price pap\r\n\tON sc.product_id = pap.product_id\r\nLEFT JOIN product_barcodes_comma_separated pbcs\r\n\tON sc.product_id = pbcs.product_id\r\nLEFT JOIN products p_parent\r\n\tON p.parent_product_id = p_parent.id\r\nWHERE p.hide_on_stock_overview = 0"
+  },
+  "ddl": {
+    "migrations": "CREATE TABLE migrations (migration INTEGER NOT NULL PRIMARY KEY UNIQUE, execution_time_timestamp DATETIME DEFAULT (datetime('now', 'localtime')))",
+    "locations": "CREATE TABLE locations (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, is_freezer TINYINT NOT NULL DEFAULT 0, active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)))",
+    "quantity_units": "CREATE TABLE quantity_units (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, name_plural TEXT, plural_forms TEXT, active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)))",
+    "chores": "CREATE TABLE \"chores\" (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\tperiod_type TEXT NOT NULL,\r\n\tperiod_days INTEGER,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, period_config TEXT, track_date_only TINYINT DEFAULT 0, rollover TINYINT DEFAULT 0, assignment_type TEXT, assignment_config TEXT, next_execution_assigned_to_user_id INT, consume_product_on_execution TINYINT NOT NULL DEFAULT 0, product_id TINYINT, product_amount REAL, period_interval INTEGER NOT NULL DEFAULT 1 CHECK(period_interval > 0), active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)), start_date DATETIME, rescheduled_date DATETIME, rescheduled_next_execution_assigned_to_user_id INT)",
+    "batteries": "CREATE TABLE batteries (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\tused_in TEXT,\r\n\tcharge_interval_days INTEGER NOT NULL DEFAULT 0,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)))",
+    "recipes": "CREATE TABLE recipes (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, picture_file_name TEXT, base_servings INTEGER DEFAULT 1, desired_servings INTEGER DEFAULT 1, not_check_shoppinglist TINYINT NOT NULL DEFAULT 0, type TEXT DEFAULT 'normal', product_id INTEGER)",
+    "users": "CREATE TABLE users (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tusername TEXT NOT NULL UNIQUE,\r\n\tfirst_name TEXT,\r\n\tlast_name TEXT,\r\n\tpassword TEXT NOT NULL,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, picture_file_name TEXT)",
+    "sessions": "CREATE TABLE sessions (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tsession_key TEXT NOT NULL UNIQUE,\r\n\tuser_id INTEGER NOT NULL,\r\n\texpires DATETIME,\r\n\tlast_used DATETIME,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "api_keys": "CREATE TABLE api_keys (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tapi_key TEXT NOT NULL UNIQUE,\r\n\tuser_id INTEGER NOT NULL,\r\n\texpires DATETIME,\r\n\tlast_used DATETIME,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, key_type TEXT NOT NULL DEFAULT 'default', description TEXT)",
+    "chores_log": "CREATE TABLE chores_log (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tchore_id INTEGER NOT NULL,\r\n\ttracked_time DATETIME,\r\n\tdone_by_user_id INTEGER,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, undone TINYINT NOT NULL DEFAULT 0 CHECK(undone IN (0, 1)), undone_timestamp DATETIME, skipped TINYINT NOT NULL DEFAULT 0 CHECK(skipped IN (0, 1)), scheduled_execution_time DATETIME)",
+    "task_categories": "CREATE TABLE task_categories (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)))",
+    "product_groups": "CREATE TABLE product_groups (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)))",
+    "user_settings": "CREATE TABLE user_settings (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tuser_id INTEGER NOT NULL,\r\n\tkey TEXT NOT NULL,\r\n\tvalue TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime')),\r\n\trow_updated_timestamp DATETIME DEFAULT (datetime('now', 'localtime')),\r\n\r\n\tUNIQUE(user_id, key)\r\n)",
+    "equipment": "CREATE TABLE equipment (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\tinstruction_manual_file_name TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "recipes_nestings": "CREATE TABLE recipes_nestings (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\trecipe_id INTEGER NOT NULL,\r\n\tincludes_recipe_id INTEGER NOT NULL,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime')), servings INTEGER DEFAULT 1,\r\n\r\n\tUNIQUE(recipe_id, includes_recipe_id)\r\n)",
+    "recipes_pos": "CREATE TABLE recipes_pos (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\trecipe_id INTEGER NOT NULL,\r\n\tproduct_id INTEGER NOT NULL,\r\n\tamount REAL NOT NULL DEFAULT 0,\r\n\tnote TEXT,\r\n\tqu_id INTEGER,\r\n\tonly_check_single_unit_in_stock TINYINT NOT NULL DEFAULT 0,\r\n\tingredient_group TEXT,\r\n\tnot_check_stock_fulfillment TINYINT NOT NULL DEFAULT 0,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, variable_amount TEXT, price_factor REAL NOT NULL DEFAULT 1, round_up TINYINT NOT NULL DEFAULT 0 CHECK(round_up IN (0, 1)))",
+    "stock": "CREATE TABLE stock (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INTEGER NOT NULL,\r\n\tamount DECIMAL(15, 2) NOT NULL,\r\n\tbest_before_date DATE,\r\n\tpurchased_date DATE DEFAULT (datetime('now', 'localtime')),\r\n\tstock_id TEXT NOT NULL,\r\n\tprice DECIMAL(15, 2),\r\n\topen TINYINT NOT NULL DEFAULT 0 CHECK(open IN (0, 1)),\r\n\topened_date DATETIME,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, location_id INTEGER, shopping_location_id INTEGER, note TEXT)",
+    "shopping_list": "CREATE TABLE shopping_list (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INTEGER,\r\n\tnote TEXT,\r\n\tamount DECIMAL(15, 2) NOT NULL DEFAULT 0,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, shopping_list_id INT DEFAULT 1, done INT DEFAULT 0, qu_id INTEGER)",
+    "shopping_lists": "CREATE TABLE shopping_lists (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "userfields": "CREATE TABLE userfields (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tentity TEXT NOT NULL,\r\n\tname TEXT NOT NULL,\r\n\tcaption TEXT NOT NULL,\r\n\ttype TEXT NOT NULL,\r\n\tshow_as_column_in_tables TINYINT NOT NULL DEFAULT 0,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime')), config TEXT, sort_number INTEGER, input_required TINYINT NOT NULL DEFAULT 0 CHECK(input_required IN (0, 1)), default_value TEXT,\r\n\r\n\tUNIQUE(entity, name)\r\n)",
+    "quantity_unit_conversions": "CREATE TABLE quantity_unit_conversions (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tfrom_qu_id INT NOT NULL,\r\n\tto_qu_id INT NOT NULL,\r\n\tfactor REAL NOT NULL,\r\n\tproduct_id INT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "userentities": "CREATE TABLE userentities (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL,\r\n\tcaption TEXT NOT NULL,\r\n\tdescription TEXT,\r\n\tshow_in_sidebar_menu TINYINT NOT NULL DEFAULT 1,\r\n\ticon_css_class TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime')),\r\n\r\n\tUNIQUE(name)\r\n)",
+    "userobjects": "CREATE TABLE userobjects (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tuserentity_id INTEGER NOT NULL,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "meal_plan": "CREATE TABLE meal_plan (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tday DATE NOT NULL,\r\n\ttype TEXT DEFAULT 'recipe',\r\n\trecipe_id INTEGER,\r\n\trecipe_servings INTEGER DEFAULT 1,\r\n\tnote TEXT,\r\n\tproduct_id INTEGER,\r\n\tproduct_amount REAL DEFAULT 0,\r\n\tproduct_qu_id INTEGER,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, done TINYINT NOT NULL DEFAULT 0 CHECK(done IN (0, 1)), section_id INTEGER NOT NULL DEFAULT -1)",
+    "shopping_locations": "CREATE TABLE shopping_locations (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, active TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)))",
+    "product_barcodes": "CREATE TABLE product_barcodes (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INT NOT NULL,\r\n\tbarcode TEXT NOT NULL,\r\n\tqu_id INT,\r\n\tamount REAL,\r\n\tshopping_location_id INTEGER,\r\n\tlast_price DECIMAL(15, 2),\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, note TEXT)",
+    "user_permissions": "CREATE TABLE user_permissions\r\n(\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tpermission_id INTEGER NOT NULL,\r\n\tuser_id INTEGER NOT NULL,\r\n\r\n\tUNIQUE (user_id, permission_id)\r\n)",
+    "permission_hierarchy": "CREATE TABLE permission_hierarchy\r\n(\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tparent INTEGER NULL -- If the user has the parent permission, the user also has the child permission\r\n)",
+    "tasks": "CREATE TABLE tasks (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL,\r\n\tdescription TEXT,\r\n\tdue_date DATETIME,\r\n\tdone TINYINT NOT NULL DEFAULT 0 CHECK(done IN (0, 1)),\r\n\tdone_timestamp DATETIME,\r\n\tcategory_id INTEGER,\r\n\tassigned_to_user_id INTEGER,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "battery_charge_cycles": "CREATE TABLE battery_charge_cycles (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tbattery_id INTEGER NOT NULL,\r\n\ttracked_time DATETIME,\r\n\tundone TINYINT NOT NULL DEFAULT 0 CHECK(undone IN (0, 1)),\r\n\tundone_timestamp DATETIME,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n)",
+    "meal_plan_sections": "CREATE TABLE meal_plan_sections (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tsort_number INTEGER,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, time_info TEXT)",
+    "stock_log": "CREATE TABLE stock_log (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INTEGER NOT NULL,\r\n\tamount DECIMAL(15, 2) NOT NULL,\r\n\tbest_before_date DATE,\r\n\tpurchased_date DATE,\r\n\tused_date DATE,\r\n\tspoiled INTEGER NOT NULL DEFAULT 0,\r\n\tstock_id TEXT NOT NULL,\r\n\ttransaction_type TEXT NOT NULL,\r\n\tprice DECIMAL(15, 2),\r\n\tundone TINYINT NOT NULL DEFAULT 0 CHECK(undone IN (0, 1)),\r\n\tundone_timestamp DATETIME,\r\n\topened_date DATETIME,\r\n\tlocation_id INTEGER,\r\n\trecipe_id INTEGER,\r\n\tcorrelation_id TEXT,\r\n\ttransaction_id TEXT,\r\n\tstock_row_id INTEGER,\r\n\tshopping_location_id INTEGER,\r\n\tuser_id INTEGER NOT NULL,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, note TEXT)",
+    "userfield_values": "CREATE TABLE userfield_values (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tfield_id INTEGER NOT NULL,\r\n\tobject_id TEXT NOT NULL,\r\n\tvalue TEXT NOT NULL,\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime')),\r\n\r\n\tUNIQUE(field_id, object_id)\r\n)",
+    "products": "CREATE TABLE products (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tname TEXT NOT NULL UNIQUE,\r\n\tdescription TEXT,\r\n\tproduct_group_id INTEGER,\r\n\tactive TINYINT NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),\r\n\tlocation_id INTEGER NOT NULL,\r\n\tshopping_location_id INTEGER,\r\n\tqu_id_purchase INTEGER NOT NULL,\r\n\tqu_id_stock INTEGER NOT NULL,\r\n\tmin_stock_amount INTEGER NOT NULL DEFAULT 0,\r\n\tdefault_best_before_days INTEGER NOT NULL DEFAULT 0,\r\n\tdefault_best_before_days_after_open INTEGER NOT NULL DEFAULT 0,\r\n\tdefault_best_before_days_after_freezing INTEGER NOT NULL DEFAULT 0,\r\n\tdefault_best_before_days_after_thawing INTEGER NOT NULL DEFAULT 0,\r\n\tpicture_file_name TEXT,\r\n\tenable_tare_weight_handling TINYINT NOT NULL DEFAULT 0,\r\n\ttare_weight REAL NOT NULL DEFAULT 0,\r\n\tnot_check_stock_fulfillment_for_recipes TINYINT DEFAULT 0,\r\n\tparent_product_id INT,\r\n\tcalories INTEGER,\r\n\tcumulate_min_stock_amount_of_sub_products TINYINT DEFAULT 0,\r\n\tdue_type TINYINT NOT NULL DEFAULT 1 CHECK(due_type IN (1, 2)),\r\n\tquick_consume_amount REAL NOT NULL DEFAULT 1,\r\n\thide_on_stock_overview TINYINT NOT NULL DEFAULT 0 CHECK(hide_on_stock_overview IN (0, 1)),\r\n\tdefault_stock_label_type INTEGER NOT NULL DEFAULT 0,\r\n\tshould_not_be_frozen TINYINT NOT NULL DEFAULT 0 CHECK(should_not_be_frozen IN (0, 1)),\r\n\ttreat_opened_as_out_of_stock TINYINT NOT NULL DEFAULT 1 CHECK(treat_opened_as_out_of_stock IN (0, 1)),\r\n\tno_own_stock TINYINT NOT NULL DEFAULT 0 CHECK(no_own_stock IN (0, 1)),\r\n\tdefault_consume_location_id INTEGER,\r\n\tmove_on_open TINYINT NOT NULL DEFAULT 0 CHECK(move_on_open IN (0, 1)),\r\n\trow_created_timestamp DATETIME DEFAULT (datetime('now', 'localtime'))\r\n, qu_id_consume INTEGER, auto_reprint_stock_label TINYINT NOT NULL DEFAULT 0 CHECK(auto_reprint_stock_label IN (0, 1)), quick_open_amount REAL NOT NULL DEFAULT 1, qu_id_price INTEGER, disable_open TINYINT NOT NULL DEFAULT 0 CHECK(disable_open IN (0, 1)), default_purchase_price_type TINYINT NOT NULL DEFAULT 1 CHECK(default_purchase_price_type IN (1, 2, 3)))",
+    "cache__quantity_unit_conversions_resolved": "CREATE TABLE cache__quantity_unit_conversions_resolved (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INT,\r\n\tfrom_qu_id INT,\r\n\tfrom_qu_name TEXT,\r\n\tfrom_qu_name_plural TEXT,\r\n\tto_qu_id INT,\r\n\tto_qu_name TEXT,\r\n\tto_qu_name_plural TEXT,\r\n\tfactor TEXT,\r\n\tpath TEXT\r\n)",
+    "cache__products_average_price": "CREATE TABLE cache__products_average_price (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INT,\r\n\tprice DECIMAL(15, 2),\r\n\r\n\tUNIQUE(product_id)\r\n)",
+    "cache__products_last_purchased": "CREATE TABLE cache__products_last_purchased (\r\n\tid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,\r\n\tproduct_id INT,\r\n\tamount DECIMAL(15, 2),\r\n\tbest_before_date DATE,\r\n\tpurchased_date DATE,\r\n\tprice DECIMAL(15, 2),\r\n\tlocation_id INT,\r\n\tshopping_location_id INT,\r\n\r\n\tUNIQUE(product_id)\r\n)"
+  },
+  "triggers": {
+    "remove_recipe_from_meal_plans": "CREATE TRIGGER remove_recipe_from_meal_plans AFTER DELETE ON recipes\r\nBEGIN\r\n\tDELETE FROM meal_plan\r\n\tWHERE recipe_id = OLD.id;\r\nEND",
+    "prevent_self_nested_recipes_INS": "CREATE TRIGGER prevent_self_nested_recipes_INS BEFORE INSERT ON recipes_nestings\r\nBEGIN\r\nSELECT CASE WHEN((\r\n\tSELECT 1\r\n\tFROM recipes_nestings\r\n\tWHERE NEW.recipe_id = NEW.includes_recipe_id\r\n\t)\r\n\tNOTNULL) THEN RAISE(ABORT, \"Recursive nested recipe detected\") END;\r\nEND",
+    "prevent_self_nested_recipes_UPD": "CREATE TRIGGER prevent_self_nested_recipes_UPD BEFORE UPDATE ON recipes_nestings\r\nBEGIN\r\nSELECT CASE WHEN((\r\n\tSELECT 1\r\n\tFROM recipes_nestings\r\n\tWHERE NEW.recipe_id = NEW.includes_recipe_id\r\n\t)\r\n\tNOTNULL) THEN RAISE(ABORT, \"Recursive nested recipe detected\") END;\r\nEND",
+    "set_products_default_location_if_empty_stock": "CREATE TRIGGER set_products_default_location_if_empty_stock AFTER INSERT ON stock\r\nBEGIN\r\n\tUPDATE stock\r\n\tSET location_id = (SELECT location_id FROM products where id = product_id)\r\n\tWHERE id = NEW.id\r\n\t\tAND location_id IS NULL;\r\nEND",
+    "remove_items_from_deleted_shopping_list": "CREATE TRIGGER remove_items_from_deleted_shopping_list AFTER DELETE ON shopping_lists\r\nBEGIN\r\n    DELETE FROM shopping_list WHERE shopping_list_id = OLD.id;\r\nEND",
+    "prevent_infinite_nested_recipes_INS": "CREATE TRIGGER prevent_infinite_nested_recipes_INS BEFORE INSERT ON recipes_nestings\r\nBEGIN\r\n    SELECT CASE WHEN((\r\n        SELECT 1\r\n        FROM recipes_nestings_resolved rnr\r\n        WHERE NEW.recipe_id = rnr.includes_recipe_id\r\n            AND NEW.includes_recipe_id = rnr.recipe_id\r\n    ) NOTNULL) THEN RAISE(ABORT, \"Recursive nested recipe detected\") END;\r\nEND",
+    "prevent_infinite_nested_recipes_UPD": "CREATE TRIGGER prevent_infinite_nested_recipes_UPD BEFORE UPDATE ON recipes_nestings\r\nBEGIN\r\n    SELECT CASE WHEN((\r\n        SELECT 1\r\n        FROM recipes_nestings_resolved rnr\r\n        WHERE NEW.recipe_id = rnr.includes_recipe_id\r\n            AND NEW.includes_recipe_id = rnr.recipe_id\r\n    ) NOTNULL) THEN RAISE(ABORT, \"Recursive nested recipe detected\") END;\r\nEND",
+    "create_internal_recipe": "CREATE TRIGGER create_internal_recipe AFTER INSERT ON meal_plan\r\nBEGIN\r\n\t/* This contains practically the same logic as the trigger remove_internal_recipe */\r\n\r\n\t-- Create a recipe per day\r\n\tDELETE FROM recipes\r\n\tWHERE name = NEW.day\r\n\t\tAND type = 'mealplan-day';\r\n\r\n\tINSERT OR REPLACE INTO recipes\r\n\t\t(id, name, type)\r\n\tVALUES\r\n\t\t((SELECT MIN(id) - 1 FROM recipes), NEW.day, 'mealplan-day');\r\n\r\n\t-- Create a recipe per week\r\n\tDELETE FROM recipes\r\n\tWHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0')\r\n\t\tAND type = 'mealplan-week';\r\n\r\n\tINSERT INTO recipes\r\n\t\t(id, name, type)\r\n\tVALUES\r\n\t\t((SELECT MIN(id) - 1 FROM recipes), LTRIM(STRFTIME('%Y-%W', NEW.day), '0'), 'mealplan-week');\r\n\r\n\t-- Delete all current nestings entries for the day and week recipe\r\n\tDELETE FROM recipes_nestings\r\n\tWHERE recipe_id IN (SELECT id FROM recipes WHERE name = NEW.day AND type = 'mealplan-day')\r\n\t\tOR recipe_id IN (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0') AND type = 'mealplan-week');\r\n\r\n\t-- Add all recipes for this day as included recipes in the day-recipe\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = NEW.day AND type = 'mealplan-day'), recipe_id, SUM(recipe_servings)\r\n\tFROM meal_plan\r\n\tWHERE day = NEW.day\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL\r\n\tGROUP BY recipe_id;\r\n\r\n\t-- Add all recipes for this week as included recipes in the week-recipe\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0') AND type = 'mealplan-week'), recipe_id, SUM(recipe_servings)\r\n\tFROM meal_plan\r\n\tWHERE STRFTIME('%Y-%W', day) = STRFTIME('%Y-%W', NEW.day)\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL\r\n\tGROUP BY recipe_id;\r\n\r\n\t-- Add all products for this day as ingredients in the day-recipe\r\n\tINSERT INTO recipes_pos\r\n\t\t(recipe_id, product_id, amount, qu_id)\r\n\tSELECT (SELECT id FROM recipes WHERE name = NEW.day AND type = 'mealplan-day'), product_id, SUM(product_amount), product_qu_id\r\n\tFROM meal_plan\r\n\tWHERE day = NEW.day\r\n\t\tAND type = 'product'\r\n\t\tAND product_id IS NOT NULL\r\n\tGROUP BY product_id, product_qu_id;\r\n\r\n\t-- Add all products for this week as ingredients in the week-recipe\r\n\tINSERT INTO recipes_pos\r\n\t\t(recipe_id, product_id, amount, qu_id)\r\n\tSELECT (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0') AND type = 'mealplan-week'), product_id, SUM(product_amount), product_qu_id\r\n\tFROM meal_plan\r\n\tWHERE STRFTIME('%Y-%W', day) = STRFTIME('%Y-%W', NEW.day)\r\n\t\tAND type = 'product'\r\n\t\tAND product_id IS NOT NULL\r\n\tGROUP BY product_id, product_qu_id;\r\n\r\n\t-- Create a shadow recipe per meal plan recipe\r\n\tINSERT INTO recipes\r\n\t\t(id, name, type)\r\n\tSELECT (SELECT MIN(id) - 1 FROM recipes), CAST(NEW.day AS TEXT) || '#' || CAST(id AS TEXT), 'mealplan-shadow'\r\n\tFROM meal_plan\r\n\tWHERE id = NEW.id\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL;\r\n\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = CAST(NEW.day AS TEXT) || '#' || CAST(meal_plan.id AS TEXT) AND type = 'mealplan-shadow'), recipe_id, recipe_servings\r\n\tFROM meal_plan\r\n\tWHERE id = NEW.id\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL;\r\n\r\n\t-- Enforce \"when empty then null\" for certain columns\r\n\tUPDATE meal_plan\r\n\tSET recipe_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(recipe_id, '') = '';\r\n\r\n\tUPDATE meal_plan\r\n\tSET product_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(product_id, '') = '';\r\n\r\n\tUPDATE meal_plan\r\n\tSET product_qu_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(product_qu_id, '') = '';\r\nEND",
+    "remove_internal_recipe": "CREATE TRIGGER remove_internal_recipe AFTER DELETE ON meal_plan\r\nBEGIN\r\n\t/* This contains practically the same logic as the trigger create_internal_recipe */\r\n\r\n\t-- Create a recipe per day\r\n\tDELETE FROM recipes\r\n\tWHERE name = OLD.day\r\n\t\tAND type = 'mealplan-day';\r\n\r\n\tINSERT OR REPLACE INTO recipes\r\n\t\t(id, name, type)\r\n\tVALUES\r\n\t\t((SELECT MIN(id) - 1 FROM recipes), OLD.day, 'mealplan-day');\r\n\r\n\t-- Create a recipe per week\r\n\tDELETE FROM recipes\r\n\tWHERE name = LTRIM(STRFTIME('%Y-%W', OLD.day), '0')\r\n\t\tAND type = 'mealplan-week';\r\n\r\n\tINSERT INTO recipes\r\n\t\t(id, name, type)\r\n\tVALUES\r\n\t\t((SELECT MIN(id) - 1 FROM recipes), LTRIM(STRFTIME('%Y-%W', OLD.day), '0'), 'mealplan-week');\r\n\r\n\t-- Delete all current nestings entries for the day and week recipe\r\n\tDELETE FROM recipes_nestings\r\n\tWHERE recipe_id IN (SELECT id FROM recipes WHERE name = OLD.day AND type = 'mealplan-day')\r\n\t\tOR recipe_id IN (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', OLD.day), '0') AND type = 'mealplan-week');\r\n\r\n\t-- Add all recipes for this day as included recipes in the day-recipe\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = OLD.day AND type = 'mealplan-day'), recipe_id, SUM(recipe_servings)\r\n\tFROM meal_plan\r\n\tWHERE day = OLD.day\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL\r\n\tGROUP BY recipe_id;\r\n\r\n\t-- Add all recipes for this week as included recipes in the week-recipe\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', OLD.day), '0') AND type = 'mealplan-week'), recipe_id, SUM(recipe_servings)\r\n\tFROM meal_plan\r\n\tWHERE STRFTIME('%Y-%W', day) = STRFTIME('%Y-%W', OLD.day)\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL\r\n\tGROUP BY recipe_id;\r\n\r\n\t-- Add all products for this day as ingredients in the day-recipe\r\n\tINSERT INTO recipes_pos\r\n\t\t(recipe_id, product_id, amount, qu_id)\r\n\tSELECT (SELECT id FROM recipes WHERE name = OLD.day AND type = 'mealplan-day'), product_id, SUM(product_amount), product_qu_id\r\n\tFROM meal_plan\r\n\tWHERE day = OLD.day\r\n\t\tAND type = 'product'\r\n\t\tAND product_id IS NOT NULL\r\n\tGROUP BY product_id, product_qu_id;\r\n\r\n\t-- Add all products for this week as ingredients in the week-recipe\r\n\tINSERT INTO recipes_pos\r\n\t\t(recipe_id, product_id, amount, qu_id)\r\n\tSELECT (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', OLD.day), '0') AND type = 'mealplan-week'), product_id, SUM(product_amount), product_qu_id\r\n\tFROM meal_plan\r\n\tWHERE STRFTIME('%Y-%W', day) = STRFTIME('%Y-%W', OLD.day)\r\n\t\tAND type = 'product'\r\n\t\tAND product_id IS NOT NULL\r\n\tGROUP BY product_id, product_qu_id;\r\n\r\n\t-- Remove shadow recipes per meal plan recipe\r\n\tDELETE FROM recipes\r\n\tWHERE type = 'mealplan-shadow'\r\n\t\tAND name NOT IN (SELECT CAST(day AS TEXT) || '#' || CAST(id AS TEXT) FROM meal_plan WHERE type = 'recipe');\r\nEND",
+    "update_internal_recipe": "CREATE TRIGGER update_internal_recipe AFTER UPDATE ON meal_plan\r\nBEGIN\r\n\t/* This contains practically the same logic as the trigger create_internal_recipe */\r\n\r\n\t-- Create a recipe per day\r\n\tDELETE FROM recipes\r\n\tWHERE name = NEW.day\r\n\t\tAND type = 'mealplan-day';\r\n\r\n\tINSERT OR REPLACE INTO recipes\r\n\t\t(id, name, type)\r\n\tVALUES\r\n\t\t((SELECT MIN(id) - 1 FROM recipes), NEW.day, 'mealplan-day');\r\n\r\n\t-- Create a recipe per week\r\n\tDELETE FROM recipes\r\n\tWHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0')\r\n\t\tAND type = 'mealplan-week';\r\n\r\n\tINSERT INTO recipes\r\n\t\t(id, name, type)\r\n\tVALUES\r\n\t\t((SELECT MIN(id) - 1 FROM recipes), LTRIM(STRFTIME('%Y-%W', NEW.day), '0'), 'mealplan-week');\r\n\r\n\t-- Delete all current nestings entries for the day and week recipe\r\n\tDELETE FROM recipes_nestings\r\n\tWHERE recipe_id IN (SELECT id FROM recipes WHERE name = NEW.day AND type = 'mealplan-day')\r\n\t\tOR recipe_id IN (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0') AND type = 'mealplan-week');\r\n\r\n\t-- Add all recipes for this day as included recipes in the day-recipe\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = NEW.day AND type = 'mealplan-day'), recipe_id, SUM(recipe_servings)\r\n\tFROM meal_plan\r\n\tWHERE day = NEW.day\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL\r\n\tGROUP BY recipe_id;\r\n\r\n\t-- Add all recipes for this week as included recipes in the week-recipe\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0') AND type = 'mealplan-week'), recipe_id, SUM(recipe_servings)\r\n\tFROM meal_plan\r\n\tWHERE STRFTIME('%Y-%W', day) = STRFTIME('%Y-%W', NEW.day)\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL\r\n\tGROUP BY recipe_id;\r\n\r\n\t-- Add all products for this day as ingredients in the day-recipe\r\n\tINSERT INTO recipes_pos\r\n\t\t(recipe_id, product_id, amount, qu_id)\r\n\tSELECT (SELECT id FROM recipes WHERE name = NEW.day AND type = 'mealplan-day'), product_id, SUM(product_amount), product_qu_id\r\n\tFROM meal_plan\r\n\tWHERE day = NEW.day\r\n\t\tAND type = 'product'\r\n\t\tAND product_id IS NOT NULL\r\n\tGROUP BY product_id, product_qu_id;\r\n\r\n\t-- Add all products for this week as ingredients in the week-recipe\r\n\tINSERT INTO recipes_pos\r\n\t\t(recipe_id, product_id, amount, qu_id)\r\n\tSELECT (SELECT id FROM recipes WHERE name = LTRIM(STRFTIME('%Y-%W', NEW.day), '0') AND type = 'mealplan-week'), product_id, SUM(product_amount), product_qu_id\r\n\tFROM meal_plan\r\n\tWHERE STRFTIME('%Y-%W', day) = STRFTIME('%Y-%W', NEW.day)\r\n\t\tAND type = 'product'\r\n\t\tAND product_id IS NOT NULL\r\n\tGROUP BY product_id, product_qu_id;\r\n\r\n\t-- Create a shadow recipe per meal plan recipe\r\n\tDELETE FROM recipes_nestings\r\n\tWHERE recipe_id IN (SELECT id FROM recipes WHERE name IN (SELECT CAST(NEW.day AS TEXT) || '#' || CAST(NEW.id AS TEXT) FROM meal_plan WHERE day = NEW.day) AND type = 'mealplan-shadow');\r\n\r\n\tDELETE FROM recipes\r\n\tWHERE type = 'mealplan-shadow'\r\n\t\tAND name = CAST(NEW.day AS TEXT) || '#' || CAST(NEW.id AS TEXT);\r\n\r\n\tINSERT INTO recipes\r\n\t\t(id, name, type)\r\n\tSELECT (SELECT MIN(id) - 1 FROM recipes), CAST(NEW.day AS TEXT) || '#' || CAST(id AS TEXT), 'mealplan-shadow'\r\n\tFROM meal_plan\r\n\tWHERE id = NEW.id\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL;\r\n\r\n\tINSERT INTO recipes_nestings\r\n\t\t(recipe_id, includes_recipe_id, servings)\r\n\tSELECT (SELECT id FROM recipes WHERE name = CAST(NEW.day AS TEXT) || '#' || CAST(meal_plan.id AS TEXT) AND type = 'mealplan-shadow'), recipe_id, recipe_servings\r\n\tFROM meal_plan\r\n\tWHERE id = NEW.id\r\n\t\tAND type = 'recipe'\r\n\t\tAND recipe_id IS NOT NULL;\r\n\r\n\t-- Enforce \"when empty then null\" for certain columns\r\n\tUPDATE meal_plan\r\n\tSET recipe_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(recipe_id, '') = '';\r\n\r\n\tUPDATE meal_plan\r\n\tSET product_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(product_id, '') = '';\r\n\r\n\tUPDATE meal_plan\r\n\tSET product_qu_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(product_qu_id, '') = '';\r\nEND",
+    "prevent_internal_meal_plan_section_removal": "CREATE TRIGGER prevent_internal_meal_plan_section_removal BEFORE DELETE ON meal_plan_sections\r\nBEGIN\r\n\tSELECT CASE WHEN((\r\n\t\tSELECT 1\r\n\t\tFROM meal_plan_sections\r\n\t\tWHERE id = OLD.id\r\n\t\t\tAND id = -1\r\n\t) NOTNULL) THEN RAISE(ABORT, \"This is an internally used/required default section and therefore can't be deleted\") END;\r\nEND",
+    "set_products_default_location_if_empty_stock_log": "CREATE TRIGGER set_products_default_location_if_empty_stock_log AFTER INSERT ON stock_log\r\nBEGIN\r\n\tUPDATE stock_log\r\n\tSET location_id = (SELECT location_id FROM products where id = product_id)\r\n\tWHERE id = NEW.id\r\n\t\tAND location_id IS NULL;\r\nEND",
+    "default_start_date_when_empty_INS": "CREATE TRIGGER default_start_date_when_empty_INS AFTER INSERT ON chores\r\nBEGIN\r\n\tUPDATE chores\r\n\tSET start_date =  DATETIME('now', 'localtime')\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(start_date, '') = '';\r\nEND",
+    "default_start_date_when_empty_UPD": "CREATE TRIGGER default_start_date_when_empty_UPD AFTER UPDATE ON chores\r\nBEGIN\r\n\tUPDATE chores\r\n\tSET start_date =  DATETIME('now', 'localtime')\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(start_date, '') = '';\r\nEND",
+    "default_qu_INS": "CREATE TRIGGER default_qu_INS AFTER INSERT ON product_barcodes\r\nBEGIN\r\n\tUPDATE product_barcodes\r\n\tSET qu_id = (SELECT qu_id_stock FROM products WHERE id = product_barcodes.product_id)\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(qu_id, 0) = 0;\r\nEND",
+    "default_qu_UPD": "CREATE TRIGGER default_qu_UPD AFTER UPDATE ON product_barcodes\r\nBEGIN\r\n\tUPDATE product_barcodes\r\n\tSET qu_id = (SELECT qu_id_stock FROM products WHERE id = product_barcodes.product_id)\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(qu_id, 0) = 0;\r\nEND",
+    "remove_conversions": "CREATE TRIGGER remove_conversions AFTER DELETE ON quantity_units\r\nBEGIN\r\n\tDELETE FROM quantity_unit_conversions\r\n\tWHERE from_qu_id = OLD.id\r\n\t\tOR to_qu_id = OLD.id;\r\nEND",
+    "prevent_empty_userfields_INS": "CREATE TRIGGER prevent_empty_userfields_INS AFTER INSERT ON userfield_values\r\nBEGIN\r\n\tDELETE FROM userfield_values\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(value, '') = '';\r\nEND",
+    "prevent_empty_userfields_UPD": "CREATE TRIGGER prevent_empty_userfields_UPD AFTER UPDATE ON userfield_values\r\nBEGIN\r\n\tDELETE FROM userfield_values\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(value, '') = '';\r\nEND",
+    "prevent_adding_no_own_stock_products_to_stock": "CREATE TRIGGER prevent_adding_no_own_stock_products_to_stock AFTER INSERT ON stock\r\nBEGIN\r\n\tSELECT CASE WHEN((\r\n\t\tSELECT 1\r\n\t\tFROM products p\r\n\t\tWHERE id = NEW.product_id\r\n\t\t\tAND no_own_stock = 1\r\n\t) NOTNULL) THEN RAISE(ABORT, \"no_own_stock=1 products can't be added to stock\") END;\r\nEND",
+    "cascade_chore_removal": "CREATE TRIGGER cascade_chore_removal AFTER DELETE ON chores\r\nBEGIN\r\n\tDELETE FROM chores_log\r\n\tWHERE chore_id = OLD.id;\r\n\r\n\tDELETE FROM userfield_values\r\n\tWHERE object_id = OLD.id\r\n\t\tAND field_id IN (SELECT id FROM userfields WHERE entity = 'chores');\r\nEND",
+    "cascade_battery_removal": "CREATE TRIGGER cascade_battery_removal AFTER DELETE ON batteries\r\nBEGIN\r\n\tDELETE FROM battery_charge_cycles\r\n\tWHERE battery_id = OLD.id;\r\n\r\n\tDELETE FROM userfield_values\r\n\tWHERE object_id = OLD.id\r\n\t\tAND field_id IN (SELECT id FROM userfields WHERE entity = 'batteries');\r\nEND",
+    "cascade_userfield_removal": "CREATE TRIGGER cascade_userfield_removal AFTER DELETE ON userfields\r\nBEGIN\r\n\tDELETE FROM userfield_values\r\n\tWHERE object_id = OLD.id\r\n\t\tAND field_id = OLD.id;\r\nEND",
+    "prevent_adding_barcodes_for_not_existing_products": "CREATE TRIGGER prevent_adding_barcodes_for_not_existing_products AFTER INSERT ON product_barcodes\r\nBEGIN\r\n\tSELECT CASE WHEN((\r\n\t\tSELECT 1\r\n\t\tFROM products p\r\n\t\tWHERE id = NEW.product_id\r\n\t) ISNULL) THEN RAISE(ABORT, \"product_id doesn't reference a existing product\") END;\r\nEND",
+    "userfield_values_special_handling_INS": "CREATE TRIGGER userfield_values_special_handling_INS AFTER INSERT ON userfield_values\r\nBEGIN\r\n\t-- Entity stock:\r\n\t-- object_id is the transaction_id on insert -> replace it by the corresponding stock_id\r\n\tINSERT OR REPLACE INTO userfield_values\r\n\t\t(field_id, object_id, value)\r\n\tSELECT uv.field_id, sl.stock_id, uv.value\r\n\tFROM userfield_values uv\r\n\tJOIN stock_log sl\r\n\t\tON uv.object_id = sl.transaction_id\r\n\t\tAND sl.transaction_type IN ('purchase', 'inventory-correction', 'stock-edit-new')\r\n\tWHERE uv.field_id IN (SELECT id FROM userfields WHERE entity = 'stock')\r\n\t\tAND uv.field_id = NEW.field_id\r\n\t\tAND uv.object_id = NEW.object_id;\r\n\r\n\tDELETE FROM userfield_values\r\n\tWHERE field_id IN (SELECT id FROM userfields WHERE entity = 'stock')\r\n\t\tAND field_id = NEW.field_id\r\n\t\tAND object_id = NEW.object_id;\r\nEND",
+    "stock_next_use_INS": "CREATE TRIGGER stock_next_use_INS INSTEAD OF INSERT ON stock_next_use\r\nBEGIN\r\n\tINSERT INTO stock\r\n\t\t(product_id, amount, best_before_date, purchased_date, stock_id,\r\n\t\tprice, open, opened_date, location_id, shopping_location_id, note)\r\n\tVALUES\r\n\t\t(NEW.product_id, NEW.amount, NEW.best_before_date, NEW.purchased_date, NEW.stock_id,\r\n\t\tNEW.price, NEW.open, NEW.opened_date, NEW.location_id, NEW.shopping_location_id, NEW.note);\r\nEND",
+    "stock_next_use_UPD": "CREATE TRIGGER stock_next_use_UPD INSTEAD OF UPDATE ON stock_next_use\r\nBEGIN\r\n\tUPDATE stock\r\n\tSET product_id = NEW.product_id,\r\n\tamount = NEW.amount,\r\n\tbest_before_date = NEW.best_before_date,\r\n\tpurchased_date = NEW.purchased_date,\r\n\tstock_id = NEW.stock_id,\r\n\tprice = NEW.price,\r\n\topen = NEW.open,\r\n\topened_date = NEW.opened_date,\r\n\tlocation_id = NEW.location_id,\r\n\tshopping_location_id = NEW.shopping_location_id,\r\n\tnote = NEW.note\r\n\tWHERE id = NEW.id;\r\nEND",
+    "stock_next_use_DEL": "CREATE TRIGGER stock_next_use_DEL INSTEAD OF DELETE ON stock_next_use\r\nBEGIN\r\n\tDELETE FROM stock\r\n\tWHERE id = OLD.id;\r\nEND",
+    "recipes_pos_qu_id_default": "CREATE TRIGGER recipes_pos_qu_id_default AFTER INSERT ON recipes_pos\r\nBEGIN\r\n\tUPDATE recipes_pos\r\n\tSET qu_id = (SELECT qu_id_stock FROM products where id = product_id)\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(qu_id, '') = '';\r\n\r\n\tSELECT CASE WHEN((\r\n\t\tSELECT 1\r\n\t\tFROM recipes_pos rp\r\n\t\tJOIN quantity_unit_conversions_resolved qucr\r\n\t\t\tON qucr.product_id = rp.product_id\r\n\t\t\tAND qucr.to_qu_id = rp.qu_id\r\n\t\tWHERE rp.id = NEW.id\r\n\r\n\t\tUNION\r\n\r\n\t\t-- only_check_single_unit_in_stock = 1 ingredients can have any QU\r\n\t\tSELECT 1\r\n\t\tFROM recipes_pos rp\r\n\t\tWHERE rp.id = NEW.id\r\n\t\t\tAND IFNULL(rp.only_check_single_unit_in_stock, 0) = 1\r\n\t) ISNULL) THEN RAISE(ABORT, \"Provided qu_id doesn't have a related conversion for that product\") END;\r\nEND",
+    "qu_conversions_custom_constraint_INS": "CREATE TRIGGER qu_conversions_custom_constraint_INS BEFORE INSERT ON quantity_unit_conversions\r\nBEGIN\r\n\t/*\r\n\t\tNecessary because unique constraints don't include NULL values in SQLite\r\n\t*/\r\nSELECT CASE WHEN((\r\n\tSELECT 1\r\n\tFROM quantity_unit_conversions\r\n\tWHERE from_qu_id = NEW.from_qu_id\r\n\t\tAND to_qu_id = NEW.to_qu_id\r\n\t\tAND IFNULL(product_id, 0) = IFNULL(NEW.product_id, 0)\r\n\t)\r\n\tNOTNULL) THEN RAISE(ABORT, \"QU conversion already exists\") END;\r\nEND",
+    "qu_conversions_custom_constraint_UPD": "CREATE TRIGGER qu_conversions_custom_constraint_UPD BEFORE UPDATE ON quantity_unit_conversions\r\nBEGIN\r\n\t/* This contains practically the same logic as the trigger qu_conversions_custom_constraint_INS */\r\n\r\n\t/*\r\n\t\tNecessary because unique constraints don't include NULL values in SQLite\r\n\t*/\r\nSELECT CASE WHEN((\r\n\tSELECT 1\r\n\tFROM quantity_unit_conversions\r\n\tWHERE from_qu_id = NEW.from_qu_id\r\n\t\tAND to_qu_id = NEW.to_qu_id\r\n\t\tAND IFNULL(product_id, 0) = IFNULL(NEW.product_id, 0)\r\n\t\tAND id != NEW.id\r\n\t)\r\n\tNOTNULL) THEN RAISE(ABORT, \"QU conversion already exists\") END;\r\nEND",
+    "enforce_parent_product_id_null_when_empty_INS": "CREATE TRIGGER enforce_parent_product_id_null_when_empty_INS AFTER INSERT ON products\r\nBEGIN\r\n\tUPDATE products\r\n\tSET parent_product_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(parent_product_id, '') = '';\r\nEND",
+    "enforce_parent_product_id_null_when_empty_UPD": "CREATE TRIGGER enforce_parent_product_id_null_when_empty_UPD AFTER UPDATE ON products\r\nBEGIN\r\n\tUPDATE products\r\n\tSET parent_product_id = NULL\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(parent_product_id, '') = '';\r\nEND",
+    "cascade_product_removal": "CREATE TRIGGER cascade_product_removal AFTER DELETE ON products\r\nBEGIN\r\n\tDELETE FROM stock\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tDELETE FROM stock_log\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tDELETE FROM product_barcodes\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tDELETE FROM quantity_unit_conversions\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tDELETE FROM recipes_pos\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tUPDATE recipes\r\n\tSET product_id = NULL\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tDELETE FROM meal_plan\r\n\tWHERE product_id = OLD.id\r\n\t\tAND type = 'product';\r\n\r\n\tDELETE FROM shopping_list\r\n\tWHERE product_id = OLD.id;\r\n\r\n\tDELETE FROM userfield_values\r\n\tWHERE object_id = OLD.id\r\n\t\tAND field_id IN (SELECT id FROM userfields WHERE entity = 'products');\r\nEND",
+    "enfore_product_nesting_level": "CREATE TRIGGER enfore_product_nesting_level BEFORE UPDATE ON products\r\nBEGIN\r\n\t-- Currently only 1 level is supported\r\n    SELECT CASE WHEN((\r\n        SELECT 1\r\n        FROM products p\r\n        WHERE IFNULL(NEW.parent_product_id, '') != ''\r\n            AND IFNULL(parent_product_id, '') = NEW.id\r\n    ) NOTNULL) THEN RAISE(ABORT, \"Unsupported product nesting level detected (currently only 1 level is supported)\") END;\r\nEND",
+    "enforce_min_stock_amount_for_cumulated_childs_INS": "CREATE TRIGGER enforce_min_stock_amount_for_cumulated_childs_INS AFTER INSERT ON products\r\nBEGIN\r\n\t/*\r\n\t\tWhen a parent product has cumulate_min_stock_amount_of_sub_products enabled,\r\n\t\tthe child should not have any min_stock_amount\r\n\t*/\r\n\r\n\tUPDATE products\r\n\tSET min_stock_amount = 0\r\n\tWHERE id IN (\r\n\t\t\tSELECT\r\n\t\t\t\tp_child.id\r\n\t\t\tFROM products p_parent\r\n\t\t\tJOIN products p_child\r\n\t\t\t\tON p_child.parent_product_id = p_parent.id\r\n\t\t\tWHERE p_parent.id = NEW.id\r\n\t\t\t\tAND IFNULL(p_parent.cumulate_min_stock_amount_of_sub_products, 0) = 1\r\n\t\t\t)\r\n\t\tAND min_stock_amount > 0;\r\nEND",
+    "enforce_min_stock_amount_for_cumulated_childs_UPD": "CREATE TRIGGER enforce_min_stock_amount_for_cumulated_childs_UPD AFTER UPDATE ON products\r\nBEGIN\r\n\t/*\r\n\t\tWhen a parent product has cumulate_min_stock_amount_of_sub_products enabled,\r\n\t\tthe child should not have any min_stock_amount\r\n\t*/\r\n\r\n\tUPDATE products\r\n\tSET min_stock_amount = 0\r\n\tWHERE id IN (\r\n\t\t\tSELECT\r\n\t\t\t\tp_child.id\r\n\t\t\tFROM products p_parent\r\n\t\t\tJOIN products p_child\r\n\t\t\t\tON p_child.parent_product_id = p_parent.id\r\n\t\t\tWHERE p_parent.id = NEW.id\r\n\t\t\t\tAND IFNULL(p_parent.cumulate_min_stock_amount_of_sub_products, 0) = 1\r\n\t\t\t)\r\n\t\tAND min_stock_amount > 0;\r\nEND",
+    "cascade_change_qu_id_stock": "CREATE TRIGGER cascade_change_qu_id_stock BEFORE UPDATE ON products WHEN NEW.qu_id_stock != OLD.qu_id_stock\r\nBEGIN\r\n\t-- All amounts anywhere are related to the products stock QU,\r\n\t-- so apply the appropriate unit conversion to all amounts everywhere on change\r\n\t-- (and enforce that such a conversion need to exist when the product was once added to stock)\r\n\r\n\tSELECT CASE WHEN((\r\n\t\tSELECT 1\r\n\t\tFROM quantity_unit_conversions_resolved\r\n\t\tWHERE product_id = NEW.id\r\n\t\t\tAND from_qu_id = OLD.qu_id_stock\r\n\t\t\tAND to_qu_id = NEW.qu_id_stock\r\n\t) ISNULL)\r\n\tAND\r\n\t((\r\n        SELECT 1\r\n        FROM stock_log\r\n\t\tWHERE product_id = NEW.id\r\n\t\t\tAND NEW.qu_id_stock != OLD.qu_id_stock\r\n    ) NOTNULL) THEN RAISE(ABORT, \"qu_id_stock can only be changed when a corresponding QU conversion (old QU => new QU) exists when the product was once added to stock\") END;\r\n\r\n\tUPDATE chores\r\n\tSET product_amount = product_amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE product_id = NEW.id;\r\n\r\n\tUPDATE meal_plan\r\n\tSET product_amount = product_amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE type = 'product'\r\n\t\tAND product_id = NEW.id;\r\n\r\n\tUPDATE recipes_pos\r\n\tSET amount = amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE product_id = NEW.id;\r\n\r\n\tUPDATE shopping_list\r\n\tSET amount = amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE product_id = NEW.id\r\n\t\tAND product_id IS NOT NULL;\r\n\r\n\tUPDATE stock\r\n\tSET amount = amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0),\r\n\tprice = price / IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE product_id = NEW.id;\r\n\r\n\tUPDATE stock_log\r\n\tSET amount = amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0),\r\n\tprice = price / IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE product_id = NEW.id;\r\nEND",
+    "default_qu_id_consume": "CREATE TRIGGER default_qu_id_consume AFTER INSERT ON products\r\nBEGIN\r\n\tUPDATE products\r\n\tSET qu_id_consume = qu_id_stock\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(qu_id_consume, 0) = 0;\r\nEND",
+    "cascade_change_qu_id_stock2": "CREATE TRIGGER cascade_change_qu_id_stock2 AFTER UPDATE ON products WHEN NEW.qu_id_stock != OLD.qu_id_stock\r\nBEGIN\r\n\t-- See also the trigger \"cascade_change_qu_id_stock BEFORE UPDATE ON products\"\r\n\t-- This here applies the needed changes to the products table itself only AFTER the update\r\n\r\n\tUPDATE products\r\n\tSET quick_consume_amount = quick_consume_amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0),\r\n\tquick_open_amount = quick_open_amount * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0),\r\n\tcalories = calories / IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0),\r\n\ttare_weight = tare_weight * IFNULL((SELECT factor FROM quantity_unit_conversions_resolved WHERE product_id = NEW.id AND from_qu_id = OLD.qu_id_stock AND to_qu_id = NEW.qu_id_stock LIMIT 1), 1.0)\r\n\tWHERE id = NEW.id;\r\nEND",
+    "default_qu_id_price": "CREATE TRIGGER default_qu_id_price AFTER INSERT ON products\r\nBEGIN\r\n\tUPDATE products\r\n\tSET qu_id_price = qu_id_purchase\r\n\tWHERE id = NEW.id\r\n\t\tAND IFNULL(qu_id_price, 0) = 0;\r\nEND",
+    "quantity_unit_conversions_INS": "CREATE TRIGGER quantity_unit_conversions_INS AFTER INSERT ON quantity_unit_conversions\r\nBEGIN\r\n\t-- Create the inverse QU conversion\r\n\tINSERT OR REPLACE INTO quantity_unit_conversions\r\n\t\t(from_qu_id, to_qu_id, factor, product_id)\r\n\tVALUES\r\n\t\t(NEW.to_qu_id, NEW.from_qu_id, 1 / IFNULL(NEW.factor, 1), NEW.product_id);\r\n\r\n\t-- Update quantity_unit_conversions_resolved cache\r\n\tDELETE FROM cache__quantity_unit_conversions_resolved\r\n\tWHERE path LIKE '%/' || NEW.to_qu_id || '/%'\r\n\t\tOR path LIKE '%/' || NEW.from_qu_id || '/%';\r\n\r\n\tINSERT INTO cache__quantity_unit_conversions_resolved\r\n\t\t(product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path)\r\n\tSELECT product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path\r\n\tFROM quantity_unit_conversions_resolved\r\n\tWHERE path LIKE '%/' || NEW.to_qu_id || '/%'\r\n\t\tOR path LIKE '%/' || NEW.from_qu_id || '/%';\r\nEND",
+    "quantity_unit_conversions_UPD": "CREATE TRIGGER quantity_unit_conversions_UPD AFTER UPDATE ON quantity_unit_conversions\r\nBEGIN\r\n\t-- Update the inverse QU conversion\r\n\tUPDATE quantity_unit_conversions\r\n\tSET factor = 1 / IFNULL(NEW.factor, 1),\r\n\tfrom_qu_id = NEW.to_qu_id,\r\n\tto_qu_id = NEW.from_qu_id\r\n\tWHERE from_qu_id = OLD.to_qu_id\r\n\t\tAND to_qu_id = OLD.from_qu_id\r\n\t\tAND IFNULL(product_id, -1) = IFNULL(NEW.product_id, -1);\r\n\r\n\t-- Update quantity_unit_conversions_resolved cache\r\n\tDELETE FROM cache__quantity_unit_conversions_resolved\r\n\tWHERE path LIKE '%/' || NEW.to_qu_id || '/%'\r\n\t\tOR path LIKE '%/' || NEW.from_qu_id || '/%';\r\n\r\n\tINSERT INTO cache__quantity_unit_conversions_resolved\r\n\t\t(product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path)\r\n\tSELECT product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path\r\n\tFROM quantity_unit_conversions_resolved\r\n\tWHERE path LIKE '%/' || NEW.to_qu_id || '/%'\r\n\t\tOR path LIKE '%/' || NEW.from_qu_id || '/%';\r\nEND",
+    "quantity_unit_conversions_DEL": "CREATE TRIGGER quantity_unit_conversions_DEL AFTER DELETE ON quantity_unit_conversions\r\nBEGIN\r\n\t-- Delete the inverse QU conversion\r\n\tDELETE FROM quantity_unit_conversions\r\n\tWHERE from_qu_id = OLD.to_qu_id\r\n\t\tAND to_qu_id = OLD.from_qu_id\r\n\t\tAND IFNULL(product_id, -1) = IFNULL(OLD.product_id, -1);\r\n\r\n\t-- Update quantity_unit_conversions_resolved cache\r\n\tDELETE FROM cache__quantity_unit_conversions_resolved\r\n\tWHERE path LIKE '%/' || OLD.to_qu_id || '/%'\r\n\t\tOR path LIKE '%/' || OLD.from_qu_id || '/%';\r\n\r\n\tINSERT INTO cache__quantity_unit_conversions_resolved\r\n\t\t(product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path)\r\n\tSELECT product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path\r\n\tFROM quantity_unit_conversions_resolved\r\n\tWHERE path LIKE '%/' || OLD.to_qu_id || '/%'\r\n\t\tOR path LIKE '%/' || OLD.from_qu_id || '/%';\r\nEND",
+    "products_INS": "CREATE TRIGGER products_INS AFTER INSERT ON products\r\nBEGIN\r\n\t-- Update quantity_unit_conversions_resolved cache\r\n\tDELETE FROM cache__quantity_unit_conversions_resolved\r\n\tWHERE product_id = NEW.id;\r\n\r\n\tINSERT INTO cache__quantity_unit_conversions_resolved\r\n\t\t(product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path)\r\n\tSELECT product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path\r\n\tFROM quantity_unit_conversions_resolved\r\n\tWHERE product_id = NEW.id;\r\nEND",
+    "products_UPD": "CREATE TRIGGER products_UPD AFTER UPDATE ON products\r\nBEGIN\r\n\t-- Update quantity_unit_conversions_resolved cache\r\n\tDELETE FROM cache__quantity_unit_conversions_resolved\r\n\tWHERE product_id = NEW.id;\r\n\r\n\tINSERT INTO cache__quantity_unit_conversions_resolved\r\n\t\t(product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path)\r\n\tSELECT product_id, from_qu_id, from_qu_name, from_qu_name_plural, to_qu_id, to_qu_name, to_qu_name_plural, factor, path\r\n\tFROM quantity_unit_conversions_resolved\r\n\tWHERE product_id = NEW.id;\r\nEND",
+    "products_DELETE": "CREATE TRIGGER products_DELETE AFTER DELETE ON products\r\nBEGIN\r\n\t-- Update quantity_unit_conversions_resolved cache\r\n\tDELETE FROM cache__quantity_unit_conversions_resolved\r\n\tWHERE product_id = OLD.id;\r\nEND",
+    "stock_log_INS": "CREATE TRIGGER stock_log_INS AFTER INSERT ON stock_log\r\nBEGIN\r\n\t-- Update products_average_price cache\r\n\tINSERT OR REPLACE INTO cache__products_average_price\r\n\t\t(product_id, price)\r\n\tSELECT product_id, price\r\n\tFROM products_average_price\r\n\tWHERE product_id = NEW.product_id;\r\n\r\n\t-- Update products_last_purchased cache\r\n\tINSERT OR REPLACE INTO cache__products_last_purchased\r\n\t\t(product_id, amount, best_before_date, purchased_date, price, location_id, shopping_location_id)\r\n\tSELECT product_id, amount, best_before_date, purchased_date, price, location_id, shopping_location_id\r\n\tFROM products_last_purchased\r\n\tWHERE product_id = NEW.product_id;\r\nEND",
+    "stock_log_UPD": "CREATE TRIGGER stock_log_UPD AFTER UPDATE ON stock_log\r\nBEGIN\r\n\t-- Update products_average_price cache\r\n\tINSERT OR REPLACE INTO cache__products_average_price\r\n\t\t(product_id, price)\r\n\tSELECT product_id, price\r\n\tFROM products_average_price\r\n\tWHERE product_id = NEW.product_id;\r\n\r\n\t-- Update products_last_purchased cache\r\n\tINSERT OR REPLACE INTO cache__products_last_purchased\r\n\t\t(product_id, amount, best_before_date, purchased_date, price, location_id, shopping_location_id)\r\n\tSELECT product_id, amount, best_before_date, purchased_date, price, location_id, shopping_location_id\r\n\tFROM products_last_purchased\r\n\tWHERE product_id = NEW.product_id;\r\nEND",
+    "stock_log_DEL": "CREATE TRIGGER stock_log_DEL AFTER DELETE ON stock_log\r\nBEGIN\r\n\t-- Update products_average_price cache\r\n\tDELETE FROM cache__products_average_price\r\n\tWHERE product_id = OLD.id;\r\n\r\n\t-- Update products_last_purchased cache\r\n\tDELETE FROM cache__products_last_purchased\r\n\tWHERE product_id = OLD.id;\r\nEND",
+    "products_default_qu_conversions": "CREATE TRIGGER products_default_qu_conversions AFTER INSERT ON products\r\nBEGIN\r\n\t-- Create product specific 1:1 conversions when QU stock != QU purchase/consume/price\r\n\t-- and when no default QU conversion apply\r\n\r\n\t-- with qu_id_stock != qu_id_purchase\r\n\tINSERT INTO quantity_unit_conversions\r\n\t\t(from_qu_id, to_qu_id, factor, product_id)\r\n\tSELECT p.qu_id_purchase, p.qu_id_stock, 1, p.id\r\n\tFROM products p\r\n\tWHERE p.id = NEW.id\r\n\t\tAND p.qu_id_stock != qu_id_purchase\r\n\t\tAND NOT EXISTS(SELECT 1 FROM quantity_unit_conversions_resolved WHERE product_id = p.id AND from_qu_id = p.qu_id_stock AND to_qu_id = p.qu_id_purchase);\r\n\r\n\t-- with qu_id_stock != qu_id_consume\r\n\tINSERT INTO quantity_unit_conversions\r\n\t\t(from_qu_id, to_qu_id, factor, product_id)\r\n\tSELECT p.qu_id_consume, p.qu_id_stock, 1, p.id\r\n\tFROM products p\r\n\tWHERE p.id = NEW.id\r\n\t\tAND p.qu_id_stock != qu_id_consume\r\n\t\tAND NOT EXISTS(SELECT 1 FROM quantity_unit_conversions_resolved WHERE product_id = p.id AND from_qu_id = p.qu_id_stock AND to_qu_id = p.qu_id_consume);\r\n\r\n\t-- with qu_id_stock != qu_id_price\r\n\tINSERT INTO quantity_unit_conversions\r\n\t\t(from_qu_id, to_qu_id, factor, product_id)\r\n\tSELECT p.qu_id_price, p.qu_id_stock, 1, p.id\r\n\tFROM products p\r\n\tWHERE p.id = NEW.id\r\n\t\tAND p.qu_id_stock != qu_id_price\r\n\t\tAND NOT EXISTS(SELECT 1 FROM quantity_unit_conversions_resolved WHERE product_id = p.id AND from_qu_id = p.qu_id_stock AND to_qu_id = p.qu_id_price);\r\nEND",
+    "recipes_desired_servings_default": "CREATE TRIGGER recipes_desired_servings_default AFTER INSERT ON recipes\r\nBEGIN\r\n\tUPDATE recipes\r\n\tSET desired_servings = base_servings\r\n\tWHERE id = NEW.id;\r\nEND",
+    "shopping_list_defaults_INS": "CREATE TRIGGER shopping_list_defaults_INS AFTER INSERT ON shopping_list\r\nBEGIN\r\n\tUPDATE shopping_list\r\n\tSET qu_id = (SELECT qu_id_purchase FROM products WHERE id = product_id)\r\n\tWHERE IFNULL(qu_id, '') = ''\r\n\t\tAND id = NEW.id;\r\n\r\n\tUPDATE shopping_list\r\n\tSET amount = 0\r\n\tWHERE TYPEOF(amount) NOT IN ('integer', 'real')\r\n\t\tAND id = NEW.id;\r\nEND",
+    "shopping_list_defaults_UPD": "CREATE TRIGGER shopping_list_defaults_UPD AFTER UPDATE ON shopping_list\r\nBEGIN\r\n\tUPDATE shopping_list\r\n\tSET qu_id = (SELECT qu_id_purchase FROM products WHERE id = product_id)\r\n\tWHERE IFNULL(qu_id, '') = ''\r\n\t\tAND id = NEW.id;\r\n\r\n\tUPDATE shopping_list\r\n\tSET amount = 0\r\n\tWHERE TYPEOF(amount) NOT IN ('integer', 'real')\r\n\t\tAND id = NEW.id;\r\nEND"
+  },
+  "permissions": [
+    [
+      1,
+      "ADMIN",
+      null
+    ],
+    [
+      2,
+      "USERS",
+      1
+    ],
+    [
+      3,
+      "USERS_CREATE",
+      2
+    ],
+    [
+      4,
+      "USERS_EDIT",
+      3
+    ],
+    [
+      5,
+      "USERS_READ",
+      4
+    ],
+    [
+      6,
+      "USERS_EDIT_SELF",
+      1
+    ],
+    [
+      7,
+      "STOCK",
+      1
+    ],
+    [
+      8,
+      "SHOPPINGLIST",
+      1
+    ],
+    [
+      9,
+      "RECIPES",
+      1
+    ],
+    [
+      10,
+      "CHORES",
+      1
+    ],
+    [
+      11,
+      "BATTERIES",
+      1
+    ],
+    [
+      12,
+      "TASKS",
+      1
+    ],
+    [
+      13,
+      "EQUIPMENT",
+      1
+    ],
+    [
+      14,
+      "CALENDAR",
+      1
+    ],
+    [
+      15,
+      "STOCK_PURCHASE",
+      7
+    ],
+    [
+      16,
+      "STOCK_CONSUME",
+      7
+    ],
+    [
+      17,
+      "STOCK_INVENTORY",
+      7
+    ],
+    [
+      18,
+      "STOCK_TRANSFER",
+      7
+    ],
+    [
+      19,
+      "STOCK_OPEN",
+      7
+    ],
+    [
+      20,
+      "STOCK_EDIT",
+      7
+    ],
+    [
+      21,
+      "SHOPPINGLIST_ITEMS_ADD",
+      8
+    ],
+    [
+      22,
+      "SHOPPINGLIST_ITEMS_DELETE",
+      8
+    ],
+    [
+      23,
+      "RECIPES_MEALPLAN",
+      9
+    ],
+    [
+      24,
+      "CHORE_TRACK_EXECUTION",
+      10
+    ],
+    [
+      25,
+      "CHORE_UNDO_EXECUTION",
+      10
+    ],
+    [
+      26,
+      "BATTERIES_TRACK_CHARGE_CYCLE",
+      11
+    ],
+    [
+      27,
+      "BATTERIES_UNDO_CHARGE_CYCLE",
+      11
+    ],
+    [
+      28,
+      "TASKS_UNDO_EXECUTION",
+      12
+    ],
+    [
+      29,
+      "TASKS_MARK_COMPLETED",
+      12
+    ],
+    [
+      30,
+      "MASTER_DATA_EDIT",
+      1
+    ]
+  ]
+}

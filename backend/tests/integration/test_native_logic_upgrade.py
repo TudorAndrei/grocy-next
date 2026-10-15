@@ -1,0 +1,110 @@
+"""Keep a saved database intact when native object creation fails."""
+
+import os
+import sqlite3
+import subprocess
+import sys
+from pathlib import Path
+
+
+def test_native_logic_upgrade_rolls_back_name_conflicts(tmp_path: Path):
+    database = tmp_path / "saved.db"
+    environment = {**os.environ, "GROCY_DATABASE_URL": f"sqlite+aiosqlite:///{database}"}
+    command = [sys.executable, "-m", "alembic", "upgrade"]
+    backend = Path(__file__).parents[2]
+    created = subprocess.run(
+        [*command, "20261015_0020"],
+        cwd=backend,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    with sqlite3.connect(database) as db:
+        db.executescript("""
+            INSERT INTO tasks(id,name) VALUES (20,'Saved');
+            UPDATE sqlite_sequence SET seq=9000 WHERE name='tasks';
+            CREATE TABLE project_audit(name TEXT);
+            CREATE TRIGGER project_task AFTER INSERT ON tasks BEGIN
+                INSERT INTO project_audit VALUES (NEW.name);
+            END;
+            CREATE VIEW sessions AS SELECT name FROM tasks;
+        """)
+        before = list(db.iterdump())
+    rejected = subprocess.run(
+        [*command, "head"],
+        cwd=backend,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert rejected.returncode != 0
+    assert "view sessions already exists" in rejected.stderr
+    with sqlite3.connect(database) as db:
+        assert list(db.iterdump()) == before
+        task = db.execute("INSERT INTO tasks(name) VALUES ('Next')")
+        assert task.lastrowid == 9001
+        assert db.execute("SELECT name FROM project_audit").fetchall() == [("Next",)]
+        assert db.execute("SELECT name FROM sessions ORDER BY name").fetchall() == [
+            ("Next",),
+            ("Saved",),
+        ]
+
+
+def test_cli_initialization_supports_native_writes_without_startup_migrations(
+    tmp_path: Path, monkeypatch
+):
+    import json
+
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.main import create_app
+
+    database = tmp_path / "initialized.db"
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
+    monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "false")
+    monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
+    initialized = subprocess.run(
+        [sys.executable, "-m", "grocy.cli", "init", "--username", "Owner"],
+        cwd=Path(__file__).parents[2],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert initialized.returncode == 0, initialized.stderr
+    key = json.loads(initialized.stdout)["api_key"]
+    with sqlite3.connect(database) as db:
+        recipe = db.execute(
+            "INSERT INTO recipes(name,base_servings) VALUES ('Direct SQL',3)"
+        ).lastrowid
+        assert db.execute(
+            "SELECT base_servings,desired_servings FROM recipes WHERE id=?", (recipe,)
+        ).fetchone() == (3, 3)
+    clear_settings_cache()
+    with TestClient(create_app(), headers={"GROCY-API-KEY": key}) as api:
+
+        def create(entity, **body):
+            response = api.post(f"/api/objects/{entity}", json=body)
+            assert response.status_code == 200, response.text
+            return int(response.json()["created_object_id"])
+
+        unit = create("quantity_units", name="Piece")
+        purchase = create("quantity_units", name="Pack")
+        location = create("locations", name="Kitchen")
+        product = create(
+            "products",
+            name="Saved",
+            location_id=location,
+            qu_id_stock=unit,
+            qu_id_purchase=purchase,
+        )
+        saved = api.get(f"/api/objects/products/{product}").json()
+        assert saved["qu_id_consume"] == unit and saved["qu_id_price"] == purchase
+        conversions = api.get("/api/objects/quantity_unit_conversions").json()
+        assert {(row["from_qu_id"], row["to_qu_id"], row["factor"]) for row in conversions} == {
+            (unit, purchase, 1),
+            (purchase, unit, 1),
+        }
