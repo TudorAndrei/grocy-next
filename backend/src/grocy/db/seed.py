@@ -34,7 +34,7 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
         ApiKey(
             api_key=api_key,
             user_id=admin.id,
-            key_type="default",
+            key_type="grocy-next",
             description="Bootstrap development key",
         )
     )

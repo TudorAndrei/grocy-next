@@ -47,6 +47,7 @@ async def create_key(body: CreateKey, actor: CurrentActor, session: DbSession) -
     row = ApiKey(
         user_id=body.user_id,
         api_key=secrets.token_urlsafe(32),
+        key_type="grocy-next",
         description=body.description,
         expires=expires,
     )

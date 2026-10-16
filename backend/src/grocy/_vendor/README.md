@@ -92,3 +92,10 @@ The release's FastRoute 1.3.0, container, server handler, server middleware, and
 supply the router dependencies. The original CORS middleware and exception controller
 retain preflight responses, wildcard headers, method errors, and their diagnostics.
 The original OpenAPI controller adds current custom entities to the API specification.
+
+Native authentication uses the unchanged API key middleware, its base middleware, and key service.
+The adapter supplies the request, route context, and application database connection.
+The original service retains local expiry, credential order, use timestamps, and orphan-user behavior.
+The database adapter restores the main file timestamp after the native use update.
+PDO leaves omitted bindings null and rejects extra bindings with SQLite error 25.
+The Python statement adapter retains both rules when the driver reports a binding count error.

@@ -26,12 +26,24 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
     wrapper.chmod(0o700)
     monkeypatch.setenv("GROCY_PHP_EXECUTABLE", str(wrapper))
     clear_settings_cache()
+
+    def live_workers():
+        workers = set()
+        for value in processes.read_text().splitlines():
+            worker = int(value)
+            try:
+                os.kill(worker, 0)
+            except ProcessLookupError:
+                continue
+            workers.add(worker)
+        return workers
+
     name = uuid4().hex
     with TestClient(create_app()) as client:
         client.headers.update(api_headers)
         pid = int(processes.read_text().splitlines()[-1])
         assert client.options("/api/objects/locations").status_code == 200
-        original_pids = {int(item) for item in processes.read_text().splitlines()}
+        original_pids = live_workers()
         os.kill(pid, signal.SIGTERM)
         for _ in range(3):
             response = client.post(
@@ -51,8 +63,8 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
             )
         else:
             pytest.fail("The purifier did not recover after its worker stopped")
-        pids = {int(item) for item in processes.read_text().splitlines()}
-        assert original_pids < pids and len(pids - original_pids) == 1
+        pids = live_workers()
+        assert original_pids - {pid} < pids and len(pids - original_pids) == 1
         with pytest.raises(ProcessLookupError):
             os.kill(pid, 0)
         for protocol_pid in original_pids - {pid}:
@@ -65,15 +77,17 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
                 break
         else:
             pytest.fail("The native HTTP worker did not recover")
-        recovered_pids = {int(item) for item in processes.read_text().splitlines()}
-        assert pids < recovered_pids and len(recovered_pids - pids) == 1
+        recovered_pids = live_workers()
+        assert pids - original_pids < recovered_pids and len(recovered_pids - pids) == 1
         pids = recovered_pids
         parameters = (("query[]", f"name={name}"), ("query[]", "description§Link"))
         matching = client.get("/api/objects/locations", params=parameters)
         assert matching.status_code == 200, matching.text
         assert [row["id"] for row in matching.json()] == [int(location)]
-        regex_pid = int(processes.read_text().splitlines()[-1])
-        assert regex_pid not in pids
+        regex_workers = live_workers() - pids
+        assert len(regex_workers) == 1
+        regex_pid = regex_workers.pop()
+        pids.add(regex_pid)
         os.kill(regex_pid, signal.SIGTERM)
         for _ in range(3):
             matching = client.get("/api/objects/locations", params=parameters)
@@ -83,17 +97,18 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
                 break
         else:
             pytest.fail("The native SQL function worker did not recover")
-        recovered_pids = {int(item) for item in processes.read_text().splitlines()}
-        assert pids < recovered_pids and len(recovered_pids - pids) == 2
+        recovered_pids = live_workers()
+        assert pids - {regex_pid} < recovered_pids and len(recovered_pids - pids) == 1
         pids = recovered_pids
+        previous_workers = {int(item) for item in processes.read_text().splitlines()}
         task = client.post("/api/objects/tasks", json={"name": name}).json()["created_object_id"]
         assert client.post(f"/api/tasks/{task}/complete", json={}).status_code == 204
-        action_pids = {int(item) for item in processes.read_text().splitlines()} - set(pids)
+        action_pids = {int(item) for item in processes.read_text().splitlines()} - previous_workers
         assert action_pids
         for action_pid in action_pids:
             with pytest.raises(ProcessLookupError):
                 os.kill(action_pid, 0)
-        pids.update(action_pids)
+        pids = {int(item) for item in processes.read_text().splitlines()}
     for pid in pids:
         with pytest.raises(ProcessLookupError):
             os.kill(pid, 0)

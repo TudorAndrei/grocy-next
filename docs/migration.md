@@ -90,3 +90,7 @@ CLI initialization runs the same migrations. A database created with `grocy-cli 
 Imported timestamp values bypass the runtime timestamp codec. The import keeps fractional seconds and native year 0000 timestamp text exactly. Some domain date operations still have separate year limits.
 
 Custom triggers on replaced native views are saved before replacement. The upgrade restores them after the native triggers. A saved-database check confirms that such a custom trigger still executes after upgrade.
+
+Revision 0023 separates application API keys from native Grocy API keys. New CLI, bootstrap, and v2 keys use `grocy-next`. Saved application keys retain their secret text, user, expiry, and allocation history. The revision changes the type of old default keys with null expiry, a 43-character application secret, or the bootstrap description. Native Grocy-generated keys have 50 characters and a saved expiry.
+
+Imports now record source key IDs in `grocy_imported_api_keys`. The revision excludes those identities from application-key classification. Older imports recover this metadata from their saved `.source.sqlite` copy. The key ID and secret must both match. A source key with null expiry therefore keeps the native type and remains invalid. Source secret text, timestamps, and key types stay unchanged. The metadata table has no allocation counter. Key deletion removes its metadata row through a foreign key.

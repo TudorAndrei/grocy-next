@@ -199,3 +199,17 @@ An unknown path under `/api/` can return 405 because the native wildcard OPTIONS
 Application v2 and health routes retain their existing request rules.
 The original `/api/openapi/specification` controller includes current custom entities and request URLs.
 Queries read setting keys and values without parsing unused setting timestamps.
+
+Native API keys now use the original authentication middleware and key service.
+Default and native calendar key expiry must be later than the current local whole second.
+Null expiry is invalid. The key text `0` is empty under PHP rules and cannot authenticate.
+Repeated headers use their combined value. Query parameters use the native PHP parser.
+Valid key checks save `last_used` before the user lookup, including for a deleted user.
+Repeated use within one second can skip an unchanged write and still authenticate.
+The native update restores the main database file timestamp.
+Native array query values retain their original binding behavior, including expiry replacement.
+Missing bindings become null. Extra bindings return the original SQLite error 25.
+
+Application keys use the separate `grocy-next` type. Their UTC expiry and null expiry rules remain available.
+Application calendar keys keep their existing scope. An application header key takes precedence over query keys.
+Revision 0023 separates saved application keys. Import identity records protect source key types.

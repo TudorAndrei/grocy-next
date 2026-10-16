@@ -186,6 +186,13 @@ class NativeReadDatabaseService extends Grocy\Services\DatabaseService
         return date('Y-m-d H:i:s', NATIVE_DATABASE_FILE === null ? time() : filemtime(NATIVE_DATABASE_FILE));
     }
 
+    public function SetDbChangedTime($dateTime)
+    {
+        if (NATIVE_DATABASE_FILE !== null) {
+            touch(NATIVE_DATABASE_FILE, strtotime($dateTime));
+        }
+    }
+
     public function GetDbConnectionRaw()
     {
         return new NativeRawReader($this->database);

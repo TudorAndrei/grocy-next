@@ -54,7 +54,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             await session.flush()
             session.add_all(
                 [
-                    ApiKey(user_id=user.id, api_key=key),
+                    ApiKey(user_id=user.id, api_key=key, key_type="grocy-next"),
                     UserPermission(user_id=user.id, permission_id=1),
                 ]
             )

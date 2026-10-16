@@ -253,6 +253,7 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
     after = _data_snapshot(database)
     assert {name for name in after if name not in before} == {
         "cache__quantity_unit_conversions_resolved",
+        "grocy_imported_api_keys",
         "migrations",
         "permission_hierarchy",
         "sessions",

@@ -4999,3 +4999,82 @@ def test_native_setting_dates_do_not_block_requests(api, execute_sql, timestamp)
         execute_sql(f"DELETE FROM user_settings WHERE key='{key}'")
         if added:
             execute_sql("ALTER TABLE user_settings DROP COLUMN row_created_timestamp")
+
+
+@pytest.mark.parametrize(
+    "case,expected_status,used",
+    [
+        ("valid", 200, True),
+        ("orphan", 401, True),
+        ("null-expiry", 401, False),
+        ("expired-local", 401, False),
+        ("whole-second", 401, False),
+        ("future-local", 200, True),
+        ("text-expiry", 200, True),
+        ("zero", 401, False),
+        ("duplicate-header", 401, False),
+        ("query-fallback", 200, True),
+        ("duplicate-query", 200, True),
+        ("query-array", 401, False),
+        ("query-array-override", 200, True),
+        ("query-array-extra", 500, False),
+    ],
+)
+def test_native_api_key_checks_and_use_records(api, execute_sql, case, expected_status, used):
+    from grocy.core.time import server_timezone
+
+    key = "0" if case == "zero" else "native-auth-" + uuid4().hex
+    now = datetime.now(server_timezone())
+    expires = "2999-12-31 23:59:59"
+    if case == "null-expiry":
+        expires = None
+    elif case in {"expired-local", "future-local", "whole-second"}:
+        minutes = {"expired-local": -2, "future-local": 2, "whole-second": 0}[case]
+        expires = (now + timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")
+    elif case == "text-expiry":
+        expires = "not-a-date"
+    elif case == "query-array-override":
+        expires = "2000-01-01 00:00:00"
+    expiry_sql = "NULL" if expires is None else f"'{expires}'"
+    user_id = 2147483647 if case == "orphan" else 1
+    execute_sql(
+        "INSERT INTO api_keys(api_key,user_id,expires) "
+        f"VALUES ('{key}',{user_id},{expiry_sql})"
+    )
+    headers = [("GROCY-API-KEY", key)]
+    params = []
+    if case == "duplicate-header":
+        headers.append(("GROCY-API-KEY", "invalid"))
+    elif case in {"query-fallback", "duplicate-query"}:
+        headers = [("GROCY-API-KEY", "invalid")]
+        if case == "duplicate-query":
+            params.append(("GROCY-API-KEY", "invalid"))
+        params.append(("GROCY-API-KEY", key))
+    elif case.startswith("query-array"):
+        headers = [("GROCY-API-KEY", "invalid")]
+        params.append(("GROCY-API-KEY[]", key))
+        if case != "query-array":
+            params.extend(
+                [("GROCY-API-KEY[]", "0000-01-01 00:00:00"), ("GROCY-API-KEY[]", "default")]
+            )
+        if case == "query-array-extra":
+            params.append(("GROCY-API-KEY[]", "extra"))
+    try:
+        for _ in range(2):
+            before = datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S")
+            response = api.get("/api/system/info", headers=headers, params=params)
+            after = datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S")
+            assert response.status_code == expected_status, response.text
+            last_used = execute_sql(f"SELECT last_used FROM api_keys WHERE api_key='{key}'")[0][0]
+            if used:
+                assert isinstance(last_used, str) and before <= last_used <= after
+            else:
+                assert last_used is None
+            if expected_status == 401:
+                assert response.content == b""
+            elif expected_status == 500:
+                assert response.json()["error_message"] == (
+                    "SQLSTATE[HY000]: General error: 25 column index out of range"
+                )
+    finally:
+        execute_sql(f"DELETE FROM api_keys WHERE api_key='{key}'")

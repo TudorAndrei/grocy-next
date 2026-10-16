@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from grocy.db.models.base import Base, TimestampMixin
@@ -38,3 +38,13 @@ class UserPermission(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     permission_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ImportedApiKey(Base):
+    """Keep imported credentials distinct from legacy application credentials."""
+
+    __tablename__ = "grocy_imported_api_keys"
+
+    api_key_id: Mapped[int] = mapped_column(
+        ForeignKey("api_keys.id", ondelete="CASCADE"), primary_key=True
+    )

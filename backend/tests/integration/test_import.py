@@ -261,7 +261,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0022"
+            == "20261016_0023"
         )
 
 
@@ -459,3 +459,66 @@ def test_import_keeps_native_version_history_and_calendar_secret(tmp_path, monke
         assert response.status_code == 200, response.text
     with sqlite3.connect(target) as db:
         assert db.execute("SELECT * FROM migrations ORDER BY migration").fetchall() == history
+
+
+@pytest.mark.parametrize("import_version", ["current", "saved"])
+def test_imported_and_application_keys_keep_distinct_expiry_rules(
+    tmp_path, monkeypatch, import_version
+):
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.db.native_schema import SCHEMA
+    from grocy.main import create_app
+
+    source, target = tmp_path / "source.db", tmp_path / "target.db"
+    source_database(source)
+    imported_key = "a" * 43
+    with sqlite3.connect(source) as db:
+        db.execute(SCHEMA["ddl"]["api_keys"])
+        db.execute(
+            "INSERT INTO api_keys(api_key,user_id,expires,description) VALUES (?,1,NULL,?)",
+            (imported_key, "Bootstrap development key"),
+        )
+        db.execute(
+            "INSERT INTO api_keys(api_key,user_id,expires) "
+            "VALUES ('native-owner',1,'2999-12-31 23:59:59')"
+        )
+    import_grocy_sqlite(source, target)
+    if import_version == "current":
+        # The stored import identities must remain useful when the source copy moves.
+        target.with_suffix(".db.source.sqlite").unlink()
+    else:
+        # Older imports have the source snapshot but no credential provenance table.
+        with sqlite3.connect(target) as db:
+            db.execute("DROP TABLE IF EXISTS grocy_imported_api_keys")
+    with sqlite3.connect(target) as db:
+        db.execute(
+            "INSERT INTO api_keys(api_key,user_id,expires) VALUES ('saved-app-key',1,NULL)"
+        )
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
+    monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
+    clear_settings_cache()
+    with TestClient(create_app()) as api:
+        assert api.get("/api/user", headers={"GROCY-API-KEY": imported_key}).status_code == 401
+        for key in ["native-owner", "saved-app-key"]:
+            response = api.get("/api/user", headers={"GROCY-API-KEY": key})
+            assert response.status_code == 200 and response.json()[0]["id"] == 1
+        created = api.post(
+            "/api/v2/api-keys",
+            headers={"GROCY-API-KEY": "saved-app-key"},
+            json={"user_id": 1},
+        )
+        assert created.status_code == 200, created.text
+        key = created.json()["api_key"]
+        assert api.get("/api/user", headers={"GROCY-API-KEY": key}).status_code == 200
+    with sqlite3.connect(target) as db:
+        assert db.execute(
+            "SELECT key_type,expires,last_used FROM api_keys WHERE api_key=?", (imported_key,)
+        ).fetchone() == ("default", None, None)
+        assert db.execute(
+            "SELECT key_type,expires FROM api_keys WHERE api_key='saved-app-key'"
+        ).fetchone() == ("grocy-next", None)
+        assert db.execute(
+            "SELECT key_type,expires FROM api_keys WHERE api_key=?", (key,)
+        ).fetchone() == ("grocy-next", None)

@@ -41,6 +41,7 @@ async def native_action_response(
     user_id: int,
     *,
     arguments: dict[str, str] | None = None,
+    body: bytes | None = None,
 ) -> Response:
     runtime: InputPurifier = request.app.state.input_purifier
     settings = get_settings()
@@ -72,7 +73,7 @@ async def native_action_response(
         object_id=object_id,
         user_id=user_id,
         method=request.scope.get("grocy_original_method", request.method),
-        body=await request.body(),
+        body=await request.body() if body is None else body,
         content_type=request.headers.get("content-type"),
         query_string=request.scope["query_string"],
         uri=str(request.url),

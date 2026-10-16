@@ -27,6 +27,23 @@ function nativeAction(array $request, NativeDatabase $database): array
         if ($http->getUri()->getScheme() === 'https') $_SERVER['HTTPS'] = 'on';
         if ($http->hasHeader('X-Forwarded-Proto')) $_SERVER['HTTP_X_FORWARDED_PROTO'] = $http->getHeaderLine('X-Forwarded-Proto');
         if ($http->hasHeader('User-Agent')) $_SERVER['HTTP_USER_AGENT'] = $http->getHeaderLine('User-Agent');
+        if ($request['route'] === 'authenticate') {
+            (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'instance'))->setValue(
+                null, new NativeReadDatabaseService($database)
+            );
+            $app = nativeRouter();
+            $http = (new Slim\Middleware\RoutingMiddleware(
+                $app->getRouteResolver(), $app->getRouteCollector()->getRouteParser()
+            ))->performRouting($http);
+            $user = (new NativeApiKeyAuthMiddleware($request['arguments']['header']))->authenticate($http);
+            return nativeEncodedResponse($response->withJson([
+                'user_id' => $user === null ? null : $user->id,
+                'selected' => $database->authenticatedKeySelected,
+                'header' => $http->getHeaderLine($request['arguments']['header']),
+                'query_key' => $http->getQueryParam($request['arguments']['header']),
+                'secret' => $http->getQueryParam('secret'),
+            ]));
+        }
         $user = $database->users(GROCY_USER_ID);
         define('GROCY_AUTHENTICATED', true);
         define('GROCY_USER_USERNAME', $user->username);

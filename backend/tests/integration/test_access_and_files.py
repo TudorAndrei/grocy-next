@@ -272,3 +272,58 @@ async def test_empty_profile_password_preserves_stored_password(
         )
         async with get_session_factory()() as session:
             assert await session.scalar(select(User.password).where(User.id == user_id)) == password
+
+
+def test_native_key_use_preserves_file_time_and_credential_priority(tmp_path, monkeypatch):
+    import os
+    import sqlite3
+    import time
+    from datetime import datetime
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.core.time import server_timezone
+    from grocy.main import create_app
+
+    database = tmp_path / "native-key-use.db"
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
+    monkeypatch.setenv("GROCY_DATABASE_WAL", "false")
+    clear_settings_cache()
+    with TestClient(create_app()) as api:
+        with sqlite3.connect(database) as db:
+            db.execute(
+                "INSERT INTO api_keys(api_key,user_id,expires) "
+                "VALUES ('native-valid',1,'2999-12-31 23:59:59')"
+            )
+            db.execute(
+                "INSERT INTO api_keys(api_key,user_id,expires) "
+                "VALUES ('native-orphan',2147483647,'2999-12-31 23:59:59')"
+            )
+        old_time = int(time.time()) - 7 * 86400
+        for key, status in [("native-valid", 200), ("native-orphan", 401)]:
+            os.utime(database, (old_time, old_time))
+            for _ in range(2):
+                response = api.get(
+                    "/api/system/info",
+                    headers={"GROCY-API-KEY": key},
+                    params={"GROCY-API-KEY": "dev-key"},
+                )
+                assert response.status_code == status, response.text
+                assert int(database.stat().st_mtime) == old_time
+            with sqlite3.connect(database) as db:
+                last_used = db.execute(
+                    "SELECT last_used FROM api_keys WHERE api_key=?", (key,)
+                ).fetchone()[0]
+            assert isinstance(last_used, str) and len(last_used) == 19
+        changed = api.get(
+            "/api/system/db-changed-time", headers={"GROCY-API-KEY": "native-valid"}
+        )
+        assert changed.status_code == 200
+        assert changed.json()["changed_time"] == datetime.fromtimestamp(
+            old_time, server_timezone()
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        preferred = api.get(
+            "/api/user",
+            headers={"GROCY-API-KEY": "dev-key"},
+            params={"GROCY-API-KEY": "native-orphan"},
+        )
+        assert preferred.status_code == 200 and preferred.json()[0]["id"] == 1

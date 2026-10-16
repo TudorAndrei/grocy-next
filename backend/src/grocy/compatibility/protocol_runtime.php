@@ -1,6 +1,14 @@
 <?php
 
 // Use the release's route declarations and framework for HTTP method decisions.
+class NativeApiKeyAuthMiddleware extends Grocy\Middleware\ApiKeyAuthMiddleware
+{
+    public function __construct(string $header)
+    {
+        $this->ApiKeyHeaderName = $header;
+    }
+}
+
 function nativeRouter(): Slim\App
 {
     static $router = null;

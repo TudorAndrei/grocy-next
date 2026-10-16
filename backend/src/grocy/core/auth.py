@@ -60,13 +60,17 @@ async def authenticate_request(
     if actor := getattr(request.state, "grocy_actor", None):
         return actor
     settings = get_settings()
+    if not request.url.path.startswith("/api/v2/") and request.url.path != "/api/health":
+        return await authenticate_native_request(request, session)
     key = grocy_api_key or request.headers.get(settings.api_key_header)
     calendar_secret = (
         request.query_params.get("secret") if request.url.path == "/api/calendar/ical" else None
     )
     candidates = [
         (key, "default"),
+        (key, "grocy-next"),
         (request.query_params.get(settings.api_key_header), "default"),
+        (request.query_params.get(settings.api_key_header), "grocy-next"),
         (calendar_secret, "special-purpose-calendar-ical"),
         (calendar_secret, "calendar"),
     ]
@@ -82,6 +86,57 @@ async def authenticate_request(
         except UnauthorizedError:
             continue
         return actor
+    raise UnauthorizedError("Invalid API key")
+
+
+async def authenticate_native_request(request: Request, session: AsyncSession) -> Actor:
+    import json
+
+    from grocy.api.compatibility.responses import native_action_response
+
+    header = ", ".join(request.headers.getlist(get_settings().api_key_header))
+    if header not in {"", "0"}:
+        try:
+            return await authenticate_key(session, header, key_type="grocy-next")
+        except _MissingKeyUser:
+            raise
+        except UnauthorizedError:
+            pass
+    response = await native_action_response(
+        request,
+        session,
+        "authenticate",
+        "",
+        1,
+        arguments={"header": get_settings().api_key_header},
+        body=b"",
+    )
+    body = json.loads(bytes(response.body))
+    if response.status_code != 200:
+        raise GrocyError(
+            body["error_message"],
+            status_code=response.status_code,
+            code=None,
+            details=body.get("error_details"),
+        )
+    if body["selected"]:
+        if body["user_id"] is None:
+            raise _MissingKeyUser("Invalid API key")
+        return await actor_for_user(session, body["user_id"])
+    # Application keys retain their extension expiry rules and calendar scope.
+    for key, key_type in [
+        (body["header"], "grocy-next"),
+        (body["query_key"], "grocy-next"),
+        (body["secret"] if request.url.path == "/api/calendar/ical" else None, "calendar"),
+    ]:
+        if not isinstance(key, str) or key in {"", "0"}:
+            continue
+        try:
+            return await authenticate_key(session, key, key_type=key_type)
+        except _MissingKeyUser:
+            raise
+        except UnauthorizedError:
+            continue
     raise UnauthorizedError("Invalid API key")
 
 
@@ -102,7 +157,9 @@ def require_request_permission(request: Request, actor: Actor) -> None:
         raise
 
 
-async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "default") -> Actor:
+async def authenticate_key(
+    session: AsyncSession, key: str, *, key_type: str | None = None
+) -> Actor:
     if key_type == "special-purpose-calendar-ical":
         local_time = datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S")
         valid = ApiKey.expires > local_time
@@ -110,19 +167,29 @@ async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "
         now = datetime.now(UTC).replace(tzinfo=None)
         valid = or_(ApiKey.expires.is_(None), ApiKey.expires >= now)
     stmt = (
-        select(ApiKey.user_id, User.id, User.username, valid)
+        select(ApiKey.user_id, User.id, valid)
         .select_from(ApiKey)
         .outerjoin(User, ApiKey.user_id == User.id)
-        .where(ApiKey.api_key == key, ApiKey.key_type == key_type)
+        .where(
+            ApiKey.api_key == key,
+            ApiKey.key_type == key_type
+            if key_type is not None
+            else ApiKey.key_type.in_(["default", "grocy-next"]),
+        )
     )
     identity = (await session.execute(stmt)).first()
     if identity is None:
         raise UnauthorizedError("Invalid API key")
-    user_id, existing_user_id, username, is_valid = identity
+    user_id, existing_user_id, is_valid = identity
     if not is_valid:
         raise UnauthorizedError("API key expired")
     if existing_user_id is None:
         raise _MissingKeyUser("Invalid API key")
+    return await actor_for_user(session, user_id, key=key)
+
+
+async def actor_for_user(session: AsyncSession, user_id: int, *, key: str | None = None) -> Actor:
+    username = (await session.execute(select(User.username).where(User.id == user_id))).scalar_one()
     session.info["actor_user_id"] = user_id
     ids = set(
         (

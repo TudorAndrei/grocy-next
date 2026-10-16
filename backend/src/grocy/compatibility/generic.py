@@ -1,10 +1,11 @@
 """Execute native SQL with PDO statement and explicit transaction boundaries."""
 
 import asyncio
+import re
 from typing import Any
 
 from sqlalchemy.engine import Connection
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.purifier import InputPurifier
@@ -56,7 +57,28 @@ class NativeStatements:
                 )
                 for row in before:
                     await self._delete_nutrition(row["id"])
-            result = await connection.exec_driver_sql(step["query"], parameters)
+            try:
+                result = await connection.exec_driver_sql(step["query"], parameters)
+            except ProgrammingError as error:
+                missing = re.fullmatch(
+                    r"Incorrect number of bindings supplied\. The current statement uses (\d+), "
+                    r"and there are (\d+) supplied\.",
+                    str(error.orig),
+                )
+                if not isinstance(parameters, tuple) or missing is None:
+                    raise
+                required, supplied = map(int, missing.groups())
+                if required < supplied:
+                    if not self.transaction:
+                        await self.session.rollback()
+                    return {"error": "SQLSTATE[HY000]: General error: 25 column index out of range"}
+                if required == supplied:
+                    raise
+                # PDO leaves omitted positional bindings null. SQLite's Python
+                # driver rejects them before execution, so supply those nulls.
+                result = await connection.exec_driver_sql(
+                    step["query"], parameters + (None,) * (required - supplied)
+                )
             response: dict[str, Any] = {
                 "row_count": max(result.rowcount, 0),
                 "rows": [

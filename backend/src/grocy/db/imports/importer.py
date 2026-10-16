@@ -129,6 +129,11 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                     conn.execute(table.insert().values(**values))
                     count += 1
                 copied[table.name] = count
+            if "api_keys" in source_tables:
+                conn.exec_driver_sql(
+                    "INSERT OR IGNORE INTO grocy_imported_api_keys(api_key_id) "
+                    "SELECT id FROM api_keys"
+                )
             if "migrations" in source_tables:
                 conn.exec_driver_sql(SCHEMA["ddl"]["migrations"])
                 history = source_db.execute(

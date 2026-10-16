@@ -6,6 +6,7 @@ class NativeDatabase extends LessQL\Database
 {
     public string $insertId = '0';
     public array $context = [];
+    public bool $authenticatedKeySelected = false;
 
     public function __construct(private PDO $schema)
     {
@@ -34,6 +35,12 @@ class NativeDatabase extends LessQL\Database
 
     public function select($table, $options = [])
     {
+        // IsValidApiKey may skip an unchanged last_used write within one second.
+        // GetUserByApiKey still performs this distinct credential lookup.
+        if ($table === 'api_keys' && count($options['where'] ?? []) === 1
+            && str_starts_with($options['where'][0], '`api_key` ')) {
+            $this->authenticatedKeySelected = true;
+        }
         $this->context = ['action' => 'select', 'table' => $table];
         return parent::select($table, $options);
     }
@@ -108,6 +115,9 @@ class NativeDatabase extends LessQL\Database
 
     public function update($table, $data, $where = [], $params = [])
     {
+        if ($table === 'api_keys' && array_key_exists('last_used', $data)) {
+            $this->authenticatedKeySelected = true;
+        }
         $this->context = [
             'action' => 'update', 'table' => $table,
             'before_query' => 'SELECT * FROM ' . $this->quoteIdentifier($table) . $this->getSuffix($where),

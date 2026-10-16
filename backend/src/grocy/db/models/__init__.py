@@ -35,7 +35,7 @@ from grocy.db.models.settings import (
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
-from grocy.db.models.users import ApiKey, User, UserPermission
+from grocy.db.models.users import ApiKey, ImportedApiKey, User, UserPermission
 from grocy.db.native_columns import configure_native_columns
 
 configure_native_references(Base.metadata)
@@ -49,6 +49,7 @@ __all__ = [
     "Chore",
     "ChoreLog",
     "Equipment",
+    "ImportedApiKey",
     "Location",
     "MealPlanEntry",
     "MealPlanSection",

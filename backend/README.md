@@ -61,6 +61,11 @@ and eluceo/iCal 2.14.0. PHP handles date parsing, event IDs, escaping, folding, 
 Native calendar secrets use their original key type and the server's local clock for expiry.
 Saved application calendar subscriptions remain valid. Authentication reads only identity fields,
 so unused user dates do not block access.
+Native credentials now use Grocy's unchanged API key middleware and service.
+Expiry uses the local server clock and a strict whole-second comparison. Null expiry is invalid.
+Valid credentials save `last_used` before the user lookup. The main database file time stays unchanged.
+Application keys use the separate `grocy-next` type and retain their existing expiry rules.
+Revision 0023 separates saved application keys and protects imported native key identities.
 The web recipe page uses `/api/v2/recipes/{id}` routes for selected servings and ingredient details.
 Set `TZ` to select the same server time zone for Python and the PHP workers.
 User, permission, and single-setting operations also use the original Grocy controller.

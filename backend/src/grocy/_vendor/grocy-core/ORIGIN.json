@@ -359,6 +359,8 @@
     "routes.php": "1f66f29f2fd4f427011a8ce97df8470a24518f86ce9217fd75ccb60974c5756b",
     "controllers/ExceptionController.php": "fc3ce96067a4de7117ffb3e26a423af0cf2deb9742fe84d0faccb6ac22feeefe",
     "controllers/OpenApiController.php": "8ec700a4625ead5d0d221dafc80d6b66323bcfe8af54eb3fe14e32c144d6890d",
-    "middleware/CorsMiddleware.php": "2967a8044ca3644d09c6d38cc4066f2b54be449516fc1848825ddd70194b0970"
+    "middleware/CorsMiddleware.php": "2967a8044ca3644d09c6d38cc4066f2b54be449516fc1848825ddd70194b0970",
+    "middleware/AuthMiddleware.php": "5cd8cc8cdb67657cb2b0262cb1928bfd44037212fa7836508a42257e27a55bec",
+    "middleware/ApiKeyAuthMiddleware.php": "ecf18bf055bc990ef7c760eaf9f0b1f6e9c9bbdc7ea4e4d7a9eb41bd2c6fed21"
   }
 }
