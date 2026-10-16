@@ -190,6 +190,15 @@ class NativeStatement
         $result = Fiber::suspend([
             'query' => $query, 'context' => $context, 'columns' => $this->columns,
         ]);
+        while (isset($result['function'])) {
+            $call = $result['function'];
+            try {
+                $body = ['value' => nativeEncodeValue(nativeSqliteFunction($call['name'], $call['arguments']))];
+            } catch (Throwable $error) {
+                $body = ['error' => $error->getMessage(), 'error_kind' => $error instanceof Error ? 'error' : 'exception'];
+            }
+            $result = Fiber::suspend(['function_result' => $body]);
+        }
         if ($result['transaction_aborted'] ?? false) {
             $this->database->sqliteAbortedTransaction();
         }
@@ -312,43 +321,6 @@ function nativeSqliteFunction(string $name, array $arguments)
     throw new RuntimeException('Unknown native SQLite function');
 }
 
-class NativeUserfieldsService extends Grocy\Services\UserfieldsService
-{
-    public function __construct(private NativeDatabase $database)
-    {
-    }
-
-    protected function getDatabase()
-    {
-        return $this->database;
-    }
-}
-
-class NativeGenericController extends Grocy\Controllers\GenericEntityApiController
-{
-    private NativeUserfieldsService $fields;
-
-    public function __construct(private NativeDatabase $database)
-    {
-        $this->fields = new NativeUserfieldsService($database);
-    }
-
-    protected function getDatabase()
-    {
-        return $this->database;
-    }
-
-    protected function getUserfieldsService()
-    {
-        return $this->fields;
-    }
-
-    public function parseBody($request)
-    {
-        return $this->GetParsedAndFilteredRequestBody($request);
-    }
-}
-
 function nativeWriteBody(array $request, NativeDatabase $database)
 {
     $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
@@ -435,79 +407,100 @@ function nativeErrorDetails(Throwable $error): array
     ];
 }
 
+function nativeDatabaseOperation(array $request, NativeDatabase $database): array
+{
+    $parsing = false;
+    try {
+        if ($request['operation'] === 'context') return nativeRequestContext($request, $database);
+        if ($request['operation'] === 'action') {
+            return nativeAction($request, $database);
+        }
+        if ($request['operation'] === 'list_read') {
+            return nativeListRead($request, $database);
+        }
+        if (in_array($request['operation'], ['generic_read', 'field_read'], true)) {
+            return nativeGenericRead($request, $database);
+        }
+        if ($request['method'] !== 'DELETE') {
+            // Grocy parses outside its write exception handler.
+            $parsing = true;
+            $body = nativeWriteBody($request, $database);
+            $parsing = false;
+            if ($body === null) {
+                throw new Exception('Request body could not be parsed (probably invalid JSON format or missing/wrong Content-Type header)');
+            }
+        }
+        if ($request['operation'] === 'field_write') {
+            (new NativeUserfieldsService($database))->SetValues(
+                $request['entity'], $request['object_id'], $body
+            );
+            return [];
+        }
+        if ($request['method'] === 'POST') {
+            $database->table($request['entity'])->createRow($body)->save();
+            return ['created_object_id' => $database->lastInsertId()];
+        }
+        $row = $database->table($request['entity'], $request['object_id']);
+        if ($row === null) {
+            return ['status' => 400, 'error_message' => 'Object not found'];
+        }
+        if ($request['method'] === 'DELETE') {
+            $row->delete();
+        } else {
+            $row->update($body);
+        }
+        return [];
+    } catch (Throwable $error) {
+        if (defined('NATIVE_HTTP_CONTEXT') && $request['operation'] === 'context') throw $error;
+        $data = [
+            'error_message' => $error->getMessage(),
+        ];
+        $read = in_array($request['operation'], ['generic_read', 'field_read', 'list_read'], true);
+        $uncaught = $parsing || $read || ($request['method'] ?? 'PUT') === 'DELETE' || $error instanceof Error;
+        if ($uncaught) {
+            $data['error_details'] = nativeErrorDetails($error);
+        }
+        if ($read) {
+            return [
+                'response' => base64_encode(json_encode($data)), 'status' => 500,
+                'headers' => ['Content-Type' => ['application/json']] + nativeCorsHeaders(),
+            ];
+        }
+        $status = $error instanceof Slim\Exception\HttpException ? $error->getCode() : ($uncaught ? 500 : 400);
+        return ['status' => $status] + $data;
+    }
+}
+
 function nativeDatabaseRequest(array $request, PDO $schema): array
 {
     $database = $GLOBALS['NativeRequestDatabase'] ?? new NativeDatabase($schema);
     if (defined('NATIVE_REQUEST_CONTEXT')) $GLOBALS['NativeRequestDatabase'] = $database;
-    $fiber = new Fiber(function () use ($request, $database) {
-        $parsing = false;
-        try {
-            if ($request['operation'] === 'context') return nativeRequestContext($request, $database);
-            if ($request['operation'] === 'action') {
-                return nativeAction($request, $database);
+    if (defined('NATIVE_HTTP_CONTEXT')) {
+        // Keep configuration, authentication, controllers, and SQL callbacks in one fiber.
+        $fiber = $GLOBALS['NativeRequestFiber'] ??= new Fiber(function ($request) use ($database) {
+            while (true) {
+                $body = nativeDatabaseOperation($request, $database);
+                $request = Fiber::suspend(['result' => $body, 'error_reporting' => error_reporting()]);
             }
-            if ($request['operation'] === 'list_read') {
-                return nativeListRead($request, $database);
-            }
-            if (in_array($request['operation'], ['generic_read', 'field_read'], true)) {
-                return nativeGenericRead($request, $database);
-            }
-            if ($request['method'] !== 'DELETE') {
-                // Grocy parses outside its write exception handler.
-                $parsing = true;
-                $body = nativeWriteBody($request, $database);
-                $parsing = false;
-                if ($body === null) {
-                    throw new Exception('Request body could not be parsed (probably invalid JSON format or missing/wrong Content-Type header)');
-                }
-            }
-            if ($request['operation'] === 'field_write') {
-                (new NativeUserfieldsService($database))->SetValues(
-                    $request['entity'], $request['object_id'], $body
-                );
-                return [];
-            }
-            if ($request['method'] === 'POST') {
-                $database->table($request['entity'])->createRow($body)->save();
-                return ['created_object_id' => $database->lastInsertId()];
-            }
-            $row = $database->table($request['entity'], $request['object_id']);
-            if ($row === null) {
-                return ['status' => 400, 'error_message' => 'Object not found'];
-            }
-            if ($request['method'] === 'DELETE') {
-                $row->delete();
-            } else {
-                $row->update($body);
-            }
-            return [];
-        } catch (Throwable $error) {
-            $data = [
-                'error_message' => $error->getMessage(),
-            ];
-            $read = in_array($request['operation'], ['generic_read', 'field_read', 'list_read'], true);
-            $uncaught = $parsing || $read || ($request['method'] ?? 'PUT') === 'DELETE' || $error instanceof Error;
-            if ($uncaught) {
-                $data['error_details'] = nativeErrorDetails($error);
-            }
-            if ($read) {
-                return [
-                    'response' => base64_encode(json_encode($data)), 'status' => 500,
-                    'headers' => ['Content-Type' => ['application/json']] + nativeCorsHeaders(),
-                ];
-            }
-            $status = $error instanceof Slim\Exception\HttpException ? $error->getCode() : ($uncaught ? 500 : 400);
-            return ['status' => $status] + $data;
-        }
-    });
-    $step = $fiber->start();
+        });
+    } else {
+        $fiber = new Fiber(fn($request) => nativeDatabaseOperation($request, $database));
+    }
+    $step = $fiber->isStarted() ? $fiber->resume($request) : $fiber->start($request);
     while (!$fiber->isTerminated()) {
-        reply(['id' => $request['id'], 'ok' => true, 'query' => $step]);
-        $line = fgets(STDIN);
-        if ($line === false) {
-            throw new RuntimeException('Native SQL execution stopped');
+        if (isset($step['result'])) {
+            error_reporting($step['error_reporting']);
+            return $step['result'];
         }
+        reply(['id' => $request['id'], 'ok' => true, 'query' => $step]);
+        $line = nativeReadMessage();
+        if ($line === false) throw new RuntimeException('Native SQL execution stopped');
         $resume = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+        while (($resume['operation'] ?? '') === 'sqlite_function') {
+            $step = $fiber->resume(['function' => $resume]);
+            reply(['id' => $resume['id'], 'ok' => true, 'body' => $step['function_result']]);
+            $resume = json_decode(nativeReadMessage(), true, 512, JSON_THROW_ON_ERROR);
+        }
         if ($resume['id'] !== $request['id']) {
             throw new RuntimeException('Native SQL response ID is invalid');
         }

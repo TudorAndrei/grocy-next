@@ -13,21 +13,21 @@ from grocy.main import create_app
 
 @pytest.mark.skipif(os.name != "posix", reason="The worker executable fixture uses a POSIX script")
 def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkeypatch, api_headers):
+    from concurrent.futures import ThreadPoolExecutor
+    from time import monotonic, sleep
+
     executable = get_settings().php_executable
     processes = tmp_path / "processes.txt"
     wrapper = tmp_path / "php-worker"
     fail_request = tmp_path / "fail-request"
-    cookie_process = tmp_path / "cookie-process"
     wrapper.write_text(
         f"#!{sys.executable}\n"
         "import os, sys\n"
         "from pathlib import Path\n"
         f"with open({str(processes)!r}, 'a') as output:\n"
         "    output.write(str(os.getpid()) + '\\n')\n"
-        "if '-S' in sys.argv:\n"
-        f"    Path({str(cookie_process)!r}).write_text(str(os.getpid()))\n"
         f"failure = Path({str(fail_request)!r})\n"
-        "if failure.exists() and '-' in sys.argv:\n"
+        "if failure.exists() and '-S' in sys.argv:\n"
         "    failure.unlink()\n"
         "    sys.exit(1)\n"
         f"os.execvp({executable!r}, [{executable!r}, *sys.argv[1:]])\n"
@@ -35,23 +35,10 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
     wrapper.chmod(0o700)
     monkeypatch.setenv("GROCY_PHP_EXECUTABLE", str(wrapper))
     clear_settings_cache()
-
-    def live_workers():
-        workers = set()
-        for value in processes.read_text().splitlines():
-            worker = int(value)
-            try:
-                os.kill(worker, 0)
-            except ProcessLookupError:
-                continue
-            workers.add(worker)
-        return workers
-
     name = uuid4().hex
     with TestClient(create_app()) as client:
         client.options("/api/system/info")
         client.headers.update(api_headers)
-        assert client.options("/api/objects/locations").status_code == 200
         fail_request.touch()
         response = client.post(
             "/api/objects/locations",
@@ -65,50 +52,49 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
         )
         assert response.status_code == 200, response.text
         location = response.json()["created_object_id"]
-        assert client.get(f"/api/objects/locations/{location}").json()["description"] == (
-            "<a>Link</a>"
+        assert (
+            client.get(f"/api/objects/locations/{location}").json()["description"] == "<a>Link</a>"
         )
-        cookie_pid = int(cookie_process.read_text())
-        os.kill(cookie_pid, signal.SIGTERM)
-        for _ in range(3):
-            recovered = client.get(f"/api/objects/locations/{location}")
-            assert recovered.status_code in (200, 503), recovered.text
-            if recovered.status_code == 200:
-                assert recovered.json()["description"] == "<a>Link</a>"
-                break
-        else:
-            pytest.fail("The PHP HTTP cookie worker did not recover")
-        with pytest.raises(ProcessLookupError):
-            os.kill(cookie_pid, 0)
-        pids = live_workers()
+        config = get_settings().datapath / "config.php"
+        marker = tmp_path / "inflight.pid"
+        import base64
+
+        encoded_path = base64.b64encode(str(marker).encode()).decode()
+        config.write_text(
+            "<?php file_put_contents(base64_decode('" + encoded_path + "'), (string)getmypid());"
+            "usleep(5000000);"
+        )
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                pending = executor.submit(
+                    client.post, "/api/objects/locations", json={"name": name + "-interrupted"}
+                )
+                deadline = monotonic() + 5
+                while not marker.exists() and monotonic() < deadline:
+                    sleep(0.01)
+                assert marker.exists(), "The PHP request did not reach configuration"
+                os.kill(int(marker.read_text()), signal.SIGTERM)
+                assert pending.result(timeout=10).status_code == 503
+        finally:
+            config.unlink(missing_ok=True)
+        assert (
+            client.get(
+                "/api/objects/locations", params={"query[]": f"name={name}-interrupted"}
+            ).json()
+            == []
+        )
         parameters = (("query[]", f"name={name}"), ("query[]", "description§Link"))
         matching = client.get("/api/objects/locations", params=parameters)
         assert matching.status_code == 200, matching.text
         assert [row["id"] for row in matching.json()] == [int(location)]
-        regex_workers = live_workers() - pids
-        assert len(regex_workers) == 1
-        regex_pid = regex_workers.pop()
-        pids.add(regex_pid)
-        os.kill(regex_pid, signal.SIGTERM)
-        for _ in range(3):
-            matching = client.get("/api/objects/locations", params=parameters)
-            assert matching.status_code in (200, 500, 503), matching.text
-            if matching.status_code == 200:
-                assert [row["id"] for row in matching.json()] == [int(location)]
-                break
-        else:
-            pytest.fail("The native SQL function worker did not recover")
-        recovered_pids = live_workers()
-        assert pids - {regex_pid} < recovered_pids and len(recovered_pids - pids) == 1
-        pids = recovered_pids
-        previous_workers = {int(item) for item in processes.read_text().splitlines()}
+        previous = set(processes.read_text().splitlines())
         task = client.post("/api/objects/tasks", json={"name": name}).json()["created_object_id"]
         assert client.post(f"/api/tasks/{task}/complete", json={}).status_code == 204
-        action_pids = {int(item) for item in processes.read_text().splitlines()} - previous_workers
-        assert action_pids
-        for action_pid in action_pids:
+        current = set(processes.read_text().splitlines())
+        assert current - previous
+        for pid in current - previous:
             with pytest.raises(ProcessLookupError):
-                os.kill(action_pid, 0)
+                os.kill(int(pid), 0)
         pids = {int(item) for item in processes.read_text().splitlines()}
     for pid in pids:
         with pytest.raises(ProcessLookupError):

@@ -11,6 +11,7 @@ from grocy import __version__
 from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
 from grocy.compatibility.files import NativeFiles
+from grocy.compatibility.http_request import NativeHttpRequests
 from grocy.compatibility.protocol import NativeProtocol
 from grocy.compatibility.purifier import InputPurifier
 from grocy.core.config import get_settings
@@ -41,13 +42,16 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
                 await session.commit()
     purifier = InputPurifier(settings.php_executable)
     files = NativeFiles(settings.php_executable)
+    http = NativeHttpRequests(settings.php_executable, settings.datapath.resolve())
     try:
         await purifier.start()
         if _app is not None:
             _app.state.input_purifier = purifier
             _app.state.native_files = files
+            _app.state.native_http = http
         yield
     finally:
+        await http.close()
         await files.close()
         await purifier.close()
         await engine.dispose()

@@ -11,7 +11,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from grocy.compatibility.cookies import NativeCookies
 from grocy.compatibility.values import decode_value, encode_value
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
@@ -24,12 +23,10 @@ class InputPurifier:
         *,
         user_id: int | None = 1,
         datapath: Path | None = None,
-        function_runtime: InputPurifier | None = None,
     ) -> None:
         self.executable = executable
         self.user_id = user_id
         self.datapath = datapath
-        self.function_runtime = function_runtime
         self.php_version = ""
         self._lock = asyncio.Lock()
         self._process: asyncio.subprocess.Process | None = None
@@ -37,7 +34,6 @@ class InputPurifier:
         self._cache: TemporaryDirectory[str] | None = None
         self._sequence = 0
         self._functions: InputPurifier | None = None
-        self._cookies: NativeCookies | None = None
 
     async def start(self) -> None:
         async with self._lock:
@@ -87,49 +83,6 @@ class InputPurifier:
         if process.stderr is not None:
             while await process.stderr.read(8192):
                 pass
-
-    async def request_context(
-        self,
-        *,
-        method: str,
-        uri: str,
-        headers: list[tuple[bytes, bytes]],
-        configuration: dict[str, Any],
-        default_permissions: list[str],
-        api_key_header: str,
-        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
-    ) -> dict[str, Any]:
-        provider = self.function_runtime or self
-        if provider._cookies is None:
-            provider._cookies = NativeCookies(self.executable)
-        cookies = await provider._cookies.parse(headers)
-        result = await self._request(
-            b"",
-            {
-                "operation": "context",
-                "method": method,
-                "uri": uri,
-                "headers": [
-                    [base64.b64encode(name).decode(), base64.b64encode(value).decode()]
-                    for name, value in headers
-                ],
-                "configuration": configuration,
-                "default_permissions": default_permissions,
-                "api_key_header": api_key_header,
-                "cookies": cookies["cookies"],
-                "http_ini": cookies["ini"],
-                "error_reporting": cookies["error_reporting"],
-            },
-            execute=execute,
-        )
-        if settings := result.get("startup"):
-            startup = await provider._cookies.startup(settings)
-            if cookies["committed"]:
-                cookies["output"] += startup["output"]
-            else:
-                cookies = startup
-        result["startup_output"] = cookies
-        return result
 
     async def purify(self, body: bytes) -> Any:
         return await self._request(body, {})
@@ -217,8 +170,6 @@ class InputPurifier:
         )
 
     async def sqlite_function(self, name: str, arguments: tuple) -> dict[str, Any]:
-        if self.function_runtime is not None:
-            return await self.function_runtime.sqlite_function(name, arguments)
         # A separate worker can answer while the main worker waits for SQLite.
         if self._functions is None:
             self._functions = InputPurifier(self.executable)
@@ -363,9 +314,6 @@ class InputPurifier:
             if self._functions is not None:
                 await self._functions.close()
                 self._functions = None
-            if self._cookies is not None:
-                await self._cookies.close()
-                self._cookies = None
             if self._cache is not None:
                 self._cache.cleanup()
                 self._cache = None

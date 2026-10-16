@@ -1,7 +1,5 @@
 <?php
 
-require __DIR__ . '/http_runtime.php';
-
 // Runtime inputs use the pinned packages in ../_vendor. Each has its own license.
 spl_autoload_register(function (string $class): void {
     $prefixes = [
@@ -53,7 +51,7 @@ require __DIR__ . '/../_vendor/ralouphie-getallheaders/src/getallheaders.php';
 require __DIR__ . '/../_vendor/grocy-core/helpers/extensions.php';
 require __DIR__ . '/../_vendor/guzzlehttp-guzzle/src/functions_include.php';
 require __DIR__ . '/../_vendor/symfony-deprecation-contracts/function.php';
-require __DIR__ . '/file_service_runtime.php';
+require __DIR__ . '/native_classes.php';
 require __DIR__ . '/../_vendor/nikic-fast-route/src/functions.php';
 require __DIR__ . '/../_vendor/php-di/src/functions.php';
 foreach (json_decode(file_get_contents(__DIR__ . '/render_packages.json'), true)['files'] as $file) {

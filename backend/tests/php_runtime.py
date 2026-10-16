@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+import grocy
+
 DEVELOPMENT_PROFILES = {
     "default": "",
     "hidden": "ini_set('display_errors', '0');",
@@ -29,6 +31,17 @@ def read_http_settings(executable: str, directory: Path) -> dict:
     script = directory / "php-http-settings.php"
     marker = b"\x1ePHP_HTTP_SETTINGS\x1e"
     profiles = base64.b64encode(json.dumps(DEVELOPMENT_PROFILES).encode()).decode()
+    vendor = Path(grocy.__file__).parent / "_vendor"
+    declarations = base64.b64encode(
+        json.dumps(
+            [
+                str(vendor / "berrnd-slim-blade-view/src/Blade.php"),
+                str(vendor / "grocy-core/services/DatabaseService.php"),
+                str(vendor / "grocy-core/services/BaseService.php"),
+                str(vendor / "grocy-core/services/UsersService.php"),
+            ]
+        ).encode()
+    ).decode()
     script.write_text(
         """<?php
 $cookies = $_COOKIE;
@@ -39,19 +52,24 @@ if ($profile !== '') {
 }
 if (isset($_GET['bootstrap'])) echo 'BOOTSTRAP:';
 error_reporting($profile === '' ? E_ALL ^ (E_NOTICE | E_WARNING | E_DEPRECATED) : E_ALL);
+$declarations = json_decode(base64_decode('__DECLARATIONS__'), true);
+require $declarations[0];
 ob_clean();
+if (isset($_GET['services'])) {
+    foreach (array_slice($declarations, 1) as $file) require $file;
+}
 echo "\\x1ePHP_HTTP_SETTINGS\\x1e", json_encode([
     'max_input_vars' => (int)ini_get('max_input_vars'),
     'max_input_nesting_level' => (int)ini_get('max_input_nesting_level'),
 ]);
-""".replace("__PROFILES__", profiles)
+""".replace("__PROFILES__", profiles).replace("__DECLARATIONS__", declarations)
     )
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
     url = f"http://127.0.0.1:{port}"
     process = subprocess.Popen(
-        [executable, "-S", f"127.0.0.1:{port}", str(script)],
+        [executable, "-d", "opcache.enable=0", "-S", f"127.0.0.1:{port}", str(script)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         env={key: value for key, value in os.environ.items() if key != "PHP_CLI_SERVER_WORKERS"},
@@ -87,6 +105,10 @@ echo "\\x1ePHP_HTTP_SETTINGS\\x1e", json_encode([
                     settings["development"][profile]["logged"] = contents.count(
                         b"ob_clean(): Failed to delete buffer. No buffer to delete"
                     )
+            with urlopen(url + "?profile=" + profile + "&services=1", timeout=2) as response:
+                settings["development"][profile]["service_output"] = response.read().split(
+                    marker, 1
+                )[0]
         return settings
     finally:
         process.terminate()

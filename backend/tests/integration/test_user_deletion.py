@@ -76,12 +76,12 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
                 "'saved-purchase',?)",
                 (user,),
             ).lastrowid
-        task = old.post(
-            "/api/objects/tasks",
-            json={"name": "Saved task", "assigned_to_user_id": user, "done": 0},
-        )
-        assert task.status_code == 200, task.text
+        # The saved schema has no native API permission views before the upgrade.
         with sqlite3.connect(database) as connection:
+            task = connection.execute(
+                "INSERT INTO tasks(name,assigned_to_user_id,done) VALUES ('Saved task',?,0)",
+                (user,),
+            ).lastrowid
             chore_log = connection.execute(
                 "INSERT INTO chores_log(chore_id,tracked_time,done_by_user_id,skipped,undone) "
                 "VALUES (1,'2027-01-04',?,0,0)",
@@ -146,7 +146,7 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
         assert connection.execute("SELECT user_id FROM deleted_user_audit").fetchall() == [(user,)]
         assert connection.execute(
             "SELECT assigned_to_user_id FROM saved_assignments WHERE id=?",
-            (task.json()["created_object_id"],),
+            (task,),
         ).fetchone() == (user,)
         assert connection.execute(
             "SELECT done_by_user_id, tracked_time FROM chores_log WHERE id=?", (chore_log,)

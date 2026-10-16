@@ -122,10 +122,10 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
     clear_settings_cache()
     headers = {"GROCY-API-KEY": "dev-key"}
     with TestClient(create_app(), headers=headers) as old:
-
         old.options("/api/system/info")
+
         def create_saved(table: str, **body):
-            # Revision 0013 had ORM defaults, before native SQL defaults were installed.
+            # Seed the saved revision directly. Its permission views do not exist yet.
             defaults = {
                 column.name: float(column.default.arg)
                 if isinstance(column.default.arg, Decimal)
@@ -133,13 +133,20 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
                 for column in ENTITY_MODELS[table].__table__.columns
                 if column.default is not None and not callable(column.default.arg)
             }
-            response = old.post(f"/api/objects/{table}", json={**defaults, **body})
-            assert response.status_code == 200, response.text
-            return response
+            values = {**defaults, **body}
+            columns = ",".join(f'"{name}"' for name in values)
+            placeholders = ",".join("?" for _ in values)
+            with sqlite3.connect(database) as saved:
+                identifier = saved.execute(
+                    f'INSERT INTO "{table}" ({columns}) VALUES ({placeholders})',
+                    tuple(values.values()),
+                ).lastrowid
+                assert identifier is not None
+                return identifier
 
-        location = create_saved("locations", name="Saved spare").json()["created_object_id"]
-        assert create_saved("tasks", name="Saved task", category_id=1).status_code == 200
-        assert create_saved("shopping_list", product_id=1, amount=1, qu_id=1).status_code == 200
+        location = create_saved("locations", name="Saved spare")
+        create_saved("tasks", name="Saved task", category_id=1)
+        create_saved("shopping_list", product_id=1, amount=1, qu_id=1)
         field = create_saved(
             "userfields",
             entity="products",
@@ -147,40 +154,33 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             caption="Origin",
             type="text-single-line",
         )
-        assert field.status_code == 200, field.text
-        assert old.put("/api/userfields/products/1", json={"origin": "Farm"}).status_code == 204
+        with sqlite3.connect(database) as saved:
+            saved.execute(
+                "INSERT INTO userfield_values(field_id,object_id,value) VALUES (?, '1', 'Farm')",
+                (field,),
+            )
         assert old.put("/api/user/settings/kept", json={"value": "saved"}).status_code == 204
-        entity = create_saved("userentities", name="saved", caption="Saved").json()[
-            "created_object_id"
-        ]
-        assert create_saved("userobjects", userentity_id=entity).status_code == 200
-        section = create_saved("meal_plan_sections", name="Saved meal").json()["created_object_id"]
-        assert (
-            create_saved(
-                "meal_plan",
-                **{
-                    "day": "2027-01-04",
-                    "type": "recipe",
-                    "recipe_id": 1,
-                    "recipe_servings": 2,
-                    "section_id": section,
-                },
-            ).status_code
-            == 200
-        )
-        assert create_saved("equipment", name="Saved equipment").status_code == 200
-        product_meal = create_saved(
+        entity = create_saved("userentities", name="saved", caption="Saved")
+        create_saved("userobjects", userentity_id=entity)
+        section = create_saved("meal_plan_sections", name="Saved meal")
+        create_saved(
             "meal_plan",
-            **{
-                "day": "2027-01-04",
-                "type": "product",
-                "product_id": 2,
-                "product_amount": 2.5,
-                "product_qu_id": 2,
-                "section_id": section,
-            },
+            day="2027-01-04",
+            type="recipe",
+            recipe_id=1,
+            recipe_servings=2,
+            section_id=section,
         )
-        assert product_meal.status_code == 200, product_meal.text
+        create_saved("equipment", name="Saved equipment")
+        create_saved(
+            "meal_plan",
+            day="2027-01-04",
+            type="product",
+            product_id=2,
+            product_amount=2.5,
+            product_qu_id=2,
+            section_id=section,
+        )
         nutrition = old.put(
             "/api/v2/products/1/nutrition",
             json={

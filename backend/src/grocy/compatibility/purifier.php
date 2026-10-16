@@ -2,12 +2,18 @@
 
 // The filtering configuration is from Grocy 4.5.0 BaseApiController.
 // See LICENSE.grocy and ../_vendor/htmlpurifier/ORIGIN.json.
-error_reporting(E_ALL & ~E_DEPRECATED);
+if (!defined('NATIVE_HTTP_CONTEXT')) error_reporting(E_ALL & ~E_DEPRECATED);
 
 function reply(array $value): void
 {
-    fwrite(STDOUT, json_encode($value, JSON_THROW_ON_ERROR) . "\n");
-    fflush(STDOUT);
+    $stream = $GLOBALS['NativeChannel'] ?? STDOUT;
+    fwrite($stream, json_encode($value, JSON_THROW_ON_ERROR) . "\n");
+    fflush($stream);
+}
+
+function nativeReadMessage()
+{
+    return fgets($GLOBALS['NativeChannel'] ?? STDIN);
 }
 
 try {
@@ -56,7 +62,7 @@ try {
     exit(1);
 }
 
-while (($line = fgets(STDIN)) !== false) {
+while (($line = nativeReadMessage()) !== false) {
     $id = null;
     try {
         $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
@@ -72,8 +78,21 @@ while (($line = fgets(STDIN)) !== false) {
             continue;
         }
         if (in_array($request['operation'] ?? 'purify', ['context', 'generic', 'field_write', 'field_read', 'generic_read', 'list_read', 'action'], true)) {
-            reply(['id' => $id, 'ok' => true, 'body' => nativeDatabaseRequest($request, $nativeSchema)]);
+            $body = nativeDatabaseRequest($request, $nativeSchema);
+            reply(['id' => $id, 'ok' => true, 'body' => $body]);
+            if (defined('NATIVE_HTTP_CONTEXT') && (($body['terminal'] ?? false) || ($body['emitted'] ?? false))) break;
             continue;
+        }
+        if (($request['operation'] ?? '') === 'http_emit') {
+            $factory = new Slim\Psr7\Factory\ResponseFactory();
+            $response = $factory->createResponse($request['status']);
+            foreach ($request['headers'] as [$name, $value]) {
+                $response = $response->withAddedHeader(base64_decode($name), base64_decode($value));
+            }
+            $response = $response->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(base64_decode($request['json'])));
+            (new Slim\ResponseEmitter())->emit($response);
+            reply(['id' => $id, 'ok' => true, 'body' => ['emitted' => true]]);
+            break;
         }
         $raw = base64_decode($request['json'], true);
         $body = filteredBody(parsedBody($raw, 'POST', 'application/json'), $purifier);
@@ -82,6 +101,7 @@ while (($line = fgets(STDIN)) !== false) {
         }
         reply(['id' => $id, 'ok' => true, 'body' => $body]);
     } catch (Throwable $error) {
+        if (defined('NATIVE_HTTP_CONTEXT')) throw $error;
         fwrite(STDERR, 'Input purification failed: ' . get_class($error) . "\n");
         reply(['id' => $id, 'ok' => false]);
     }

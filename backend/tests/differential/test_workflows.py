@@ -5507,6 +5507,62 @@ def test_native_bootstrap_output_retains_http_header_state(
         assert response.headers["access-control-allow-origin"] == "*"
 
 
+@pytest.mark.parametrize(
+    "case", ["output", "development", "header", "handler", "buffer", "shutdown", "exit"]
+)
+def test_native_configuration_http_side_effects(
+    api, runtime_configuration, php_http_settings, case
+):
+    code = {
+        "output": "echo 'CONFIG:';",
+        "development": "Setting('MODE', 'dev');echo 'CONFIG:';",
+        "header": "header('X-Configuration: retained');",
+        "handler": "Setting('MODE', 'dev');set_error_handler(function(){echo 'HANDLED:';});",
+        "buffer": "ob_start(function($output){return 'WRAP:' . $output;});",
+        "shutdown": "register_shutdown_function(function(){echo ':SHUTDOWN';});",
+        "exit": "http_response_code(418);header('X-Configuration: terminal');exit('STOP');",
+    }[case]
+    runtime_configuration(code)
+    response = api.get("/api/user", follow_redirects=False)
+    if case == "exit":
+        assert response.status_code == 418
+        assert response.headers["x-configuration"] == "terminal"
+        assert response.content == b"STOP"
+        return
+    assert response.status_code == 200, response.text
+    if case == "header":
+        assert response.headers["x-configuration"] == "retained"
+    if case == "shutdown":
+        assert response.content.endswith(b":SHUTDOWN")
+    if case == "buffer":
+        assert response.content.startswith(b"WRAP:")
+    if case in {"output", "development"} and php_http_settings["bootstrap_output"]:
+        assert response.content.startswith(b"CONFIG:")
+    if case == "handler":
+        assert b"ob_clean()" not in response.content
+        if php_http_settings["bootstrap_output"]:
+            assert response.content.startswith(b"HANDLED:")
+    start = response.content.find(b'[{"id":')
+    assert start >= 0, response.text
+    payload = response.content[start:].removesuffix(b":SHUTDOWN")
+    assert json.loads(payload)[0]["id"] == 1
+
+
+def test_native_configuration_output_precedes_cache_redirect(
+    api, runtime_configuration, php_http_settings
+):
+    runtime_configuration("echo 'CONFIG:';Setting('BASE_URL', '/configuration-cache');")
+    response = api.get("/api/user", follow_redirects=False)
+    if php_http_settings["bootstrap_output"]:
+        assert response.status_code == 200
+        assert "location" not in response.headers
+    else:
+        assert response.status_code == 302
+        assert response.headers["location"] == "/configuration-cache/"
+    assert response.content == b"CONFIG:"
+    assert "access-control-allow-origin" not in response.headers
+
+
 @pytest.mark.parametrize("mode", ["disabled", *DEVELOPMENT_PROFILES])
 @pytest.mark.parametrize(
     ("method", "path"),
@@ -5538,12 +5594,14 @@ def test_native_development_output_and_authentication_bypass(
     )
     expected = php_http_settings["development"].get(mode, {"output": b""})
     notice = expected["output"]
+    body_notice = expected.get("service_output", notice) if method == "GET" else notice
     content_type = expected.get("content_type")
     headers = {"GROCY-API-KEY": "invalid"}
     if mode == "registration":
         headers["Cookie"] = ("ignored=1; " * (php_http_settings["max_input_vars"] + 1)).rstrip()
         warning = php_http_settings["startup_output"]
         notice = warning + notice
+        body_notice = warning + body_notice
         if warning:
             content_type = php_http_settings["startup_content_type"]
     response = api.request(method, path, headers=headers)
@@ -5581,7 +5639,7 @@ def test_native_development_output_and_authentication_bypass(
         )
         return re.sub(rb" in [^\r\n]+ on line \d+", b" in FILE on line LINE", output)
 
-    assert normalize_location(prefix) == normalize_location(notice)
+    assert normalize_location(prefix) == normalize_location(body_notice)
 
 
 @pytest.mark.parametrize(

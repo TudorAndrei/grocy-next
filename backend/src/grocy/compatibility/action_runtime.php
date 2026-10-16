@@ -13,12 +13,17 @@ function nativeAction(array $request, NativeDatabase $database): array
             require __DIR__ . '/../_vendor/grocy-core/config-dist.php';
             (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
         }
-        $http = nativeHttpRequest($request)->withBody(
+        $http = nativeHttpRequest($request);
+        if (!defined('NATIVE_HTTP_CONTEXT')) $http = $http->withBody(
             (new Slim\Psr7\Factory\StreamFactory())->createStream(base64_decode($request['json'], true))
         );
         if ($request['route'] === 'authenticate') return nativeAuthenticate($request, $database, $http);
         if (!defined('GROCY_AUTHENTICATED')) {
             nativeAttachIdentity($database->users($request['user_id'] ?? GROCY_USER_ID), $http);
+        }
+        if ($request['route'] === 'http_dispatch') {
+            (new Slim\ResponseEmitter())->emit(nativeDispatch($http, $database));
+            return ['emitted' => true];
         }
         if ($request['route'] === 'dispatch') {
             $response = nativeDispatch($http, $database);
