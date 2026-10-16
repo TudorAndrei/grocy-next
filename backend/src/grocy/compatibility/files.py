@@ -166,7 +166,7 @@ class NativeFiles:
         query = request.scope["query_string"]
         uri = raw_path + (b"?" + query if query else b"")
         metadata = {
-            "method": request.method,
+            "method": request.scope.get("grocy_original_method", request.method),
             "root": str(root.resolve()),
             "group": group,
             "file_name": file_name,

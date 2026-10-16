@@ -1,0 +1,20 @@
+{
+  "package": "psr/log",
+  "version": "3.0.2",
+  "source": "https://github.com/php-fig/log.git",
+  "commit": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "6e944907067bae93c00a9f2ad51032243820b22df34b77c77690d46cb2e98e24",
+    "src/AbstractLogger.php": "84c69c6cc60fd805eb525daa79bd04a8d0b73e52776e1a0c2a9e666b37b4512e",
+    "src/InvalidArgumentException.php": "403c6def4d4199a12cb4a54e804c7d29405968871366500f72d6f3ea401bfc64",
+    "src/LoggerAwareInterface.php": "076efac38ab493f4fc3e701cce9a2641135048f2bf0407b322c45712ef73813c",
+    "src/LoggerAwareTrait.php": "eb114e265de2d1c8c1190b0fa9cb5f8a25e262a46d1d28d1aa02f01aaf025c64",
+    "src/LoggerInterface.php": "05aecbaded98967719d76a058ea27465ffae03b7800dc36049e1ed23c825e6b3",
+    "src/LoggerTrait.php": "c854406af9c4706980e93183b5f37fa9cca523df9bb1019a927f8e4713834172",
+    "src/LogLevel.php": "9f2520b22945ce1599c4fedba0a4c75985f172ca86cdf386766ebb8b2363768c",
+    "src/NullLogger.php": "22fbb348f7b25259ca801f595fc9aa22b9f035a44e7899687bd89bf4070d78c8"
+  }
+}

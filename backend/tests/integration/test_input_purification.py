@@ -30,6 +30,8 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
     with TestClient(create_app()) as client:
         client.headers.update(api_headers)
         pid = int(processes.read_text().splitlines()[-1])
+        assert client.options("/api/objects/locations").status_code == 200
+        original_pids = {int(item) for item in processes.read_text().splitlines()}
         os.kill(pid, signal.SIGTERM)
         for _ in range(3):
             response = client.post(
@@ -49,8 +51,23 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
             )
         else:
             pytest.fail("The purifier did not recover after its worker stopped")
-        pids = [int(item) for item in processes.read_text().splitlines()]
-        assert len(pids) == 2 and pids[0] != pids[1]
+        pids = {int(item) for item in processes.read_text().splitlines()}
+        assert original_pids < pids and len(pids - original_pids) == 1
+        with pytest.raises(ProcessLookupError):
+            os.kill(pid, 0)
+        for protocol_pid in original_pids - {pid}:
+            os.kill(protocol_pid, signal.SIGTERM)
+        for _ in range(3):
+            response = client.get(f"/api/objects/locations/{location}")
+            assert response.status_code in (200, 503), response.text
+            if response.status_code == 200:
+                assert response.json()["description"] == "<a>Link</a>"
+                break
+        else:
+            pytest.fail("The native HTTP worker did not recover")
+        recovered_pids = {int(item) for item in processes.read_text().splitlines()}
+        assert pids < recovered_pids and len(recovered_pids - pids) == 1
+        pids = recovered_pids
         parameters = (("query[]", f"name={name}"), ("query[]", "description§Link"))
         matching = client.get("/api/objects/locations", params=parameters)
         assert matching.status_code == 200, matching.text
@@ -66,8 +83,9 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
                 break
         else:
             pytest.fail("The native SQL function worker did not recover")
-        pids = [int(item) for item in processes.read_text().splitlines()]
-        assert len(pids) == 4 and len(set(pids)) == 4
+        recovered_pids = {int(item) for item in processes.read_text().splitlines()}
+        assert pids < recovered_pids and len(recovered_pids - pids) == 2
+        pids = recovered_pids
         task = client.post("/api/objects/tasks", json={"name": name}).json()["created_object_id"]
         assert client.post(f"/api/tasks/{task}/complete", json={}).status_code == 204
         action_pids = {int(item) for item in processes.read_text().splitlines()} - set(pids)
@@ -75,7 +93,7 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
         for action_pid in action_pids:
             with pytest.raises(ProcessLookupError):
                 os.kill(action_pid, 0)
-        pids.extend(action_pids)
+        pids.update(action_pids)
     for pid in pids:
         with pytest.raises(ProcessLookupError):
             os.kill(pid, 0)

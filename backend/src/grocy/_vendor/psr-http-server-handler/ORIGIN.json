@@ -1,0 +1,13 @@
+{
+  "package": "psr/http-server-handler",
+  "version": "1.0.2",
+  "source": "https://github.com/php-fig/http-server-handler.git",
+  "commit": "84c4fb66179be4caaf8e97bd239203245302e7d4",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "f1c0e3a2955b835d774b312207edd9ccce98524caf148729bafd05c157da6f12",
+    "src/RequestHandlerInterface.php": "f570a4ec16883f983d0ffbe20f421b2d808f5e133d61df0d1072a56ca142442f"
+  }
+}

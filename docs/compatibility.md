@@ -174,7 +174,8 @@ Chore consumption uses the gross tare amount. Chore tracking saves its log befor
 
 Feature flag environment values follow the upstream string and boolean rules. Only `true` and `false` become booleans. `0` stays a false string; `off` stays a true string. Flags control calendar groups, freeze and thaw dates, label due dates, and default location creation. They do not disable API routes. Explicit printer flags and `GROCY_LABEL_PRINTER_RUN_SERVER` control server printing. Existing Grocy Next printer settings still enable their printer flag when that flag is not set explicitly.
 
-The audit still needs more input coercion, validation, and combined error cases. Python date types do not support year 0000, which PHP accepts. Generic object date inputs need more checks. Encoded image bytes can differ between Pillow and PHP GD. Printer error text differs from Guzzle. ID gaps from rejected or repeated writes and internal write order need more checks. Generic nested writes, field definition defaults, and more response edge cases need checks. These gaps remain outside the verified behavior.
+The audit still needs authentication use records and expiry, default-setting propagation,
+configuration modes, and more combined request and permission cases. Full runtime parity remains incomplete.
 
 See [the backend parity audit](backend-parity-audit.md) for the repair scope and verification results.
 
@@ -189,3 +190,12 @@ Caught field errors keep their separate native 400 response. Earlier field write
 
 No database migration is needed for this runtime repair. The pinned source files retain their original
 release bytes and license. Git attributes prevent line-ending changes in that package.
+
+The original Grocy route declarations and Slim router now select allowed HTTP methods.
+The original CORS middleware returns wildcard headers and empty OPTIONS responses before authentication.
+HEAD executes the matching GET operation and omits its body. Unauthorized requests return an empty body
+with the native HTML content type. The original exception controller formats route errors.
+An unknown path under `/api/` can return 405 because the native wildcard OPTIONS route matches that path.
+Application v2 and health routes retain their existing request rules.
+The original `/api/openapi/specification` controller includes current custom entities and request URLs.
+Queries read setting keys and values without parsing unused setting timestamps.

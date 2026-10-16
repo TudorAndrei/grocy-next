@@ -22,8 +22,8 @@ The PHP worker has only a private memory database for PDO quoting.
 
 Generic object and custom field writes pass raw request bodies to Grocy's
 unchanged `BaseApiController`. It parses and filters each body before LessQL
-uses its PHP values. `slim-framework` contains the pinned `HttpException` class
-and its license. This class keeps native Content-Type errors and status codes.
+uses its PHP values. `slim-framework` contains the pinned framework source and its license.
+Its HTTP exceptions keep native Content-Type errors and status codes.
 
 List and stock reads also use the pinned Grocy controllers and services. The
 adapter supplies the application connection. The original database service
@@ -86,3 +86,9 @@ configuration defaults, locale middleware, and all release localization files.
 The native request adapter supplies the original headers and URL. The original
 Slim request-response strategy checks controller results. The database adapter
 uses the application database path for the native file timestamp operation.
+
+HTTP method selection uses the unchanged Grocy route declarations and Slim router.
+The release's FastRoute 1.3.0, container, server handler, server middleware, and log interfaces
+supply the router dependencies. The original CORS middleware and exception controller
+retain preflight responses, wildcard headers, method errors, and their diagnostics.
+The original OpenAPI controller adds current custom entities to the API specification.

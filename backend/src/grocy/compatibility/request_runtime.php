@@ -14,6 +14,10 @@ spl_autoload_register(function (string $class): void {
         'GuzzleHttp\\Promise\\' => ['guzzlehttp-promises/src/'],
         'GuzzleHttp\\Psr7\\' => ['guzzlehttp-psr7/src/'],
         'GuzzleHttp\\' => ['guzzlehttp-guzzle/src/'],
+        'FastRoute\\' => ['nikic-fast-route/src/'],
+        'Psr\\Container\\' => ['psr-container/src/'],
+        'Psr\\Log\\' => ['psr-log/src/'],
+        'Psr\\Http\\Server\\' => ['psr-http-server-handler/src/', 'psr-http-server-middleware/src/'],
         'Psr\\Http\\Client\\' => ['psr-http-client/src/'],
         'Gumlet\\' => ['gumlet-image-resize/lib/'],
         'LessQL\\' => ['morris-lessql/src/LessQL/'],
@@ -42,6 +46,7 @@ require __DIR__ . '/../_vendor/grocy-core/helpers/extensions.php';
 require __DIR__ . '/../_vendor/guzzlehttp-guzzle/src/functions_include.php';
 require __DIR__ . '/../_vendor/symfony-deprecation-contracts/function.php';
 require __DIR__ . '/file_service_runtime.php';
+require __DIR__ . '/../_vendor/nikic-fast-route/src/functions.php';
 
 function parsedBody(string $raw, string $method, ?string $contentType)
 {

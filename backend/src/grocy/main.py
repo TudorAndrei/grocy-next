@@ -11,6 +11,7 @@ from grocy import __version__
 from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
 from grocy.compatibility.files import NativeFiles
+from grocy.compatibility.protocol import NativeProtocol
 from grocy.compatibility.purifier import InputPurifier
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(NativeProtocol)
     app.add_exception_handler(GrocyError, grocy_error_handler)
 
     @app.exception_handler(IntegrityError)

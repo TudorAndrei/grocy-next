@@ -26,6 +26,7 @@ class InputPurifier:
         self._cache: TemporaryDirectory[str] | None = None
         self._sequence = 0
         self._functions: InputPurifier | None = None
+        self._protocol: InputPurifier | None = None
 
     async def start(self) -> None:
         async with self._lock:
@@ -75,6 +76,18 @@ class InputPurifier:
         if process.stderr is not None:
             while await process.stderr.read(8192):
                 pass
+
+    async def protocol(self, method: str, path: bytes) -> dict[str, Any]:
+        if self._protocol is None:
+            self._protocol = InputPurifier(self.executable)
+        return await self._protocol._request(
+            b"",
+            {
+                "operation": "protocol",
+                "method": method,
+                "path": base64.b64encode(path).decode("ascii"),
+            },
+        )
 
     async def purify(self, body: bytes) -> Any:
         return await self._request(body, {})
@@ -300,6 +313,9 @@ class InputPurifier:
             if self._functions is not None:
                 await self._functions.close()
                 self._functions = None
+            if self._protocol is not None:
+                await self._protocol.close()
+                self._protocol = None
             if self._cache is not None:
                 self._cache.cleanup()
                 self._cache = None

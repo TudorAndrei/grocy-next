@@ -1,0 +1,13 @@
+{
+  "package": "psr/http-server-middleware",
+  "version": "1.0.2",
+  "source": "https://github.com/php-fig/http-server-middleware.git",
+  "commit": "c1481f747daaa6a0782775cd6a8c26a1bf4a3829",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "f1c0e3a2955b835d774b312207edd9ccce98524caf148729bafd05c157da6f12",
+    "src/MiddlewareInterface.php": "85747acc30d5f9ba7692319714f82740270d866fa48db51ad65cffe34bd97463"
+  }
+}

@@ -11,6 +11,11 @@ Generic reads and custom fields use the pinned Grocy controller and field servic
 OpenAPI file, and license are in `_vendor/grocy-core`. A second PHP worker evaluates SQLite regular
 expressions and ceiling values. Both workers stop with the application. Generic read responses keep
 PHP JSON encoding, native column order, status, and headers.
+The original Grocy routes, Slim router, and CORS middleware select HTTP methods and route errors.
+HEAD requests execute GET and return no body. OPTIONS requests return an empty 200 response.
+Compatibility responses use native wildcard CORS headers. Unauthorized responses have no body.
+The separate routing worker stops with the application and restarts after a worker failure.
+`/api/openapi/specification` uses the original controller and includes current custom entities.
 File requests use the original Grocy file controller and service with the pinned Gumlet image
 library and PHP GD. Each request has its own PHP process. Uploads and downloads use streams.
 The process stops when the response ends, the client disconnects, or the application stops.
@@ -60,7 +65,8 @@ The web recipe page uses `/api/v2/recipes/{id}` routes for selected servings and
 Set `TZ` to select the same server time zone for Python and the PHP workers.
 User, permission, and single-setting operations also use the original Grocy controller.
 User passwords use PHP's native password hash. Profile edits require the native fields.
-The `/api/v2/user/settings` extension supports bulk setting changes and deletion.
+Unused setting timestamps do not block native requests. The `/api/v2/user/settings` extension
+supports bulk setting changes and deletion.
 Set `GROCY_PHP_EXECUTABLE` if PHP is not available as `php` on `PATH`.
 The Docker image includes this runtime.
 

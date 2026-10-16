@@ -86,13 +86,16 @@ def execute_sql(api):
             async def run():
                 async with get_session_factory()() as session:
                     connection = await session.connection()
-                    await connection.exec_driver_sql(statement)
+                    result = await connection.exec_driver_sql(statement)
+                    rows = [tuple(row) for row in result] if result.returns_rows else None
                     await session.commit()
+                    return rows
 
-            api.portal.call(run)
+            return api.portal.call(run)
         else:
             with sqlite3.connect(os.environ["GROCY_REFERENCE_DATABASE"]) as database:
-                database.execute(statement)
+                result = database.execute(statement)
+                return result.fetchall() if result.description else None
 
     return execute
 
@@ -4975,3 +4978,24 @@ def test_native_system_missing_translation_keeps_production_error(api, body):
         "Psr\\Http\\Message\\ResponseInterface, null returned"
     )
     assert set(response.json()) == {"error_message", "error_details"}
+
+
+@pytest.mark.parametrize("timestamp", ["0000-01-04 10:00:00", "invalid"])
+def test_native_setting_dates_do_not_block_requests(api, execute_sql, timestamp):
+    key = "unused-date-" + uuid4().hex
+    assert api.put("/api/user/settings/" + key, json={"value": "kept"}).status_code == 204
+    columns = {row[1] for row in execute_sql("PRAGMA table_info(user_settings)")}
+    added = "row_created_timestamp" not in columns
+    if added:
+        execute_sql("ALTER TABLE user_settings ADD COLUMN row_created_timestamp DATETIME")
+    execute_sql(f"UPDATE user_settings SET row_created_timestamp='{timestamp}' WHERE key='{key}'")
+    try:
+        response = api.get("/api/system/info")
+        assert response.status_code == 200, response.text
+        assert response.json()["grocy_version"]["Version"] == "4.5.0"
+        value = api.get("/api/user/settings/" + key)
+        assert value.status_code == 200 and value.json() == {"value": "kept"}
+    finally:
+        execute_sql(f"DELETE FROM user_settings WHERE key='{key}'")
+        if added:
+            execute_sql("ALTER TABLE user_settings DROP COLUMN row_created_timestamp")

@@ -71,7 +71,7 @@ async def native_action_response(
         route=route,
         object_id=object_id,
         user_id=user_id,
-        method=request.method,
+        method=request.scope.get("grocy_original_method", request.method),
         body=await request.body(),
         content_type=request.headers.get("content-type"),
         query_string=request.scope["query_string"],

@@ -1,0 +1,31 @@
+{
+  "package": "nikic/fast-route",
+  "version": "v1.3.0",
+  "source": "https://github.com/nikic/FastRoute.git",
+  "commit": "181d480e08d9476e61381e04a71b34dc0432e812",
+  "license": [
+    "BSD-3-Clause"
+  ],
+  "files": {
+    "LICENSE": "c6ec05e0bd21f917b21e67a1eda248fb8a45c501a9cb727b7f7c132974dd0220",
+    "src/BadRouteException.php": "6a1f71196cbd7fbad7367a5d52912bf8f895d1d049369cedc5681816265ecab4",
+    "src/bootstrap.php": "e0965c224de75a336dff52a73f654e6637f86debba38e2d5f62e730a58f47d06",
+    "src/DataGenerator/CharCountBased.php": "5574439b4e8f1042c5b147decb39c0881f9411ede97560f04b0f9993ba51676c",
+    "src/DataGenerator/GroupCountBased.php": "83628b60d509f1481dd272e4f9dc922bbe5558dd17de237342978aef2ab23d45",
+    "src/DataGenerator/GroupPosBased.php": "5ac62eecef0e81b9ed911aa8193c334e78fcea65188f54c9a7b142bcdc0c1291",
+    "src/DataGenerator/MarkBased.php": "4bedc85ee3a2d6e51c8de0b7e3b1bd4e2407adaa69413c7bfa1d98cea78d3225",
+    "src/DataGenerator/RegexBasedAbstract.php": "9721e0dbe945fb98a5c6942f8650ac71a372db776a35da3813a0d4d5cd605dbf",
+    "src/DataGenerator.php": "dcaa7e8d5f84fc750f2e1ba48f7dac319de2e225ba0215964d4e31b98ef2465a",
+    "src/Dispatcher/CharCountBased.php": "86c36c2ba07fb5385057e888d5030ec953755efc1aa3805a6e27facbc1dbe510",
+    "src/Dispatcher/GroupCountBased.php": "9fdb3ceb489751443763176716a659362cf9b84bc45f558d3f704e5594d49087",
+    "src/Dispatcher/GroupPosBased.php": "05e6e48dfe2da2bf068b40c074bd3199edf8b52cc38531ecfd64f054f2d85bac",
+    "src/Dispatcher/MarkBased.php": "81611dbdce6a4b69b95197d2b30c34339a4dff3b2c7e50c47e98e58ff5f0337a",
+    "src/Dispatcher/RegexBasedAbstract.php": "29906bf63174244a578b7ad798681c21eb924f4f70bce93a98f491c4f9219f79",
+    "src/Dispatcher.php": "f2055b11d7574b68f66ff78f0f8dece8bf205fe4fb95a707bbf7ebb8a7f84bf7",
+    "src/functions.php": "9254012e02a3a3b0f75360ac122e0e7ced796c61d1f57ad59747ec00d6b6fc7f",
+    "src/Route.php": "e4c1c7402863cbcea13330c7761927352d6e46d8abe3da6b7c12d3b246001711",
+    "src/RouteCollector.php": "820b2667dc97634a5bf4d4420e328604631cc77b5db462c78e3b88c61935bf50",
+    "src/RouteParser/Std.php": "ee2e682416914d31affa30563c731464045ad74a4956f70622513adcf1b9f8d1",
+    "src/RouteParser.php": "6046e32e6f8310decd9b22b0b34109531b239026b8eaf39a188f21037fa2be24"
+  }
+}

@@ -92,6 +92,7 @@ function nativeAction(array $request, NativeDatabase $database): array
             'battery_label' => [new NativeBatteriesController($database), 'BatteryPrintLabel', ['batteryId' => $request['object_id']]],
             'recipe_label' => [new NativeRecipesController($database), 'RecipePrintLabel', ['recipeId' => $request['object_id']]],
             'shopping_thermal' => [new NativePrintController($database), 'PrintShoppingListThermal', []],
+            'openapi_specification' => [new NativeOpenApiController($database), 'DocumentationSpec', []],
             'system_info' => [new NativeSystemController($database), 'GetSystemInfo', []],
             'system_time' => [new NativeSystemController($database), 'GetSystemTime', []],
             'system_config' => [new NativeSystemController($database), 'GetConfig', []],

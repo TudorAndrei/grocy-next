@@ -115,7 +115,7 @@ class NativeLocaleMiddleware extends Grocy\Middleware\LocaleMiddleware
 
 class NativePrintController extends Grocy\Controllers\PrintApiController { use NativeListContext; }
 
-class NativeCalendarController extends Grocy\Controllers\CalendarApiController
+trait NativeUrlContext
 {
     use NativeListContext { __construct as private setDatabase; }
 
@@ -133,6 +133,9 @@ class NativeCalendarController extends Grocy\Controllers\CalendarApiController
         };
     }
 }
+
+class NativeCalendarController extends Grocy\Controllers\CalendarApiController { use NativeUrlContext; }
+class NativeOpenApiController extends Grocy\Controllers\OpenApiController { use NativeUrlContext; }
 
 // DatabaseService retains its raw SQL and explicit transaction calls.
 class NativeRawReader

@@ -2031,3 +2031,90 @@ def test_reference_native_system_config_exposes_current_printer_and_url_settings
         link = app.get("/api/calendar/ical/sharing-link")
         assert link.status_code == 200, link.text
         assert link.json()["url"].startswith("/native-prefix/api/calendar/ical?secret=")
+
+
+@pytest.mark.parametrize(
+    "method,path,origin",
+    [
+        ("HEAD", "/api/system/info", "https://example.invalid"),
+        ("HEAD", "/api/missing-route", "https://example.invalid"),
+        ("OPTIONS", "/api/system/info", "https://example.invalid"),
+        ("OPTIONS", "/api/missing-route", "http://localhost:5173"),
+        ("OPTIONS", "/api/", "https://example.invalid"),
+        ("GET", "/api/missing-route", "http://localhost:5173"),
+        ("PATCH", "/api/system/info", "https://example.invalid"),
+        ("POST", "/api/system/info", "https://example.invalid"),
+        ("GET", "/api/system/info", "http://localhost:5173"),
+    ],
+)
+def test_reference_native_http_methods_and_cors(
+    client, api_headers, reference, method, path, origin
+):
+    client.headers.update(api_headers)
+    results = []
+    headers = {"Origin": origin}
+    if method == "OPTIONS":
+        headers.update(
+            {
+                "GROCY-API-KEY": "",
+                "Access-Control-Request-Method": "DELETE",
+                "Access-Control-Request-Headers": "GROCY-API-KEY, X-Custom",
+            }
+        )
+    for app in (reference, client):
+        response = app.request(method, path, headers=headers)
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, OPTIONS"
+        assert response.headers["access-control-allow-headers"] == "*"
+        if method in {"HEAD", "OPTIONS"}:
+            assert response.content == b""
+        message = None
+        if response.status_code >= 400 and method != "HEAD":
+            error = response.json()
+            assert set(error) == {"error_message", "error_details"}
+            assert set(error["error_details"]) == {"stack_trace", "file", "line"}
+            message = error["error_message"]
+        results.append((response.status_code, response.headers["content-type"], message))
+    assert results[0] == results[1]
+
+
+@pytest.mark.parametrize("method", ["GET", "HEAD"])
+def test_reference_native_unauthorized_response_is_empty(client, api_headers, reference, method):
+    client.headers.update(api_headers)
+    results = []
+    for app in (reference, client):
+        response = app.request(method, "/api/system/info", headers={"GROCY-API-KEY": "invalid"})
+        assert response.status_code == 401
+        assert response.content == b""
+        assert response.headers["access-control-allow-origin"] == "*"
+        results.append(response.headers["content-type"])
+    assert results[0] == results[1]
+
+
+def test_reference_native_openapi_specification_includes_user_entities(
+    client, api_headers, reference
+):
+    client.headers.update(api_headers)
+    name = "native-spec-" + uuid4().hex
+    results = []
+    for app in (reference, client):
+        create(app, "userentities", {"name": name, "caption": "Native specification"})
+        response = app.get("/api/openapi/specification")
+        assert response.status_code == 200, response.text
+        spec = response.json()
+        assert spec["info"]["version"] == "4.5.0"
+        enum = spec["components"]["schemas"]["ExposedEntity_IncludingUserEntities"]["enum"]
+        assert "userentity-" + name in enum
+        for schema in spec["components"]["schemas"].values():
+            if isinstance(schema, dict) and isinstance(schema.get("enum"), list):
+                schema["enum"] = [
+                    value
+                    for value in schema["enum"]
+                    if not isinstance(value, str)
+                    or not value.startswith("userentity-")
+                    or value == "userentity-" + name
+                ]
+        base = str(app.base_url).rstrip("/")
+        assert spec["servers"][0]["url"] == base + "/api"
+        results.append(json.loads(json.dumps(spec).replace(base, "BASE")))
+    assert results[0] == results[1]

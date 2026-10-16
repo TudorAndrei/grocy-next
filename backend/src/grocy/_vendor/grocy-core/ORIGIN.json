@@ -355,6 +355,10 @@
     "localization/zh_TW/permissions.po": "4f040a173c9a96f26b6431e6c568af20cb067570fa566a4c85caf7f75696b806",
     "localization/zh_TW/stock_transaction_types.po": "d3a7ce5c718d39d27f44f50d9b437701b2f7320facfd6666d91b62025a9d87f4",
     "localization/zh_TW/strings.po": "25d72d494aacddd62063a48f3cf87fba94ffcd90618d163704231d01dcb31313",
-    "localization/zh_TW/userfield_types.po": "5e091e6344996efc3c480811fc27351a6607b9fa12d94e952bcc996ec168ea8e"
+    "localization/zh_TW/userfield_types.po": "5e091e6344996efc3c480811fc27351a6607b9fa12d94e952bcc996ec168ea8e",
+    "routes.php": "1f66f29f2fd4f427011a8ce97df8470a24518f86ce9217fd75ccb60974c5756b",
+    "controllers/ExceptionController.php": "fc3ce96067a4de7117ffb3e26a423af0cf2deb9742fe84d0faccb6ac22feeefe",
+    "controllers/OpenApiController.php": "8ec700a4625ead5d0d221dafc80d6b66323bcfe8af54eb3fe14e32c144d6890d",
+    "middleware/CorsMiddleware.php": "2967a8044ca3644d09c6d38cc4066f2b54be449516fc1848825ddd70194b0970"
   }
 }

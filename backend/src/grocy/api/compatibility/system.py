@@ -43,3 +43,12 @@ async def log_missing_localization(
     request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
     return await native_action_response(request, session, "system_missing", "", actor.user_id)
+
+
+@router.get("/api/openapi/specification")
+async def openapi_specification(
+    request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(
+        request, session, "openapi_specification", "", actor.user_id
+    )

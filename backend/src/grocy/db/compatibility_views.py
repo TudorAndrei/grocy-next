@@ -33,10 +33,10 @@ def install_compatibility_views(connection: Connection) -> None:
 
 async def configure_compatibility_queries(session: AsyncSession) -> None:
     user_id = session.info.get("actor_user_id", 1)
-    rows = (
-        await session.execute(select(UserSetting).where(UserSetting.user_id == user_id))
-    ).scalars()
-    settings = {**client_defaults()["user_settings"], **{row.key: row.value for row in rows}}
+    rows = await session.execute(
+        select(UserSetting.key, UserSetting.value).where(UserSetting.user_id == user_id)
+    )
+    settings = {**client_defaults()["user_settings"], **{key: value for key, value in rows}}
 
     connection = await session.connection()
     await connection.run_sync(register_compatibility_functions, settings)
