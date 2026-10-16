@@ -58,3 +58,13 @@ async def session() -> AsyncIterator[AsyncSession]:
     async with factory() as db:
         yield db
     await engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def php_http_settings(tmp_path_factory):
+    from grocy.core.config import get_settings
+    from php_runtime import read_http_settings
+
+    return read_http_settings(
+        get_settings().php_executable, tmp_path_factory.mktemp("php-http-settings")
+    )

@@ -17,12 +17,15 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
     processes = tmp_path / "processes.txt"
     wrapper = tmp_path / "php-worker"
     fail_request = tmp_path / "fail-request"
+    cookie_process = tmp_path / "cookie-process"
     wrapper.write_text(
         f"#!{sys.executable}\n"
         "import os, sys\n"
         "from pathlib import Path\n"
         f"with open({str(processes)!r}, 'a') as output:\n"
         "    output.write(str(os.getpid()) + '\\n')\n"
+        "if '-S' in sys.argv:\n"
+        f"    Path({str(cookie_process)!r}).write_text(str(os.getpid()))\n"
         f"failure = Path({str(fail_request)!r})\n"
         "if failure.exists() and '-' in sys.argv:\n"
         "    failure.unlink()\n"
@@ -64,6 +67,18 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
         assert client.get(f"/api/objects/locations/{location}").json()["description"] == (
             "<a>Link</a>"
         )
+        cookie_pid = int(cookie_process.read_text())
+        os.kill(cookie_pid, signal.SIGTERM)
+        for _ in range(3):
+            recovered = client.get(f"/api/objects/locations/{location}")
+            assert recovered.status_code in (200, 503), recovered.text
+            if recovered.status_code == 200:
+                assert recovered.json()["description"] == "<a>Link</a>"
+                break
+        else:
+            pytest.fail("The PHP HTTP cookie worker did not recover")
+        with pytest.raises(ProcessLookupError):
+            os.kill(cookie_pid, 0)
         pids = live_workers()
         parameters = (("query[]", f"name={name}"), ("query[]", "description§Link"))
         matching = client.get("/api/objects/locations", params=parameters)

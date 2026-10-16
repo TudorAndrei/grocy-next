@@ -12,6 +12,7 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
         }
         (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
         (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'instance'))->setValue(null, new NativeReadDatabaseService($database));
+        $_COOKIE = unserialize(base64_decode($request['cookies'], true), ['allowed_classes' => false]);
         $http = nativeHttpRequest($request);
         ob_start();
         if (is_file(GROCY_DATAPATH . '/config.php')) require GROCY_DATAPATH . '/config.php';
@@ -81,13 +82,6 @@ function nativeHttpRequest(array $request)
     }
     $_SERVER['HTTP_HOST'] = $http->getHeaderLine('Host');
     if ($http->getUri()->getScheme() === 'https') $_SERVER['HTTPS'] = 'on';
-    $_COOKIE = [];
-    foreach (explode(';', $http->getHeaderLine('Cookie')) as $cookie) {
-        $pair = explode('=', ltrim($cookie), 2);
-        if (count($pair) !== 2) continue;
-        parse_str($pair[0] . '=' . str_replace('+', '%2B', $pair[1]), $parsed);
-        $_COOKIE = array_replace_recursive($parsed, $_COOKIE);
-    }
     return $http;
 }
 

@@ -89,9 +89,14 @@ class NativeProtocol:
             if name.lower().startswith("access-control-")
         ]
         unauthorized = False
+        startup = result["startup_output"]
+        startup_body = startup["output"]
+        if not startup["committed"] and result.get("context"):
+            # Grocy clears buffered startup output after successful configuration.
+            startup_body = b""
 
         async def native_send(message: Message) -> None:
-            nonlocal unauthorized
+            nonlocal unauthorized, startup_body
             if message["type"] == "http.response.start":
                 unauthorized = message["status"] == 401
                 names = {name for name, _value in cors}
@@ -108,8 +113,17 @@ class NativeProtocol:
                         [(b"content-type", b"text/html; charset=UTF-8"), (b"content-length", b"0")]
                     )
                 message = {**message, "headers": [*headers, *cors]}
-            elif message["type"] == "http.response.body" and (method == "HEAD" or unauthorized):
-                message = {**message, "body": b""}
+                if startup["output"] and startup["committed"]:
+                    # PHP has already sent these headers before Grocy can change them.
+                    message = {
+                        **message,
+                        "status": startup["status"],
+                        "headers": [(b"content-type", startup["content_type"].encode())],
+                    }
+            elif message["type"] == "http.response.body":
+                body = b"" if unauthorized else message.get("body", b"")
+                message = {**message, "body": b"" if method == "HEAD" else startup_body + body}
+                startup_body = b""
             await send(message)
 
         if not result["matched"]:

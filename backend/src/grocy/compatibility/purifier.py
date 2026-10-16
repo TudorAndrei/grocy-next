@@ -11,6 +11,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from grocy.compatibility.cookies import NativeCookies
 from grocy.compatibility.values import decode_value, encode_value
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
@@ -36,6 +37,7 @@ class InputPurifier:
         self._cache: TemporaryDirectory[str] | None = None
         self._sequence = 0
         self._functions: InputPurifier | None = None
+        self._cookies: NativeCookies | None = None
 
     async def start(self) -> None:
         async with self._lock:
@@ -97,7 +99,11 @@ class InputPurifier:
         api_key_header: str,
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
     ) -> dict[str, Any]:
-        return await self._request(
+        provider = self.function_runtime or self
+        if provider._cookies is None:
+            provider._cookies = NativeCookies(self.executable)
+        cookies = await provider._cookies.parse(headers)
+        result = await self._request(
             b"",
             {
                 "operation": "context",
@@ -110,9 +116,12 @@ class InputPurifier:
                 "configuration": configuration,
                 "default_permissions": default_permissions,
                 "api_key_header": api_key_header,
+                "cookies": cookies["cookies"],
             },
             execute=execute,
         )
+        result["startup_output"] = cookies
+        return result
 
     async def purify(self, body: bytes) -> Any:
         return await self._request(body, {})
@@ -346,6 +355,9 @@ class InputPurifier:
             if self._functions is not None:
                 await self._functions.close()
                 self._functions = None
+            if self._cookies is not None:
+                await self._cookies.close()
+                self._cookies = None
             if self._cache is not None:
                 self._cache.cleanup()
                 self._cache = None

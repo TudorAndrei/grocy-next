@@ -5340,42 +5340,142 @@ def test_native_authentication_bypass_uses_default_identity(api, runtime_configu
 
 
 @pytest.mark.parametrize(
-    "case", ["valid", "expired", "null", "orphan-key", "duplicate", "percent", "plus", "array"]
+    ("case", "suffix", "cookie", "valid"),
+    [
+        ("valid", b"", "grocy_session={key}", True),
+        ("expired", b"", "grocy_session={key}", False),
+        ("null", b"", "grocy_session={key}", False),
+        ("orphan-key", b"", "grocy_session={key}", True),
+        ("duplicate", b"", "grocy_session={key}; grocy_session=invalid", True),
+        ("percent", b" a+b", "grocy_session={key}%20a%2Bb", True),
+        ("plus", b" a+b", "grocy_session={key} a+b", True),
+        ("array", b"", "grocy_session[]={key}", False),
+        ("ampersand", b"&tail", "grocy_session={key}&tail", True),
+        ("encoded-ampersand", b"&tail", "grocy_session={key}%26tail", True),
+        ("ampersand-fields", b"", "grocy_session=invalid&grocy_session={key}", False),
+        ("equals", b"=tail", "grocy_session={key}=tail", True),
+        ("percent-name", b"", "grocy%5Fsession={key}", False),
+        ("dot-name", b"", "grocy.session={key}", True),
+        ("space-name", b"", "grocy session={key}", True),
+        ("plus-name", b"", "grocy+session={key}", False),
+        ("encoded-array-name", b"", "grocy_session%5B%5D={key}", False),
+        ("array-first", b"", "grocy_session[]=invalid; grocy_session={key}", False),
+        ("scalar-first", b"", "grocy_session={key}; grocy_session[]=invalid", False),
+        ("invalid-first", b"", "grocy_session=invalid; grocy_session={key}", False),
+        ("empty-first", b"", "grocy_session=; grocy_session={key}", False),
+        ("bare-first", b"", "grocy_session; grocy_session={key}", False),
+        ("quoted", b"", 'grocy_session="{key}"', False),
+        ("semicolon", b";tail", "grocy_session={key}%3Btail", True),
+        ("nul", b"\0tail", "grocy_session={key}%00tail", False),
+        ("binary", b"\xff", "grocy_session={key}%FF", True),
+        ("double-encoding", b"%26tail", "grocy_session={key}%2526tail", True),
+        ("tab-name", b"", "other=value;\tgrocy_session={key}", True),
+        ("trailing-name-space", b"", "grocy_session ={key}", False),
+        ("input-limit", b"", "ignored=1; " * 1000 + "grocy_session={key}", False),
+        ("input-limit-valid-first", b"", "grocy_session={key}; " + "ignored=1; " * 1000, True),
+        ("below-limit", b"", "ignored=1; " * 999 + "grocy_session={key}", True),
+        (
+            "nested-removal",
+            b"",
+            "grocy_session=invalid; grocy_session" + "[0]" * 65 + "=invalid; grocy_session={key}",
+            True,
+        ),
+        (
+            "nested-limit",
+            b"",
+            "grocy_session=invalid; grocy_session" + "[0]" * 64 + "=invalid; grocy_session={key}",
+            False,
+        ),
+        (
+            "named-array",
+            b"",
+            "grocy_session[:1]={key}; grocy_session[:2]=0000-01-01%2000:00:00",
+            True,
+        ),
+        (
+            "array-overwrite",
+            b"",
+            "grocy_session[:1]=invalid; grocy_session[:1]={key}; "
+            "grocy_session[:2]=0000-01-01%2000:00:00",
+            True,
+        ),
+        (
+            "array-reject",
+            b"",
+            "grocy_session[:1]={key}; grocy_session[:1]=invalid; "
+            "grocy_session[:2]=0000-01-01%2000:00:00",
+            False,
+        ),
+        (
+            "expired-array",
+            b"",
+            "grocy_session[:1]={key}; grocy_session[:2]=0000-01-01%2000:00:00",
+            True,
+        ),
+    ],
+    ids=lambda value: value if isinstance(value, str) and "{key}" not in value else "",
 )
-def test_native_session_cookie_authentication_and_use_time(api, execute_sql, case):
-    key = uuid4().hex + (" a+b" if case in {"percent", "plus"} else "")
+def test_native_session_cookie_authentication_and_use_time(
+    api, execute_sql, php_http_settings, case, suffix, cookie, valid
+):
+    token = uuid4().hex
+    hex_key = (token.encode() + suffix).hex()
     expiry = (
         "NULL"
         if case == "null"
         else "'2000-01-01 00:00:00'"
-        if case == "expired"
+        if case in {"expired", "expired-array"}
         else "'2999-12-31 23:59:59'"
     )
-    execute_sql(f"INSERT INTO sessions(session_key,user_id,expires) VALUES ('{key}',1,{expiry})")
-    headers = {"GROCY-API-KEY": "", "Cookie": "grocy_session=" + key}
+    execute_sql(
+        "INSERT INTO sessions(session_key,user_id,expires) "
+        f"VALUES (CAST(X'{hex_key}' AS TEXT),1,{expiry})"
+    )
+    headers = {"GROCY-API-KEY": "", "Cookie": cookie.format(key=token).rstrip(" \t")}
     orphan = uuid4().hex
-    if case == "duplicate":
-        headers["Cookie"] += "; grocy_session=invalid"
-    elif case == "percent":
-        headers["Cookie"] = "grocy_session=" + key.replace(" ", "%20").replace("+", "%2B")
-    elif case == "array":
-        headers["Cookie"] = "grocy_session[]=" + key
-    elif case == "orphan-key":
+    if case == "orphan-key":
         execute_sql(
             "INSERT INTO api_keys(api_key,user_id,expires) "
             f"VALUES ('{orphan}',2147483647,'2999-12-31 23:59:59')"
         )
         headers["GROCY-API-KEY"] = orphan
-    valid = case not in {"expired", "null", "array"}
     try:
         response = api.get("/api/user", headers=headers)
-        assert response.status_code == (200 if valid else 401), response.text
-        if valid:
+        warning = php_http_settings["startup_output"]
+        if case in {"input-limit", "input-limit-valid-first"} and warning:
+            assert response.status_code == 200, response.text
+            assert response.content.startswith(warning), response.text
+            remainder = response.content.removeprefix(warning)
+            if valid:
+                assert json.loads(remainder)[0]["id"] == 1
+            else:
+                assert remainder == b""
+            assert response.headers.get("content-type") == php_http_settings["startup_content_type"]
+            assert "access-control-allow-origin" not in response.headers
+        else:
+            assert response.status_code == (200 if valid else 401), response.text
+        if case in {"input-limit", "input-limit-valid-first"}:
+            for method in ("HEAD", "OPTIONS"):
+                other = api.request(method, "/api/user", headers=headers)
+                expected = 200 if warning or valid or method == "OPTIONS" else 401
+                assert other.status_code == expected, other.text
+                assert other.content == (warning if method == "OPTIONS" else b"")
+                if warning:
+                    assert (
+                        other.headers.get("content-type")
+                        == php_http_settings["startup_content_type"]
+                    )
+                    assert "access-control-allow-origin" not in other.headers
+                else:
+                    assert other.headers["access-control-allow-origin"] == "*"
+        if valid and (case != "input-limit-valid-first" or not warning):
             assert response.json()[0]["id"] == 1
-        used = execute_sql(f"SELECT last_used FROM sessions WHERE session_key='{key}'")[0][0]
-        assert bool(used) == valid
+        used = execute_sql(
+            f"SELECT last_used FROM sessions WHERE CAST(session_key AS BLOB)=X'{hex_key}'"
+        )[0][0]
+        assert bool(used) == (valid or case == "nul")
     finally:
-        execute_sql(f"DELETE FROM sessions WHERE session_key='{key}'")
+        execute_sql(f"DELETE FROM sessions WHERE CAST(session_key AS BLOB)=X'{hex_key}'")
         execute_sql(f"DELETE FROM api_keys WHERE api_key='{orphan}'")
 
 
