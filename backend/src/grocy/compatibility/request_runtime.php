@@ -1,5 +1,7 @@
 <?php
 
+require __DIR__ . '/http_runtime.php';
+
 // Runtime inputs use the pinned packages in ../_vendor. Each has its own license.
 spl_autoload_register(function (string $class): void {
     $prefixes = [

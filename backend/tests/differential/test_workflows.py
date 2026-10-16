@@ -14,6 +14,8 @@ from uuid import uuid4
 import httpx
 import pytest
 
+from php_runtime import DEVELOPMENT_PROFILES
+
 
 @pytest.fixture(params=["local", "php"])
 def api(request, api_headers):
@@ -5253,8 +5255,11 @@ def runtime_configuration(api, native_data_directory):
 
 
 @pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
-def test_native_cache_change_redirects_before_authentication(api, runtime_configuration, method):
-    runtime_configuration("Setting('BASE_URL', '/startup-gap');")
+@pytest.mark.parametrize("mode", ["production", "dev"])
+def test_native_cache_change_redirects_before_authentication(
+    api, runtime_configuration, method, mode
+):
+    runtime_configuration(f"Setting('BASE_URL', '/startup-gap');Setting('MODE', '{mode}');")
     headers = dict(api.headers)
     try:
         api.headers.pop("GROCY-API-KEY", None)
@@ -5263,7 +5268,9 @@ def test_native_cache_change_redirects_before_authentication(api, runtime_config
         assert response.headers["location"] == "/startup-gap/"
         assert response.content == b""
         assert "access-control-allow-origin" not in response.headers
-        assert api.get("/api/system/info", follow_redirects=False).status_code == 401
+        assert api.get("/api/system/info", follow_redirects=False).status_code == (
+            401 if mode == "production" else 200
+        )
     finally:
         api.headers.update(headers)
 
@@ -5478,16 +5485,103 @@ def test_native_configuration_errors_precede_http_and_authentication(
         assert "access-control-allow-origin" not in response.headers
 
 
-@pytest.mark.parametrize("mode", ["disabled", "dev"])
-def test_native_authentication_bypass_uses_default_identity(api, runtime_configuration, mode):
+def test_native_bootstrap_output_retains_http_header_state(
+    api, runtime_configuration, php_http_settings
+):
+    runtime_configuration(
+        r"class BootstrapAuth extends \Grocy\Middleware\DefaultAuthMiddleware {"
+        r"public function __construct($container, $factory) {"
+        r"parent::__construct($container, $factory); echo 'BOOTSTRAP:'; }}"
+        r"Setting('AUTH_CLASS', 'BootstrapAuth');Setting('DISABLE_AUTH', true);"
+    )
+    response = api.get("/api/user")
+    assert response.status_code == 200, response.text
+    prefix = php_http_settings["bootstrap_output"]
+    assert response.content.startswith(prefix)
+    assert json.loads(response.content.removeprefix(prefix))[0]["id"] == 1
+    if prefix:
+        assert response.headers["content-type"] == php_http_settings["bootstrap_content_type"]
+        assert "access-control-allow-origin" not in response.headers
+    else:
+        assert response.headers["content-type"] == "application/json"
+        assert response.headers["access-control-allow-origin"] == "*"
+
+
+@pytest.mark.parametrize("mode", ["disabled", *DEVELOPMENT_PROFILES])
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("GET", "/api/user"),
+        ("HEAD", "/api/user"),
+        ("OPTIONS", "/api/user"),
+        ("PATCH", "/api/system/info"),
+    ],
+)
+def test_native_development_output_and_authentication_bypass(
+    api,
+    runtime_configuration,
+    native_data_directory,
+    php_http_settings,
+    request,
+    mode,
+    method,
+    path,
+):
+    log = native_data_directory / "development-errors.log"
+    if mode == "logging":
+        assert not log.exists()
+        request.addfinalizer(lambda: log.unlink(missing_ok=True))
     runtime_configuration(
         "Setting('DISABLE_AUTH', true);"
         if mode == "disabled"
-        else "Setting('MODE', 'dev'); ini_set('display_errors', '0');"
+        else "Setting('MODE', 'dev');" + DEVELOPMENT_PROFILES[mode]
     )
-    response = api.get("/api/user", headers={"GROCY-API-KEY": "invalid"})
-    assert response.status_code == 200, response.text
-    assert response.json()[0]["id"] == 1
+    expected = php_http_settings["development"].get(mode, {"output": b""})
+    notice = expected["output"]
+    content_type = expected.get("content_type")
+    headers = {"GROCY-API-KEY": "invalid"}
+    if mode == "registration":
+        headers["Cookie"] = ("ignored=1; " * (php_http_settings["max_input_vars"] + 1)).rstrip()
+        warning = php_http_settings["startup_output"]
+        notice = warning + notice
+        if warning:
+            content_type = php_http_settings["startup_content_type"]
+    response = api.request(method, path, headers=headers)
+    if mode == "logging":
+        contents = log.read_bytes() if log.exists() else b""
+        assert (
+            contents.count(b"ob_clean(): Failed to delete buffer. No buffer to delete")
+            == expected["logged"]
+        )
+    assert response.status_code == (405 if method == "PATCH" and not notice else 200), response.text
+    if notice:
+        assert response.headers["content-type"] == content_type
+        assert "access-control-allow-origin" not in response.headers
+    else:
+        assert response.headers["access-control-allow-origin"] == "*"
+        if method != "OPTIONS":
+            assert response.headers["content-type"] == "application/json"
+    if method == "HEAD":
+        assert response.content == b""
+        return
+    prefix = response.content
+    if method != "OPTIONS":
+        start = prefix.find(b'{"error_message":' if method == "PATCH" else b'[{"id":')
+        assert start >= 0, response.text
+        payload = json.loads(prefix[start:])
+        prefix = prefix[:start]
+        if method == "GET":
+            assert payload[0]["id"] == 1
+        else:
+            assert payload["error_message"].startswith("Method not allowed.")
+
+    def normalize_location(output):
+        output = re.sub(
+            rb" in <b>[^<]+</b> on line <b>\d+</b>", b" in <b>FILE</b> on line <b>LINE</b>", output
+        )
+        return re.sub(rb" in [^\r\n]+ on line \d+", b" in FILE on line LINE", output)
+
+    assert normalize_location(prefix) == normalize_location(notice)
 
 
 @pytest.mark.parametrize(

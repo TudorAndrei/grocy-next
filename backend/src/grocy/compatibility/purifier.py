@@ -117,9 +117,17 @@ class InputPurifier:
                 "default_permissions": default_permissions,
                 "api_key_header": api_key_header,
                 "cookies": cookies["cookies"],
+                "http_ini": cookies["ini"],
+                "error_reporting": cookies["error_reporting"],
             },
             execute=execute,
         )
+        if settings := result.get("startup"):
+            startup = await provider._cookies.startup(settings)
+            if cookies["committed"]:
+                cookies["output"] += startup["output"]
+            else:
+                cookies = startup
         result["startup_output"] = cookies
         return result
 

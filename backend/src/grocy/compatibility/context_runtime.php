@@ -13,6 +13,8 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
         (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
         (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'instance'))->setValue(null, new NativeReadDatabaseService($database));
         $_COOKIE = unserialize(base64_decode($request['cookies'], true), ['allowed_classes' => false]);
+        error_reporting($request['error_reporting']);
+        nativeApplyHttpIni($request['http_ini']);
         $http = nativeHttpRequest($request);
         ob_start();
         if (is_file(GROCY_DATAPATH . '/config.php')) require GROCY_DATAPATH . '/config.php';
@@ -40,6 +42,7 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
             $result['headers']['Location'] = [(new Grocy\Helpers\UrlManager(GROCY_BASE_URL))->ConstructUrl('/')];
             return $result;
         }
+        ob_start();
         $nativeService = new Grocy\Services\DatabaseService();
         $modeDatabase = in_array(GROCY_MODE, ['demo', 'prerelease'], true);
         define('NATIVE_DATABASE_FILE', $modeDatabase
@@ -60,6 +63,8 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
         $GLOBALS['NativeAuthentication'] = new $class($container, new Slim\Psr7\Factory\ResponseFactory());
         $app = nativeRouter();
         if (!empty(GROCY_BASE_PATH)) $app->setBasePath(GROCY_BASE_PATH);
+        $GLOBALS['NativeExceptionController'] = new NativeExceptionController($app);
+        $bootstrapOutput = ob_get_clean();
         $result = nativeProtocol([
             'method' => $request['method'],
             'path' => base64_encode($http->getUri()->getPath()),
@@ -74,6 +79,12 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
             'login_url' => $container->get('UrlManager')->ConstructUrl('/login'),
             'stock_due_soon_days' => nativeEncodeValue($GROCY_DEFAULT_USER_SETTINGS['stock_due_soon_days']),
         ];
+        if (GROCY_MODE === 'dev' || $bootstrapOutput !== '') {
+            $result['startup'] = [
+                'ini' => nativeHttpIni(), 'error_reporting' => error_reporting(),
+                'buffers' => ob_get_level(), 'output' => base64_encode($bootstrapOutput),
+            ];
+        }
         return $result;
     } catch (Throwable $error) {
         if (ob_get_level() > 0) ob_end_clean();

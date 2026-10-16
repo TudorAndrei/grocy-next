@@ -26,6 +26,14 @@ class NativeCookies:
         self._url = ""
 
     async def parse(self, headers: list[tuple[bytes, bytes]]) -> dict[str, Any]:
+        return await self._request(headers)
+
+    async def startup(self, settings: dict[str, Any]) -> dict[str, Any]:
+        return await self._request([], settings)
+
+    async def _request(
+        self, headers: list[tuple[bytes, bytes]], startup: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         async with self._lock:
             try:
                 await self._start()
@@ -33,6 +41,7 @@ class NativeCookies:
                 response = await self._client.post(
                     self._url,
                     headers=[(name, value) for name, value in headers if name.lower() == b"cookie"],
+                    json=startup,
                 )
                 prefix, marker, payload = response.content.partition(_MARKER)
                 if not marker:
@@ -42,6 +51,8 @@ class NativeCookies:
                     not isinstance(result, dict)
                     or not isinstance(result.get("cookies"), str)
                     or not isinstance(result.get("committed"), bool)
+                    or not isinstance(result.get("ini"), dict)
+                    or not isinstance(result.get("error_reporting"), int)
                 ):
                     raise ValueError("The PHP HTTP runtime returned invalid cookie state")
                 result.update(

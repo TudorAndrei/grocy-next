@@ -58,7 +58,8 @@ class NativeRoutingHandler implements Psr\Http\Server\RequestHandlerInterface
             $this->matched = true;
             return $this->app->getResponseFactory()->createResponse();
         } catch (Throwable $error) {
-            return (new NativeExceptionController($this->app))($request, $error, true, false, false);
+            $controller = $GLOBALS['NativeExceptionController'] ?? new NativeExceptionController($this->app);
+            return $controller($request, $error, true, false, false);
         }
     }
 }
