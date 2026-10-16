@@ -49,6 +49,15 @@ class NativeDatabase extends LessQL\Database
     public function prepareExecution(string $query)
     {
         $this->context = ['action' => 'execute', 'table' => ''];
+        $productDelete = 'DELETE FROM products WHERE ';
+        if (str_starts_with($query, $productDelete)) {
+            // The application's nutrition references need the same cleanup as
+            // a generic product delete, inside Grocy's existing transaction.
+            $this->context = [
+                'action' => 'delete', 'table' => 'products',
+                'before_query' => 'SELECT * FROM products WHERE ' . substr($query, strlen($productDelete)),
+            ];
+        }
         return $this->prepare($query);
     }
 

@@ -4187,3 +4187,232 @@ def test_native_recipe_duplicate_ingredient_failure_restores_stock_and_log(api, 
     }
     assert rows(api, "stock", product_id=product) == before_stock
     assert rows(api, "stock_log", product_id=product) == before_log
+
+
+@pytest.mark.parametrize(
+    "amount,status", [(True, 200), ([], 500), ({}, 500), ("invalid", 500), (0, 400), (-1, 400)]
+)
+def test_native_stock_purchase_amount_retains_php_argument_rules(api, catalog, amount, status):
+    product, _, _, _ = catalog
+    response = api.post(f"/api/stock/products/{product}/add", json={"amount": amount})
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert response.json()[0]["amount"] == 1
+        assert rows(api, "stock", product_id=product)[0]["amount"] == 1
+    elif status == 500:
+        kind = "array" if isinstance(amount, (list, dict)) else "string"
+        assert (
+            f"Argument #2 ($amount) must be of type float, {kind} given"
+            in response.json()["error_message"]
+        )
+        assert rows(api, "stock", product_id=product) == []
+    else:
+        assert response.json() == {"error_message": "Amount can't be <= 0"}
+        assert rows(api, "stock", product_id=product) == []
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("price", "invalid"),
+        ("price", True),
+        ("location_id", "invalid"),
+        ("shopping_location_id", "invalid"),
+        ("best_before_date", "invalid"),
+        ("purchased_date", "invalid"),
+    ],
+)
+def test_native_stock_purchase_invalid_optional_values_use_defaults(api, catalog, field, value):
+    product, _, _, location = catalog
+    before = api.get("/api/system/time").json()["time_local_sqlite3"][:10]
+    response = api.post(f"/api/stock/products/{product}/add", json={"amount": 1, field: value})
+    assert response.status_code == 200, response.text
+    row = response.json()[0]
+    after = api.get("/api/system/time").json()["time_local_sqlite3"][:10]
+    expected = {"price": None, "location_id": location, "shopping_location_id": None}
+    if field in expected:
+        assert row[field] == expected[field]
+    else:
+        assert before <= row[field] <= after
+
+
+@pytest.mark.parametrize("mode", [-1, 3, "invalid"])
+def test_native_stock_purchase_label_modes_keep_unrestricted_runtime_values(api, catalog, mode):
+    product, _, _, _ = catalog
+    response = api.post(
+        f"/api/stock/products/{product}/add", json={"amount": 2.5, "stock_label_type": mode}
+    )
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 1 and response.json()[0]["amount"] == 2.5
+
+
+@pytest.mark.parametrize("field", ["best_before_date", "purchased_date"])
+def test_native_stock_purchase_keeps_year_zero_dates(api, catalog, field):
+    product, _, _, _ = catalog
+    response = api.post(
+        f"/api/stock/products/{product}/add", json={"amount": 1, field: "0000-01-04"}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()[0][field] == "0000-01-04"
+    entries = api.get(f"/api/stock/products/{product}/entries")
+    assert entries.status_code == 200 and entries.json()[0][field] == "0000-01-04"
+    details = api.get(f"/api/stock/products/{product}")
+    assert details.status_code == 200, details.text
+
+
+@pytest.mark.parametrize("action", ["add", "consume", "open", "transfer", "inventory"])
+def test_native_stock_empty_body_uses_original_required_amount_error(api, catalog, action):
+    product, _, _, _ = catalog
+    response = api.post(f"/api/stock/products/{product}/{action}", json={})
+    assert response.status_code == 400, response.text
+    message = "An new amount is required" if action == "inventory" else "An amount is required"
+    assert response.json() == {"error_message": message}
+    assert rows(api, "stock_log", product_id=product) == []
+
+
+@pytest.mark.parametrize("spoiled", ["false", "invalid"])
+def test_native_stock_consumption_uses_php_bool_argument_conversion(api, catalog, spoiled):
+    product, _, _, _ = catalog
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 2}).status_code == 200
+    response = api.post(
+        f"/api/stock/products/{product}/consume", json={"amount": 1, "spoiled": spoiled}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["spoiled"] == 1
+
+
+@pytest.mark.parametrize(
+    "body,transaction_type",
+    [
+        ({"transaction_type": "inventory-correction"}, "consume"),
+        (
+            {"transaction_type": "ignored", "transactiontype": "inventory-correction"},
+            "inventory-correction",
+        ),
+    ],
+)
+def test_native_stock_consumption_retains_transaction_field_typo(
+    api, catalog, body, transaction_type
+):
+    product, _, _, _ = catalog
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 2}).status_code == 200
+    response = api.post(f"/api/stock/products/{product}/consume", json={"amount": 1, **body})
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["transaction_type"] == transaction_type
+
+
+@pytest.mark.parametrize("form", ["decimal", "exponent"])
+def test_native_stock_detail_booking_and_undo_accept_numeric_url_ids(api, catalog, form):
+    product, _, _, _ = catalog
+    response = api.post(f"/api/stock/products/{product}/add", json={"amount": 2})
+    assert response.status_code == 200, response.text
+    booking = response.json()[0]["id"]
+    entry = rows(api, "stock", product_id=product)[0]["id"]
+
+    def token(value):
+        return f"{value}.0" if form == "decimal" else f"{value}e0"
+
+    for path in [
+        f"products/{token(product)}",
+        f"entry/{token(entry)}",
+        f"bookings/{token(booking)}",
+        f"products/{token(product)}/price-history",
+    ]:
+        result = api.get("/api/stock/" + path)
+        assert result.status_code == 200, result.text
+    undone = api.post(f"/api/stock/bookings/{token(booking)}/undo")
+    assert undone.status_code == 204 and undone.content == b"", undone.text
+    assert rows(api, "stock", product_id=product) == []
+
+
+@pytest.mark.parametrize("form", ["leading_zero", "decimal", "exponent"])
+def test_native_stock_merge_rejects_noncanonical_integer_ids(api, catalog, form):
+    product, unit, _, location = catalog
+    remove = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    token = {"leading_zero": f"0{product}", "decimal": f"{product}.0", "exponent": f"{product}e0"}[
+        form
+    ]
+    response = api.post(f"/api/stock/products/{token}/merge/{remove}")
+    assert response.status_code == 400, response.text
+    assert response.json() == {
+        "error_message": "Provided {productIdToKeep} or {productIdToRemove} is not a valid integer"
+    }
+    assert api.get(f"/api/objects/products/{product}").status_code == 200
+    assert api.get(f"/api/objects/products/{remove}").status_code == 200
+
+
+def test_native_stock_edit_requires_amount_and_keeps_writes_before_type_error(api, catalog):
+    product, _, _, _ = catalog
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 3}).status_code == 200
+    entry_id = rows(api, "stock", product_id=product)[0]["id"]
+    entry = api.get(f"/api/stock/entry/{entry_id}").json()
+    response = api.put(f"/api/stock/entry/{entry['id']}", json={"price": 4})
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "An amount is required"}
+    assert api.get(f"/api/stock/entry/{entry['id']}").json() == entry
+    response = api.put(f"/api/stock/entry/{entry['id']}", json={"amount": 2})
+    assert response.status_code == 500, response.text
+    assert (
+        "BoolToInt(): Argument #1 ($bool) must be of type bool, null given"
+        in response.json()["error_message"]
+    )
+    assert api.get(f"/api/stock/entry/{entry['id']}").json() == entry
+    logs = rows(api, "stock_log", product_id=product)
+    assert [row["transaction_type"] for row in logs] == ["purchase", "stock-edit-old"]
+    response = api.put(f"/api/stock/entry/{entry['id']}", json={"amount": 2, "open": False})
+    assert response.status_code == 200, response.text
+    saved = api.get(f"/api/stock/entry/{entry['id']}").json()
+    assert saved["amount"] == 2 and saved["purchased_date"] is None and saved["open"] == 0
+
+
+@pytest.mark.parametrize(
+    "resource,kind", [("products", "p"), ("chores", "c"), ("batteries", "b"), ("recipes", "r")]
+)
+def test_native_label_numeric_url_uses_controller_code_id(api, catalog, resource, kind):
+    if resource == "products":
+        record = catalog[0]
+        path = f"/api/stock/products/{record}e0/printlabel"
+    else:
+        extra = {"period_type": "daily"} if resource == "chores" else {}
+        record = create(api, resource, name=uuid4().hex, **extra)
+        path = f"/api/{resource}/{record}e0/printlabel"
+    response = api.get(path)
+    assert response.status_code == 200, response.text
+    code_id = str(record) if resource == "products" else f"{record}e0"
+    assert response.json()["grocycode"] == f"grcy:{kind}:{code_id}"
+
+
+@pytest.mark.parametrize("action", ["add", "consume", "open", "transfer", "inventory"])
+def test_native_stock_barcode_lookup_runs_before_action_permission(api, action):
+    name = uuid4().hex
+    assert api.post("/api/users", json={"username": name, "password": "test"}).status_code == 204
+    user = api.get("/api/users", params={"query[]": "username=" + name}).json()[0]["id"]
+    assert api.put(f"/api/users/{user}/permissions", json={"permissions": [9]}).status_code == 204
+    key = user_key(api, user)
+    barcode = "unknown-" + uuid4().hex
+    response = api.post(
+        f"/api/stock/products/by-barcode/{barcode}/{action}",
+        json={},
+        headers={"GROCY-API-KEY": key},
+    )
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": f"No product with barcode {barcode} found"}
+
+
+def test_native_stock_self_merge_keeps_original_error_and_stock(api, catalog):
+    product, _, _, _ = catalog
+    assert api.post(f"/api/stock/products/{product}/add", json={"amount": 2}).status_code == 200
+    before_stock = rows(api, "stock", product_id=product)
+    before_log = rows(api, "stock_log", product_id=product)
+    response = api.post(f"/api/stock/products/{product}/merge/{product}")
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "$productIdToKeep cannot equal $productIdToRemove"}
+    assert rows(api, "stock", product_id=product) == before_stock
+    assert rows(api, "stock_log", product_id=product) == before_log

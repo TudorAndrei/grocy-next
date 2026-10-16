@@ -62,8 +62,19 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
         key = old.post("/api/v2/api-keys", json={"user_id": user}).json()["api_key"]
         old.headers["GROCY-API-KEY"] = key
         assert old.put("/api/user/settings/kept", json={"value": "saved"}).status_code == 204
-        booking = old.post("/api/stock/products/1/add", json={"amount": 1})
-        assert booking.status_code == 200, booking.text
+        # Store legacy stock before the native permission views exist.
+        with sqlite3.connect(database) as connection:
+            connection.execute(
+                "INSERT INTO stock(product_id,amount,best_before_date,purchased_date,stock_id,"
+                "open,location_id) VALUES (1,1,'2027-12-31','2027-01-04','saved-stock',0,1)"
+            )
+            booking_id = connection.execute(
+                "INSERT INTO stock_log(product_id,amount,best_before_date,purchased_date,stock_id,"
+                "spoiled,transaction_type,undone,location_id,transaction_id,user_id) "
+                "VALUES (1,1,'2027-12-31','2027-01-04','saved-stock',0,'purchase',0,1,"
+                "'saved-purchase',?)",
+                (user,),
+            ).lastrowid
         task = old.post(
             "/api/objects/tasks",
             json={"name": "Saved task", "assigned_to_user_id": user, "done": 0},
@@ -139,7 +150,7 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
             "SELECT done_by_user_id, tracked_time FROM chores_log WHERE id=?", (chore_log,)
         ).fetchone() == (user, "2027-01-04")
         assert connection.execute(
-            "SELECT user_id FROM stock_log WHERE id=?", (booking.json()[0]["id"],)
+            "SELECT user_id FROM stock_log WHERE id=?", (booking_id,)
         ).fetchone() == (user,)
         assert connection.execute("SELECT contributor_id FROM nutrition_evidence").fetchall() == [
             (user,)

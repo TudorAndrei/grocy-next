@@ -187,3 +187,56 @@ def test_mcp_http_products_search_and_nutrition(
     )
     assert current.status_code == 200
     assert current.json()["revision"] == 1
+
+
+def test_native_product_merge_with_nutrition_keeps_core_behavior(client, api_headers):
+    client.headers.update(api_headers)
+    products = []
+    for name in ["Keep nutrition", "Remove nutrition"]:
+        response = client.post(
+            "/api/objects/products",
+            json={"name": name, "location_id": 1, "qu_id_stock": 1, "qu_id_purchase": 1},
+        )
+        assert response.status_code == 200, response.text
+        product = int(response.json()["created_object_id"])
+        nutrition = client.put(
+            f"/api/v2/products/{product}/nutrition",
+            json={
+                "expected_revision": 0,
+                "basis": {"quantity": "100", "unit": "g"},
+                "nutrients": {"energy_kcal": "97"},
+                "source": {"type": "manual"},
+            },
+        )
+        assert nutrition.status_code == 200, nutrition.text
+        products.append(product)
+    keep, remove = products
+    before = client.get(f"/api/v2/products/{keep}/nutrition").json()
+    removed_nutrition = client.get(f"/api/v2/products/{remove}/nutrition").json()
+    from grocy.db.session import get_session_factory
+
+    def execute(statement):
+        async def run():
+            async with get_session_factory()() as session:
+                connection = await session.connection()
+                await connection.exec_driver_sql(statement)
+                await session.commit()
+
+        client.portal.call(run)
+
+    execute(
+        f"CREATE TRIGGER merge_block BEFORE DELETE ON products WHEN OLD.id={remove} "
+        "BEGIN SELECT RAISE(ABORT,'Blocked merge'); END"
+    )
+    blocked = client.post(f"/api/stock/products/{keep}/merge/{remove}")
+    assert blocked.status_code == 400, blocked.text
+    assert "Blocked merge" in blocked.json()["error_message"]
+    assert client.get(f"/api/v2/products/{keep}/nutrition").json() == before
+    assert client.get(f"/api/v2/products/{remove}/nutrition").json() == removed_nutrition
+    execute("DROP TRIGGER merge_block")
+    assert client.post(f"/api/stock/products/{remove}/add", json={"amount": 3}).status_code == 200
+    merged = client.post(f"/api/stock/products/{keep}/merge/{remove}")
+    assert merged.status_code == 204 and merged.content == b"", merged.text
+    assert client.get(f"/api/stock/products/{keep}").json()["stock_amount"] == 3
+    assert client.get(f"/api/objects/products/{remove}").status_code == 404
+    assert client.get(f"/api/v2/products/{keep}/nutrition").json() == before

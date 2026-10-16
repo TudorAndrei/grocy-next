@@ -1713,3 +1713,79 @@ def test_reference_native_recipe_output_label_and_partial_failure(
         printer.status = 200
     assert snapshots == [[1, 1], [1, 1]]
     assert not errors or errors[0] == errors[1]
+
+
+def test_reference_stock_label_modes_and_disabled_printer_controls(
+    client, api_headers, reference, printer
+):
+    client.headers.update(api_headers)
+    for app in (reference, client):
+        printer.clear()
+        printer.setting("FEATURE_FLAG_LABEL_PRINTER", True)
+        printer.setting("LABEL_PRINTER_RUN_SERVER", True)
+        unit = create(app, "quantity_units", {"name": uuid4().hex})
+        location = create(app, "locations", {"name": uuid4().hex})
+        product = create(
+            app,
+            "products",
+            {
+                "name": uuid4().hex,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+            },
+        )
+        response = app.post(
+            f"/api/stock/products/{product}/add", json={"amount": 2.5, "stock_label_type": 2}
+        )
+        assert response.status_code == 200
+        bookings = response.json()
+        assert [row["amount"] for row in bookings] == [1, 1]
+        assert len({row["transaction_id"] for row in bookings}) == 1
+        assert [payload["grocycode"] for payload in printer] == [
+            f"grcy:p:{product}:{row['stock_id']}" for row in bookings
+        ]
+        assert [payload["stock_entry"]["amount"] for payload in printer] == [1, 1]
+        assert app.get(f"/api/stock/products/{product}").json()["stock_amount"] == 2
+        assert (
+            app.post(f"/api/stock/transactions/{bookings[0]['transaction_id']}/undo").status_code
+            == 204
+        )
+        assert app.get(f"/api/stock/products/{product}").json()["stock_amount"] == 0
+        printer.clear()
+        for mode in (0, 1):
+            assert (
+                app.post(
+                    f"/api/stock/products/{product}/inventory",
+                    json={
+                        "new_amount": mode + 1,
+                        "stock_label_type": mode,
+                        "purchased_date": "2026-01-01",
+                    },
+                ).status_code
+                == 200
+            )
+        assert len(printer) == 1
+        assert printer[0]["stock_entry"]["purchased_date"] == "2026-01-01"
+        printer.clear()
+        printer.setting("FEATURE_FLAG_LABEL_PRINTER", False)
+        assert (
+            app.post(
+                f"/api/stock/products/{product}/add", json={"amount": 1, "stock_label_type": 1}
+            ).status_code
+            == 200
+        )
+        assert printer == []
+        assert app.get(f"/api/stock/products/{product}/printlabel").status_code == 200
+        assert len(printer) == 1
+        printer.setting("LABEL_PRINTER_RUN_SERVER", False)
+        assert app.get(f"/api/stock/products/{product}/printlabel").status_code == 200
+        assert len(printer) == 1
+        printer.setting("FEATURE_FLAG_LABEL_PRINTER", True)
+        assert (
+            app.post(
+                f"/api/stock/products/{product}/add", json={"amount": 1, "stock_label_type": 1}
+            ).status_code
+            == 200
+        )
+        assert len(printer) == 1

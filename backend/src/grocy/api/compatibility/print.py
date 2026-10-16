@@ -2,15 +2,15 @@ import asyncio
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Response
 from starlette.concurrency import run_in_threadpool
 
-from grocy.core.auth import CurrentActor
+from grocy.api.compatibility.responses import native_action_response
+from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
 from grocy.domains.catalog.objects import GenericObjectsService
-from grocy.domains.printing import label
 from grocy.domains.shopping.service import ShoppingService
 
 router = APIRouter(tags=["print"])
@@ -67,15 +67,23 @@ async def print_shoppinglist_thermal(
 
 
 @router.get("/api/chores/{chore_id}/printlabel")
-async def print_chore_label(chore_id: int, _actor: CurrentActor, session: DbSession) -> dict:
-    return await label(session, "chores", chore_id)
+async def print_chore_label(
+    chore_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(request, session, "chore_label", chore_id, actor.user_id)
 
 
 @router.get("/api/batteries/{battery_id}/printlabel")
-async def print_battery_label(battery_id: int, _actor: CurrentActor, session: DbSession) -> dict:
-    return await label(session, "batteries", battery_id)
+async def print_battery_label(
+    battery_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(
+        request, session, "battery_label", battery_id, actor.user_id
+    )
 
 
 @router.get("/api/recipes/{recipe_id}/printlabel")
-async def print_recipe_label(recipe_id: int, _actor: CurrentActor, session: DbSession) -> dict:
-    return await label(session, "recipes", recipe_id)
+async def print_recipe_label(
+    recipe_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(request, session, "recipe_label", recipe_id, actor.user_id)

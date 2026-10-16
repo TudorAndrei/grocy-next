@@ -103,6 +103,7 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
         f"/api/stock/entry/{entry['id']}",
         json={
             "amount": 5,
+            "open": False,
             "price": 3.25,
             "purchased_date": "2027-01-04",
             "note": "corrected",

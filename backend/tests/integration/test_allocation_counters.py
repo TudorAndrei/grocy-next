@@ -136,10 +136,6 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
             return response
 
         location = create_saved("locations", name="Saved spare").json()["created_object_id"]
-        purchase = old.post(
-            "/api/stock/products/1/add", json={"amount": 2, "price": 3.25, "note": "Saved note"}
-        )
-        assert purchase.status_code == 200, purchase.text
         assert create_saved("tasks", name="Saved task", category_id=1).status_code == 200
         assert create_saved("shopping_list", product_id=1, amount=1, qu_id=1).status_code == 200
         field = create_saved(
@@ -194,6 +190,28 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
         assert nutrition.status_code == 200, nutrition.text
     with sqlite3.connect(database) as connection:
         connection.execute("INSERT INTO saved_product_reference VALUES (1)")
+        # Store legacy stock before the native permission views exist.
+        connection.execute(
+            "INSERT INTO stock(product_id,amount,best_before_date,purchased_date,stock_id,price,"
+            "open,location_id,note,row_created_timestamp) "
+            "VALUES (1,2,'2027-12-31','2027-01-04','saved-stock',3.25,0,1,'Saved note',"
+            "'2027-01-04 12:00:00')"
+        )
+        connection.execute(
+            "INSERT INTO stock_log(product_id,amount,best_before_date,purchased_date,stock_id,"
+            "spoiled,transaction_type,price,undone,location_id,transaction_id,user_id,"
+            "note,row_created_timestamp) "
+            "VALUES (1,2,'2027-12-31','2027-01-04','saved-stock',0,'purchase',3.25,0,1,"
+            "'saved-purchase',1,'Saved note','2027-01-04 12:00:00')"
+        )
+        connection.execute(
+            "INSERT INTO cache__products_average_price(product_id,price) VALUES (1,3.25)"
+        )
+        connection.execute(
+            "INSERT INTO cache__products_last_purchased(product_id,amount,best_before_date,"
+            "purchased_date,price,location_id) "
+            "VALUES (1,2,'2027-12-31','2027-01-04',3.25,1)"
+        )
         connection.execute(
             "INSERT INTO chores_log(chore_id,tracked_time,done_by_user_id,skipped,undone) "
             "VALUES (1,'2027-01-04',1,0,0)"
