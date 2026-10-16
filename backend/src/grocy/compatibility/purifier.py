@@ -187,6 +187,8 @@ class InputPurifier:
         body: bytes,
         content_type: str | None,
         query_string: bytes,
+        uri: str,
+        headers: list[tuple[bytes, bytes]],
         default_permissions: list[str],
         datapath: Path,
         configuration: dict[str, Any],
@@ -205,6 +207,11 @@ class InputPurifier:
                     "method": method,
                     "content_type": content_type,
                     "query_string": base64.b64encode(query_string).decode("ascii"),
+                    "uri": uri,
+                    "headers": [
+                        [base64.b64encode(name).decode(), base64.b64encode(value).decode()]
+                        for name, value in headers
+                    ],
                     "default_permissions": default_permissions,
                     "configuration": configuration,
                     "arguments": arguments or {},

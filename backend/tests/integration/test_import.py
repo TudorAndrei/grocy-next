@@ -261,11 +261,13 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
         ).fetchone() == ("", "2026-01-01 12:00:00", 1)
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-            == "20261015_0021"
+            == "20261015_0022"
         )
 
 
-def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api_headers: dict):
+def test_database_change_time_uses_main_file_timestamp(
+    tmp_path: Path, monkeypatch, api_headers: dict
+):
     import os
     import time
     from datetime import datetime
@@ -282,15 +284,23 @@ def test_database_change_time_tracks_wal_writes(tmp_path: Path, monkeypatch, api
         database = tmp_path / "wal.db"
         wal = tmp_path / "wal.db-wal"
         assert wal.exists()
-        # The Grocy timestamp has whole seconds. Age both files before the real write.
-        previous = time.time() - 5
-        for path in (database, wal):
-            os.utime(path, (previous, previous))
+        from grocy.core.time import server_timezone
+
+        previous = time.time() - 10
+        os.utime(database, (previous, previous))
+        os.utime(wal, (previous + 5, previous + 5))
+        expected = datetime.fromtimestamp(database.stat().st_mtime, server_timezone()).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         before = app.get("/api/system/db-changed-time").json()["changed_time"]
+        assert before == expected
         created = app.post("/api/objects/locations", json={"name": "WAL location"})
         assert created.status_code == 200
         after = app.get("/api/system/db-changed-time").json()["changed_time"]
-        assert datetime.fromisoformat(after) > datetime.fromisoformat(before)
+        expected = datetime.fromtimestamp(database.stat().st_mtime, server_timezone()).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        assert after == expected
         saved = app.get(f"/api/objects/locations/{created.json()['created_object_id']}").json()
         assert saved["name"] == "WAL location"
 
@@ -402,3 +412,50 @@ def test_import_keeps_deleted_user_references_and_id_sequence(tmp_path: Path, mo
         assert connection.execute(
             "SELECT value FROM user_settings WHERE user_id=100"
         ).fetchone() == ("saved",)
+
+
+def test_import_keeps_native_version_history_and_calendar_secret(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.db.native_schema import SCHEMA
+    from grocy.main import create_app
+
+    source, target = tmp_path / "source.db", tmp_path / "imported.db"
+    source_database(source)
+    history = [(1, "0000-01-04 00:00:00"), (253, "2025-03-28 12:00:00.123456")]
+    with sqlite3.connect(source) as db:
+        db.execute(SCHEMA["ddl"]["migrations"])
+        db.executemany("INSERT INTO migrations VALUES (?,?)", history)
+        db.execute(SCHEMA["ddl"]["api_keys"])
+        db.execute(
+            "INSERT INTO api_keys(api_key,user_id,expires,key_type) "
+            "VALUES ('saved-native-calendar',1,'2999-12-31 23:59:59',"
+            "'special-purpose-calendar-ical')"
+        )
+        db.execute(
+            "INSERT INTO api_keys(api_key,user_id,expires) "
+            "VALUES ('import-admin',1,'2999-12-31 23:59:59')"
+        )
+    result = import_grocy_sqlite(source, target)
+    assert result["copied_tables"]["migrations"] == 2
+    with sqlite3.connect(target) as db:
+        assert db.execute("SELECT * FROM migrations ORDER BY migration").fetchall() == history
+        assert db.execute(
+            "SELECT key_type FROM api_keys WHERE api_key='saved-native-calendar'"
+        ).fetchone() == ("special-purpose-calendar-ical",)
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
+    monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
+    clear_settings_cache()
+    with TestClient(create_app(), headers={"GROCY-API-KEY": "import-admin"}) as app:
+        assert app.get("/api/system/info").json()["db_version"] == 253
+        link = app.get("/api/calendar/ical/sharing-link")
+        assert link.status_code == 200 and link.json()["url"].endswith(
+            "secret=saved-native-calendar"
+        )
+        response = app.get(
+            "/api/calendar/ical?secret=saved-native-calendar", headers={"GROCY-API-KEY": ""}
+        )
+        assert response.status_code == 200, response.text
+    with sqlite3.connect(target) as db:
+        assert db.execute("SELECT * FROM migrations ORDER BY migration").fetchall() == history

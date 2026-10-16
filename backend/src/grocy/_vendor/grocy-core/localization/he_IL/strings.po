@@ -1,0 +1,2803 @@
+# 
+# Translators:
+# Yaron Shahrabani <sh.yaron@gmail.com>, 2025
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: Yaron Shahrabani <sh.yaron@gmail.com>, 2025\n"
+"Language-Team: Hebrew (Israel) (https://app.transifex.com/grocy/teams/93189/he_IL/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: he_IL\n"
+"Plural-Forms: nplurals=3; plural=(n == 1 && n % 1 == 0) ? 0 : (n == 2 && n % 1 == 0) ? 1: 2;\n"
+"X-Domain: grocy/strings\n"
+
+msgid "Stock overview"
+msgstr "סקירת מלאי"
+
+msgid "%s product expires"
+msgid_plural "%s products expiring"
+msgstr[0] "תוקפו של מוצר יפוג"
+msgstr[1] "תוקפם של %s מוצרים יפוג"
+msgstr[2] "תוקפם של %s מוצרים יפוג"
+
+msgid "within the next day"
+msgid_plural "within the next %s days"
+msgstr[0] "תוך יום"
+msgstr[1] "תוך יומיים"
+msgstr[2] "תוך %s ימים"
+msgstr[3] "תוך %s ימים"
+
+msgid "%s product is already expired"
+msgid_plural "%s products are already expired"
+msgstr[0] "תוקפו של מוצר אחד כבר פג"
+msgstr[1] "תוקפם של %s מוצרים כבר פג"
+msgstr[2] "תוקפם של %s מוצרים כבר פג"
+msgstr[3] "תוקפם של %s מוצרים כבר פג"
+
+msgid "%s product is overdue"
+msgid_plural "%s products are overdue"
+msgstr[0] "התוקף של אחד המוצרים פג"
+msgstr[1] "התוקף של %s מוצרים פג"
+msgstr[2] "התוקף של %s מוצרים פג"
+
+msgid "%s product is below defined min. stock amount"
+msgid_plural "%s products are below defined min. stock amount"
+msgstr[0] "מוצר אחד אזל מתחת לכמות המלאי המזערית"
+msgstr[1] "%s מוצרים אזלו מעבר לכמות המלאי המזערית"
+msgstr[2] "%s מוצרים אזלו מעבר לכמות המלאי המזערית"
+
+msgid "Product"
+msgstr "מוצר"
+
+msgid "%s Product"
+msgid_plural "%s Products"
+msgstr[0] "מוצר אחד"
+msgstr[1] "%s מוצרים"
+msgstr[2] "%s מוצרים"
+
+msgid "Amount"
+msgstr "כמות"
+
+msgid "Logout"
+msgstr "יציאה"
+
+msgid "Chores overview"
+msgstr "סקירת מטלות"
+
+msgid "Batteries overview"
+msgstr "סקירת סוללות"
+
+msgid "Purchase"
+msgstr "רכישה"
+
+msgid "Consume"
+msgstr "צריכה"
+
+msgid "Inventory"
+msgstr "מצאי"
+
+msgid "Shopping list"
+msgstr "רשימת קניות"
+
+msgid "Chore tracking"
+msgstr "מעקב מטלות"
+
+msgid "Battery tracking"
+msgstr "מעקב סוללות"
+
+msgid "Locations"
+msgstr "מיקומים"
+
+msgid "Stores"
+msgstr "חנויות"
+
+msgid "Quantity units"
+msgstr "יחידות כמות"
+
+msgid "Chores"
+msgstr "מטלות"
+
+msgid "Batteries"
+msgstr "סוללות"
+
+msgid "Chore"
+msgstr "מטלה"
+
+msgid "Next estimated tracking"
+msgstr "המעקב המוערך הבא"
+
+msgid "Last tracked"
+msgstr "נעקב לאחרונה"
+
+msgid "Battery"
+msgstr "סוללה"
+
+msgid "Last charged"
+msgstr "טעינה אחרונה"
+
+msgid "Next planned charge cycle"
+msgstr "מחזור הטעינה המתוכנן הבא"
+
+msgid "Best before"
+msgstr "בתוקף עד"
+
+msgid "OK"
+msgstr "אישור"
+
+msgid "Product overview"
+msgstr "סקירת מוצר"
+
+msgid "Stock quantity unit"
+msgstr "יחידת כמות במלאי"
+
+msgid "Stock amount"
+msgstr "כמות במלאי"
+
+msgid "Last purchased"
+msgstr "רכישה אחרונה"
+
+msgid "Last used"
+msgstr "שימוש אחרון"
+
+msgid "Spoiled"
+msgstr "מקולקל"
+
+msgid "Barcode lookup is disabled"
+msgstr "חיפוש ברקודים מושבת"
+
+msgid ""
+"will be added to the list of barcodes for the selected product on submit"
+msgstr "יתווסף לרשימת הברקודים למוצר הנבחר להגשה"
+
+msgid "New amount"
+msgstr "כמות חדשה"
+
+msgid "Note"
+msgstr "הערה"
+
+msgid "Tracked time"
+msgstr "זמן מעקב"
+
+msgid "Chore overview"
+msgstr "סקירת מטלה"
+
+msgid "Tracked count"
+msgstr "ספירת מעקב"
+
+msgid "Battery overview"
+msgstr "סקירת סוללה"
+
+msgid "Charge cycles count"
+msgstr "ספירת מחזורי טעינה"
+
+msgid "Create shopping list item"
+msgstr "יצירת פריט ברשימת קניות"
+
+msgid "Edit shopping list item"
+msgstr "עריכת פריט ברשימת קניות"
+
+msgid "Save"
+msgstr "שמירה"
+
+msgid "Add"
+msgstr "הוספה"
+
+msgid "Name"
+msgstr "שם"
+
+msgid "Location"
+msgstr "מיקום"
+
+msgid "Min. stock amount"
+msgstr "כמות מזערית במלאי"
+
+msgid "Description"
+msgstr "תיאור"
+
+msgid "Create product"
+msgstr "יצירת מוצר"
+
+msgid "Barcode(s)"
+msgstr "ברקודים"
+
+msgid "Minimum stock amount"
+msgstr "כמות מזערית במלאי"
+
+msgid "Default best before days"
+msgstr "ימים בתוקף עד כבררת מחדל"
+
+msgid "Default quantity unit purchase"
+msgstr "יחידת כמות בררת מחדל לרכישה"
+
+msgid "Quantity unit stock"
+msgstr "יחידת כמות למלאי"
+
+msgid "Create location"
+msgstr "יצירת מיקום"
+
+msgid "Create store"
+msgstr "יצירת חנות"
+
+msgid "Create quantity unit"
+msgstr "יצירת יחידת כמות"
+
+msgid "Period type"
+msgstr "סוג תקופה"
+
+msgid "Period days"
+msgstr "ימי תקופה"
+
+msgid "Create chore"
+msgstr "יצירת מטלה"
+
+msgid "Used in"
+msgstr "בתוך"
+
+msgid "Create battery"
+msgstr "יצירת סוללה"
+
+msgid "Edit battery"
+msgstr "עריכת סוללה"
+
+msgid "Edit chore"
+msgstr "עריכת מטלה"
+
+msgid "Edit quantity unit"
+msgstr "עריכת יחידת כמות"
+
+msgid "Edit product"
+msgstr "עריכת מוצר"
+
+msgid "Edit location"
+msgstr "עריכת מיקום"
+
+msgid "Edit store"
+msgstr "עריכת חנות"
+
+msgid "Manage master data"
+msgstr "ניהול נתוני על"
+
+msgid "This will apply to added products"
+msgstr "זה יחול על מוצרים שנוספו"
+
+msgid "never"
+msgstr "אף פעם לא"
+
+msgid "Add products that are below defined min. stock amount"
+msgstr "להוסיף מוצרים שחסרים מתחת לכמות המלאי המזערית"
+
+msgid "Login"
+msgstr "כניסה"
+
+msgid "Username"
+msgstr "שם משתמש"
+
+msgid "Password"
+msgstr "ססמה"
+
+msgid "Invalid credentials, please try again"
+msgstr "פרטי הגישה שגויים, נא לנסות שוב"
+
+msgid "Are you sure you want to delete battery \"%s\"?"
+msgstr "למחוק את הסוללה „%s”?"
+
+msgid "Yes"
+msgstr "כן"
+
+msgid "No"
+msgstr "לא"
+
+msgid "Are you sure you want to delete chore \"%s\"?"
+msgstr "למחוק את המטלה „%s”?"
+
+msgid "\"%s\" could not be resolved to a product, how do you want to proceed?"
+msgstr "אין אפשרות לעבד את „%s” לכדי מוצר, איך להמשיך?"
+
+msgid "Create or assign product"
+msgstr "יצירת או הקצאת מוצר"
+
+msgid "Cancel"
+msgstr "ביטול"
+
+msgid "Add as new product"
+msgstr "הוספה כמוצר חדש"
+
+msgid "Add as barcode to existing product"
+msgstr "הוספה כברקוד למוצר קיים"
+
+msgid "Add as new product and prefill barcode"
+msgstr "הוספה כמוצר חדש ולמלא את הברקוד מראש"
+
+msgid "Are you sure you want to delete quantity unit \"%s\"?"
+msgstr "למחוק את יחידת הכמות „%s”?"
+
+msgid "Are you sure you want to delete product \"%s\"?"
+msgstr "למחוק את המוצר „%s”?"
+
+msgid "Are you sure you want to delete location \"%s\"?"
+msgstr "למחוק את המיקום „%s”?"
+
+msgid "Are you sure you want to delete store \"%s\"?"
+msgstr "למחוק את החנות „%s”?"
+
+msgid "Manage API keys"
+msgstr "ניהול מפתחות API"
+
+msgid "REST API browser"
+msgstr "דפדפן REST API"
+
+msgid "API keys"
+msgstr "מפתחות API"
+
+msgid "Create new API key"
+msgstr "יצירת מפתח API חדש"
+
+msgid "API key"
+msgstr "מפתח API"
+
+msgid "Expires"
+msgstr "תפוגה"
+
+msgid "Created"
+msgstr "יצירה"
+
+msgid "This product is not in stock"
+msgstr "המוצר הזה אינו במלאי"
+
+msgid "This means %s will be added to stock"
+msgstr "המשמעות היא הוספה של %s למלאי"
+
+msgid "This means %s will be removed from stock"
+msgstr "המשמעות היא הסרה של %s מהמלאי"
+
+msgid "Removed %1$s of %2$s from stock"
+msgstr "%1$s מתוך %2$s הוסרו מהמלאי"
+
+msgid "About Grocy"
+msgstr "על Grocy"
+
+msgid "Close"
+msgstr "סגירה"
+
+msgid "Added %1$s of %2$s to stock"
+msgstr "%1$s מתוך %2$s נוספו למלאי"
+
+msgid "Stock amount of %1$s is now %2$s"
+msgstr "כמות המלאי %1$s היא כעת %2$s"
+
+msgid "Tracked execution of chore %1$s on %2$s"
+msgstr "ההוצאה לפועל של מטלה %1$s ב־%2$s נעקבה"
+
+msgid "Tracked charge cycle of battery %1$s on %2$s"
+msgstr "מחזור טעינה של הסוללה %1$s ב־%2$s נעקב"
+
+msgid "Consume all %s which are currently in stock"
+msgstr "לצרוך את מלוא ה־%s שכרגע במלאי"
+
+msgid "All"
+msgstr "הכול"
+
+msgid "Search"
+msgstr "חיפוש"
+
+msgid "Not logged in"
+msgstr "לא נכנסת"
+
+msgid "You have to select a product"
+msgstr "עליך לבחור במוצר"
+
+msgid "You have to select a chore"
+msgstr "עליך לבחור במטלה"
+
+msgid "You have to select a battery"
+msgstr "עליך לבחור בסוללה"
+
+msgid "A name is required"
+msgstr "צריך למלא שם"
+
+msgid "A location is required"
+msgstr "נדרש מיקום"
+
+msgid "A quantity unit is required"
+msgstr "נדרשת יחידת כמות"
+
+msgid "A period type is required"
+msgstr "נדרש סוג פרק זמן"
+
+msgid "A best before date is required"
+msgstr "דרש תאריך תפוגה"
+
+msgid "Settings"
+msgstr "הגדרות"
+
+msgid "This can only be before now"
+msgstr "זה יכול להיות רק בעבר"
+
+msgid "Calendar"
+msgstr "לוח שנה"
+
+msgid "Recipes"
+msgstr "מתכונים"
+
+msgid "Edit recipe"
+msgstr "עריכת מתכון"
+
+msgid "Ingredients list"
+msgstr "רשימת מצרכים"
+
+msgid "Add recipe ingredient"
+msgstr "הוספת רכיב למתכון"
+
+msgid "Edit recipe ingredient"
+msgstr "עריכת רכיב במתכון"
+
+msgid "Are you sure you want to delete recipe \"%s\"?"
+msgstr "למחוק את המתכון „%s”?"
+
+msgid "Are you sure you want to delete recipe ingredient \"%s\"?"
+msgstr "למחוק את רכיב המתכון „%s”?"
+
+msgid "Are you sure you want to empty shopping list \"%s\"?"
+msgstr "לרוקן את רשימת הקניות „%s”?"
+
+msgid "Clear list"
+msgstr "לרוקן את הרשימה"
+
+msgid "Requirements fulfilled"
+msgstr "הדרישות מולאו"
+
+msgid "Put missing products on shopping list"
+msgstr "הוספת מוצרים חסרים לרשימת הקניות"
+
+msgid "Enough in stock"
+msgstr "מספיק במלאי"
+
+msgid ""
+"Not enough in stock, %s ingredient missing but already on the shopping list"
+msgid_plural ""
+"Not enough in stock, %s ingredients missing but already on the shopping list"
+msgstr[0] "אין מספיק במלאי, רכיב אחד חסר אבל כבר ברשימת הקניות"
+msgstr[1] "אין מספיק במלאי, %s רכיבים חסרים אבל כבר ברשימת הקניות"
+msgstr[2] "אין מספיק במלאי, %s רכיבים חסרים אבל כבר ברשימת הקניות"
+
+msgid "Expand to fullscreen"
+msgstr "הרחבה למסך מלא"
+
+msgid "Ingredients"
+msgstr "רכיבים"
+
+msgid "Preparation"
+msgstr "הכנה"
+
+msgid "Recipe"
+msgstr "מתכון"
+
+msgid "Not enough in stock, %1$s missing, %2$s already on shopping list"
+msgstr "אין מספיק במלאי, %1$s חסרים, %2$s כבר ברשימת הקניות"
+
+msgid "Show notes"
+msgstr "הצגת הערות"
+
+msgid "Put missing amount on shopping list"
+msgstr "להוסיף את הכמות החסרה לרשימת הקניות"
+
+msgid ""
+"Are you sure you want to put all missing ingredients for recipe \"%s\" on "
+"the shopping list?"
+msgstr "להוסיף את כל הרכיבים החסרים למתכון „%s” ברשימת הקניות?"
+
+msgid "Manage users"
+msgstr "ניהול משתמשים"
+
+msgid "User"
+msgstr "משתמש"
+
+msgid "Users"
+msgstr "משתמשים"
+
+msgid "Are you sure you want to delete user \"%s\"?"
+msgstr "למחוק את המשתמש „%s”?"
+
+msgid "Create user"
+msgstr "יצירת משתמש"
+
+msgid "Edit user"
+msgstr "עריכת משתמש"
+
+msgid "First name"
+msgstr "שם פרטי"
+
+msgid "Last name"
+msgstr "שם משפחה"
+
+msgid "A username is required"
+msgstr "נדרש שם משתמש"
+
+msgid "Confirm password"
+msgstr "אישור ססמה"
+
+msgid "Passwords do not match"
+msgstr "הססמאות אינן תואמות"
+
+msgid "Change password"
+msgstr "החלפת ססמה"
+
+msgid "Done by"
+msgstr "בוצע על ידי"
+
+msgid "Last done by"
+msgstr "בוצע לאחרונה על ידי"
+
+msgid "Unknown"
+msgstr "לא ידוע"
+
+msgid "Chores journal"
+msgstr "יומן מטלות"
+
+msgid "0 means suggestions for the next charge cycle are disabled"
+msgstr "0 אומר שההצעות למחזור הטעינה הבא מושבותת"
+
+msgid "Charge cycle interval (days)"
+msgstr "הפרש מחזור טעינה (ימים)"
+
+msgid "Last price"
+msgstr "מחיר אחרון"
+
+msgid "Price history"
+msgstr "היסטוריית מחירים"
+
+msgid "No price history available"
+msgstr "אין היסטוריים מחירים זמינה"
+
+msgid "Price"
+msgstr "מחיר"
+
+msgid "Unit"
+msgstr "יחידה"
+
+msgid "%s Unit"
+msgid_plural "%s Units"
+msgstr[0] "יחידה אחת"
+msgstr[1] "%s יחידות"
+msgstr[2] "%s יחידות"
+
+msgid "%s chore is due to be done"
+msgid_plural "%s chores are due to be done"
+msgstr[0] "מטלה אחת אמורה להסתיים"
+msgstr[1] "%s מטלות אמורות להסתיים"
+msgstr[2] "%s מטלות אמורות להסתיים"
+
+msgid "%s chore is overdue to be done"
+msgid_plural "%s chores are overdue to be done"
+msgstr[0] "מטלה אחת חרגה ממועד הסיום"
+msgstr[1] "%s מטלות חרגו ממועד הסיום"
+msgstr[2] "%s מטלות חרגו ממועד הסיום"
+
+msgid "%s battery is due to be charged"
+msgid_plural "%s batteries are due to be charged"
+msgstr[0] "סוללה אחת שיש לטעון בקרוב"
+msgstr[1] "%s סוללות שיש לטעון בקרוב"
+msgstr[2] "%s סוללות שיש לטעון בקרוב"
+
+msgid "%s battery is overdue to be charged"
+msgid_plural "%s batteries are overdue to be charged"
+msgstr[0] "סוללה אחת כבר אמורה הייתה להיטען"
+msgstr[1] "%s סוללות כבר היו אמורות להיטען"
+msgstr[2] "%s סוללות כבר היו אמורות להיטען"
+
+msgid "in singular form"
+msgstr "בצורת יחיד"
+
+msgid "Quantity unit"
+msgstr "יחידת כמות"
+
+msgid "Only check if any amount is in stock"
+msgstr "לסמן רק אם יש כמות כלשהי במלאי"
+
+msgid ""
+"Are you sure you want to consume all ingredients needed by recipe \"%s\" "
+"(ingredients marked with \"only check if any amount is in stock\" will be "
+"ignored)?"
+msgstr ""
+"לצרוך את כל הפריטים שנחוצים למתכון „%s” (רכיבים שמסומנים ב„לסמן רק אם יש "
+"כמות כלשהי במלאי” לא יוכללו)?"
+
+msgid "Removed all in stock ingredients needed by recipe \"%s\" from stock"
+msgstr "כל הרכיבים שנחוצים למתכון „%s” הוסרו מהמלאי"
+
+msgid "Consume all ingredients needed by this recipe"
+msgstr "לצרוך את כל המצרכים שהמתכון הזה דורש"
+
+msgid "Click to show technical details"
+msgstr "לחיצה תציג את המפרט הטכני"
+
+msgid "Error while saving, probably this item already exists"
+msgstr "שגיאה בשמירה, כנראה שהפריט הזה כבר קיים"
+
+msgid "Error details"
+msgstr "פרטי השגיאה"
+
+msgid "Tasks"
+msgstr "משימות"
+
+msgid "Show done tasks"
+msgstr "הצגת משימות שבוצעו"
+
+msgid "Task"
+msgstr "משימה"
+
+msgid "Due"
+msgstr "סיום"
+
+msgid "Assigned to"
+msgstr "מוקצית אל"
+
+msgid "Mark task \"%s\" as completed"
+msgstr "סימון המשימה „%s” כהושלמה"
+
+msgid "Uncategorized"
+msgstr "ללא קטגוריה"
+
+msgid "Task categories"
+msgstr "קטגוריות משימות"
+
+msgid "Create task"
+msgstr "יצירת משימה"
+
+msgid "A due date is required"
+msgstr "נדרש מועד סיום"
+
+msgid "Category"
+msgstr "קטגוריה"
+
+msgid "Edit task"
+msgstr "עריכת משימה"
+
+msgid "Are you sure you want to delete task \"%s\"?"
+msgstr "למחוק את המשימה „%s”?"
+
+msgid "%s task is due to be done"
+msgid_plural "%s tasks are due to be done"
+msgstr[0] "משימה אחת אמורה להסתיים"
+msgstr[1] "%s משימות אמורות להסתיים"
+msgstr[2] "%s משימות אמורות להסתיים"
+msgstr[3] "%s משימות אמורות להסתיים"
+
+msgid "%s task is overdue to be done"
+msgid_plural "%s tasks are overdue to be done"
+msgstr[0] "משימה אחת חרגה ממועד הסיום"
+msgstr[1] "%s משימות חרגו ממועד הסיום"
+msgstr[2] "%s משימות חרגו ממועד הסיום"
+msgstr[3] "%s משימות חרגו ממועד הסיום"
+
+msgid "Edit task category"
+msgstr "עריכת קטגוריית משימות"
+
+msgid "Create task category"
+msgstr "יצירת קטגוריית משימות"
+
+msgid "Product groups"
+msgstr "קבוצות מוצרים"
+
+msgid "Ungrouped"
+msgstr "ללא קבוצה"
+
+msgid "Create product group"
+msgstr "יצירת קבוצת מוצרים"
+
+msgid "Edit product group"
+msgstr "עריכת קבוצת מוצרים"
+
+msgid "Product group"
+msgstr "קבוצת מוצרים"
+
+msgid "Are you sure you want to delete product group \"%s\"?"
+msgstr "למחוק את קבוצת המוצרים „%s”?"
+
+msgid "Stay logged in permanently"
+msgstr "להישאר במערכת לצמיתות"
+
+msgid "When not set, you will get logged out at latest after 30 days"
+msgstr "כשהערך אינו מוגדר המערכת תוציא אותך לאחר 30 ימים"
+
+msgid "Status"
+msgstr "מצב"
+
+msgid "Below min. stock amount"
+msgstr "מתחת לכמות המלאי המזערית"
+
+msgid "Due soon"
+msgstr "מועד הסיום מתקרב"
+
+msgid "Overdue"
+msgstr "מועד הסיום חלף"
+
+msgid "View settings"
+msgstr "הצגת ההגדרות"
+
+msgid "Auto reload on external changes"
+msgstr "לרענן אוטומטית עם שינויים חיצוניים"
+
+msgid "Auto enable in time range"
+msgstr "להפעיל אוטומטית בטווח זמן"
+
+msgid "From"
+msgstr "התחלה"
+
+msgid "in format"
+msgstr "בתצורה"
+
+msgid "To"
+msgstr "סיום"
+
+msgid "Time range goes over midnight"
+msgstr "טווח הזמן חוצה את חצות"
+
+msgid "Product picture"
+msgstr "תמונת המוצר"
+
+msgid "No file selected"
+msgstr "לא נבחר קובץ"
+
+msgid "Delete"
+msgstr "מחיקה"
+
+msgid "Select file"
+msgstr "בחירת קובץ"
+
+msgid "Image of product %s"
+msgstr "תמונה של המוצר %s"
+
+msgid "Deletion not possible"
+msgstr "אין אפשרות למחוק"
+
+msgid "Equipment"
+msgstr "ציוד"
+
+msgid "Instruction manual"
+msgstr "הוראות הפעלה"
+
+msgid "The selected equipment has no instruction manual"
+msgstr "לציוד הנבחר אין הוראות הפעלה"
+
+msgid "Notes"
+msgstr "הערות"
+
+msgid "Edit equipment"
+msgstr "עריכת ציוד"
+
+msgid "Create equipment"
+msgstr "יצירת ציוד"
+
+msgid "The current file will be deleted on save"
+msgstr "הקובץ הנוכחי יימחק עם השמירה"
+
+msgid "No picture available"
+msgstr "אין תמונה זמינה"
+
+msgid "Presets for new products"
+msgstr "ערכות מוגדרות למוצרים חדשים"
+
+msgid "Included recipes"
+msgstr "מתכונים כלולים"
+
+msgid "A recipe is required"
+msgstr "נדרש מתכון"
+
+msgid "Add included recipe"
+msgstr "הוספת מתכון כלול"
+
+msgid "Edit included recipe"
+msgstr "עריכת מתכון כלול"
+
+msgid "Group"
+msgstr "קבוצה"
+
+msgid "This will be used as a headline to group ingredients together"
+msgstr "ישמש בתור כותרת לקיבוץ הרכיבים יחד"
+
+msgid "Journal"
+msgstr "יומן"
+
+msgid "Stock journal"
+msgstr "יומן מלאי"
+
+msgid "Undone on"
+msgstr "מועד הביטול"
+
+msgid "Batteries journal"
+msgstr "יומן סוללות"
+
+msgid "Undo charge cycle"
+msgstr "ביטול מחזור טעינה"
+
+msgid "Undo chore execution"
+msgstr "ביטול הוצאת מטלה לפועל"
+
+msgid "Chore execution successfully undone"
+msgstr "הוצאת המטלה לפועל בוטלה בהצלחה"
+
+msgid "Undo"
+msgstr "ביטול"
+
+msgid "Booking successfully undone"
+msgstr "ההזמנה בוטלה בהצלחה"
+
+msgid "Charge cycle successfully undone"
+msgstr "מחזור הטעינה בוטל בהצלחה"
+
+msgid "Disable stock fulfillment checking for this ingredient"
+msgstr "השבתת בדיקת אספקת מלאי עבור רכיב זה"
+
+msgid "Add all list items to stock"
+msgstr "להוסיף את כל פריטי הרשימה למלאי"
+
+msgid "Add this item to stock"
+msgstr "להוסיף את הפריט הזה למלאי"
+
+msgid "Adding shopping list item %1$s of %2$s"
+msgstr "מתווסף פריט %1$s מתוך %2$s לרשימת הקניות"
+
+msgid "Use a specific stock item"
+msgstr "להשתמש בפריט מלאי מסוים"
+
+msgid ""
+"The first item in this list would be picked by the default rule consume rule"
+" (Opened first, then first due first, then first in first out)"
+msgstr ""
+"הפריט הראשון ברשימה הזאת ייבחר על ידי כלל הצריכה כברירת מחדל (נפתחו קודם, "
+"לאחר מכן תום תוקף קרוב ראשון ואז הראשון שנכנס הוא הראשון שיוצא)"
+
+msgid "Mark %1$s of %2$s as open"
+msgstr "לסמן %1$s מתוך %2$s כפתוחים"
+
+msgid "Marked %1$s of %2$s as opened"
+msgstr "%1$s מתוך %2$s סומנו כפתוחים"
+
+msgid "Mark as opened"
+msgstr "סימון כנפתח"
+
+msgid "Not opened"
+msgstr "לא נפתח"
+
+msgid "Opened"
+msgid_plural "Opened"
+msgstr[0] "נפתח"
+msgstr[1] "נפתחו"
+msgstr[2] "נפתחו"
+
+msgid "%s opened"
+msgstr "%s נפתחו"
+
+msgid "Product due"
+msgstr "תפוגת המוצר"
+
+msgid "Task due"
+msgstr "מועד סיום המשימה"
+
+msgid "Chore due"
+msgstr "מועד סיום המטלה"
+
+msgid "Battery charge cycle due"
+msgstr "מועד מחזור טעינת הסוללה"
+
+msgid "Show clock in header"
+msgstr "הצגת שעון בכותרת"
+
+msgid "Stock settings"
+msgstr "הגדרות מלאי"
+
+msgid "Shopping list to stock workflow"
+msgstr "רצף מרשימת קניות למלאי"
+
+msgid "Skip"
+msgstr "דילוג"
+
+msgid "Servings"
+msgstr "מנות"
+
+msgid "Costs"
+msgstr "עלויות"
+
+msgid "The ingredients listed here result in this amount of servings"
+msgstr "הרכיבים שמופיעים כאן מספקים כמות כזאת של מנות"
+
+msgid "Do not check against the shopping list when adding missing items to it"
+msgstr "לא לבדוק מול רשימת הקניות בעת הוספת פריטים חסרים אליה"
+
+msgid ""
+"By default the amount to be added to the shopping list is \"needed amount - "
+"stock amount - shopping list amount\" - when this is enabled, it is only "
+"checked against the stock amount, not against what is already on the "
+"shopping list"
+msgstr ""
+"כבררת מחדל הכמות שתתווסף לרשימת הקניות היא „הכמות הנדרשת - הכמות במלאי - "
+"הכמות ברשימת הקניות” - כשאפשרות זו פעילה, הבדיקה מתבצעת מול הכמות במלאי, לא "
+"מול מה שכבר נמצא ברשימת הקניות"
+
+msgid "Picture"
+msgstr "צילום"
+
+msgid "Uncheck ingredients to not put them on the shopping list"
+msgstr "יש לבטל רכיבים כדי שלא יתווספו לרשימת הקניות"
+
+msgid "This is for statistical purposes only"
+msgstr "מיועד למטרות סטטיסטיות בלבד"
+
+msgid "You have to select a recipe"
+msgstr "עליך לבחור במתכון"
+
+msgid "Key type"
+msgstr "סוג מפתח"
+
+msgid "Share/Integrate calendar (iCal)"
+msgstr "שיתוף/שילוב לוח שנה (iCal)"
+
+msgid ""
+"Use the following (public) URL to share or integrate the calendar in iCal "
+"format"
+msgstr ""
+"ניתן להשתמש בכתובת (הציבורית) הבאה כדי לשתף או לשלב את לוח השנה בתצורת iCal"
+
+msgid "Enable tare weight handling"
+msgstr "לאפשר טיפול במשקל טרה"
+
+msgid ""
+"This is useful e.g. for flour in jars - on purchase/consume/inventory you "
+"always weigh the whole jar, the amount to be posted is then automatically "
+"calculated based on what is in stock and the tare weight defined below"
+msgstr ""
+"שימושי למשל לקמחים בצנצנצות - בעת רכישה/צריכה/אחסון תמיד שוקלים את הצנצנת "
+"כולה, הכמות לפרסום מחושבת אוטומטית לפי מה שבמלאי בתוספת משקל הטרה שמוגדר "
+"להלן"
+
+msgid "Tare weight"
+msgstr "משקל טרה"
+
+msgid ""
+"Tare weight handling enabled - please weigh the whole container, the amount "
+"to be posted will be automatically calculcated"
+msgstr ""
+"טיפול במשקל טרה פעיל - נא לשקול את כלל המוצר עם האריזה, הכמות שתפורסם תחושב "
+"אוטומטית"
+
+msgid "You have to select a location"
+msgstr "עליך לבחור במיקום"
+
+msgid "You have to select a store"
+msgstr "עליך לבחור בחנות"
+
+msgid "List"
+msgstr "רשימה"
+
+msgid "Gallery"
+msgstr "גלריה"
+
+msgid "The current picture will be deleted on save"
+msgstr "התמונה הנוכחית תימחק עם השמירה"
+
+msgid "Journal for this battery"
+msgstr "יומן לסוללה הזו"
+
+msgid "System info"
+msgstr "פרטי המערכת"
+
+msgid "Changelog"
+msgstr "יומן שינויים"
+
+msgid "will be multiplied by a factor of %1$s to get %2$s"
+msgstr "יוכפל במקדם של %1$s כדי לקבל %2$s"
+
+msgid "The given date is earlier than today, are you sure?"
+msgstr "התאריך שסופק הוא בעבר, להמשיך?"
+
+msgid "Product count"
+msgstr "ספירת מוצרים"
+
+msgid ""
+"Type a new product name or barcode and hit TAB or ENTER to start a workflow"
+msgstr ""
+"נא להקליד שם מוצר או ברקוד חדשים וללחוץ על TAB או על Enter כדי להתחיל רצף "
+"פעילות"
+
+msgid ""
+"This will be used as the default setting when adding this product as a "
+"recipe ingredient"
+msgstr "תשמש כהגדרת בררת המחדל בעת הוספת המוצר הזה כרכיב במתכון"
+
+msgid "Add item"
+msgstr "הוספת פריט"
+
+msgid "Selected shopping list"
+msgstr "רשימת הקניות הנבחרת"
+
+msgid "New shopping list"
+msgstr "רשימת קניות חדשה"
+
+msgid "Delete shopping list"
+msgstr "מחיקת רשימת קניות"
+
+msgid "Chores settings"
+msgstr "הגדרות מטלות"
+
+msgid "Batteries settings"
+msgstr "הגדרות סוללות"
+
+msgid "Tasks settings"
+msgstr "הגדרות משימות"
+
+msgid "Create shopping list"
+msgstr "יצירת רשימת קניות"
+
+msgid "Are you sure you want to delete shopping list \"%s\"?"
+msgstr "למחוק את רשימת הקניות „%s”?"
+
+msgid "Average shelf life"
+msgstr "אורך חיי מדף ממוצע"
+
+msgid "Spoil rate"
+msgstr "קצב קלקול"
+
+msgid "Show more"
+msgstr "להציג עוד"
+
+msgid "Show less"
+msgstr "להסתיר בחזרה"
+
+msgid "The amount must be between %1$s and %2$s"
+msgstr "הכמות חייבת להיות בין %1$s לבין %2$s"
+
+msgid "Day of month"
+msgstr "יום בחודש"
+
+msgid "Monday"
+msgstr "יום שני"
+
+msgid "Tuesday"
+msgstr "יום שלישי"
+
+msgid "Wednesday"
+msgstr "יום רביעי"
+
+msgid "Thursday"
+msgstr "יום חמישי"
+
+msgid "Friday"
+msgstr "יום שישי"
+
+msgid "Saturday"
+msgstr "שבת"
+
+msgid "Sunday"
+msgstr "יום ראשון"
+
+msgid "Configure userfields"
+msgstr "הגדרת שדות משתמש"
+
+msgid "Userfields"
+msgstr "שדות משתמשים"
+
+msgid "Entity"
+msgstr "יישות"
+
+msgid "Caption"
+msgstr "כותרת"
+
+msgid "Type"
+msgstr "סוג"
+
+msgid "Create userfield"
+msgstr "יצירת שדה משתמש"
+
+msgid "A entity is required"
+msgstr "נדרשת יישות"
+
+msgid "A caption is required"
+msgstr "נדרשת כותרת"
+
+msgid "A type is required"
+msgstr "נדרש סוג"
+
+msgid "Show as column in tables"
+msgstr "הצגת עמודה כטבלה"
+
+msgid "This is required and can only contain letters and numbers"
+msgstr "נחוץ ויכול להכיל אותיות ומספרים בלבד"
+
+msgid "Edit userfield"
+msgstr "עריכת שדה משתמש"
+
+msgid "Plural forms"
+msgstr "צורות ריבוי"
+
+msgid "One plural form per line, the current language requires"
+msgstr "צורת ריבוי אחת בכל שורה, השפה הנוכחית דורשת"
+
+msgid "Plural count"
+msgstr "ספירת ריבוי"
+
+msgid "Plural rule"
+msgstr "כלל ריבוי"
+
+msgid "in plural form"
+msgstr "בצורת ריבוי"
+
+msgid "Not enough in stock, %s ingredient missing"
+msgid_plural "Not enough in stock, %s ingredients missing"
+msgstr[0] "אין מספיק במלאי, רכיב אחד חסר"
+msgstr[1] "אין מספיק במלאי, %s רכיבים חסרים"
+msgstr[2] "אין מספיק במלאי, %s רכיבים חסרים"
+
+msgid "Not enough in stock, but already on the shopping list"
+msgstr "אין מספיק במלאי, אבל כבר מופיע ברשימת הקניות"
+
+msgid "Not enough in stock"
+msgstr "אין מספיק במלאי"
+
+msgid "Default location"
+msgstr "מיקום בררת מחדל"
+
+msgid "Default amount for purchase"
+msgstr "כמות בררת מחדל לרכישה"
+
+msgid "Default amount for consume"
+msgstr "כמות בררת מחדל לצריכה"
+
+msgid "Variable amount"
+msgstr "כמות משתנה"
+
+msgid ""
+"When this is not empty, it will be shown instead of the amount entered above"
+" while the amount there will still be used for stock fulfillment checking"
+msgstr ""
+"כאשר זה לא ריק, הוא יופיע במקום הכמות שמולאה להלן בזמן שהכמות שם עדיין תשמש "
+"לבדיקת צבירת מלאי"
+
+msgid "Track date only"
+msgstr "מעקב אחר התאריך בלבד"
+
+msgid "When enabled only the day of an execution is tracked, not the time"
+msgstr "כאשר האפשרות פעילה רק יום ההוצאה לפועל במעקב, לא השעה"
+
+msgid "Consume %1$s of %2$s"
+msgstr "צריכה של %1$s מתוך %2$s"
+
+msgid "Meal plan"
+msgstr "תכנית ארוחות"
+
+msgid "%s serving"
+msgid_plural "%s servings"
+msgstr[0] "מנה אחת"
+msgstr[1] "%s מנות"
+msgstr[2] "%s מנות"
+
+msgid "Week costs"
+msgstr "עלויות שבועיות"
+
+msgid "Configuration"
+msgstr "הגדרות"
+
+msgid "A predefined list of values, one per line"
+msgstr "רשימה מוגדרת מראש של ערכים, אחד בשורה"
+
+msgid "Products"
+msgstr "מוצרים"
+
+msgid "Marked task %s as completed on %s"
+msgstr "המשימה %s סומנה שהושלמה ב־%s"
+
+msgid "Booking has subsequent dependent bookings, undo not possible"
+msgstr "להזמנה יש הזמנות עוקבות שתלויות בה, אי אפשר לבטל"
+
+msgid "per serving"
+msgstr "לפי מנה"
+
+msgid "Never"
+msgstr "אף פעם"
+
+msgid "Today"
+msgstr "היום"
+
+msgid "Undo task"
+msgstr "ביטול ביצוע משימה"
+
+msgid "Due date rollover"
+msgstr "מועד סיום מתגלגל"
+
+msgid ""
+"When enabled the chore can never be overdue, the due date will shift forward"
+" each day when due"
+msgstr ""
+"כשהאפשרות מופעלת המטלה לא יכולה לחרוג ממועד הסיום, מועד הסיום יועבר ליום הבא"
+" עם כל חריגה"
+
+msgid "Location Content Sheet"
+msgstr "גיליון תוכן מיקום"
+
+msgid "Print"
+msgstr "הדפסה"
+
+msgid "all locations"
+msgstr "כל המיקומים"
+
+msgid ""
+"Here you can print a page per location with the current stock, maybe to hang"
+" it there and note the consumed things on it"
+msgstr ""
+"כאן ניתן להדפיס עמוד לפי מיקום עם המלאי הנוכחי, אפשר לתלות אותו במיקום "
+"המתאים ולסמן עליו דברים שנצרכו"
+
+msgid "this location"
+msgstr "המיקום הזה"
+
+msgid "Consumed amount"
+msgstr "כמות שנצרכה"
+
+msgid "Time of printing"
+msgstr "מועד ההדפסה"
+
+msgid "Are you sure you want to delete equipment \"%s\"?"
+msgstr "למחוק את הציוד „%s”?"
+
+msgid "Parent product"
+msgstr "מוצר הורה"
+
+msgid ""
+"Not possible because this product is already used as a parent product in "
+"another product"
+msgstr "בלתי אפשרי כיוון שהמוצר הזה כבר משמש כמוצר הורה למוצר אחר"
+
+msgid "Default conversions"
+msgstr "המרות בררת מחדל"
+
+msgid "Factor"
+msgstr "מקדם"
+
+msgid "1 %s is the same as..."
+msgstr "%s אחד שקול ל…"
+
+msgid "Create QU conversion"
+msgstr "יצירת המרת יחידת כמות"
+
+msgid "Default for QU"
+msgstr "בררת מחדת ליחידת כמות"
+
+msgid "Quantity unit from"
+msgstr "יחידת כמות מקור"
+
+msgid "Quantity unit to"
+msgstr "יחידת כמות לכדי"
+
+msgid "This cannot be equal to %s"
+msgstr "ערך זה לא יכול להיות שווה ל־%s"
+
+msgid "This means 1 %1$s is the same as %2$s %3$s"
+msgstr "משמעות הדבר היא ש־%1$s אחד שקול ל־%2$s %3$s"
+
+msgid "QU conversions"
+msgstr "המרות יחידות כמות"
+
+msgid "Override for product"
+msgstr "דריסה למוצר"
+
+msgid "This equals %1$s %2$s"
+msgstr "שווה ערך ל־%1$s %2$s"
+
+msgid "Edit QU conversion"
+msgstr "עריכת המרת יחידת כמות"
+
+msgid "An assignment type is required"
+msgstr "נדרש סוג הקצאה"
+
+msgid "Assignment type"
+msgstr "סוג הקצאה"
+
+msgid ""
+"This means the next execution of this chore is scheduled at the same time "
+"(based on the start date) every day"
+msgid_plural ""
+"This means the next execution of this chore is scheduled at the same time "
+"(based on the start date) every %s days"
+msgstr[0] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת לאותו הזמן (לפי מועד "
+"ההתחלה) כל יום"
+msgstr[1] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת לאותו הזמן (לפי מועד "
+"ההתחלה) כל יומיים"
+msgstr[2] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת לאותו הזמן (לפי מועד "
+"ההתחלה) כל %s ימים"
+msgstr[3] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת לאותו הזמן (לפי מועד "
+"ההתחלה) כל %s ימים"
+
+msgid ""
+"This means the next execution of this chore is scheduled %s hour after the "
+"last execution"
+msgid_plural ""
+"This means the next execution of this chore is scheduled %s hours after the "
+"last execution"
+msgstr[0] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל שעה לאחר ההוצאה האחרונה "
+"לפועל"
+msgstr[1] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל שעתיים לאחר ההוצאה "
+"האחרונה לפועל"
+msgstr[2] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל %s שעות לאחר ההוצאה "
+"האחרונה לפועל"
+msgstr[3] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל %s שעות לאחר ההוצאה "
+"האחרונה לפועל"
+
+msgid ""
+"This means the next execution of this chore is scheduled every week on the "
+"selected weekdays"
+msgid_plural ""
+"This means the next execution of this chore is scheduled every %s weeks on "
+"the selected weekdays"
+msgstr[0] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל שבוע בימי השבוע הנבחרים"
+msgstr[1] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל שבועיים בימי השבוע "
+"הנבחרים"
+msgstr[2] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל %s שבועות בימי השבוע "
+"הנבחרים"
+msgstr[3] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל %s שבועות בימי השבוע "
+"הנבחרים"
+
+msgid ""
+"This means the next execution of this chore is scheduled on the selected day"
+" every month"
+msgid_plural ""
+"This means the next execution of this chore is scheduled on the selected day"
+" every %s months"
+msgstr[0] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת ליום הנבחר כל חודש"
+msgstr[1] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת ליום הנבחר כל חודשיים"
+msgstr[2] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת ליום הנבחר כל %s חודשים"
+
+msgid "This means the next execution of this chore is not scheduled"
+msgstr "משמעות הדבר היא שההוצאה לפועל של המטלה הזאת לא תתוזמן"
+
+msgid ""
+"This means the next execution of this chore will not be assigned to anyone"
+msgstr "משמעות הדבר היא שההוצאה לפועל של המטלה הזאת לא תוקצה לאף אחד"
+
+msgid ""
+"This means the next execution of this chore will be assigned to the one who "
+"executed it least"
+msgstr ""
+"משמעות הדבר היא שההוצאה הבאה לפועל של המטלה הזאת תוקצה למי שהוציא אותה לפועל"
+" בפעם האחרונה"
+
+msgid "This means the next execution of this chore will be assigned randomly"
+msgstr "משמעות הדבר היא שההוצאה לפועל של המטלה הזאת תוקצה אקראית"
+
+msgid ""
+"This means the next execution of this chore will be assigned to the next one"
+" in alphabetical order"
+msgstr ""
+"משמעות הדבר היא שההוצאה הבאה לפועל של המטלה הזאת תוקצה לבא בתור בסדר האלפבית"
+
+msgid "Assign to"
+msgstr "הקצאה אל"
+
+msgid "This assignment type requires that at least one is assigned"
+msgstr "סוג הקצאה זו דורש לפחות מוקצה אחד"
+
+msgid "%s chore is assigned to me"
+msgid_plural "%s chores are assigned to me"
+msgstr[0] "מטלה אחת מוקצית אלי"
+msgstr[1] "%s מטלות מוקצות אלי"
+msgstr[2] "%s מטלות מוקצות אלי"
+
+msgid "Assigned to me"
+msgstr "מוקצה אלי"
+
+msgid "assigned to %s"
+msgstr "מוקצה אל %s"
+
+msgid "Assignment"
+msgstr "הקצאה"
+
+msgid "Consume product on chore execution"
+msgstr "לצרוך מוצרים עם הוצאת מטלה לפועל"
+
+msgid "Are you sure you want to delete user field \"%s\"?"
+msgstr "למחוק את שדה המשתמש „%s”?"
+
+msgid "Userentities"
+msgstr "יישויות משתמש"
+
+msgid "Create userentity"
+msgstr "יצירת יישות משתמש"
+
+msgid "Show in sidebar menu"
+msgstr "הצגה בסרגל הצד"
+
+msgid "Edit userentity"
+msgstr "עריכת יישות משתמש"
+
+msgid "Edit %s"
+msgstr "עריכת %s"
+
+msgid "Create %s"
+msgstr "יצירת %s"
+
+msgid "Are you sure you want to delete this userobject?"
+msgstr "למחוק את עצם המשתמש הזה?"
+
+msgid "Icon CSS class"
+msgstr "class ה־CSS של הסמל"
+
+msgid "For example"
+msgstr "לדוגמה"
+
+msgid "Configure fields"
+msgstr "הגדרת שדות"
+
+msgid "Quantity unit plural form testing"
+msgstr "בדיקת צורות ריבוי של יחידת הכמות"
+
+msgid "Result"
+msgstr "תוצאה"
+
+msgid "Test plural forms"
+msgstr "בדיקת צורות ריבוי"
+
+msgid "Scan a barcode"
+msgstr "סריקת ברקוד"
+
+msgid "Error while initializing the barcode scanning library"
+msgstr "אירעה שגיאה בהפעלת ספריית סריקת הברקודים"
+
+msgid ""
+"The resulting price of this ingredient will be multiplied by this factor"
+msgstr "המחיר שיתקבל לרכיב זה יוכפל במקדם הזה"
+
+msgid "Price factor"
+msgstr "מקדם מחיר"
+
+msgid "Do you find Grocy useful?"
+msgstr "Grocy שימושי לדעתך?"
+
+msgid "Say thanks"
+msgstr "להגיד תודה"
+
+msgid "Search for recipes containing this product"
+msgstr "חיפוש מתכונים שמכילים את המוצר הזה"
+
+msgid "Add to shopping list"
+msgstr "הוספה לרשימת קניות"
+
+msgid "Added %1$s of %2$s to the shopping list \"%3$s\""
+msgstr "%1$s מתוך %2$s נוספו לרשימת הקניות „%3$s”"
+
+msgid "Output"
+msgstr "פלט"
+
+msgid "Energy"
+msgstr "אנרגיה"
+
+msgid "Per stock quantity unit"
+msgstr "יחידת כמות לפי מלאי"
+
+msgid "Barcode scanner testing"
+msgstr "בדיקת סורק הברקודים"
+
+msgid "Expected barcode"
+msgstr "ברקוד צפוי"
+
+msgid "Scan field"
+msgstr "שדה סריקה"
+
+msgid "Scanned barcodes"
+msgstr "ברקודים שנסרקו"
+
+msgid "Hit"
+msgstr "פגעו"
+
+msgid "Miss"
+msgstr "החטיאו"
+
+msgid "Display recipe"
+msgstr "הצגת מתכון"
+
+msgid "Accumulate sub products min. stock amount"
+msgstr "צבירת תת־מוצרים עם כמות מלאי מזערית"
+
+msgid ""
+"If enabled, the min. stock amount of sub products will be accumulated into "
+"this product, means the sub product will never be missing, only this product"
+msgstr ""
+"אם האפשרות פעילה, הכמות המזערית במלאי של תת־מוצרים תצטבר לכדי המוצר הזה, "
+"משמעות הדבר היא שתת־המוצר הזה אף פעם לא יחסר, רק המוצר הזה"
+
+msgid "Are you sure you want to remove this conversion?"
+msgstr "להסיר את ההמרה הזאת?"
+
+msgid "Unit price"
+msgstr "מחיר ליחידה"
+
+msgid "Total price"
+msgstr "מחיר כולל"
+
+msgid "in %s and based on the purchase quantity unit"
+msgstr "ב־%s ועל בסיס יחידת כמות הרכישה"
+
+msgid "Unlimited"
+msgstr "ללא הגבלה"
+
+msgid "Clear"
+msgstr "לרוקן"
+
+msgid "Are you sure you want to remove the included recipe \"%s\"?"
+msgstr "להסיר את המתכון הכלול „%s”?"
+
+msgid "Period interval"
+msgstr "תקופת הפרש"
+
+msgid ""
+"This means the next execution of this chore is scheduled every year on the "
+"same day (based on the start date)"
+msgid_plural ""
+"This means the next execution of this chore is scheduled every %s years on "
+"the same day (based on the start date)"
+msgstr[0] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל שנה באותו היום (לפי "
+"תאריך ההתחלה)"
+msgstr[1] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל שנתיים באותו היום (לפי "
+"תאריך ההתחלה)"
+msgstr[2] ""
+"משמעות הדבר היא שהוצאת המשימה הבאה לפועל מתוזמנת כל %s שנים באותו היום (לפי "
+"תאריך ההתחלה)"
+
+msgid "Transfer"
+msgstr "העברה"
+
+msgid "From location"
+msgstr "ממיקום"
+
+msgid "To location"
+msgstr "למיקום"
+
+msgid "There are no units available at this location"
+msgstr "אין יחידות זמינות למיקום הזה"
+
+msgid "Amount: %1$s; Due on %2$s; Bought on %3$s"
+msgstr "כמות: %1$s; תפוג בתאריך %2$s; נקנתה בתאריך %3$s"
+
+msgid "Transfered %1$s of %2$s from %3$s to %4$s"
+msgstr "%1$s מתוך %2$s הועברו מהמיקום %3$s אל %4$s"
+
+msgid "Stock entries"
+msgstr "רשומות מלאי"
+
+msgid "Best before date"
+msgstr "מועד בתוקף עד"
+
+msgid "Purchased date"
+msgstr "תאריך הרכישה"
+
+msgid "Consume all %s for this stock entry"
+msgstr "לצרוך את מלוא ה־%s עבור רשימת מלאי זו"
+
+msgid "The amount cannot be lower than %1$s"
+msgstr "הכמות לא יכולה להיות פחות מאשר %1$s"
+
+msgid "Stock entry successfully updated"
+msgstr "רשומת המלאי עודכנה בהצלחה"
+
+msgid "Edit stock entry"
+msgstr "עריכת רשומת מלאי"
+
+msgid ""
+"Camera access is only possible when supported and allowed by your browser "
+"and when Grocy is served via a secure (https://) connection"
+msgstr ""
+"הגישה למצלמה אפשרית רק כשיש תמיכה והסכמה על ידי הדפדפן שלך וכאשר Grocy פועל "
+"דרך חיבור מאובטח (https://‎)"
+
+msgid "Keep screen on"
+msgstr "להשאיר את המסך פעיל"
+
+msgid "Keep screen on while displaying a \"fullscreen-card\""
+msgstr "להשאיר את המסך פעיל בעת הצגת „כרטיס מסך מלא”"
+
+msgid "A purchased date is required"
+msgstr "נדרש תאריך רכישה"
+
+msgid ""
+"When a product is selected, one unit (per serving in stock quantity unit) "
+"will be added to stock on consuming this recipe"
+msgstr ""
+"כאשר נבחר מוצר, יחידה אחת (לפי הגשה ביחידת כמות במלאי) תתווסף למלאי בעת "
+"צריכת המתכון הזה"
+
+msgid "Produces product"
+msgstr "מייצר מוצר"
+
+msgid "This booking cannot be undone"
+msgstr "אי אפשר לבטל את ההזמנה הזו"
+
+msgid "Booking does not exist or was already undone"
+msgstr "ההזמנה אינה קיימת או שכבר בוטלה"
+
+msgid "Are you sure you want to delete API key \"%s\"?"
+msgstr "למחוק את מפתח ה־API‏ „%s”?"
+
+msgid "Add note"
+msgstr "הוספת הערה"
+
+msgid "per day"
+msgstr "ליום"
+
+msgid "Only undone items"
+msgstr "רק פריטים שלא הסתיימו"
+
+msgid "Add product"
+msgstr "הוספת מוצר"
+
+msgid "Consume all ingredients needed by this weeks recipes or products"
+msgstr "צורך את כל הרכיבים שנדרשים על ידי המתכונים או המוצרים של השבוע הזה"
+
+msgid "Meal plan recipe"
+msgstr "מתכון בתכנית ארוחות"
+
+msgid "Meal plan note"
+msgstr "הערה בתכנית ארוחות"
+
+msgid "Meal plan product"
+msgstr "מוצר בתכנית ארוחות"
+
+msgid "Scan mode"
+msgstr "מצב סריקה"
+
+msgid "on"
+msgstr "פעיל"
+
+msgid "off"
+msgstr "כבוי"
+
+msgid ""
+"Scan mode is on but not all required fields could be populated automatically"
+msgstr "מצב סריקה פעיל אבל אין אפשרות למלא את כל השדות אוטומטית"
+
+msgid "Is freezer"
+msgstr "הקפאה"
+
+msgid "This cannot be the same as the \"From\" location"
+msgstr "לא יכול להיות כמו מיקום המוצא"
+
+msgid "Thawed"
+msgstr "הופשר"
+
+msgid "Frozen"
+msgstr "הוקפא"
+
+msgid "Are you sure you want to delete userentity \"%s\"?"
+msgstr "למחוק את ישות המשתמש „%s”?"
+
+msgid "Shopping list settings"
+msgstr "הגדרות רשימת קניות"
+
+msgid "Show a month-view calendar"
+msgstr "לוח שנה בתצוגת חודש"
+
+msgid "Desired servings"
+msgstr "גודל מנה מבוקשת"
+
+msgid "Recipes settings"
+msgstr "הגדרות מתכונים"
+
+msgid "Recipe card"
+msgstr "כרטיס מתכון"
+
+msgid "Group ingredients by their product group"
+msgstr "קיבוץ רכיבים לפי קבוצת המוצר שלהם"
+
+msgid "Unknown store"
+msgstr "חנות לא ידועה"
+
+msgid "Store"
+msgstr "חנות"
+
+msgid "Transaction successfully undone"
+msgstr "ההעברה בוטלה בהצלחה"
+
+msgid "Default store"
+msgstr "חנות בררת מחדל"
+
+msgid "Consume this stock entry"
+msgstr "צריכת רשומת מלאי זו"
+
+msgid "Mark this stock entry as open"
+msgstr "סימון רשומת מלאי זו כפתוחה"
+
+msgid "Mark this item as done"
+msgstr "סימון פריט זה כבוצע"
+
+msgid "Edit this item"
+msgstr "עריכת פריט זה"
+
+msgid "Delete this item"
+msgstr "מחיקת פריט זה"
+
+msgid "Show an icon if the product is already on the shopping list"
+msgstr "הצגת סמל אם המוצר כבר ברשימת הקניות"
+
+msgid "Calories"
+msgstr "קלוריות"
+
+msgid "means %1$s per %2$s"
+msgstr "כלומר %1$s לכל %2$s"
+
+msgid "Create recipe"
+msgstr "יצירת מתכון"
+
+msgid "Save & continue to add ingredients and included recipes"
+msgstr "לשמור ולהמשיך להוסיף רכיבים ומתכונים כלולים"
+
+msgid "Save & continue"
+msgstr "לשמור ולהמשיך"
+
+msgid "Save & return to recipes"
+msgstr "לשמור ולחזור למתכונים"
+
+msgid "Stock value"
+msgstr "ערך מלאי"
+
+msgid "Average price"
+msgstr "מחיר ממוצע"
+
+msgid "Active"
+msgstr "פעיל"
+
+msgid "Barcodes"
+msgstr "ברקודים"
+
+msgid "Barcode"
+msgstr "ברקוד"
+
+msgid "Create Barcode"
+msgstr "יצירת ברקוד"
+
+msgid "Barcode for product"
+msgstr "ברקוד למוצר"
+
+msgid "Edit Barcode"
+msgstr "עריכת ברקוד"
+
+msgid ""
+"Based on the prices of the default consume rule (Opened first, then first "
+"due first, then first in first out) for in stock ingredients and on the last"
+" price for missing ones"
+msgstr ""
+"לפי מחירי כלל הצריכה כברירת המחדל (קודם נפתח, אחר כך סיום תוקף בהתחלה, ואז "
+"הראשון שנכנס הוא הראשון שיוצא) לרכיבים במלאי ובמחיר האחרון לחסרים"
+
+msgid "Clear filter"
+msgstr "לבטל את הסינון"
+
+msgid "Permissions for user %s"
+msgstr "הרשאות למשתמש %s"
+
+msgid "Are you sure you want to remove full permissions for yourself?"
+msgstr "להסיר את מלוא ההרשאות לעצמך?"
+
+msgid "Permissions saved"
+msgstr "ההרשאות נשמרו"
+
+msgid "You are not allowed to view this page"
+msgstr "אסור לך לצפות בעמוד הזה"
+
+msgid "Page not found"
+msgstr "העמוד לא נמצא"
+
+msgid "Unauthorized"
+msgstr "אין לך הרשאה"
+
+msgid "Error source"
+msgstr "מקור השגיאה"
+
+msgid "Error message"
+msgstr "הודעת השגיאה"
+
+msgid "Stack trace"
+msgstr "מהלך ביצוע"
+
+msgid "Easy error info copy & paste (for reporting)"
+msgstr "פרטי שגיאה שקל להעתיק ולהדביק (לטובת דיווח)"
+
+msgid "This page does not exist"
+msgstr "העמוד הזה אינו קיים"
+
+msgid "You will be redirected to the default page in %s seconds"
+msgstr "תבוצע הפניה לעמוד בררת המחדל תוך %s שניות"
+
+msgid "Server error"
+msgstr "שגיאת שרת"
+
+msgid "A server error occured while processing your request"
+msgstr "אירעה שגיאה בשרת בעת עיבוד הבקשה שלך"
+
+msgid "If you think this is a bug, please report it"
+msgstr "אם לדעתך מדובר בתקלה, נא לדווח עליה"
+
+msgid "Language"
+msgstr "שפה"
+
+msgid "User settings"
+msgstr "הגדרות המשתמש"
+
+msgid "Default"
+msgstr "בררת מחדל"
+
+msgid "Stock journal summary"
+msgstr "תקציר יומן מלאי"
+
+msgid "Journal summary"
+msgstr "תקציר יומן"
+
+msgid "Consume exact amount"
+msgstr "צריכת כמות מדויקת"
+
+msgid "Value"
+msgstr "ערך"
+
+msgid "%s total value"
+msgstr "%s ערך כולל"
+
+msgid ""
+"Show purchased date on purchase and inventory page (otherwise the purchased "
+"date defaults to today)"
+msgstr ""
+"הצגת תאריך הרכישה בעמודי הרכישה והמצאי (אחרת תאריך הרכישה יוגדר להיום)"
+
+msgid "Common"
+msgstr "משותף"
+
+msgid "Decimal places allowed for amounts"
+msgstr "מקומות עשרוניים מותרים לכמויות"
+
+msgid "Edit shopping list"
+msgstr "עריכת רשימת הקניות"
+
+msgid "Save & continue to add quantity unit conversions & barcodes"
+msgstr "לשמור ולהמשיך להוסיף המרות יחידת כמות וברקודים"
+
+msgid "Save & return to products"
+msgstr "לשמור ולחזור למוצרים"
+
+msgid "Save & continue to add conversions"
+msgstr "לשמור ולהמשיך להוספת המרה"
+
+msgid "Save & return to quantity units"
+msgstr "לשמור ולחזור ליחידות כמות"
+
+msgid "price"
+msgstr "מחיר"
+
+msgid "New stock amount"
+msgstr "כמות חדשה במלאי"
+
+msgid "Price per stock unit"
+msgstr "מחיר ליחידת מלאי"
+
+msgid "Table options"
+msgstr "אפשרויות טבלה"
+
+msgid "This product is currently on a shopping list"
+msgstr "המוצר הזה נמצא כרגע ברשימת קניות"
+
+msgid "Undo transaction"
+msgstr "ביטול העברה"
+
+msgid "Transaction type"
+msgstr "סוג העברה"
+
+msgid "Transaction time"
+msgstr "זמן העברה"
+
+msgid "Chore journal"
+msgstr "יומן מטלות"
+
+msgid "Track next chore schedule"
+msgstr "מעקב תזמון המטלה הבאה"
+
+msgid "Mark task as completed"
+msgstr "סימון המשימה כהושלמה"
+
+msgid "Track charge cycle"
+msgstr "מעקב אחר מחזור טעינה"
+
+msgid "Battery journal"
+msgstr "יומן סוללה"
+
+msgid "This product has a picture"
+msgstr "למוצר הזה יש תמונה"
+
+msgid "Consume this stock entry as spoiled"
+msgstr "לצרוך את רשומת המלאי הזאת כמקולקלת"
+
+msgid "Configure user permissions"
+msgstr "להגדיר הרשאות משתמשים"
+
+msgid "Show a QR-Code for this API key"
+msgstr "להציג קוד QR עבור מפתח API זה"
+
+msgid ""
+"This is the default quantity unit used on purchase and when adding this "
+"product to the shopping list"
+msgstr "זאת כמות ברירת המחדל שמשמשת לרכישה ובעת הוספת המוצר הזה לרשימת הקניות"
+
+msgid ""
+"Show a warning when the due date of the purchased product is earlier than "
+"the next due date in stock"
+msgstr ""
+"להציג אזהרה כאשר התאריך בתוקף עד של המוצר הנרכש הוא מוקדם מתאריך התוקף עד "
+"הבא במלאי"
+
+msgid "This is due earlier than already in stock items"
+msgstr "יסתיים לפני הפריטים שכבר במלאי"
+
+msgid ""
+"When enabled, after changing/scanning a product and if all fields could be "
+"automatically populated (by product and/or barcode defaults), the "
+"transaction is automatically submitted"
+msgstr ""
+"כאשר האפשרות פעילה, לאחר החלפת/סריקת פריט ואם ניתן למלא את כל השדות אוטומטית"
+" (לפי בררות המחדל למוצר ו/או לברקוד), ההעברה תוגש אוטומטית"
+
+msgid "Quick consume amount"
+msgstr "כמות לצריכה מהירה"
+
+msgid ""
+"This amount is used for the \"quick consume button\" on the stock overview "
+"page (related to quantity unit stock)"
+msgstr ""
+"הכמות הזאת משמשת ל„כפתור צריכה מהירה” בעמוד סקירת המלאי (קשורה ליחידת כמות "
+"במלאי)"
+
+msgid ""
+"This amount is used for the \"quick open button\" on the stock overview page"
+" (related to quantity unit stock)"
+msgstr ""
+"הכמות הזאת משמשת ל„כפתור פתיחה מהירה” בעמוד סקירת המלאי (קשורה ליחידת כמות "
+"במלאי)"
+
+msgid "Copy"
+msgstr "העתקה"
+
+msgid "Are you sure you want to remove this barcode?"
+msgstr "להסיר את הברקוד הזה?"
+
+msgid "Due date type"
+msgstr "סוג תאריך בתוקף עד"
+
+msgid ""
+"Based on the selected type, the highlighting on the stock overview page will"
+" be different"
+msgstr "בהתאם לסוג הנבחר, ההדגשה על עמוד סקירת המלאי תשתנה"
+
+msgid ""
+"Means that the product is maybe still safe to be consumed after its due date"
+" is reached"
+msgstr ""
+"המשמעות היא שהמוצר עשוי להיות בטוח לצריכה לאחר שמועד סיום התוקף שלו חלף"
+
+msgid "Expiration date"
+msgstr "תאריך תפוגת התוקף"
+
+msgid ""
+"Means that the product is not safe to be consumed after its due date is "
+"reached"
+msgstr "המשמעות היא שהמוצר לא בטוח לצריכה לאחר שמועד סיום התוקף שלו חלף"
+
+msgid ""
+"For purchases this amount of days will be added to today for the due date "
+"suggestion"
+msgstr ""
+"לרכישות תתווסף כמות הימים הזאת ליום הנוכחי להצעת תאריך תפוגת התוקף המיטבי"
+
+msgid "-1 means that this product will be never overdue"
+msgstr "‎-1 משמעו שתוקף המוצר הזה לא יפוג לעולם"
+
+msgid "Default due days"
+msgstr "ימים בתוקף עד כבררת מחדל"
+
+msgid ""
+"When this product was marked as opened, the due date will be replaced by "
+"today + this amount of days, but only if the resulting date is not after the"
+" original due date (a value of 0 disables this)"
+msgstr ""
+"כאשר המוצר הזה מסומן כפתוח, תאריך התפוגה יוחלף ביום הנוכחי + כמות כזאת של "
+"ימים, אך רק אם התאריך שמתקבל אינו מאוחר מתאריך התפוגה המקורי (0 ישבית את זה)"
+
+msgid "Default due days after opened"
+msgstr "ימים לתום התוקף לאחר הפתיחה כבררת מחדל"
+
+msgid ""
+"On moving this product to a freezer location (so when freezing it), the due "
+"date will be replaced by today + this amount of days"
+msgstr "בהעברת מוצר להקפאה, מועד התוקף יוחלף ביום הנוכחי + כמות זו של ימים"
+
+msgid "Default due days after freezing"
+msgstr "ימים לתום התוקף לאחר ההקפאה כבררת מחדל"
+
+msgid ""
+"On moving this product from a freezer location (so when thawing it), the due"
+" date will be replaced by today + this amount of days"
+msgstr ""
+"בהוצאת מוצר מהקפאה (הפשרה), מועד התוקף יוחלף ביום הנוכחי + כמות זו של ימים"
+
+msgid "Default due days after thawing"
+msgstr "ימי תוקף כבררת מחדל לאחר הפשרה"
+
+msgid "Next due date"
+msgstr "תאריך סיום התוקף הבא"
+
+msgid "%s product is due"
+msgid_plural "%s products are due"
+msgstr[0] "תוקפו של מוצר אחד יפוג"
+msgstr[1] "תוקפם של %s מוצרים יפוג"
+msgstr[2] "תוקפם של %s מוצרים יפוג"
+
+msgid "Due date"
+msgstr "תאריך סיום התוקף"
+
+msgid "Never overdue"
+msgstr "אין תפוגה"
+
+msgid "%s product is expired"
+msgid_plural "%s products are expired"
+msgstr[0] "פג תוקפו של אחד המוצרים"
+msgstr[1] "תוקפם של %s מוצרים פג"
+msgstr[2] "תוקפם של %s מוצרים פג"
+
+msgid "Expired"
+msgstr "התוקף פג"
+
+msgid "Due soon days"
+msgstr "ימים לתפוגת תוקף קרבה"
+
+msgid "Add overdue/expired products"
+msgstr "מוצרים שחרגו מהתוקף/פג תוקפם"
+
+msgid ""
+"Products with tare weight enabled are currently not supported for transfer"
+msgstr "מוצרים שמשקל הטרה שלהם פעיל אינם נתמכים בהעברה."
+
+msgid ""
+"This cannot be lower than %1$s or equal %2$s and needs to be a valid number "
+"with max. %3$s decimal places"
+msgstr ""
+"לא יכול להיות קטן מ־%1$s או שווה ל־%2$s ועליו להיות מספר תקין עם %3$s מקומות"
+" עשרוניים לכל היותר"
+
+msgid ""
+"This must be between %1$s and %2$s, cannot equal %3$s and needs to be a "
+"valid number with max. %4$s decimal places"
+msgstr ""
+"חייב להיות בין %1$s ל־%2$s, אינו יכול להיות שווה ל־%3$s ועליו להיות מספר "
+"תקני עם %4$s מקומות עשרוניים לכל היותר"
+
+msgid ""
+"This cannot be lower than %1$s and needs to be a valid number with max. %2$s"
+" decimal places"
+msgstr ""
+"לא יכול להיות קטן מ־%1$s ועליו להיות מספר תקין עם %2$s מקומות עשרוניים לכל "
+"היותר"
+
+msgid ""
+"This must between %1$s and %2$s and needs to be a valid number with max. "
+"%3$s decimal places"
+msgstr ""
+"חייב להיות בין %1$s ו־%2$s ועליו להיות מספר תקני עם %3$s מקומות עשרוניים לכל"
+" היותר"
+
+msgid ""
+"Automatically do the booking using the last price and the amount of the "
+"shopping list item, if the product has \"Default due days\" set"
+msgstr ""
+"לבצע את ההזמנה אוטומטית עם המחיר האחרון ועם כמות הפריט לקנייה, אם למוצר "
+"מוגדרים „ימי תוקף כבררת מחדל”"
+
+msgid ""
+"When moving products from/to a freezer location, the products due date is "
+"automatically adjusted according to the product settings"
+msgstr ""
+"כאשר מוצר מועבר לתוך או מחוץ למקפיא, מועד התוקף של המוצרים מכוון בהתאם "
+"להגדרות המוצר"
+
+msgid "This is the internal field name, e. g. for the API"
+msgstr "זה השם הפנימי של השדה, למשל עבור ה־API"
+
+msgid "This is used to display the field on the frontend"
+msgstr "משמש להצגת השדה במנשק המשתמש"
+
+msgid "Multiple Userfields will be ordered by that number on the input form"
+msgstr "מגוון של שדות משתמש יסודרו לפי המספר הזה בטופס הקלט"
+
+msgid "Sort number"
+msgstr "מספר סדר"
+
+msgid "Download file"
+msgstr "הורדת קובץ"
+
+msgid "Use the products \"Quick consume amount\""
+msgstr "להשתמש ב„כמות לצריכה מהירה” של המוצר"
+
+msgid "Disabled"
+msgstr "מושבת"
+
+msgid ""
+"This also removes any stock amount, the journal and all other references of "
+"this product - consider disabling it instead, if you want to keep that and "
+"just hide the product."
+msgstr ""
+"זה מסיר גם את כמות המלאי, היומן ואת כל ההפניות למוצר הזה - מוטב לשקול להשבית"
+" אותו במקום, אם כל מה שמעניין אותך הוא להשאיר את המוצר אבל להסתיר אותו."
+
+msgid "Show disabled"
+msgstr "הצגת מושבתים"
+
+msgid "Never show on stock overview"
+msgstr "לא להציג בסקירת המלאי"
+
+msgid "None"
+msgstr "בלי"
+
+msgid "Group by"
+msgstr "קיבוץ לפי"
+
+msgid "Ingredient group"
+msgstr "קבוצת רכיבים"
+
+msgid "Reset"
+msgstr "איפוס"
+
+msgid "Are you sure you want to reset the table options?"
+msgstr "לאפס את אפשרויות הטבלה?"
+
+msgid "Hide/view columns"
+msgstr "הסתרת/הצגת עמודות"
+
+msgid ""
+"A different amount/unit can then be used below while for stock fulfillment "
+"checking it is sufficient when any amount of the product in stock"
+msgstr ""
+"ניתן להשתמש ביחידה/כמות שונים להלן בעוד שלבדיקת השלמת המלאי מספיק שיש כמות "
+"כלשהי מהמוצר במלאי."
+
+msgid "Last price (Unit)"
+msgstr "מחיר אחרון (יחידה)"
+
+msgid "Last price (Total)"
+msgstr "מחיר אחרון (סך הכול)"
+
+msgid "Show header"
+msgstr "הצגת כותרת"
+
+msgid "Group by product group"
+msgstr "קיבוץ לפי קבוצת מוצרים"
+
+msgid "Table"
+msgstr "טבלה"
+
+msgid "Layout type"
+msgstr "סוג פריסה"
+
+msgid "Merge this product with another one"
+msgstr "מיזוג המוצר הזה עם אחר"
+
+msgid "Merge products"
+msgstr "מיזוג מוצרים"
+
+msgid "Product to keep"
+msgstr "מוצר להשאיר"
+
+msgid "Product to remove"
+msgstr "מוצר להסיר"
+
+msgid "Error while merging"
+msgstr "שגיאה במיזוג"
+
+msgid "After merging, this product will be kept"
+msgstr "לאחר המיזוג, המוצר הזה יישאר"
+
+msgid ""
+"After merging, all occurences of this product will be replaced by the kept "
+"product (means this product will not exist anymore)"
+msgstr ""
+"לאחר המיזוג, כל העותקים של המוצר הזה יוחלפו על ידי המוצר שנשמר (כלומר שהמוצר"
+" הזה לא יהיה קיים עוד)"
+
+msgid "Merge"
+msgstr "מיזוג"
+
+msgid "Title"
+msgstr "כותרת"
+
+msgid "Link"
+msgstr "קישור"
+
+msgid ""
+"The stock overview page lists all products which are currently in stock or "
+"below their min. stock amount - enable this to hide this product there "
+"always"
+msgstr ""
+"עמוד סקירת המלאי מציג את כל המוצרים שנמצאים כרגע במלאי או מתחת לכמות המזערית"
+" במלאי - יש להפעיל זאת כדי להסתיר את המוצר הזה שם תמיד"
+
+msgid "Print options"
+msgstr "אפשרויות הדפסה"
+
+msgid "A product or a note is required"
+msgstr "נדרש מוצר או הערה"
+
+msgid "Grocycode"
+msgstr "קוד Grocy"
+
+msgid "Download"
+msgstr "הורדה"
+
+# Example: Download *Product* Grocycode
+msgid "Download %s Grocycode"
+msgstr "הורדת קוד ה־Grocy של %s"
+
+msgid ""
+"Grocycode is a unique referer to this %s in your Grocy instance - print it "
+"onto a label and scan it like any other barcode"
+msgstr ""
+"קוד Grocy הוא ייחוס ייחודי עבור %s בעותק ה־Grocy שלך - יש להדפיס אותו על "
+"תווית ולסרוק אותו כמו כל ברקוד אחד."
+
+# Abbreviation for "due date"
+msgid "DD"
+msgstr "פג"
+
+msgid "Print on label printer"
+msgstr "הדפסה במדפסת מדבקות"
+
+msgid "Default stock entry label"
+msgstr "תווית רשומת מלאי כבררת מחדל"
+
+msgid "Stock entry label"
+msgstr "תווית רשומת מלאי"
+
+msgid "No label"
+msgstr "ללא תווית"
+
+msgid "Single label"
+msgstr "תווית בודדה"
+
+msgid "Label per unit"
+msgstr "תווית לכל יחידה"
+
+msgid "Error while executing WebHook"
+msgstr "שגיאה בהפעלת התליית רשת"
+
+# Example: Print *Product* Grocycode on label printer
+msgid "Print %s Grocycode on label printer"
+msgstr "הדפסת קוד ה־Grocy של %s במדפסת מדבקות"
+
+msgid "Open stock entry label in new window"
+msgstr "פתיחת תווית רשומת מלאי בחלון חדש"
+
+msgid "Thermal printer"
+msgstr "מדפסת תרמית"
+
+msgid "Printing"
+msgstr "מתבצעת הדפסה"
+
+msgid "Connecting to printer..."
+msgstr "מתבצעת התחברות למדפסת…"
+
+msgid "Unable to print"
+msgstr "לא ניתן להדפיס"
+
+msgid "Only done items"
+msgstr "רק פריטים שהושלמו"
+
+msgid "Show only in stock products"
+msgstr "הצגת מוצרי במלאי בלבד"
+
+msgid "Product description"
+msgstr "תיאור מוצר"
+
+# Example: *3.21 USD* per *Pack*
+msgid "%1$s per %2$s"
+msgstr "%1$s ל%2$s"
+
+msgid "Mark this item as undone"
+msgstr "סימון הביטול הזה כלא בוצע"
+
+msgid "Mandatory"
+msgstr "חובה"
+
+msgid "Mandatory Userfield"
+msgstr "שדה משתמש חובה"
+
+msgid "When enabled, then this field must be filled on the destination form"
+msgstr "כאשר פעיל, חובה למלא את השדה הזה בטופס היעד"
+
+msgid "In stock products"
+msgstr "מוצרים במלאי"
+
+msgid "Timestamp"
+msgstr "חותמת זמן"
+
+msgid "Should not be frozen"
+msgstr "לא אמור להיות קפוא"
+
+msgid ""
+"When enabled, on moving this product to a freezer location (so when freezing"
+" it), a warning will be shown"
+msgstr "כאשר פעיל, בהעברת המוצר הזה להקפאה, תופיע אזהרה"
+
+msgid "This product shouldn't be frozen"
+msgstr "מוצר זה לא אמור להיות קפוא"
+
+msgid "Copy all meal plan entries of %s"
+msgstr "העתקת כל רשומות תכנית הארוחות של %s"
+
+msgid "A date is required"
+msgstr "נדרש תאריך"
+
+msgid "Day"
+msgstr "יום"
+
+msgid "Add recipe"
+msgstr "הוספת מתכון"
+
+msgid "Copy this day"
+msgstr "העתקת היום הזה"
+
+msgid "Date range"
+msgstr "טווח תאריכים"
+
+msgid "%s month"
+msgid_plural "%s months"
+msgstr[0] "חודש"
+msgstr[1] "חודשיים"
+msgstr[2] "%s חודשים"
+msgstr[3] "%s חודשים"
+
+msgid "%s year"
+msgid_plural "%s years"
+msgstr[0] "שנה"
+msgstr[1] "שנתיים"
+msgstr[2] "%s שנים"
+
+msgid "Display product"
+msgstr "הצגת מוצר"
+
+msgid "Copy recipe"
+msgstr "העתקת מתכון"
+
+msgid "Copy of %s"
+msgstr "עותק של %s"
+
+msgid "Add decimal separator automatically for price inputs"
+msgstr "יש להוסיף נקודה עשרונית לקלט של מחיר"
+
+msgid ""
+"When enabled, you always have to enter the value including decimal places, "
+"the decimal separator will be automatically added based on the amount of "
+"allowed decimal places"
+msgstr ""
+"כאשר האפשרות פעילה, עליך תמיד למלא את הערך כולל הספרות אחרי הנקודה, הנקודה "
+"העשרונית תתווסף אוטומטית בהתאם לכמות המקומות העשרוניים האפשריים."
+
+msgid "Stock entry"
+msgstr "רשומה במלאי"
+
+msgid "Configure sections"
+msgstr "הגדרת סעיפים"
+
+msgid "Meal plan sections"
+msgstr "סעיפי תכנית ארוחות"
+
+msgid "Create meal plan section"
+msgstr "יצירת סעיף תכנית ארוחות"
+
+msgid "Sections will be ordered by that number on the meal plan"
+msgstr "הסעיפים יסודרו לפי המספר על תכנית הארוחות"
+
+msgid "Edit meal plan section"
+msgstr "עריכת סעיף תכנית ארוחות"
+
+msgid "Are you sure you want to delete meal plan section \"%s\"?"
+msgstr "למחוק את סעיף תוכנית הארוחות „%s”?"
+
+msgid "Section"
+msgstr "סעיף"
+
+msgid "Are you sure you want to empty the shopping list?"
+msgstr "לרוקן את רשימת הקניות?"
+
+msgid "This is the default which will be prefilled on purchase"
+msgstr "זו בררת המחדש שתמולא מראש בעת הרכישה"
+
+msgid "Merge chores"
+msgstr "מיזוג מטלות"
+
+msgid "Chore to keep"
+msgstr "מטלה להשאיר"
+
+msgid "After merging, this chore will be kept"
+msgstr "לאחר המיזור, המטלה הזאת תישאר"
+
+msgid "Chore to remove"
+msgstr "מטלה להסרה"
+
+msgid ""
+"After merging, all occurences of this chore will be replaced by the kept "
+"chore (means this chore will not exist anymore)"
+msgstr ""
+"לאחר המיזוג, כל מופעי המטלה הזאת יוחלפו ב„מטלה לשימור” (כלומר שהמטלה הזאת לא"
+" תהיה קיימת עוד)"
+
+msgid "Due today"
+msgstr "מסתיים היום"
+
+msgid "%s task is due to be done today"
+msgid_plural "%s tasks are due to be done today"
+msgstr[0] "משימה אמורה להסתיים היום"
+msgstr[1] "%s משימות אמורות להסתיים היום"
+msgstr[2] "%s משימות אמורות להסתיים היום"
+msgstr[3] "%s משימות אמורות להסתיים היום"
+
+msgid "%s chore is due to be done today"
+msgid_plural "%s chores are due to be done today"
+msgstr[0] "מטלה אמורה להסתיים היום"
+msgstr[1] "%s מטלות אמורות להסתיים היום"
+msgstr[2] "%s מטלות אמורות להסתיים היום"
+
+msgid "%s battery is due to be charged today"
+msgid_plural "%s batteries are due to be charged today"
+msgstr[0] "סוללה אמורה להיטען היום"
+msgstr[1] "%s סוללות אמורות להיטען היום"
+msgstr[2] "%s סוללות אמורות להיטען היום"
+
+msgid "Set to 0 to hide due soon filters/highlighting"
+msgstr "0 מסתיר את סינון/הדגשת סיום קרב"
+
+msgid "Save & close"
+msgstr "לשמור ולסגור"
+
+msgid "Save & add another task"
+msgstr "לשמור ולהוסיף משימה נוספת"
+
+msgid "Treat opened as out of stock"
+msgstr "להתייחס למוצרים פתוחים כמחוץ למלאי"
+
+msgid ""
+"When enabled, opened items will be counted as missing for calculating if "
+"this product is below its minimum stock amount"
+msgstr ""
+"כאשר האפשרות בפעילה, פריטים שנפתחו ייחשבו לחסרים לחישוב המוצר הזה מתחת לכמות"
+" המלאי המזערית"
+
+msgid "Skipped"
+msgstr "דילגת"
+
+msgid "Skip next chore schedule"
+msgstr "לדלג על תזמון המטלה הבא"
+
+msgid "Time"
+msgstr "זמן"
+
+msgid "A start date is required"
+msgstr "צריך תאריך התחלה"
+
+msgid "Start date"
+msgstr "תאריך התחלה"
+
+msgid "The start date cannot be changed when the chore was once tracked"
+msgstr "לא ניתן לשנות את תאריך ההתחלה לאחר המעקב הראשוני אחר מטלה"
+
+msgid "Show the recipe list and the recipe side by side"
+msgstr "להציג את רשימת המתכונים ואת המתכון זה לצד זה"
+
+msgid ""
+"This means the next execution of this chore is scheduled dynamically based "
+"on the past average execution frequency"
+msgstr ""
+"משמעות הדבר היא שההוצאה הבאה של המטלה הזאת לפועל מתוזמנת דינמית לפי תדירות "
+"ההוצאה לפועל הממוצעת מהעבר"
+
+msgid "Average execution frequency"
+msgstr "תדירות ממוצאת להוצאה לפועל"
+
+msgid "Reschedule next execution"
+msgstr "תזמון ההפעילות הבאה מחדש"
+
+msgid "This can only be in the future"
+msgstr "יכול להיות רק בעתיד"
+
+msgid "Rescheduled"
+msgstr "תוזמן מחדש"
+
+msgid "Due score"
+msgstr "ניקוד תפוגה"
+
+msgid ""
+"The higher this number is, the more ingredients currently in stock are due "
+"soon, overdue or already expired"
+msgstr ""
+"ככל שהמספר הזה גבוה יותר, כך תוקפם של יותר רכיבים במלאי עומד לפוג בהקדם, "
+"יפוג היום או פג"
+
+msgid "Disable own stock"
+msgstr "השבתת המלאי העצמי"
+
+msgid ""
+"When enabled, this product can't have own stock, means it will not be "
+"selectable on purchase (useful for parent products which are just used as a "
+"summary/total view of the child products)"
+msgstr ""
+"כאשר האפשרות פעילה, למוצר זה לא יכול להיות מלאי משלו, המשמעות היא שאי אפשר "
+"יהיה לבחור אותו ברכישה (שימוש למוצרי אב שמשמשים לתצוגת תקציר/סך הכול של "
+"המוצרים הצאצאים)"
+
+msgid "Out of stock items will be shown at the products default location"
+msgstr "פריטים שאינם במלאי יופיעו במיקום ברירת המחדל של המוצרים"
+
+msgid "Show a little checkbox next to each ingredient to mark it as done"
+msgstr "להציג תיבת סימון קטנה ליד כל רכיב כדי לסיים שבוצע"
+
+msgid ""
+"The ingredient is crossed out when clicked, the status is not saved, means "
+"reset when the page is reloaded"
+msgstr ""
+"הרכיב יורד מהרשימה בלחיצה עליו, המצב לא נשמר, כלומר זה יאופס עם רענון העמוד"
+
+msgid ""
+"The parent product %1$s is currently not in stock, %2$s is the current next "
+"sub product based on the default consume rule (Opened first, then first due "
+"first, then first in first out)"
+msgstr ""
+"מוצר ההורה %1$s אינו במלאי, %2$s הוא תת־המוצר הנוכחי המבוסס על כלל הצריכה "
+"כברירת מחדל (נפתח תחילה, לאחר מכן סיום תוקף תחילה ולאחר מכן הראשון שנכנס הוא"
+" הראשון שיוצא)"
+
+msgid "Night mode"
+msgstr "מצב לילה"
+
+msgid "On"
+msgstr "פעיל"
+
+msgid "Use system setting"
+msgstr "להשתמש בהגדרת המערכת"
+
+msgid "Off"
+msgstr "כבוי"
+
+msgid ""
+"Automatically add products that are below their defined min. stock amount to"
+" the shopping list"
+msgstr "להוסיף אוטומטית מוצרים שמתחת לכמות המלאי המזערית שלהם לרשימת הקניות"
+
+msgid "Reassigned"
+msgstr "מוקצה מחדש"
+
+msgid "Default value"
+msgstr "ערך ברירת מחדל"
+
+msgid "Now / today"
+msgstr "עכשיו / היום"
+
+msgid "Add meal plan entry"
+msgstr "הוספת רשומת תוכנית ארוחות"
+
+msgid "Edit meal plan entry"
+msgstr "עריכת רשומת תוכנית ארוחות"
+
+msgid "Default consume location"
+msgstr "מיקום ברירת המחדל לצריכה"
+
+msgid "Stock entries at this location will be consumed first"
+msgstr "רשומות המלאי במיקום זה תיצרכנה תחילה"
+
+msgid "Move on open"
+msgstr "העברה עם הפתיחה"
+
+msgid ""
+"When enabled, on marking this product as opened, the corresponding amount "
+"will be moved to the default consume location"
+msgstr ""
+"כשהאפשרות מופעלת, בעת סימון פתיחת מוצר, הכמות המתאימה תועבר למיקום הצריכה "
+"כברירת מחדל"
+
+msgid "Moved to %1$s"
+msgstr "הועבר אל %1$s"
+
+msgid "Decimal places allowed for prices (input)"
+msgstr "מקומות אחרי נקודה עשרונית למחירים (קלט)"
+
+msgid "Decimal places allowed for prices (display)"
+msgstr "מקומות אחרי נקודה עשרונית למחירים (תצוגה)"
+
+msgid "Clear done items"
+msgstr "פינוי פריטים שהושלמו"
+
+msgid ""
+"This shows all to this product directly or indirectly related quantity units"
+" and their derived conversion factors"
+msgstr ""
+"מציג את כל יחידות ההמרה שקשורות למוצר הזה במישרין או בעקיפין  ואת מקדמי "
+"ההמרה הנגזרים שלהם"
+
+msgid "Show resolved conversions"
+msgstr "הצגת דיונים שנפתרו"
+
+msgid "QU conversions resolved"
+msgstr "המרות יחידות כמות נפתרו"
+
+msgid "Product specific QU conversions"
+msgstr "המרת יחידות כמות נקודתיות למוצר"
+
+msgid "Default quantity unit consume"
+msgstr "יחידת כמות צריכה כברירת מחדל"
+
+msgid "This is the default quantity unit used when consuming this product"
+msgstr "זאת יחידת הכמות כברירת המחדל שתשמש בצריכת המוצר הזה"
+
+msgid "Add to meal plan"
+msgstr "הוספה לתוכנית הארוחות"
+
+msgid "Successfully added the recipe to the meal plan"
+msgstr "המתכון נוסף בהצלחה לתוכנית הארוחות"
+
+msgid "Reprint stock entry label"
+msgstr "הדפסה מחדש של תווית הכנסה למלאי"
+
+msgid "Auto reprint stock entry label"
+msgstr "הדפסה אוטומטית מחדש של תווית הכנסה למלאי"
+
+msgid ""
+"When enabled, auto-changing the due date of a stock entry (by "
+"opening/freezing/thawing and having corresponding default due days set) will"
+" reprint its label"
+msgstr ""
+"כשהאפשרות פעילה, שינוי אוטומטי של תאריך התוקף של רשומת מלאי (על ידי "
+"פתיחה/הקפאה/הפשרה וימים מוגדרים עד סוף תקופת התפוגה) ידפיס את התווית שלו "
+"מחדש"
+
+msgid "Quick open amount"
+msgstr "כמות לפתיחה מהירה"
+
+msgid "Track chore execution now"
+msgstr "מעקב הוצאת המטלה לפועל כעת"
+
+msgid "Total"
+msgstr "סך הכול"
+
+msgid "Apply"
+msgstr "החלה"
+
+msgid "Custom range"
+msgstr "טווח מותאם אישית"
+
+msgid "Yesterday"
+msgstr "אתמול"
+
+msgid "Last %1$s day"
+msgid_plural "Last %1$s days"
+msgstr[0] "היום האחרון"
+msgstr[1] "היומיים האחרונים"
+msgstr[2] "%1$s הימים האחרונים"
+
+msgid "This month"
+msgstr "החודש"
+
+msgid "Last month"
+msgstr "חודש שעבר"
+
+msgid "This year"
+msgstr "השנה"
+
+msgid "Last year"
+msgstr "שנה שעברה"
+
+msgid "Reports"
+msgstr "דוחות"
+
+msgid "Spendings"
+msgstr "הוצאות"
+
+msgid "Stock report"
+msgstr "דוח מלאי"
+
+msgid "Out of stock products"
+msgstr "מוצרים שנגמרו במלאי"
+
+msgid "Quantity unit for prices"
+msgstr "יחידת כמות למחירים"
+
+msgid ""
+"When displaying prices for this product, they will be related to this "
+"quantity unit"
+msgstr "בעת הצגת מחירים למוצר הזה, הם יהיו קשורים ליחידת כמות זו"
+
+msgid "This means 1 label will be printed"
+msgid_plural "This means %1$s labels will be printed"
+msgstr[0] "משמעות הדבר היא שתודפס תווית אחת"
+msgstr[1] "משמעות הדבר היא שתודפסנה %1$s תוויות"
+msgstr[2] "משמעות הדבר היא שתודפסנה %1$s תוויות"
+
+msgid "External barcode lookup"
+msgstr "חיפוש ברקוד חיצוני"
+
+msgid "Error while executing the barcode lookup plugin"
+msgstr "שגיאה בהפעלת תוסף חיפוש הברקוד"
+
+msgid "Nothing was found for the given barcode"
+msgstr "לא נמצא כלום לברקוד שסופק"
+
+msgid "Configure colors"
+msgstr "הגדרת צבעים"
+
+msgid "Swap track next schedule / track now buttons"
+msgstr "החלפה בין כפתורי מעקב אחר התזמון הבא / מעקב עכשיו"
+
+msgid "Scheduled tracking time"
+msgstr "זמן מעקב מתוזמן"
+
+msgid "Time of tracking"
+msgstr "זמן המעקב"
+
+msgid "Show all out of stock products"
+msgstr "הצגת כל המוצרים שנגמרו במלאי"
+
+msgid ""
+"By default the stock overview page lists all products which are currently in"
+" stock or below their min. stock amount - when this is enabled, all (active)"
+" products are always shown"
+msgstr ""
+"כברירת מחדל, עמוד סקירת המלאי מציג את כל המוצרים החדשים שאינם במלאי כרגע או "
+"מתחת לכמות המזערית שלהם במלאי - כשהאפשרות פעילה, כל המוצרים (הפעילים) "
+"מופיעים תמיד"
+
+msgid "No price information is available for at least one ingredient"
+msgstr "אין פרטי מחירים זמינים לאחד הרכיבים לפחות"
+
+msgid ""
+"For ingredients that are only partially in stock, the in stock amount will "
+"be consumed."
+msgstr "לרכיבים שנמצאים חלקית במלאי, הכמות במלאי תיצרך."
+
+msgid "Can't be opened"
+msgstr "לא ניתן לפתוח"
+
+msgid "Default purchase price type"
+msgstr "סוג מחיר רכישה כברירת מחדל"
+
+msgid "This will be used as the default price type selection on purchase"
+msgstr "זה ישמש כבחירת סוג המחיר כברירת המחדל בעת רכישה"
+
+msgid "Unspecified"
+msgstr "לא צוין"
+
+msgid "Round up quantity amounts to the nearest whole number"
+msgstr "עיגול כמויות למספר השלם הקרוב ביותר"
+
+msgid "Stock actions"
+msgstr "פעולת על מלאי"
+
+msgid "List actions"
+msgstr "פעולות רשימה"

@@ -1,0 +1,46 @@
+# 
+# Translators:
+# Fernando Luiz Bonifácio de Oliveira, 2022
+# Aurelio Barreto <aurelio@aureliobarreto.com>, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: Aurelio Barreto <aurelio@aureliobarreto.com>, 2024\n"
+"Language-Team: Portuguese (Brazil) (https://app.transifex.com/grocy/teams/93189/pt_BR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+"X-Domain: grocy/stock_transaction_types\n"
+
+msgid "purchase"
+msgstr "compra"
+
+msgid "transfer_from"
+msgstr "Transferir de"
+
+msgid "transfer_to"
+msgstr "Transferir para"
+
+msgid "consume"
+msgstr "Consumir"
+
+msgid "inventory-correction"
+msgstr "Ajuste de inventário"
+
+msgid "product-opened"
+msgstr "Produto aberto"
+
+msgid "stock-edit-old"
+msgstr "Alteração estoque antigo"
+
+msgid "stock-edit-new"
+msgstr "Alteração estoque novo"
+
+msgid "self-production"
+msgstr "Produção própria"

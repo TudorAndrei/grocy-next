@@ -101,6 +101,18 @@ class NativeStockController extends Grocy\Controllers\StockApiController { use N
 class NativeRecipesController extends Grocy\Controllers\RecipesApiController { use NativeListContext; }
 class NativeUsersController extends Grocy\Controllers\UsersApiController { use NativeListContext; }
 
+class NativeSystemController extends Grocy\Controllers\SystemApiController { use NativeListContext; }
+
+class NativeLocaleMiddleware extends Grocy\Middleware\LocaleMiddleware
+{
+    public function __construct() {}
+
+    public function selectLocale($request)
+    {
+        return $this->getLocale($request);
+    }
+}
+
 class NativePrintController extends Grocy\Controllers\PrintApiController { use NativeListContext; }
 
 class NativeCalendarController extends Grocy\Controllers\CalendarApiController
@@ -164,6 +176,11 @@ class NativeReadDatabaseService extends Grocy\Services\DatabaseService
 {
     public function __construct(private NativeDatabase $database)
     {
+    }
+
+    public function GetDbChangedTime()
+    {
+        return date('Y-m-d H:i:s', NATIVE_DATABASE_FILE === null ? time() : filemtime(NATIVE_DATABASE_FILE));
     }
 
     public function GetDbConnectionRaw()

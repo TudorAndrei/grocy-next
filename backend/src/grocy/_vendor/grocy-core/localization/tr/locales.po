@@ -1,0 +1,153 @@
+# 
+# Translators:
+# Yigit Sever <yigit@ceng.metu.edu.tr>, 2021
+# Burak ER, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2020-08-31 19:11+0000\n"
+"Last-Translator: Burak ER, 2023\n"
+"Language-Team: Turkish (https://app.transifex.com/grocy/teams/93189/tr/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: tr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: grocy/locales\n"
+
+# Czech
+msgid "cs"
+msgstr "Çekçe"
+
+# Danish
+msgid "da"
+msgstr "Danca"
+
+# German
+msgid "de"
+msgstr "Almanca"
+
+# Greek
+msgid "el_GR"
+msgstr "Yunanca"
+
+# English
+msgid "en"
+msgstr "İngilizce"
+
+# English (Great Britain)
+msgid "en_GB"
+msgstr "İngilizce (Büyük Britanya)"
+
+# Spanish
+msgid "es"
+msgstr "İspanyolca"
+
+# French
+msgid "fr"
+msgstr "Fransızca"
+
+# Hungarian
+msgid "hu"
+msgstr "Macarca"
+
+# Italian
+msgid "it"
+msgstr "İtalyanca"
+
+# Japanese
+msgid "ja"
+msgstr "Japonca"
+
+# Korean
+msgid "ko_KR"
+msgstr "Korece"
+
+# Dutch
+msgid "nl"
+msgstr "Flemenkçe"
+
+# Norwegian
+msgid "no"
+msgstr "Norveççe"
+
+# Polish
+msgid "pl"
+msgstr "Lehçe"
+
+# Portuguese (Brazil)
+msgid "pt_BR"
+msgstr "Portekizce (Brezilya)"
+
+# Portuguese (Portugal)
+msgid "pt_PT"
+msgstr "Portekizce (Portekiz)"
+
+# Russian
+msgid "ru"
+msgstr "Rusça"
+
+# Slovak
+msgid "sk_SK"
+msgstr "Slovak Dili"
+
+# Slovenian
+msgid "sl"
+msgstr "sl"
+
+# Swedish
+msgid "sv_SE"
+msgstr "İsveççe"
+
+# Turkish
+msgid "tr"
+msgstr "Türkçe"
+
+# Chinese (Taiwan)
+msgid "zh_TW"
+msgstr "Çince (Tayvan)"
+
+# Chinese (China)
+msgid "zh_CN"
+msgstr "Çince (Çin)"
+
+# Hebrew (Israel)
+msgid "he_IL"
+msgstr "İbranice (İsrail)"
+
+# Tamil
+msgid "ta"
+msgstr "Tamil Dili"
+
+# Finnish
+msgid "fi"
+msgstr "Fince"
+
+# Catalan
+msgid "ca"
+msgstr "ka"
+
+# Lithuanian
+msgid "lt"
+msgstr "lt"
+
+# Ukrainian
+msgid "uk"
+msgstr "bk"
+
+# Romanian
+msgid "ro_RO"
+msgstr ""
+"ro_RO\n"
+" "
+
+# Estonian
+msgid "et_EE"
+msgstr "et_EE"
+
+# Bulgarian
+msgid "bg_BG"
+msgstr ""

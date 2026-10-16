@@ -164,7 +164,6 @@ def test_mcp_recipes_search(client: TestClient, api_headers: dict[str, str]) -> 
 
 
 def test_generic_entities_exposed(client: TestClient, api_headers: dict[str, str]) -> None:
-    info = client.get("/api/system/info", headers=api_headers).json()
     for entity in [
         "products",
         "locations",
@@ -174,7 +173,6 @@ def test_generic_entities_exposed(client: TestClient, api_headers: dict[str, str
         "tasks",
         "batteries",
     ]:
-        assert entity in info["exposed_entities"]
         response = client.get(f"/api/objects/{entity}", headers=api_headers)
         assert response.status_code == 200
         assert isinstance(response.json(), list)

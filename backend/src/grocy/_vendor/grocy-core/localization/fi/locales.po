@@ -1,0 +1,150 @@
+# 
+# Translators:
+# Sami Kiviniemi, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2020-08-31 19:11+0000\n"
+"Last-Translator: Sami Kiviniemi, 2024\n"
+"Language-Team: Finnish (https://app.transifex.com/grocy/teams/93189/fi/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fi\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/locales\n"
+
+# Czech
+msgid "cs"
+msgstr "Tshekki"
+
+# Danish
+msgid "da"
+msgstr "Tanska"
+
+# German
+msgid "de"
+msgstr "Saksa"
+
+# Greek
+msgid "el_GR"
+msgstr "Kreikka"
+
+# English
+msgid "en"
+msgstr "Englanti"
+
+# English (Great Britain)
+msgid "en_GB"
+msgstr "Englanti (Iso-Britannia)"
+
+# Spanish
+msgid "es"
+msgstr "Espanja"
+
+# French
+msgid "fr"
+msgstr "Ranska"
+
+# Hungarian
+msgid "hu"
+msgstr "Unkari"
+
+# Italian
+msgid "it"
+msgstr "Italia"
+
+# Japanese
+msgid "ja"
+msgstr "Japani"
+
+# Korean
+msgid "ko_KR"
+msgstr "Korea"
+
+# Dutch
+msgid "nl"
+msgstr "Hollanti"
+
+# Norwegian
+msgid "no"
+msgstr "Norja"
+
+# Polish
+msgid "pl"
+msgstr "Puola"
+
+# Portuguese (Brazil)
+msgid "pt_BR"
+msgstr "Portugali (Brasilia)"
+
+# Portuguese (Portugal)
+msgid "pt_PT"
+msgstr "Portugali (Portugali)"
+
+# Russian
+msgid "ru"
+msgstr "Venäjä"
+
+# Slovak
+msgid "sk_SK"
+msgstr "Slovakia"
+
+# Slovenian
+msgid "sl"
+msgstr "Slovenia"
+
+# Swedish
+msgid "sv_SE"
+msgstr "Ruotsi"
+
+# Turkish
+msgid "tr"
+msgstr "Turkki"
+
+# Chinese (Taiwan)
+msgid "zh_TW"
+msgstr "Kiina (Taiwan)"
+
+# Chinese (China)
+msgid "zh_CN"
+msgstr "Kiina (Kiina)"
+
+# Hebrew (Israel)
+msgid "he_IL"
+msgstr "Heprea (Israel)"
+
+# Tamil
+msgid "ta"
+msgstr "Tamili"
+
+# Finnish
+msgid "fi"
+msgstr "Suomi"
+
+# Catalan
+msgid "ca"
+msgstr "Katalaani"
+
+# Lithuanian
+msgid "lt"
+msgstr "Liettua"
+
+# Ukrainian
+msgid "uk"
+msgstr "Ukraina"
+
+# Romanian
+msgid "ro_RO"
+msgstr "Romania"
+
+# Estonian
+msgid "et_EE"
+msgstr "Viro"
+
+# Bulgarian
+msgid "bg_BG"
+msgstr ""

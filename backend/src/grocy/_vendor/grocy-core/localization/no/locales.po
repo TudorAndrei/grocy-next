@@ -1,0 +1,152 @@
+# 
+# Translators:
+# Marius Borø <blizzwave@gmail.com>, 2021
+# Kurt Inge Smådal, 2022
+# Vegard Fladby <vegard.fladby@gmail.com>, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2020-08-31 19:11+0000\n"
+"Last-Translator: Vegard Fladby <vegard.fladby@gmail.com>, 2023\n"
+"Language-Team: Norwegian (https://app.transifex.com/grocy/teams/93189/no/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/locales\n"
+
+# Czech
+msgid "cs"
+msgstr "Tjekkisk"
+
+# Danish
+msgid "da"
+msgstr "Dansk"
+
+# German
+msgid "de"
+msgstr "Tysk"
+
+# Greek
+msgid "el_GR"
+msgstr "Gresk"
+
+# English
+msgid "en"
+msgstr "Engelsk"
+
+# English (Great Britain)
+msgid "en_GB"
+msgstr "Engelsk (Storbritannia)"
+
+# Spanish
+msgid "es"
+msgstr "Spansk"
+
+# French
+msgid "fr"
+msgstr "Fransk"
+
+# Hungarian
+msgid "hu"
+msgstr "Ungarsk"
+
+# Italian
+msgid "it"
+msgstr "Italiensk"
+
+# Japanese
+msgid "ja"
+msgstr "Japansk"
+
+# Korean
+msgid "ko_KR"
+msgstr "ko_KR"
+
+# Dutch
+msgid "nl"
+msgstr "Nederlansk"
+
+# Norwegian
+msgid "no"
+msgstr "Norsk"
+
+# Polish
+msgid "pl"
+msgstr "Polsk"
+
+# Portuguese (Brazil)
+msgid "pt_BR"
+msgstr "Portugisisk (Brasil)"
+
+# Portuguese (Portugal)
+msgid "pt_PT"
+msgstr "Portugisisk (Portugal)"
+
+# Russian
+msgid "ru"
+msgstr "Russisk"
+
+# Slovak
+msgid "sk_SK"
+msgstr "Slovakisk"
+
+# Slovenian
+msgid "sl"
+msgstr "Slovensk"
+
+# Swedish
+msgid "sv_SE"
+msgstr "Svensk"
+
+# Turkish
+msgid "tr"
+msgstr "Tyrkisk"
+
+# Chinese (Taiwan)
+msgid "zh_TW"
+msgstr "Kinesisk (Taiwan)"
+
+# Chinese (China)
+msgid "zh_CN"
+msgstr "Kinesisk (Kina)"
+
+# Hebrew (Israel)
+msgid "he_IL"
+msgstr "Hebraisk (Israel)"
+
+# Tamil
+msgid "ta"
+msgstr "ta"
+
+# Finnish
+msgid "fi"
+msgstr "Finsk"
+
+# Catalan
+msgid "ca"
+msgstr "Katalansk"
+
+# Lithuanian
+msgid "lt"
+msgstr "Litauisk"
+
+# Ukrainian
+msgid "uk"
+msgstr "Britisk engelsk"
+
+# Romanian
+msgid "ro_RO"
+msgstr "Romania"
+
+# Estonian
+msgid "et_EE"
+msgstr ""
+
+# Bulgarian
+msgid "bg_BG"
+msgstr ""

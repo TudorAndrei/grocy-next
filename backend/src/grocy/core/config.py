@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     app_name: str = "grocy-next"
     php_executable: str = "php"
     currency: str = "USD"
+    default_locale: str = "en"
+    base_url: str = "/"
+    disable_url_rewriting: bool | str = False
     default_permissions: list[str] = ["ADMIN"]
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
@@ -76,6 +79,7 @@ class Settings(BaseSettings):
                     name.startswith("feature_flag_")
                     or name
                     in {
+                        "disable_url_rewriting",
                         "label_printer_run_server",
                         "label_printer_hook_json",
                         "tprinter_is_network_printer",

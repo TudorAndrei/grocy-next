@@ -1,0 +1,152 @@
+# 
+# Translators:
+# Gábor Szellő <gabor.szello@gmail.com>, 2020
+# rozgonik <rozgonik1@gmail.com>, 2023
+# Tamas Voros <voros.e.tamas@gmail.com>, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2020-08-31 19:11+0000\n"
+"Last-Translator: Tamas Voros <voros.e.tamas@gmail.com>, 2023\n"
+"Language-Team: Hungarian (https://app.transifex.com/grocy/teams/93189/hu/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: hu\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/locales\n"
+
+# Czech
+msgid "cs"
+msgstr "Cseh"
+
+# Danish
+msgid "da"
+msgstr "Dán"
+
+# German
+msgid "de"
+msgstr "Német"
+
+# Greek
+msgid "el_GR"
+msgstr "Görög"
+
+# English
+msgid "en"
+msgstr "Angol"
+
+# English (Great Britain)
+msgid "en_GB"
+msgstr "Angol (Egyesült Királyság)"
+
+# Spanish
+msgid "es"
+msgstr "Spanyol"
+
+# French
+msgid "fr"
+msgstr "Francia"
+
+# Hungarian
+msgid "hu"
+msgstr "Magyar"
+
+# Italian
+msgid "it"
+msgstr "Olasz"
+
+# Japanese
+msgid "ja"
+msgstr "Japán"
+
+# Korean
+msgid "ko_KR"
+msgstr "Koreai"
+
+# Dutch
+msgid "nl"
+msgstr "Holland"
+
+# Norwegian
+msgid "no"
+msgstr "Norvég"
+
+# Polish
+msgid "pl"
+msgstr "Lengyel"
+
+# Portuguese (Brazil)
+msgid "pt_BR"
+msgstr "Portugál (Brazília)"
+
+# Portuguese (Portugal)
+msgid "pt_PT"
+msgstr "Portugál (Portugália)"
+
+# Russian
+msgid "ru"
+msgstr "Orosz"
+
+# Slovak
+msgid "sk_SK"
+msgstr "Szlovák"
+
+# Slovenian
+msgid "sl"
+msgstr "Szlovén"
+
+# Swedish
+msgid "sv_SE"
+msgstr "Svéd"
+
+# Turkish
+msgid "tr"
+msgstr "Török"
+
+# Chinese (Taiwan)
+msgid "zh_TW"
+msgstr "Kínai (Tajvan)"
+
+# Chinese (China)
+msgid "zh_CN"
+msgstr "Kínai (Kína)"
+
+# Hebrew (Israel)
+msgid "he_IL"
+msgstr "Héber (Izrael)"
+
+# Tamil
+msgid "ta"
+msgstr "Tamil"
+
+# Finnish
+msgid "fi"
+msgstr "Finn"
+
+# Catalan
+msgid "ca"
+msgstr "Katalán"
+
+# Lithuanian
+msgid "lt"
+msgstr "Litván"
+
+# Ukrainian
+msgid "uk"
+msgstr "Ukrán"
+
+# Romanian
+msgid "ro_RO"
+msgstr "ro_RO"
+
+# Estonian
+msgid "et_EE"
+msgstr "et_EE"
+
+# Bulgarian
+msgid "bg_BG"
+msgstr ""

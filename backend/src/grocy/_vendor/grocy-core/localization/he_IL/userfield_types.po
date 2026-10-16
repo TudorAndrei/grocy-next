@@ -1,0 +1,75 @@
+# 
+# Translators:
+# רון יצחקי <ronveofir@gmail.com>, 2020
+# Yaron Shahrabani <sh.yaron@gmail.com>, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:43+0000\n"
+"Last-Translator: Yaron Shahrabani <sh.yaron@gmail.com>, 2023\n"
+"Language-Team: Hebrew (Israel) (https://app.transifex.com/grocy/teams/93189/he_IL/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: he_IL\n"
+"Plural-Forms: nplurals=3; plural=(n == 1 && n % 1 == 0) ? 0 : (n == 2 && n % 1 == 0) ? 1: 2;\n"
+"X-Domain: grocy/userfield_types\n"
+
+# Text (single line)
+msgid "text-single-line"
+msgstr "טקסט בשורה אחת"
+
+# Text (multi line)
+msgid "text-multi-line"
+msgstr "טקסט מרובה שורות"
+
+# Number (integral)
+msgid "number-integral"
+msgstr "מספר שלם"
+
+# Number (decimal)
+msgid "number-decimal"
+msgstr "מספר עשרוני"
+
+# Number (currency)
+msgid "number-currency"
+msgstr "מספר (מטבע)"
+
+# Date (without time)
+msgid "date"
+msgstr "תאריך (בלי שעה)"
+
+# Date & time
+msgid "datetime"
+msgstr "תאריך ושעה"
+
+# Checkbox
+msgid "checkbox"
+msgstr "תיבת סימון"
+
+# Select list (a single item can be selected)
+msgid "preset-list"
+msgstr "בחירה מרשימה (ניתן לבחור בפריט אחד)"
+
+# Select list (multiple items can be selected)
+msgid "preset-checklist"
+msgstr "בחירה מרשימה (ניתן לבחור במגוון פריטים)"
+
+# Link
+msgid "link"
+msgstr "קישור"
+
+# Link (with title)
+msgid "link-with-title"
+msgstr "קישור (עם כותרת)"
+
+# File
+msgid "file"
+msgstr "קובץ"
+
+# Image
+msgid "image"
+msgstr "תמונה"

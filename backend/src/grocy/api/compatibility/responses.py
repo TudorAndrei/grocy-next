@@ -1,6 +1,7 @@
 """Relay the pinned PHP controller's status, headers, and response bytes."""
 
 import base64
+from pathlib import Path
 from typing import Any
 
 from fastapi import Request, Response
@@ -47,10 +48,11 @@ async def native_action_response(
         "GROCY_" + name: value for name, value in settings.feature_flags().items()
     }
     configuration.update(
-        GROCY_BASE_URL=str(request.base_url),
-        GROCY_DISABLE_URL_REWRITING=False,
-        GROCY_DEFAULT_LOCALE="en",
-        GROCY_LOCALE="en",
+        GROCY_BASE_URL=settings.base_url,
+        GROCY_DISABLE_URL_REWRITING=settings.disable_url_rewriting,
+        GROCY_DEFAULT_LOCALE=settings.default_locale,
+        GROCY_DISABLE_AUTH=False,
+        GROCY_CURRENCY=settings.currency,
         GROCY_STOCK_BARCODE_LOOKUP_PLUGIN=settings.stock_barcode_lookup_plugin,
         NATIVE_FILES_ROOT=str(settings.files_root.resolve()),
         GROCY_LABEL_PRINTER_WEBHOOK=settings.label_printer_webhook,
@@ -61,6 +63,10 @@ async def native_action_response(
     configuration.update(
         {"GROCY_" + name: value for name, value in settings.thermal_printer_configuration().items()}
     )
+    filename = session.get_bind().engine.url.database
+    configuration["NATIVE_DATABASE_FILE"] = (
+        str(Path(filename).resolve()) if filename and filename != ":memory:" else None
+    )
     result = await runtime.native_action(
         route=route,
         object_id=object_id,
@@ -69,6 +75,8 @@ async def native_action_response(
         body=await request.body(),
         content_type=request.headers.get("content-type"),
         query_string=request.scope["query_string"],
+        uri=str(request.url),
+        headers=request.scope["headers"],
         default_permissions=settings.default_permissions,
         datapath=settings.datapath.resolve(),
         configuration=configuration,

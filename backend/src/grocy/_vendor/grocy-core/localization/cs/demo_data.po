@@ -1,0 +1,437 @@
+# 
+# Translators:
+# Michal Petříček <michal@petricek.org>, 2019
+# Ondřej Suk <ondra.suk.55@gmail.com>, 2020
+# Radim Kabeláč <radim.ekk@gmail.com>, 2020
+# Pavel Paseka, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: Pavel Paseka, 2023\n"
+"Language-Team: Czech (https://app.transifex.com/grocy/teams/93189/cs/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
+"X-Domain: grocy/demo_data\n"
+
+msgid "Cookies"
+msgstr "Sušenky"
+
+msgid "Chocolate"
+msgstr "Čokoláda"
+
+msgid "Pantry"
+msgstr "Spíž"
+
+msgid "Candy cupboard"
+msgstr "Skříňka s cukrovím"
+
+msgid "Tinned food cupboard"
+msgstr "Skříňka s konzervami"
+
+msgid "Fridge"
+msgstr "Chladnička"
+
+msgid "Piece"
+msgid_plural "Pieces"
+msgstr[0] "Kus"
+msgstr[1] "Kusů"
+msgstr[2] "Kusů"
+msgstr[3] "Kusů"
+
+msgid "Pack"
+msgid_plural "Packs"
+msgstr[0] "Balení"
+msgstr[1] "Balení"
+msgstr[2] "Balení"
+msgstr[3] "Balení"
+
+msgid "Glass"
+msgid_plural "Glasses"
+msgstr[0] "Sklenice"
+msgstr[1] "Sklenic"
+msgstr[2] "Sklenic"
+msgstr[3] "Sklenic"
+
+msgid "Tin"
+msgid_plural "Tins"
+msgstr[0] "Plechovka"
+msgstr[1] "Plechovek"
+msgstr[2] "Plechovek"
+msgstr[3] "Plechovek"
+
+msgid "Can"
+msgid_plural "Cans"
+msgstr[0] "Konzerva"
+msgstr[1] "Konzerv"
+msgstr[2] "Konzerv"
+msgstr[3] "Konzerv"
+
+msgid "Bunch"
+msgid_plural "Bunches"
+msgstr[0] "Svazek"
+msgstr[1] "Svazky"
+msgstr[2] "Svazků"
+msgstr[3] "Svazků"
+
+msgid "Gummy bears"
+msgstr "Gumoví medvídci"
+
+msgid "Crisps"
+msgstr "Brambůrky"
+
+msgid "Eggs"
+msgstr "Vajíčka"
+
+msgid "Noodles"
+msgstr "Nudle"
+
+msgid "Pickles"
+msgstr "Kyselé okurky"
+
+msgid "Gulash soup"
+msgstr "Gulášová polévka"
+
+msgid "Yogurt"
+msgstr "Jogurt"
+
+msgid "Cheese"
+msgstr "Sýr"
+
+msgid "Cold cuts"
+msgstr "Uzeniny"
+
+msgid "Paprika"
+msgstr "Paprika"
+
+msgid "Cucumber"
+msgstr "Okurka"
+
+msgid "Radish"
+msgstr "Ředkev"
+
+msgid "Tomato"
+msgstr "Rajče"
+
+msgid "Change towels in the bathroom"
+msgstr "Vyměnit ručníky v koupelně"
+
+msgid "Mop the kitchen floor"
+msgstr "Vytřít podlahu v kuchyni"
+
+msgid "Warranty ends"
+msgstr "Záruka končí"
+
+msgid "TV remote control"
+msgstr "Dálkový ovladač k TV"
+
+msgid "Alarm clock"
+msgstr "Budík"
+
+msgid "Heat remote control"
+msgstr "Dálkové ovládání k topení"
+
+msgid "Take out the trash"
+msgstr "Vynést odpadkový koš"
+
+msgid "Some good snacks"
+msgstr "Nějaké dobroty"
+
+msgid "Pizza dough"
+msgstr "Těsto na pizzu"
+
+msgid "Sieved tomatoes"
+msgstr "Drcená rajčata"
+
+msgid "Salami"
+msgstr "Salám"
+
+msgid "Toast"
+msgstr "Toust"
+
+msgid "Minced meat"
+msgstr "Mleté maso"
+
+msgid "Pizza"
+msgstr "Pizza"
+
+msgid "Spaghetti bolognese"
+msgstr "Boloňské špagety"
+
+msgid "Sandwiches"
+msgstr "Sendviče"
+
+msgid "English"
+msgstr "Angličtina"
+
+msgid "German"
+msgstr "Němčina"
+
+msgid "Italian"
+msgstr "Italština"
+
+msgid "This is the note content of the recipe ingredient"
+msgstr "Toto je poznámka u suroviny receptu"
+
+msgid "Demo User"
+msgstr "Demo uživatel"
+
+msgid "Gram"
+msgid_plural "Grams"
+msgstr[0] "gram"
+msgstr[1] "gramy"
+msgstr[2] "gramů"
+msgstr[3] "gramů"
+
+msgid "Flour"
+msgstr "Mouka"
+
+msgid "Pancakes"
+msgstr "Palačinky"
+
+msgid "Sugar"
+msgstr "Cukr"
+
+msgid "Sweets"
+msgstr "Sladkosti"
+
+msgid "Bakery products"
+msgstr "Pečivo"
+
+msgid "Tinned food"
+msgstr "Konzervované potraviny"
+
+msgid "Butchery products"
+msgstr "Maso a uzeniny"
+
+msgid "Vegetables/Fruits"
+msgstr "Ovoce a zelenina"
+
+msgid "Refrigerated products"
+msgstr "Chlazené potraviny"
+
+msgid "Coffee machine"
+msgstr "Kávovar"
+
+msgid "Dishwasher"
+msgstr "Myčka nádobí"
+
+msgid "Liter"
+msgstr "litr"
+
+msgid "Liters"
+msgstr "litry"
+
+msgid "Bottle"
+msgstr "láhev"
+
+msgid "Bottles"
+msgstr "láhve"
+
+msgid "Milk"
+msgstr "Mléko"
+
+msgid "Chocolate sauce"
+msgstr "Čokoládová poleva"
+
+msgid "Milliliters"
+msgstr "mililitry"
+
+msgid "Milliliter"
+msgstr "mililitr"
+
+msgid "Bottom"
+msgstr "Dno"
+
+msgid "Topping"
+msgstr "Poleva"
+
+msgid "French"
+msgstr "Francouzština"
+
+msgid "Turkish"
+msgstr "Turečtina"
+
+msgid "Spanish"
+msgstr "Španělština"
+
+msgid "Russian"
+msgstr "Ruština"
+
+msgid "Vacuum the living room floor"
+msgstr "Vysát v obývacím pokoji"
+
+msgid "Clean the litter box"
+msgstr "Vyčistit odpadkový koš"
+
+msgid "Change the bed sheets"
+msgstr "Vyměnit povlečení"
+
+msgid "Swedish"
+msgstr "Švédština"
+
+msgid "Polish"
+msgstr "Polština"
+
+msgid "Milk Chocolate"
+msgstr "Mléčná čokoláda"
+
+msgid "Dark Chocolate"
+msgstr "Hořká čokoláda"
+
+msgid "Slice"
+msgid_plural "Slices"
+msgstr[0] "Plátek"
+msgstr[1] "Plátky"
+msgstr[2] "Plátky"
+msgstr[3] "Plátky"
+
+msgid "Example userentity"
+msgstr "Příklad uživatelské tabulky"
+
+msgid "This is an example user entity..."
+msgstr "Toto je ukázková položka uživatelské tabulky"
+
+msgid "Custom field"
+msgstr "Vlastní pole"
+
+msgid "Example field value..."
+msgstr "Příklad hodnoty pole..."
+
+msgid "Waffle rolls"
+msgstr "Oplatky"
+
+msgid "Danish"
+msgstr "Dánština"
+
+msgid "Dutch"
+msgstr "Holandština"
+
+msgid "Norwegian"
+msgstr "Norština"
+
+msgid "Demo"
+msgstr "Demo"
+
+msgid "Stable version"
+msgstr "Stabilní verze"
+
+msgid "Preview version"
+msgstr "Vývojová verze"
+
+msgid "current release"
+msgstr "Aktuální verze"
+
+msgid "not yet released"
+msgstr "zatím nevydaná"
+
+msgid "Portuguese (Brazil)"
+msgstr "Portugalština (Brazílie)"
+
+msgid "This is a note"
+msgstr "Toto je poznámka"
+
+msgid "Freezer"
+msgstr "Mrazák"
+
+msgid "Hungarian"
+msgstr "Maďarština"
+
+msgid "Slovak"
+msgstr "Slovenština"
+
+msgid "Czech"
+msgstr "Čeština"
+
+msgid "Portuguese (Portugal)"
+msgstr "Portugalština (Portugalsko)"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket1"
+msgstr "UkazkovyObchod1"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket2"
+msgstr "UkazkovyObchod2"
+
+msgid "Japanese"
+msgstr "Japonština"
+
+msgid "Chinese (Taiwan)"
+msgstr "Čínština (Tchaj-wan)"
+
+msgid "Greek"
+msgstr "Řečtina"
+
+msgid "Korean"
+msgstr "Korejština"
+
+msgid "Chinese (China)"
+msgstr "Čínština (Čína)"
+
+msgid "Hebrew (Israel)"
+msgstr "Hebrejština (Izrael)"
+
+msgid "Tamil"
+msgstr "Tamilština"
+
+msgid "Finnish"
+msgstr "Finština"
+
+msgid "Breakfast"
+msgstr "Snídaně"
+
+msgid "Lunch"
+msgstr "Oběd"
+
+msgid "Dinner"
+msgstr "Večeře"
+
+msgid "Catalan"
+msgstr "Katalánština"
+
+msgid "Slovenian"
+msgstr "Slovinština"
+
+msgid "Lithuanian"
+msgstr "Litevština"
+
+msgid "Ukrainian"
+msgstr "Ukrajinština"
+
+msgid "Kilogram"
+msgid_plural "Kilograms"
+msgstr[0] "kilogram"
+msgstr[1] "kilogramy"
+msgstr[2] "kilogramů"
+msgstr[3] "kilogramů"
+
+msgid "Romanian"
+msgstr "Rumunština"
+
+msgid "Pint"
+msgstr "Pinta"
+
+msgid "Beverages"
+msgstr "Nápoje"
+
+msgid "Ice Cream"
+msgstr "Zmrzlina"
+
+msgid "Soda"
+msgstr "Soda"
+
+msgid "Beer"
+msgstr "Pivo"
+
+msgid "Estonian"
+msgstr ""
+
+msgid "Bulgarian"
+msgstr ""

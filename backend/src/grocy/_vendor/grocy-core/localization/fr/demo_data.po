@@ -1,0 +1,437 @@
+# 
+# Translators:
+# 8a6ec6ba31fecee74183669e4744ef28_7d4badd <d361cc5e10b554e8c048e8ae22413142_453062>, 2019
+# bigoudo, 2019
+# Matthieu K, 2019
+# Antonin DESFONTAINES <antonin.desfontaines@outlook.com>, 2019
+# sebastien GRANDJEAN <maluseb@hotmail.fr>, 2020
+# Jordan COUTON <couton.jordan@gmail.com>, 2020
+# patate douce <poubel125@gmail.com>, 2020
+# nerdinator <florian.dupret@gmail.com>, 2020
+# C P <anoxy78@gmail.com>, 2020
+# Barthelemy Drabczuk, 2021
+# Zkryvix <angelo.frangione@gmail.com>, 2021
+# Jonathan Blanc, 2023
+# Greg G, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: Greg G, 2023\n"
+"Language-Team: French (https://app.transifex.com/grocy/teams/93189/fr/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fr\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+"X-Domain: grocy/demo_data\n"
+
+msgid "Cookies"
+msgstr "Biscuits"
+
+msgid "Chocolate"
+msgstr "Chocolat"
+
+msgid "Pantry"
+msgstr "Garde-manger"
+
+msgid "Candy cupboard"
+msgstr "Placard à bonbons"
+
+msgid "Tinned food cupboard"
+msgstr "Placard à conserves"
+
+msgid "Fridge"
+msgstr "Réfrigérateur"
+
+msgid "Piece"
+msgid_plural "Pieces"
+msgstr[0] "Piece"
+msgstr[1] "Unités"
+msgstr[2] "Unités"
+
+msgid "Pack"
+msgid_plural "Packs"
+msgstr[0] "Pack"
+msgstr[1] "Packs"
+msgstr[2] "Packs"
+
+msgid "Glass"
+msgid_plural "Glasses"
+msgstr[0] "Glass"
+msgstr[1] "Bocaux"
+msgstr[2] "Bocaux"
+
+msgid "Tin"
+msgid_plural "Tins"
+msgstr[0] "Tin"
+msgstr[1] "Conserve"
+msgstr[2] "Conserve"
+
+msgid "Can"
+msgid_plural "Cans"
+msgstr[0] "Can"
+msgstr[1] "Canettes"
+msgstr[2] "Canettes"
+
+msgid "Bunch"
+msgid_plural "Bunches"
+msgstr[0] "Bunch"
+msgstr[1] "Bottes"
+msgstr[2] "Bottes"
+
+msgid "Gummy bears"
+msgstr "Oursons"
+
+msgid "Crisps"
+msgstr "Chips"
+
+msgid "Eggs"
+msgstr "Oeufs"
+
+msgid "Noodles"
+msgstr "Nouilles"
+
+msgid "Pickles"
+msgstr "Cornichons"
+
+msgid "Gulash soup"
+msgstr "Soupe de goulache"
+
+msgid "Yogurt"
+msgstr "Yaourt"
+
+msgid "Cheese"
+msgstr "Fromage"
+
+msgid "Cold cuts"
+msgstr "Charcuterie"
+
+msgid "Paprika"
+msgstr "Paprika"
+
+msgid "Cucumber"
+msgstr "Concombre"
+
+msgid "Radish"
+msgstr "Radis"
+
+msgid "Tomato"
+msgstr "Tomate"
+
+msgid "Change towels in the bathroom"
+msgstr "Changer les serviettes de la salle de bain"
+
+msgid "Mop the kitchen floor"
+msgstr "Laver le sol de la cuisine"
+
+msgid "Warranty ends"
+msgstr "Fin de garantie"
+
+msgid "TV remote control"
+msgstr "Télécommande de télévision"
+
+msgid "Alarm clock"
+msgstr "Réveil"
+
+msgid "Heat remote control"
+msgstr "Télécommande du chauffage"
+
+msgid "Take out the trash"
+msgstr "Sortir les poubelles"
+
+msgid "Some good snacks"
+msgstr "Quelques bons gâteaux"
+
+msgid "Pizza dough"
+msgstr "Pâte à pizza"
+
+msgid "Sieved tomatoes"
+msgstr "Sauce tomate"
+
+msgid "Salami"
+msgstr "Salami"
+
+msgid "Toast"
+msgstr "Toast"
+
+msgid "Minced meat"
+msgstr "Viande hachée"
+
+msgid "Pizza"
+msgstr "Pizza"
+
+msgid "Spaghetti bolognese"
+msgstr "Spaghetti bolognaise"
+
+msgid "Sandwiches"
+msgstr "Sandwiches"
+
+msgid "English"
+msgstr "Anglais"
+
+msgid "German"
+msgstr "Allemand"
+
+msgid "Italian"
+msgstr "Italien"
+
+msgid "This is the note content of the recipe ingredient"
+msgstr "Ceci est le contenu de la note concernant l'ingrédient de la recette"
+
+msgid "Demo User"
+msgstr "Utilisateur de démo"
+
+msgid "Gram"
+msgid_plural "Grams"
+msgstr[0] "Gram"
+msgstr[1] "Grammes"
+msgstr[2] "Grammes"
+
+msgid "Flour"
+msgstr "Farine"
+
+msgid "Pancakes"
+msgstr "Crêpes"
+
+msgid "Sugar"
+msgstr "Sucre"
+
+msgid "Sweets"
+msgstr "Bonbons"
+
+msgid "Bakery products"
+msgstr "Viennoiseries"
+
+msgid "Tinned food"
+msgstr "Conserves"
+
+msgid "Butchery products"
+msgstr "Viande"
+
+msgid "Vegetables/Fruits"
+msgstr "Fruits et légumes"
+
+msgid "Refrigerated products"
+msgstr "Produits réfrigérés "
+
+msgid "Coffee machine"
+msgstr "Machine à café"
+
+msgid "Dishwasher"
+msgstr "Lave-vaisselle"
+
+msgid "Liter"
+msgstr "Litre"
+
+msgid "Liters"
+msgstr "Litres"
+
+msgid "Bottle"
+msgstr "Bouteille"
+
+msgid "Bottles"
+msgstr "Bouteilles"
+
+msgid "Milk"
+msgstr "Lait"
+
+msgid "Chocolate sauce"
+msgstr "Coulis de chocolat"
+
+msgid "Milliliters"
+msgstr "Millilitres"
+
+msgid "Milliliter"
+msgstr "Millilitre"
+
+msgid "Bottom"
+msgstr "Dessous"
+
+msgid "Topping"
+msgstr "Garniture"
+
+msgid "French"
+msgstr "Français"
+
+msgid "Turkish"
+msgstr "Turque"
+
+msgid "Spanish"
+msgstr "Espagnol"
+
+msgid "Russian"
+msgstr "Russe"
+
+msgid "Vacuum the living room floor"
+msgstr "Passer l'aspirateur dans le salon"
+
+msgid "Clean the litter box"
+msgstr "Nettoyer la litière"
+
+msgid "Change the bed sheets"
+msgstr "Changer les draps du lit"
+
+msgid "Swedish"
+msgstr "Suédois"
+
+msgid "Polish"
+msgstr "Polonais"
+
+msgid "Milk Chocolate"
+msgstr "Chocolat au lait"
+
+msgid "Dark Chocolate"
+msgstr "Chocolat noir"
+
+msgid "Slice"
+msgid_plural "Slices"
+msgstr[0] "Slice"
+msgstr[1] "Tranches"
+msgstr[2] "Tranches"
+
+msgid "Example userentity"
+msgstr "Exemple d'entité utilisateur"
+
+msgid "This is an example user entity..."
+msgstr "Ceci est un exemple d'entité utilisateur"
+
+msgid "Custom field"
+msgstr "Champ personnalisé"
+
+msgid "Example field value..."
+msgstr "Exemple de valeur de champ..."
+
+msgid "Waffle rolls"
+msgstr "Gaufrettes roulées"
+
+msgid "Danish"
+msgstr "Danois"
+
+msgid "Dutch"
+msgstr "Néerlandais"
+
+msgid "Norwegian"
+msgstr "Norvégien"
+
+msgid "Demo"
+msgstr "Démo"
+
+msgid "Stable version"
+msgstr "Version stable"
+
+msgid "Preview version"
+msgstr "Version d'aperçu"
+
+msgid "current release"
+msgstr "Version actuelle"
+
+msgid "not yet released"
+msgstr "not yet released"
+
+msgid "Portuguese (Brazil)"
+msgstr "Portugais (Brésil)"
+
+msgid "This is a note"
+msgstr "Ceci est une note"
+
+msgid "Freezer"
+msgstr "Congélateur"
+
+msgid "Hungarian"
+msgstr "Hongrois"
+
+msgid "Slovak"
+msgstr "Slovaque"
+
+msgid "Czech"
+msgstr "Tchèque"
+
+msgid "Portuguese (Portugal)"
+msgstr "Portugais (Portugal)"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket1"
+msgstr "DemoSupermarket1"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket2"
+msgstr "DemoSupermarket2"
+
+msgid "Japanese"
+msgstr "Japonais"
+
+msgid "Chinese (Taiwan)"
+msgstr "Chinois (Taïwan)"
+
+msgid "Greek"
+msgstr "Grec"
+
+msgid "Korean"
+msgstr "Coréen"
+
+msgid "Chinese (China)"
+msgstr "Chinois (Chine)"
+
+msgid "Hebrew (Israel)"
+msgstr "Hébreux (Israël)"
+
+msgid "Tamil"
+msgstr "Tamoul"
+
+msgid "Finnish"
+msgstr "Finnois"
+
+msgid "Breakfast"
+msgstr "Petit-déjeuner"
+
+msgid "Lunch"
+msgstr "Déjeuner"
+
+msgid "Dinner"
+msgstr "Dîner"
+
+msgid "Catalan"
+msgstr "Catalan"
+
+msgid "Slovenian"
+msgstr "Slovène"
+
+msgid "Lithuanian"
+msgstr "Lituanien"
+
+msgid "Ukrainian"
+msgstr "Ukrainien"
+
+msgid "Kilogram"
+msgid_plural "Kilograms"
+msgstr[0] "Kilogramme"
+msgstr[1] "Kilogrammes"
+msgstr[2] "Kilogrammes"
+
+msgid "Romanian"
+msgstr "Roumain"
+
+msgid "Pint"
+msgstr "Pinte"
+
+msgid "Beverages"
+msgstr "Boissons"
+
+msgid "Ice Cream"
+msgstr "Glace"
+
+msgid "Soda"
+msgstr "Soda"
+
+msgid "Beer"
+msgstr "Bière"
+
+msgid "Estonian"
+msgstr "Estonien"
+
+msgid "Bulgarian"
+msgstr ""

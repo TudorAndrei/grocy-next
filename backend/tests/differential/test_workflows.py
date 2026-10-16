@@ -4559,7 +4559,7 @@ def test_native_calendar_auth_does_not_parse_unused_user_dates(api, execute_sql,
     key = user_key(api, user)
     execute_sql(f"UPDATE users SET row_created_timestamp='{created}' WHERE id={user}")
     headers = {"GROCY-API-KEY": key}
-    for path in ["/api/calendar/ical", "/api/calendar/ical/sharing-link"]:
+    for path in ["/api/calendar/ical", "/api/calendar/ical/sharing-link", "/api/system/config"]:
         response = api.get(path, headers=headers)
         assert response.status_code == 200, response.text
 
@@ -4884,3 +4884,94 @@ def test_native_external_lookup_keeps_plugin_loader_errors(
                 override.unlink(missing_ok=True)
             else:
                 override.write_bytes(previous)
+
+
+@pytest.mark.parametrize(
+    "params,status,offset",
+    [
+        ([], 200, 0),
+        ([("offset", "-60")], 200, -60),
+        ([("offset", "+1")], 200, 1),
+        ([("offset", " 1 ")], 200, 1),
+        ([("offset", "2147483648")], 200, 2147483648),
+        ([("offset", "01")], 400, None),
+        ([("offset", "1.0")], 400, None),
+        ([("offset", "1e0")], 400, None),
+        ([("offset", "")], 400, None),
+        ([("offset", "true")], 400, None),
+        ([("offset[]", "1")], 400, None),
+        ([("offset", "bad"), ("offset", "1")], 200, 1),
+        ([("offset", "9223372036854775808")], 400, None),
+        ([("offset", "9223372036854775807")], 500, None),
+    ],
+)
+def test_native_system_time_uses_php_offset_rules(api, params, status, offset):
+    response = api.get("/api/system/time", params=params)
+    assert response.status_code == status, response.text
+    payload = response.json()
+    if status == 400:
+        assert payload == {"error_message": 'Query parameter "offset" is not a valid integer'}
+    elif status == 500:
+        assert "must be of type" in payload["error_message"]
+        assert "float given" in payload["error_message"]
+        assert set(payload) == {"error_message", "error_details"}
+    else:
+        assert set(payload) == {
+            "timezone",
+            "time_local",
+            "time_local_sqlite3",
+            "time_utc",
+            "timestamp",
+            "offset",
+        }
+        assert payload["offset"] == offset
+        assert isinstance(payload["timestamp"], int)
+        assert isinstance(payload["timezone"], str)
+        assert all(
+            isinstance(payload[key], str)
+            for key in ["time_local", "time_local_sqlite3", "time_utc"]
+        )
+        assert (
+            int(datetime.fromisoformat(payload["time_utc"]).replace(tzinfo=UTC).timestamp())
+            == payload["timestamp"]
+        )
+
+
+def test_native_system_info_uses_request_headers_and_saved_version(api, execute_sql):
+    execute_sql("INSERT INTO migrations(migration) VALUES (1337)")
+    try:
+        response = api.get("/api/system/info", headers={"User-Agent": "Native system agent"})
+        assert response.status_code == 200, response.text
+        info = response.json()
+        assert set(info) == {
+            "grocy_version",
+            "php_version",
+            "sqlite_version",
+            "db_version",
+            "os",
+            "client",
+        }
+        assert info["db_version"] == 1337
+        assert info["client"] == "Native system agent"
+        assert info["grocy_version"] == {"Version": "4.5.0", "ReleaseDate": "2025-03-28"}
+        assert all(
+            isinstance(info[name], str) and info[name]
+            for name in ["php_version", "sqlite_version", "os"]
+        )
+    finally:
+        execute_sql("DELETE FROM migrations WHERE migration=1337")
+
+
+@pytest.mark.parametrize("body", [b"", b"{}", b"{broken"])
+def test_native_system_missing_translation_keeps_production_error(api, body):
+    response = api.post(
+        "/api/system/log-missing-localization",
+        content=body,
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 500, response.text
+    assert response.json()["error_message"] == (
+        "Slim\\Handlers\\Strategies\\RequestResponse::__invoke(): Return value must be of type "
+        "Psr\\Http\\Message\\ResponseInterface, null returned"
+    )
+    assert set(response.json()) == {"error_message", "error_details"}

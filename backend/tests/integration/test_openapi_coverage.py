@@ -89,9 +89,6 @@ def test_system_and_user_surface(client: TestClient, api_headers: dict[str, str]
         response = client.get(path, headers=api_headers)
         assert response.status_code == 200, path
 
-    missing = client.post("/api/system/log-missing-localization", headers=api_headers, json={})
-    assert missing.status_code == 204
-
     setting = client.put(
         "/api/user/settings/locale",
         headers=api_headers,

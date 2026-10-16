@@ -1829,6 +1829,8 @@ def thermal_printer(reference, monkeypatch, tmp_path):
                 path.unlink(missing_ok=True)
             else:
                 path.write_bytes(contents)
+        if any(path.name == "BASE_URL.txt" for path in previous):
+            reference.get("/api/system/info")
 
 
 def thermal_list(app, name):
@@ -1971,3 +1973,61 @@ def test_reference_native_thermal_network_output(client, api_headers, reference,
         finally:
             server.shutdown()
             thread.join(timeout=5)
+
+
+@pytest.mark.parametrize(
+    "locale,language",
+    [("", "de-DE,de;q=0.9,en;q=0.1"), ("fr", "de"), ("unknown", "xx,en;q=0.5"), ("", "unknown")],
+)
+def test_reference_native_system_locale_and_localized_copy(
+    client, api_headers, reference, locale, language
+):
+    client.headers.update(api_headers)
+    results = []
+    name = "Locale recipe " + uuid4().hex
+    for app in (reference, client):
+        before = app.get("/api/user/settings").json().get("locale")
+        try:
+            assert app.put("/api/user/settings/locale", json={"value": locale}).status_code == 204
+            headers = {"Accept-Language": language}
+            response = app.get("/api/system/localization-strings", headers=headers)
+            assert response.status_code == 200, response.text
+            assert response.headers["cache-control"] == "max-age=2592000"
+            recipe = create(app, "recipes", {"name": name})
+            copied = app.post(f"/api/recipes/{recipe}/copy", headers=headers)
+            assert copied.status_code == 200, copied.text
+            copied_name = app.get(
+                "/api/objects/recipes/" + copied.json()["created_object_id"]
+            ).json()["name"]
+            config = app.get("/api/system/config", headers=headers).json()
+            results.append((config["LOCALE"], response.json(), copied_name))
+        finally:
+            if before is None:
+                app.delete("/api/user/settings/locale")
+            else:
+                app.put("/api/user/settings/locale", json={"value": before})
+    assert results[0] == results[1]
+
+
+def test_reference_native_system_config_exposes_current_printer_and_url_settings(
+    client, api_headers, reference, thermal_printer
+):
+    client.headers.update(api_headers)
+    values = {
+        "TPRINTER_PRINT_NOTES": False,
+        "TPRINTER_PRINT_QUANTITY_NAME": False,
+        "STOCK_BARCODE_LOOKUP_PLUGIN": "DemoBarcodeLookupPlugin",
+        "LABEL_PRINTER_HOOK_JSON": False,
+        "BASE_URL": "/native-prefix/",
+    }
+    for name, value in values.items():
+        thermal_printer.setting(name, value)
+    # Grocy refreshes its view cache once after the base URL changes.
+    reference.get("/api/system/config")
+    for app in (reference, client):
+        response = app.get("/api/system/config")
+        assert response.status_code == 200, response.text
+        assert {key: response.json()[key] for key in values} == values
+        link = app.get("/api/calendar/ical/sharing-link")
+        assert link.status_code == 200, link.text
+        assert link.json()["url"].startswith("/native-prefix/api/calendar/ical?secret=")

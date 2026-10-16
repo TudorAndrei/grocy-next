@@ -1,0 +1,419 @@
+# 
+# Translators:
+# Tuğberk Kaan Duman <kaan@dumanmail.com>, 2019
+# Yigit Sever <yigit@ceng.metu.edu.tr>, 2021
+# Sedat Mehmed, 2022
+# Burak ER, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: Burak ER, 2023\n"
+"Language-Team: Turkish (https://app.transifex.com/grocy/teams/93189/tr/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: tr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: grocy/demo_data\n"
+
+msgid "Cookies"
+msgstr "Kurabiye"
+
+msgid "Chocolate"
+msgstr "Çikolata"
+
+msgid "Pantry"
+msgstr "Kiler"
+
+msgid "Candy cupboard"
+msgstr "Şeker dolabı"
+
+msgid "Tinned food cupboard"
+msgstr "Konserve dolabı"
+
+msgid "Fridge"
+msgstr "Buzdolabı"
+
+msgid "Piece"
+msgid_plural "Pieces"
+msgstr[0] "Tane"
+msgstr[1] "Tane"
+
+msgid "Pack"
+msgid_plural "Packs"
+msgstr[0] "Paket"
+msgstr[1] "Paket"
+
+msgid "Glass"
+msgid_plural "Glasses"
+msgstr[0] "Bardak"
+msgstr[1] "Bardak"
+
+msgid "Tin"
+msgid_plural "Tins"
+msgstr[0] "Teneke"
+msgstr[1] "Teneke"
+
+msgid "Can"
+msgid_plural "Cans"
+msgstr[0] "Konserve"
+msgstr[1] "Konserve"
+
+msgid "Bunch"
+msgid_plural "Bunches"
+msgstr[0] "Demet"
+msgstr[1] "Demet"
+
+msgid "Gummy bears"
+msgstr "Jelibon ayı"
+
+msgid "Crisps"
+msgstr "Cips"
+
+msgid "Eggs"
+msgstr "Yumurta"
+
+msgid "Noodles"
+msgstr "Noodle"
+
+msgid "Pickles"
+msgstr "Turşu"
+
+msgid "Gulash soup"
+msgstr "Gulaş çorbası"
+
+msgid "Yogurt"
+msgstr "Yoğurt"
+
+msgid "Cheese"
+msgstr "Peynir"
+
+msgid "Cold cuts"
+msgstr "Söğüş"
+
+msgid "Paprika"
+msgstr "Kırmızı biber"
+
+msgid "Cucumber"
+msgstr "Salatalık"
+
+msgid "Radish"
+msgstr "Turp"
+
+msgid "Tomato"
+msgstr "Domates"
+
+msgid "Change towels in the bathroom"
+msgstr "Banyo havluları değiştirin"
+
+msgid "Mop the kitchen floor"
+msgstr "Mutfağın zeminini paspasla"
+
+msgid "Warranty ends"
+msgstr "Garantisi bitiyor"
+
+msgid "TV remote control"
+msgstr "TV uzaktan kumandası"
+
+msgid "Alarm clock"
+msgstr "Alarm saati"
+
+msgid "Heat remote control"
+msgstr "Uzaktan ısı kontrolü"
+
+msgid "Take out the trash"
+msgstr "Çöpü dışarı çıkar"
+
+msgid "Some good snacks"
+msgstr "Bazı iyi atıştırmalıklar"
+
+msgid "Pizza dough"
+msgstr "Pizza hamuru"
+
+msgid "Sieved tomatoes"
+msgstr "Elenmiş domates"
+
+msgid "Salami"
+msgstr "Salam"
+
+msgid "Toast"
+msgstr "Tost"
+
+msgid "Minced meat"
+msgstr "Kıyma"
+
+msgid "Pizza"
+msgstr "Pizza"
+
+msgid "Spaghetti bolognese"
+msgstr "Spagetti bolonez"
+
+msgid "Sandwiches"
+msgstr "Sandviç"
+
+msgid "English"
+msgstr "İngilizce"
+
+msgid "German"
+msgstr "Almanca"
+
+msgid "Italian"
+msgstr "İtalyanca"
+
+msgid "This is the note content of the recipe ingredient"
+msgstr "Bu, tarif malzemesi için bir not içeriği"
+
+msgid "Demo User"
+msgstr "Demo Kullanıcısı"
+
+msgid "Gram"
+msgid_plural "Grams"
+msgstr[0] "Gram"
+msgstr[1] "Gram"
+
+msgid "Flour"
+msgstr "Un"
+
+msgid "Pancakes"
+msgstr "Pankek"
+
+msgid "Sugar"
+msgstr "Şeker"
+
+msgid "Sweets"
+msgstr "Tatlı"
+
+msgid "Bakery products"
+msgstr "Fırın ürünleri"
+
+msgid "Tinned food"
+msgstr "Konserve yiyecekler"
+
+msgid "Butchery products"
+msgstr "Kasap ürünleri"
+
+msgid "Vegetables/Fruits"
+msgstr "Sebze/Meyve"
+
+msgid "Refrigerated products"
+msgstr "Dondurulmuş ürünler"
+
+msgid "Coffee machine"
+msgstr "Kahve makinesi"
+
+msgid "Dishwasher"
+msgstr "Bulaşık makinesi"
+
+msgid "Liter"
+msgstr "Litre"
+
+msgid "Liters"
+msgstr "Litre"
+
+msgid "Bottle"
+msgstr "Şişe"
+
+msgid "Bottles"
+msgstr "Şişe"
+
+msgid "Milk"
+msgstr "Süt"
+
+msgid "Chocolate sauce"
+msgstr "Çikolata sosu"
+
+msgid "Milliliters"
+msgstr "Mililitre"
+
+msgid "Milliliter"
+msgstr "Mililitre"
+
+msgid "Bottom"
+msgstr "Dip"
+
+msgid "Topping"
+msgstr "Süsleme"
+
+msgid "French"
+msgstr "Fransızca"
+
+msgid "Turkish"
+msgstr "Türkçe"
+
+msgid "Spanish"
+msgstr "İspanyolca"
+
+msgid "Russian"
+msgstr "Rusça"
+
+msgid "Vacuum the living room floor"
+msgstr "Oturma odasının zeminini süpür"
+
+msgid "Clean the litter box"
+msgstr "Çöp kutusunu temizle"
+
+msgid "Change the bed sheets"
+msgstr "Çarşafları değiştir"
+
+msgid "Swedish"
+msgstr "İsveççe"
+
+msgid "Polish"
+msgstr "Lehçe"
+
+msgid "Milk Chocolate"
+msgstr "Sütlü Çikolata"
+
+msgid "Dark Chocolate"
+msgstr "Bitter Çikolata"
+
+msgid "Slice"
+msgid_plural "Slices"
+msgstr[0] "Dilim"
+msgstr[1] "Dilim"
+
+msgid "Example userentity"
+msgstr "Örnek kullanicinesnesi"
+
+msgid "This is an example user entity..."
+msgstr "Bu bir örnek kullanıcı nesnesi..."
+
+msgid "Custom field"
+msgstr "Özel alan"
+
+msgid "Example field value..."
+msgstr "Örnek alan değeri"
+
+msgid "Waffle rolls"
+msgstr "Waffle"
+
+msgid "Danish"
+msgstr "Danca"
+
+msgid "Dutch"
+msgstr "Felemenkçe"
+
+msgid "Norwegian"
+msgstr "Norveççe"
+
+msgid "Demo"
+msgstr "Demo"
+
+msgid "Stable version"
+msgstr "Kararlı sürüm"
+
+msgid "Preview version"
+msgstr "Önizleme sürümü"
+
+msgid "current release"
+msgstr "güncel sürüm"
+
+msgid "not yet released"
+msgstr "henüz yayınlanmadı"
+
+msgid "Portuguese (Brazil)"
+msgstr "Portekizce (Brezilya)"
+
+msgid "This is a note"
+msgstr "Bu bir not"
+
+msgid "Freezer"
+msgstr "Dondurucu"
+
+msgid "Hungarian"
+msgstr "Macar Dili"
+
+msgid "Slovak"
+msgstr "Slavk Dili"
+
+msgid "Czech"
+msgstr "Çekçe"
+
+msgid "Portuguese (Portugal)"
+msgstr "Portekizce (Portekiz)"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket1"
+msgstr "DemoMarket1"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket2"
+msgstr "DemoMarket2"
+
+msgid "Japanese"
+msgstr "Japonca"
+
+msgid "Chinese (Taiwan)"
+msgstr "Çince (Tayvan)"
+
+msgid "Greek"
+msgstr "Yunanca"
+
+msgid "Korean"
+msgstr "Korece"
+
+msgid "Chinese (China)"
+msgstr "Çince (Çin)"
+
+msgid "Hebrew (Israel)"
+msgstr "İbranice (İsrail)"
+
+msgid "Tamil"
+msgstr "Tamil Dili"
+
+msgid "Finnish"
+msgstr "Fince"
+
+msgid "Breakfast"
+msgstr "Kahvaltı"
+
+msgid "Lunch"
+msgstr "Öğle yemeği"
+
+msgid "Dinner"
+msgstr "Akşam yemeği"
+
+msgid "Catalan"
+msgstr "Katalanca"
+
+msgid "Slovenian"
+msgstr "Slovence"
+
+msgid "Lithuanian"
+msgstr "Litvanya dili"
+
+msgid "Ukrainian"
+msgstr "Ukraynaca"
+
+msgid "Kilogram"
+msgid_plural "Kilograms"
+msgstr[0] "Kilogram"
+msgstr[1] "Kilogram"
+
+msgid "Romanian"
+msgstr "Romence"
+
+msgid "Pint"
+msgstr "Pint"
+
+msgid "Beverages"
+msgstr "İçecekler"
+
+msgid "Ice Cream"
+msgstr "Dondurma"
+
+msgid "Soda"
+msgstr "Soda"
+
+msgid "Beer"
+msgstr "Bira"
+
+msgid "Estonian"
+msgstr "Estonya dili"
+
+msgid "Bulgarian"
+msgstr ""

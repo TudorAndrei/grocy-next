@@ -1,0 +1,424 @@
+# 
+# Translators:
+# dark159123 <r.j.hansen@protonmail.com>, 2019
+# Troels Siggaard <troels@siggaard.com>, 2019
+# Rasmus Bojsen <rasmus@bojsen.cn>, 2019
+# Mihai Marinescu <mihai@marinescu.dk>, 2020
+# klavslund <klavslund@gmail.com>, 2021
+# Jesper Donnis, 2021
+# Brian Moos Lindberg <brian@blueeel.dk>, 2022
+# hskdk <henrik@skjaerbaek.net>, 2023
+# G Momsen, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: G Momsen, 2024\n"
+"Language-Team: Danish (https://app.transifex.com/grocy/teams/93189/da/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: da\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/demo_data\n"
+
+msgid "Cookies"
+msgstr "Småkager"
+
+msgid "Chocolate"
+msgstr "Chokolade"
+
+msgid "Pantry"
+msgstr "Spisekammer"
+
+msgid "Candy cupboard"
+msgstr "Slikskuffe"
+
+msgid "Tinned food cupboard"
+msgstr "Dåsemadsskab"
+
+msgid "Fridge"
+msgstr "Køleskab"
+
+msgid "Piece"
+msgid_plural "Pieces"
+msgstr[0] "stk"
+msgstr[1] "stk"
+
+msgid "Pack"
+msgid_plural "Packs"
+msgstr[0] "Pakke"
+msgstr[1] "Pakker"
+
+msgid "Glass"
+msgid_plural "Glasses"
+msgstr[0] "Glas"
+msgstr[1] "Glas"
+
+msgid "Tin"
+msgid_plural "Tins"
+msgstr[0] "Dåse"
+msgstr[1] "Dåser"
+
+msgid "Can"
+msgid_plural "Cans"
+msgstr[0] "Dåse"
+msgstr[1] "Dåser"
+
+msgid "Bunch"
+msgid_plural "Bunches"
+msgstr[0] "Klase"
+msgstr[1] "Klaser"
+
+msgid "Gummy bears"
+msgstr "Vingummibamser"
+
+msgid "Crisps"
+msgstr "Chips"
+
+msgid "Eggs"
+msgstr "Æg"
+
+msgid "Noodles"
+msgstr "Nudler"
+
+msgid "Pickles"
+msgstr "Syltede agurker"
+
+msgid "Gulash soup"
+msgstr "Gullashsuppe"
+
+msgid "Yogurt"
+msgstr "Yoghurt"
+
+msgid "Cheese"
+msgstr "Ost"
+
+msgid "Cold cuts"
+msgstr "Pålæg"
+
+msgid "Paprika"
+msgstr "Paprika"
+
+msgid "Cucumber"
+msgstr "Agurk"
+
+msgid "Radish"
+msgstr "Radisse"
+
+msgid "Tomato"
+msgstr "Tomat"
+
+msgid "Change towels in the bathroom"
+msgstr "Udskift håndklæder på badeværelset"
+
+msgid "Mop the kitchen floor"
+msgstr "Vask køkkengulvet"
+
+msgid "Warranty ends"
+msgstr "Reklamationsret udløber"
+
+msgid "TV remote control"
+msgstr "Fjernbetjening til TV'et"
+
+msgid "Alarm clock"
+msgstr "Væggeur"
+
+msgid "Heat remote control"
+msgstr "Fjernbetjening til varme"
+
+msgid "Take out the trash"
+msgstr "Gå ud med skraldet"
+
+msgid "Some good snacks"
+msgstr "Nogle gode snacks"
+
+msgid "Pizza dough"
+msgstr "Pizzadej"
+
+msgid "Sieved tomatoes"
+msgstr "Sigtede tomater"
+
+msgid "Salami"
+msgstr "Salami"
+
+msgid "Toast"
+msgstr "Toast"
+
+msgid "Minced meat"
+msgstr "Hakkekød"
+
+msgid "Pizza"
+msgstr "Pizza"
+
+msgid "Spaghetti bolognese"
+msgstr "Spaghetti bolognese"
+
+msgid "Sandwiches"
+msgstr "Sandwich"
+
+msgid "English"
+msgstr "Engelsk"
+
+msgid "German"
+msgstr "Tysk"
+
+msgid "Italian"
+msgstr "Italiensk"
+
+msgid "This is the note content of the recipe ingredient"
+msgstr "Dette er indholdet af opskrift-ingrediensens notefeltet"
+
+msgid "Demo User"
+msgstr "Demo bruger"
+
+msgid "Gram"
+msgid_plural "Grams"
+msgstr[0] "Gram"
+msgstr[1] "Gram"
+
+msgid "Flour"
+msgstr "Mel"
+
+msgid "Pancakes"
+msgstr "Pandekager"
+
+msgid "Sugar"
+msgstr "Sukker"
+
+msgid "Sweets"
+msgstr "Slik"
+
+msgid "Bakery products"
+msgstr "Bagværk"
+
+msgid "Tinned food"
+msgstr "Dåsemad"
+
+msgid "Butchery products"
+msgstr "Slagteriprodukter"
+
+msgid "Vegetables/Fruits"
+msgstr "Frugt og grønt"
+
+msgid "Refrigerated products"
+msgstr "Køleskabsvarer"
+
+msgid "Coffee machine"
+msgstr "Kaffemaskine"
+
+msgid "Dishwasher"
+msgstr "Opvaskemaskine"
+
+msgid "Liter"
+msgstr "Liter"
+
+msgid "Liters"
+msgstr "Liter"
+
+msgid "Bottle"
+msgstr "Flaske"
+
+msgid "Bottles"
+msgstr "Flasker"
+
+msgid "Milk"
+msgstr "Mælk"
+
+msgid "Chocolate sauce"
+msgstr "Chokoladesauce"
+
+msgid "Milliliters"
+msgstr "Milliliter"
+
+msgid "Milliliter"
+msgstr "Milliliter"
+
+msgid "Bottom"
+msgstr "Bund"
+
+msgid "Topping"
+msgstr "Topping"
+
+msgid "French"
+msgstr "Fransk"
+
+msgid "Turkish"
+msgstr "Tyrkisk"
+
+msgid "Spanish"
+msgstr "Spansk"
+
+msgid "Russian"
+msgstr "Russisk"
+
+msgid "Vacuum the living room floor"
+msgstr "Støvsug stuegulvet"
+
+msgid "Clean the litter box"
+msgstr "Rengør kattebakken"
+
+msgid "Change the bed sheets"
+msgstr "Skift sengetøj"
+
+msgid "Swedish"
+msgstr "Svensk"
+
+msgid "Polish"
+msgstr "Polsk"
+
+msgid "Milk Chocolate"
+msgstr "Mælkechokolade"
+
+msgid "Dark Chocolate"
+msgstr "Mørk chokolade"
+
+msgid "Slice"
+msgid_plural "Slices"
+msgstr[0] "Skive"
+msgstr[1] "Skiver"
+
+msgid "Example userentity"
+msgstr "Eksempel-brugerenhed"
+
+msgid "This is an example user entity..."
+msgstr "Dette er en eksempel-brugerenhed..."
+
+msgid "Custom field"
+msgstr "Brugerdefineret felt"
+
+msgid "Example field value..."
+msgstr "Eksempel-feltværdi..."
+
+msgid "Waffle rolls"
+msgstr "Vaffelruller"
+
+msgid "Danish"
+msgstr "Dansk"
+
+msgid "Dutch"
+msgstr "Hollandsk"
+
+msgid "Norwegian"
+msgstr "Norsk"
+
+msgid "Demo"
+msgstr "Demo"
+
+msgid "Stable version"
+msgstr "Stabil version"
+
+msgid "Preview version"
+msgstr "Forhåndsvisningsversion"
+
+msgid "current release"
+msgstr "aktuel udgivelse"
+
+msgid "not yet released"
+msgstr "Ikke frigivet endnu"
+
+msgid "Portuguese (Brazil)"
+msgstr "Portugisisk (Brasilien)"
+
+msgid "This is a note"
+msgstr "Denne er en note"
+
+msgid "Freezer"
+msgstr "Fryser"
+
+msgid "Hungarian"
+msgstr "Ungarsk"
+
+msgid "Slovak"
+msgstr "Slovakisk"
+
+msgid "Czech"
+msgstr "Tjekkisk"
+
+msgid "Portuguese (Portugal)"
+msgstr "Portugisisk (Portugal)"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket1"
+msgstr "Netto"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket2"
+msgstr "Fakta"
+
+msgid "Japanese"
+msgstr "Japansk"
+
+msgid "Chinese (Taiwan)"
+msgstr "Kinesisk (Taiwan)"
+
+msgid "Greek"
+msgstr "Græsk"
+
+msgid "Korean"
+msgstr "Koreansk"
+
+msgid "Chinese (China)"
+msgstr "Kinesisk"
+
+msgid "Hebrew (Israel)"
+msgstr "Hebraisk"
+
+msgid "Tamil"
+msgstr "Tamilsk"
+
+msgid "Finnish"
+msgstr "Finsk"
+
+msgid "Breakfast"
+msgstr "Morgenmad"
+
+msgid "Lunch"
+msgstr "Frokost"
+
+msgid "Dinner"
+msgstr "Aftensmad"
+
+msgid "Catalan"
+msgstr "Catalansk"
+
+msgid "Slovenian"
+msgstr "Slovensk"
+
+msgid "Lithuanian"
+msgstr "Litauisk"
+
+msgid "Ukrainian"
+msgstr "Ukrainsk"
+
+msgid "Kilogram"
+msgid_plural "Kilograms"
+msgstr[0] "Kilogram"
+msgstr[1] "Kilogram"
+
+msgid "Romanian"
+msgstr "Rumænsk"
+
+msgid "Pint"
+msgstr "Pint"
+
+msgid "Beverages"
+msgstr "Drikkevarer"
+
+msgid "Ice Cream"
+msgstr "Is"
+
+msgid "Soda"
+msgstr "Sodavand"
+
+msgid "Beer"
+msgstr "Øl"
+
+msgid "Estonian"
+msgstr "Estisk"
+
+msgid "Bulgarian"
+msgstr ""

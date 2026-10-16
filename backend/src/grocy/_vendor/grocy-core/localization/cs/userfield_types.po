@@ -1,0 +1,76 @@
+# 
+# Translators:
+# Tomas Reznicek <tomas.reznicek@gmail.com>, 2019
+# Michal Franc, 2020
+# Pavel Paseka, 2022
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:43+0000\n"
+"Last-Translator: Pavel Paseka, 2022\n"
+"Language-Team: Czech (https://app.transifex.com/grocy/teams/93189/cs/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
+"X-Domain: grocy/userfield_types\n"
+
+# Text (single line)
+msgid "text-single-line"
+msgstr "Text (jeden řádek)"
+
+# Text (multi line)
+msgid "text-multi-line"
+msgstr "Text (více řádků)"
+
+# Number (integral)
+msgid "number-integral"
+msgstr "Celé číslo"
+
+# Number (decimal)
+msgid "number-decimal"
+msgstr "Desetinné číslo"
+
+# Number (currency)
+msgid "number-currency"
+msgstr ""
+
+# Date (without time)
+msgid "date"
+msgstr "Datum"
+
+# Date & time
+msgid "datetime"
+msgstr "Datum a čas"
+
+# Checkbox
+msgid "checkbox"
+msgstr "Zaškrtávací políčko"
+
+# Select list (a single item can be selected)
+msgid "preset-list"
+msgstr "Seznam"
+
+# Select list (multiple items can be selected)
+msgid "preset-checklist"
+msgstr "Zaškrtávací seznam"
+
+# Link
+msgid "link"
+msgstr "Odkaz"
+
+# Link (with title)
+msgid "link-with-title"
+msgstr "Odkaz s nadpisem"
+
+# File
+msgid "file"
+msgstr "Soubor"
+
+# Image
+msgid "image"
+msgstr "Obrázek"

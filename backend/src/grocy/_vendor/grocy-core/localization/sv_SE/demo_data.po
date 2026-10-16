@@ -1,0 +1,423 @@
+# 
+# Translators:
+# Mathias Fröjd <info@mcfrojd.com>, 2019
+# Fredrik Hendeberg <fredrik@hendeberg.com>, 2019
+# Peter Wickenberg <peter@wickenberg.nu>, 2019
+# Sebastian Backman <valtkor@hotmail.com>, 2020
+# Per Bäckman <fotodille@gmail.com>, 2020
+# Robert Johansson, 2022
+# Matt Sawyers, 2022
+# riiga <riiga_92@hotmail.com>, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: riiga <riiga_92@hotmail.com>, 2024\n"
+"Language-Team: Swedish (Sweden) (https://app.transifex.com/grocy/teams/93189/sv_SE/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: sv_SE\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/demo_data\n"
+
+msgid "Cookies"
+msgstr "Kakor"
+
+msgid "Chocolate"
+msgstr "Choklad"
+
+msgid "Pantry"
+msgstr "Skafferi"
+
+msgid "Candy cupboard"
+msgstr "Godisskåp"
+
+msgid "Tinned food cupboard"
+msgstr "Konservskafferi"
+
+msgid "Fridge"
+msgstr "Kylskåp"
+
+msgid "Piece"
+msgid_plural "Pieces"
+msgstr[0] "Bit"
+msgstr[1] "bitar"
+
+msgid "Pack"
+msgid_plural "Packs"
+msgstr[0] "Förpackning"
+msgstr[1] "förpackningar"
+
+msgid "Glass"
+msgid_plural "Glasses"
+msgstr[0] "Glas"
+msgstr[1] "glas"
+
+msgid "Tin"
+msgid_plural "Tins"
+msgstr[0] "Burk"
+msgstr[1] "konservburkar"
+
+msgid "Can"
+msgid_plural "Cans"
+msgstr[0] "Burk"
+msgstr[1] "burkar"
+
+msgid "Bunch"
+msgid_plural "Bunches"
+msgstr[0] "Knippa"
+msgstr[1] "knippor"
+
+msgid "Gummy bears"
+msgstr "Gummibjörnar"
+
+msgid "Crisps"
+msgstr "Chips"
+
+msgid "Eggs"
+msgstr "Ägg"
+
+msgid "Noodles"
+msgstr "Spaghetti"
+
+msgid "Pickles"
+msgstr "Inlagda grönsaker"
+
+msgid "Gulash soup"
+msgstr "Gulashsoppa"
+
+msgid "Yogurt"
+msgstr "Yoghurt"
+
+msgid "Cheese"
+msgstr "Ost"
+
+msgid "Cold cuts"
+msgstr "Pålägg"
+
+msgid "Paprika"
+msgstr "Paprika"
+
+msgid "Cucumber"
+msgstr "Gurka"
+
+msgid "Radish"
+msgstr "Rädisa"
+
+msgid "Tomato"
+msgstr "Tomat"
+
+msgid "Change towels in the bathroom"
+msgstr "Byta handdukar i badrummet"
+
+msgid "Mop the kitchen floor"
+msgstr "Moppa köksgolvet"
+
+msgid "Warranty ends"
+msgstr "Garantin upphör"
+
+msgid "TV remote control"
+msgstr "TV-fjärrkontroll"
+
+msgid "Alarm clock"
+msgstr "Väckarklocka"
+
+msgid "Heat remote control"
+msgstr "Termostat-fjärrkontroll"
+
+msgid "Take out the trash"
+msgstr "Ta ut soporna"
+
+msgid "Some good snacks"
+msgstr "Några bra tilltugg"
+
+msgid "Pizza dough"
+msgstr "Pizzadeg"
+
+msgid "Sieved tomatoes"
+msgstr "Passerade tomater"
+
+msgid "Salami"
+msgstr "Salami"
+
+msgid "Toast"
+msgstr "Rostat bröd"
+
+msgid "Minced meat"
+msgstr "Köttfärs"
+
+msgid "Pizza"
+msgstr "Pizza"
+
+msgid "Spaghetti bolognese"
+msgstr "Spaghetti med köttfärssås"
+
+msgid "Sandwiches"
+msgstr "Smörgåsar"
+
+msgid "English"
+msgstr "Engelska"
+
+msgid "German"
+msgstr "Tyska"
+
+msgid "Italian"
+msgstr "Italienska"
+
+msgid "This is the note content of the recipe ingredient"
+msgstr "Detta är anteckningen för receptets ingrediens"
+
+msgid "Demo User"
+msgstr "Demo-användare"
+
+msgid "Gram"
+msgid_plural "Grams"
+msgstr[0] "gram"
+msgstr[1] "gram"
+
+msgid "Flour"
+msgstr "Mjöl"
+
+msgid "Pancakes"
+msgstr "Pannkakor"
+
+msgid "Sugar"
+msgstr "Socker"
+
+msgid "Sweets"
+msgstr "Sötsaker"
+
+msgid "Bakery products"
+msgstr "Bageriprodukter"
+
+msgid "Tinned food"
+msgstr "Konserverad mat"
+
+msgid "Butchery products"
+msgstr "Slaktprodukter"
+
+msgid "Vegetables/Fruits"
+msgstr "Grönsaker/frukt"
+
+msgid "Refrigerated products"
+msgstr "Kylda produkter"
+
+msgid "Coffee machine"
+msgstr "Kaffebryggare"
+
+msgid "Dishwasher"
+msgstr "Diskmaskin"
+
+msgid "Liter"
+msgstr "liter"
+
+msgid "Liters"
+msgstr "liter"
+
+msgid "Bottle"
+msgstr "flaska"
+
+msgid "Bottles"
+msgstr "flaskor"
+
+msgid "Milk"
+msgstr "Mjölk"
+
+msgid "Chocolate sauce"
+msgstr "Chokladsås"
+
+msgid "Milliliters"
+msgstr "milliliter"
+
+msgid "Milliliter"
+msgstr "milliliter"
+
+msgid "Bottom"
+msgstr "Botten"
+
+msgid "Topping"
+msgstr "Garnering"
+
+msgid "French"
+msgstr "Franska"
+
+msgid "Turkish"
+msgstr "Turkiska"
+
+msgid "Spanish"
+msgstr "Spanska"
+
+msgid "Russian"
+msgstr "Ryska"
+
+msgid "Vacuum the living room floor"
+msgstr "Dammsug vardagsrumsgolvet"
+
+msgid "Clean the litter box"
+msgstr "Städa kattlådan"
+
+msgid "Change the bed sheets"
+msgstr "Byta lakanen"
+
+msgid "Swedish"
+msgstr "Svenska"
+
+msgid "Polish"
+msgstr "Polska"
+
+msgid "Milk Chocolate"
+msgstr "Mjölkchoklad"
+
+msgid "Dark Chocolate"
+msgstr "Mörk chocklad"
+
+msgid "Slice"
+msgid_plural "Slices"
+msgstr[0] "Skiva"
+msgstr[1] "skivor"
+
+msgid "Example userentity"
+msgstr "Exempel användarenhet"
+
+msgid "This is an example user entity..."
+msgstr "Detta är ett exempel på en användarenhet..."
+
+msgid "Custom field"
+msgstr "Anpassat fält"
+
+msgid "Example field value..."
+msgstr "Anpassat fält värde..."
+
+msgid "Waffle rolls"
+msgstr "Våffelrullar"
+
+msgid "Danish"
+msgstr "Danska"
+
+msgid "Dutch"
+msgstr "Hollänska"
+
+msgid "Norwegian"
+msgstr "Norska"
+
+msgid "Demo"
+msgstr "Demo"
+
+msgid "Stable version"
+msgstr "Stabil version"
+
+msgid "Preview version"
+msgstr "Förhandsgranskningsversion"
+
+msgid "current release"
+msgstr "aktuell version"
+
+msgid "not yet released"
+msgstr "osläppt version"
+
+msgid "Portuguese (Brazil)"
+msgstr "Portugisiska (Brasilien)"
+
+msgid "This is a note"
+msgstr "Detta är en anteckning"
+
+msgid "Freezer"
+msgstr "Frys"
+
+msgid "Hungarian"
+msgstr "Ungerska"
+
+msgid "Slovak"
+msgstr "Slovakiska"
+
+msgid "Czech"
+msgstr "Tjeckiska"
+
+msgid "Portuguese (Portugal)"
+msgstr "Portugisiska (Portugal)"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket1"
+msgstr "Demo-affär1"
+
+# Use a in your country well known supermarket name
+msgid "DemoSupermarket2"
+msgstr "Demo-affär2"
+
+msgid "Japanese"
+msgstr "Japanska"
+
+msgid "Chinese (Taiwan)"
+msgstr "Kinesiska (Taiwan)"
+
+msgid "Greek"
+msgstr "Grekiska"
+
+msgid "Korean"
+msgstr "Koreanska"
+
+msgid "Chinese (China)"
+msgstr "Kinesiska (Kina)"
+
+msgid "Hebrew (Israel)"
+msgstr "Hebreiska (Israel)"
+
+msgid "Tamil"
+msgstr "Tamil"
+
+msgid "Finnish"
+msgstr "Finska"
+
+msgid "Breakfast"
+msgstr "Frukost"
+
+msgid "Lunch"
+msgstr "Lunch"
+
+msgid "Dinner"
+msgstr "Middag"
+
+msgid "Catalan"
+msgstr "Katalanska"
+
+msgid "Slovenian"
+msgstr "Slovenska"
+
+msgid "Lithuanian"
+msgstr "Litauiska"
+
+msgid "Ukrainian"
+msgstr "Ukrainska"
+
+msgid "Kilogram"
+msgid_plural "Kilograms"
+msgstr[0] "kilogram"
+msgstr[1] "kilogram"
+
+msgid "Romanian"
+msgstr "Rumänska"
+
+msgid "Pint"
+msgstr "brittisk pint"
+
+msgid "Beverages"
+msgstr "Drycker"
+
+msgid "Ice Cream"
+msgstr "Glass"
+
+msgid "Soda"
+msgstr "Läsk"
+
+msgid "Beer"
+msgstr "Öl"
+
+msgid "Estonian"
+msgstr "Estniska"
+
+msgid "Bulgarian"
+msgstr ""

@@ -12,6 +12,7 @@ from sqlalchemy import Date, DateTime, Text, create_engine, event, literal
 from grocy.db.compatibility_views import install_compatibility_views
 from grocy.db.imports.validate import validate_grocy_sqlite
 from grocy.db.models import Base
+from grocy.db.native_schema import SCHEMA
 from grocy.db.userfield_identity import legacy_field_ids
 
 
@@ -125,14 +126,20 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                         ).fetchone()
                         if unit:
                             values["qu_id"] = unit[0]
-                    if (
-                        table.name == "api_keys"
-                        and values.get("key_type") == "special-purpose-calendar-ical"
-                    ):
-                        values["key_type"] = "calendar"
                     conn.execute(table.insert().values(**values))
                     count += 1
                 copied[table.name] = count
+            if "migrations" in source_tables:
+                conn.exec_driver_sql(SCHEMA["ddl"]["migrations"])
+                history = source_db.execute(
+                    "SELECT migration,execution_time_timestamp FROM migrations"
+                ).fetchall()
+                for row in history:
+                    conn.exec_driver_sql(
+                        "INSERT INTO migrations(migration,execution_time_timestamp) VALUES (?,?)",
+                        tuple(row),
+                    )
+                copied["migrations"] = len(history)
             if source_db.execute(
                 "SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'"
             ).fetchone():

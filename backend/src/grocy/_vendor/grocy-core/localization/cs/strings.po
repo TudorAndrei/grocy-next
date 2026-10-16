@@ -1,0 +1,2894 @@
+# 
+# Translators:
+# Tomas Reznicek <tomas.reznicek@gmail.com>, 2019
+# Michal Petříček <michal@petricek.org>, 2019
+# Jose Riha <jose1711@gmail.com>, 2020
+# Matyas Bobek <matyas.bobek@gmail.com>, 2020
+# Adam Kroupa <mavi222@seznam.cz>, 2020
+# Radim Kabeláč <radim.ekk@gmail.com>, 2020
+# Jaroslav Lichtblau <l10n@lichtblau.cz>, 2020
+# Jarda Tesar <intossh@gmail.com>, 2021
+# Pavel Paseka, 2025
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:42+0000\n"
+"Last-Translator: Pavel Paseka, 2025\n"
+"Language-Team: Czech (https://app.transifex.com/grocy/teams/93189/cs/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
+"X-Domain: grocy/strings\n"
+
+msgid "Stock overview"
+msgstr "Přehled zásob"
+
+msgid "%s product expires"
+msgid_plural "%s products expiring"
+msgstr[0] "%s produktu se blíží datum použitelnosti"
+msgstr[1] "%s produktům se blíží datum použitelnosti"
+msgstr[2] "%s produktů se blíží datum použitelnosti"
+msgstr[3] "%s produktům se blíží datum použitelnosti"
+
+msgid "within the next day"
+msgid_plural "within the next %s days"
+msgstr[0] "během následujícího dne"
+msgstr[1] "během %s dnů"
+msgstr[2] "během %s dní"
+msgstr[3] "během %s dní"
+
+msgid "%s product is already expired"
+msgid_plural "%s products are already expired"
+msgstr[0] "%s produkt je po době použitelnosti"
+msgstr[1] "%s produkty jsou po době použitelnosti"
+msgstr[2] "%s produktů je po době použitelnosti"
+msgstr[3] "%s produktů je po době použitelnosti"
+
+msgid "%s product is overdue"
+msgid_plural "%s products are overdue"
+msgstr[0] "%s produkt je po době min. trvanlivosti"
+msgstr[1] "%s produkty jsou po době min. trvanlivosti"
+msgstr[2] "%s produktů je po době min. trvanlivosti"
+msgstr[3] "%s produktů je po datu min. trvanlivosti"
+
+msgid "%s product is below defined min. stock amount"
+msgid_plural "%s products are below defined min. stock amount"
+msgstr[0] "%s produkt nemá dostatečnou min. zásobu"
+msgstr[1] "%s produkty nemají dostatečnou min. zásobu"
+msgstr[2] "%s produktů nemá dostatečnou min. zásobu"
+msgstr[3] "%s produktů nemá dostatečnou min. zásobu"
+
+msgid "Product"
+msgstr "Produkt"
+
+msgid "%s Product"
+msgid_plural "%s Products"
+msgstr[0] "%s produkt"
+msgstr[1] "%s produktů"
+msgstr[2] "%s produktů"
+msgstr[3] "%s produktů"
+
+msgid "Amount"
+msgstr "Množství"
+
+msgid "Logout"
+msgstr "Odhlásit se"
+
+msgid "Chores overview"
+msgstr "Přehled povinností"
+
+msgid "Batteries overview"
+msgstr "Přehled baterií"
+
+msgid "Purchase"
+msgstr "Nakoupit"
+
+msgid "Consume"
+msgstr "Spotřebovat"
+
+msgid "Inventory"
+msgstr "Inventura zásob"
+
+msgid "Shopping list"
+msgstr "Nákupní seznam"
+
+msgid "Chore tracking"
+msgstr "Plnění povinností"
+
+msgid "Battery tracking"
+msgstr "Výměna baterií"
+
+msgid "Locations"
+msgstr "Umístění produktů"
+
+msgid "Stores"
+msgstr "Obchody"
+
+msgid "Quantity units"
+msgstr "Měrné jednotky"
+
+msgid "Chores"
+msgstr "Povinnosti"
+
+msgid "Batteries"
+msgstr "Baterie"
+
+msgid "Chore"
+msgstr "Povinnost"
+
+msgid "Next estimated tracking"
+msgstr "Předpokládaný čas provedení"
+
+msgid "Last tracked"
+msgstr "Naposledy provedeno"
+
+msgid "Battery"
+msgstr "Baterie"
+
+msgid "Last charged"
+msgstr "Naposledy vyměněno/nabito"
+
+msgid "Next planned charge cycle"
+msgstr "Příští plánovaná výměna/nabíjení baterie"
+
+msgid "Best before"
+msgstr "Datum min. trvanlivosti"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Product overview"
+msgstr "Přehled dat k produktu"
+
+msgid "Stock quantity unit"
+msgstr "Jednotka množství produktu"
+
+msgid "Stock amount"
+msgstr "Množství v zásobě"
+
+msgid "Last purchased"
+msgstr "Naposledy nakoupeno"
+
+msgid "Last used"
+msgstr "Naposledy použito"
+
+msgid "Spoiled"
+msgstr "Zkažené"
+
+msgid "Barcode lookup is disabled"
+msgstr "Vyhledávání podle čárového kódu vypnuto"
+
+msgid ""
+"will be added to the list of barcodes for the selected product on submit"
+msgstr ""
+"bude přidáno do seznamu čárových kódů pro vybraný produkt při potvrzení"
+
+msgid "New amount"
+msgstr "Nové množství"
+
+msgid "Note"
+msgstr "Poznámka"
+
+msgid "Tracked time"
+msgstr "Čas vykonání"
+
+msgid "Chore overview"
+msgstr "Přehled povinností"
+
+msgid "Tracked count"
+msgstr "Zaznamenaný počet"
+
+msgid "Battery overview"
+msgstr "Přehled baterií"
+
+msgid "Charge cycles count"
+msgstr "Počet cyklů výměny/nabíjení"
+
+msgid "Create shopping list item"
+msgstr "Nová položka nákupního seznamu"
+
+msgid "Edit shopping list item"
+msgstr "Upravit položku nákupního seznamu"
+
+msgid "Save"
+msgstr "Uložit"
+
+msgid "Add"
+msgstr "Přidat"
+
+msgid "Name"
+msgstr "Název"
+
+msgid "Location"
+msgstr "Umístění"
+
+msgid "Min. stock amount"
+msgstr "Min. zásoba"
+
+msgid "Description"
+msgstr "Popis"
+
+msgid "Create product"
+msgstr "Vytvořit produkt"
+
+msgid "Barcode(s)"
+msgstr "Čárový kód(y)"
+
+msgid "Minimum stock amount"
+msgstr "Minimální zásoba"
+
+msgid "Default best before days"
+msgstr "Výchozí datum spotřeby"
+
+msgid "Default quantity unit purchase"
+msgstr "Výchozí měrná jednotka pro nákup"
+
+msgid "Quantity unit stock"
+msgstr "Měrná jednotka zásoby"
+
+msgid "Create location"
+msgstr "Nové umístění"
+
+msgid "Create store"
+msgstr "Nový obchod"
+
+msgid "Create quantity unit"
+msgstr "Nová měrná jednotka produktu"
+
+msgid "Period type"
+msgstr "Typ opakování"
+
+msgid "Period days"
+msgstr "Dny opakování"
+
+msgid "Create chore"
+msgstr "Nová povinnost"
+
+msgid "Used in"
+msgstr "Použito v"
+
+msgid "Create battery"
+msgstr "Nová baterie"
+
+msgid "Edit battery"
+msgstr "Upravit baterii"
+
+msgid "Edit chore"
+msgstr "Upravit povinnost"
+
+msgid "Edit quantity unit"
+msgstr "Upravit měrnou jednotku"
+
+msgid "Edit product"
+msgstr "Upravit produkt"
+
+msgid "Edit location"
+msgstr "Upravit umístění"
+
+msgid "Edit store"
+msgstr "Upravit obchod"
+
+msgid "Manage master data"
+msgstr "Spravovat základní data"
+
+msgid "This will apply to added products"
+msgstr "Tento údaj se zapíše jen pro přidané produkty do zásoby."
+
+msgid "never"
+msgstr "nikdy"
+
+msgid "Add products that are below defined min. stock amount"
+msgstr "Přidat produkty se stavem pod minimální zásobou"
+
+msgid "Login"
+msgstr "Přihlásit se"
+
+msgid "Username"
+msgstr "Uživatelské jméno"
+
+msgid "Password"
+msgstr "Heslo"
+
+msgid "Invalid credentials, please try again"
+msgstr "Nesprávné jméno nebo heslo, zkuste to ještě jednou"
+
+msgid "Are you sure you want to delete battery \"%s\"?"
+msgstr "Odstranit baterii „%s“?"
+
+msgid "Yes"
+msgstr "Ano"
+
+msgid "No"
+msgstr "Ne"
+
+msgid "Are you sure you want to delete chore \"%s\"?"
+msgstr "Odstranit povinnost „%s“?"
+
+msgid "\"%s\" could not be resolved to a product, how do you want to proceed?"
+msgstr "Žádný uložený produkt se nejmenuje „%s“. Jak chcete pokračovat?"
+
+msgid "Create or assign product"
+msgstr "Vytvořit nebo přiřadit produkt"
+
+msgid "Cancel"
+msgstr "Zrušit"
+
+msgid "Add as new product"
+msgstr "Přidat jako nový produkt"
+
+msgid "Add as barcode to existing product"
+msgstr "Přidat jako čárový kód k existujícímu produktu"
+
+msgid "Add as new product and prefill barcode"
+msgstr "Přidat jako nový produkt a předvyplnit čárový kód"
+
+msgid "Are you sure you want to delete quantity unit \"%s\"?"
+msgstr "Odstranit jednotku množství „%s“?"
+
+msgid "Are you sure you want to delete product \"%s\"?"
+msgstr "Odstranit produkt „%s“?"
+
+msgid "Are you sure you want to delete location \"%s\"?"
+msgstr "Odstranit umístění „%s“?"
+
+msgid "Are you sure you want to delete store \"%s\"?"
+msgstr "Odstranit obchod „%s“?"
+
+msgid "Manage API keys"
+msgstr "Spravovat API klíče"
+
+msgid "REST API browser"
+msgstr "kódy REST API"
+
+msgid "API keys"
+msgstr "API klíče"
+
+msgid "Create new API key"
+msgstr "Vytvořit nový API klíč"
+
+msgid "API key"
+msgstr "API klíč"
+
+msgid "Expires"
+msgstr "Vyprší"
+
+msgid "Created"
+msgstr "Vytvořen"
+
+msgid "This product is not in stock"
+msgstr "Produkt není v zásobě"
+
+msgid "This means %s will be added to stock"
+msgstr "Zásoba se zvýší o %s"
+
+msgid "This means %s will be removed from stock"
+msgstr "Zásoba se zmenší o %s"
+
+msgid "Removed %1$s of %2$s from stock"
+msgstr "Zásoba se snížila o %1$s produktu %2$s"
+
+msgid "About Grocy"
+msgstr "Co je Grocy"
+
+msgid "Close"
+msgstr "Zavřít"
+
+msgid "Added %1$s of %2$s to stock"
+msgstr "Zásoba se zvýšila o %1$s produktu %2$s"
+
+msgid "Stock amount of %1$s is now %2$s"
+msgstr "Zásoba %1$s je nyní %2$s"
+
+msgid "Tracked execution of chore %1$s on %2$s"
+msgstr "Povinnost „%1$s“ splněna dne %2$s"
+
+msgid "Tracked charge cycle of battery %1$s on %2$s"
+msgstr "Zaznamenáno nabíjení/výměna baterie „%1$s“ dne %2$s"
+
+msgid "Consume all %s which are currently in stock"
+msgstr "Spotřebovat celou zásobu produktu %s"
+
+msgid "All"
+msgstr "Vše"
+
+msgid "Search"
+msgstr "Hledat"
+
+msgid "Not logged in"
+msgstr "Nepřihlášen"
+
+msgid "You have to select a product"
+msgstr "Produkt musí být vybrán"
+
+msgid "You have to select a chore"
+msgstr "Povinnost musí být vybrána"
+
+msgid "You have to select a battery"
+msgstr "Baterie musí být vybrána"
+
+msgid "A name is required"
+msgstr "Jméno je povinný údaj"
+
+msgid "A location is required"
+msgstr "Umístění je povinný údaj"
+
+msgid "A quantity unit is required"
+msgstr "Měrná jednotka je povinný údaj"
+
+msgid "A period type is required"
+msgstr "Typ opakování je povinný údaj"
+
+msgid "A best before date is required"
+msgstr "Datum spotřeby je povinný údaj"
+
+msgid "Settings"
+msgstr "Nastavení"
+
+msgid "This can only be before now"
+msgstr "Smí být pouze v minulosti"
+
+msgid "Calendar"
+msgstr "Kalendář"
+
+msgid "Recipes"
+msgstr "Recepty"
+
+msgid "Edit recipe"
+msgstr "Upravit recept"
+
+msgid "Ingredients list"
+msgstr "Seznam ingrediencí"
+
+msgid "Add recipe ingredient"
+msgstr "Přidat ingredienci"
+
+msgid "Edit recipe ingredient"
+msgstr "Upravit ingredienci"
+
+msgid "Are you sure you want to delete recipe \"%s\"?"
+msgstr "Odstranit recept „%s“?"
+
+msgid "Are you sure you want to delete recipe ingredient \"%s\"?"
+msgstr "Odstranit ingredienci „%s“?"
+
+msgid "Are you sure you want to empty shopping list \"%s\"?"
+msgstr "Vyprázdnit nákupní seznam „%s“?"
+
+msgid "Clear list"
+msgstr "Vyprázdnit seznam"
+
+msgid "Requirements fulfilled"
+msgstr "Stav zásob"
+
+msgid "Put missing products on shopping list"
+msgstr "Vložit produkty pod min. stavem zásoby"
+
+msgid "Enough in stock"
+msgstr "Dostatečná zásoba"
+
+msgid ""
+"Not enough in stock, %s ingredient missing but already on the shopping list"
+msgid_plural ""
+"Not enough in stock, %s ingredients missing but already on the shopping list"
+msgstr[0] "Chybí %s ingredience, je ale již v nákupním seznamu"
+msgstr[1] "Chybí %s ingredience, ale jsou již v nákupním seznamu"
+msgstr[2] "Chybí %s ingrediencí, ale jsou již v nákupním seznamu"
+msgstr[3] "Chybí %s ingrediencí, ale jsou již v nákupním seznamu"
+
+msgid "Expand to fullscreen"
+msgstr "Rozšířit na celou stránku"
+
+msgid "Ingredients"
+msgstr "Ingredience"
+
+msgid "Preparation"
+msgstr "Postup přípravy"
+
+msgid "Recipe"
+msgstr "Recept"
+
+msgid "Not enough in stock, %1$s missing, %2$s already on shopping list"
+msgstr "Nedostatečná zásoba, z %1$s potřebných je %2$s na nákupním seznamu"
+
+msgid "Show notes"
+msgstr "Zobrazit poznámky"
+
+msgid "Put missing amount on shopping list"
+msgstr "Přidat chybějící množství do nákupního seznamu"
+
+msgid ""
+"Are you sure you want to put all missing ingredients for recipe \"%s\" on "
+"the shopping list?"
+msgstr ""
+"Chcete přidat všechny chybějící ingredience z receptu „%s“ do nákupního "
+"seznamu?"
+
+msgid "Manage users"
+msgstr "Spravovat uživatele"
+
+msgid "User"
+msgstr "Uživatel"
+
+msgid "Users"
+msgstr "Uživatelé"
+
+msgid "Are you sure you want to delete user \"%s\"?"
+msgstr "Odstranit uživatele „%s“?"
+
+msgid "Create user"
+msgstr "Vytvořit uživatele"
+
+msgid "Edit user"
+msgstr "Upravit uživatele"
+
+msgid "First name"
+msgstr "Křestní jméno"
+
+msgid "Last name"
+msgstr "Příjmení"
+
+msgid "A username is required"
+msgstr "Uživatelské jméno je povinný údaj"
+
+msgid "Confirm password"
+msgstr "Potvrdit heslo"
+
+msgid "Passwords do not match"
+msgstr "Hesla se neshodují"
+
+msgid "Change password"
+msgstr "Změnit heslo"
+
+msgid "Done by"
+msgstr "Provedl(a)"
+
+msgid "Last done by"
+msgstr "Naposledy provedl(a)"
+
+msgid "Unknown"
+msgstr "Neznámý"
+
+msgid "Chores journal"
+msgstr "Deník povinností"
+
+msgid "0 means suggestions for the next charge cycle are disabled"
+msgstr "Pro vypnutí návrhu příští výměny/nabíjení baterie zadejte 0"
+
+msgid "Charge cycle interval (days)"
+msgstr "Interval výměny/nabíjení baterie (ve dnech)"
+
+msgid "Last price"
+msgstr "Poslední cena"
+
+msgid "Price history"
+msgstr "Historie cen"
+
+msgid "No price history available"
+msgstr "Historie cen není k dispozici"
+
+msgid "Price"
+msgstr "Cena"
+
+msgid "Unit"
+msgstr "Jednotka"
+
+msgid "%s Unit"
+msgid_plural "%s Units"
+msgstr[0] "%s jednotka"
+msgstr[1] "%s jednotek"
+msgstr[2] "%s jednotek"
+msgstr[3] "%s jednotek"
+
+msgid "%s chore is due to be done"
+msgid_plural "%s chores are due to be done"
+msgstr[0] "%s povinnost by měla být splněna"
+msgstr[1] "%s povinnosti by měly být splněny"
+msgstr[2] "%s povinností by mělo být splněno"
+msgstr[3] "%s povinností by mělo být splněno"
+
+msgid "%s chore is overdue to be done"
+msgid_plural "%s chores are overdue to be done"
+msgstr[0] "%s povinnost už měla být splněna"
+msgstr[1] "%s povinnosti již mělo být splněno"
+msgstr[2] "%s povinností již mělo být splněno"
+msgstr[3] "%s povinností již mělo být splněno"
+
+msgid "%s battery is due to be charged"
+msgid_plural "%s batteries are due to be charged"
+msgstr[0] "Je potřeba vyměnit/nabít jednu baterii"
+msgstr[1] "Je potřeba vyměnit/nabít %s baterie"
+msgstr[2] "Je potřeba vyměnit/nabít %s baterií"
+msgstr[3] "Je potřeba vyměnit/nabít %s baterií"
+
+msgid "%s battery is overdue to be charged"
+msgid_plural "%s batteries are overdue to be charged"
+msgstr[0] "Již měla být vyměněna/nabita %s baterie"
+msgstr[1] "Již měly být vyměněny/nabity %s baterie"
+msgstr[2] "Již mělo být vyměněno/nabito %s baterií"
+msgstr[3] "Již mělo být vyměněno/nabito %s baterií"
+
+msgid "in singular form"
+msgstr "v jednotném čísle"
+
+msgid "Quantity unit"
+msgstr "Měrná jednotka"
+
+msgid "Only check if any amount is in stock"
+msgstr "Pouze zkontrolovat, zda je v zásobě jakékoliv množství"
+
+msgid ""
+"Are you sure you want to consume all ingredients needed by recipe \"%s\" "
+"(ingredients marked with \"only check if any amount is in stock\" will be "
+"ignored)?"
+msgstr ""
+"Přejete se spotřebovat všechny ingredience receptu „%s“? Ingredience "
+"označené „Zkontrolovat pouze zda je v zásobě jakékoliv množství“ budou "
+"ignorovány."
+
+msgid "Removed all in stock ingredients needed by recipe \"%s\" from stock"
+msgstr "Všechny ingredience z receptu „%s“ byly odebrány ze zásob"
+
+msgid "Consume all ingredients needed by this recipe"
+msgstr "Spotřebovat všechny ingredience použité v tomto receptu"
+
+msgid "Click to show technical details"
+msgstr "Klikněte pro zobrazení technických podrobností"
+
+msgid "Error while saving, probably this item already exists"
+msgstr "Chyba během ukládání, položka již patrně existuje."
+
+msgid "Error details"
+msgstr "Detaily chyby"
+
+msgid "Tasks"
+msgstr "Přehled úkolů"
+
+msgid "Show done tasks"
+msgstr "Zobrazit hotové úkoly"
+
+msgid "Task"
+msgstr "Úkol"
+
+msgid "Due"
+msgstr "Termín splnění"
+
+msgid "Assigned to"
+msgstr "Přiřazeno"
+
+msgid "Mark task \"%s\" as completed"
+msgstr "Označit úkol „%s“ jako hotový"
+
+msgid "Uncategorized"
+msgstr "Bez kategorie"
+
+msgid "Task categories"
+msgstr "Kategorie úkolů"
+
+msgid "Create task"
+msgstr "Vytvořit úkol"
+
+msgid "A due date is required"
+msgstr "Datum je povinné"
+
+msgid "Category"
+msgstr "Kategorie"
+
+msgid "Edit task"
+msgstr "Upravit úkol"
+
+msgid "Are you sure you want to delete task \"%s\"?"
+msgstr "Odstranit úkol „%s“?"
+
+msgid "%s task is due to be done"
+msgid_plural "%s tasks are due to be done"
+msgstr[0] "%s úkol má být splněn"
+msgstr[1] "%s úkoly mají být splněny"
+msgstr[2] "%s úkolů má být splněno"
+msgstr[3] "%s úkolů má být splněno"
+
+msgid "%s task is overdue to be done"
+msgid_plural "%s tasks are overdue to be done"
+msgstr[0] "%s úkol již měl být splněn"
+msgstr[1] "%s úkoly již měly být splněny"
+msgstr[2] "%s úkolů již mělo být splněno"
+msgstr[3] "%s úkolů již mělo být splněno"
+
+msgid "Edit task category"
+msgstr "Upravit kategorii úkolu"
+
+msgid "Create task category"
+msgstr "Vytvořit kategorii úkolů"
+
+msgid "Product groups"
+msgstr "Skupiny produktů"
+
+msgid "Ungrouped"
+msgstr "Bez skupiny"
+
+msgid "Create product group"
+msgstr "Vytvořit skupinu produktů"
+
+msgid "Edit product group"
+msgstr "Upravit skupinu produktů"
+
+msgid "Product group"
+msgstr "Skupina produktů"
+
+msgid "Are you sure you want to delete product group \"%s\"?"
+msgstr "Odstranit skupinu produktů „%s“?"
+
+msgid "Stay logged in permanently"
+msgstr "Zůstat přihlášen"
+
+msgid "When not set, you will get logged out at latest after 30 days"
+msgstr "Pokud nebude zaškrtnuto, budete odhlášeni nejpozději za 30 dní"
+
+msgid "Status"
+msgstr "Stav"
+
+msgid "Below min. stock amount"
+msgstr "pod min. množstvím zásoby"
+
+msgid "Due soon"
+msgstr "blíží se datum min. trvanlivosti"
+
+msgid "Overdue"
+msgstr "po datu min. trvanlivosti"
+
+msgid "View settings"
+msgstr "Zobrazit nastavení"
+
+msgid "Auto reload on external changes"
+msgstr "Automaticky obnovit při změně dat jiným uživatelem"
+
+msgid "Auto enable in time range"
+msgstr "Automaticky zapnout ve stanovený čas"
+
+msgid "From"
+msgstr "Od"
+
+msgid "in format"
+msgstr "ve formátu"
+
+msgid "To"
+msgstr "Do"
+
+msgid "Time range goes over midnight"
+msgstr "Časový rozsah přesahuje přes půlnoc"
+
+msgid "Product picture"
+msgstr "Obrázek produktu"
+
+msgid "No file selected"
+msgstr "Soubor není vybraný"
+
+msgid "Delete"
+msgstr "Smazat"
+
+msgid "Select file"
+msgstr "Vybrat soubor"
+
+msgid "Image of product %s"
+msgstr "Obrázek produktu %s“"
+
+msgid "Deletion not possible"
+msgstr "Nelze smazat"
+
+msgid "Equipment"
+msgstr "Vybavení"
+
+msgid "Instruction manual"
+msgstr "Návod k použití"
+
+msgid "The selected equipment has no instruction manual"
+msgstr "Zvolené vybavení nemá návod k použití"
+
+msgid "Notes"
+msgstr "Poznámky"
+
+msgid "Edit equipment"
+msgstr "Upravit vybavení"
+
+msgid "Create equipment"
+msgstr "Vytvořit vybavení"
+
+msgid "The current file will be deleted on save"
+msgstr "Soubor se smaže až po kliknutí na tlačítku Uložit"
+
+msgid "No picture available"
+msgstr "Obrázek není k dispozici"
+
+msgid "Presets for new products"
+msgstr "Výchozí hodnoty pro nové produkty"
+
+msgid "Included recipes"
+msgstr "Dílčí recepty"
+
+msgid "A recipe is required"
+msgstr "Recept je povinný údaj"
+
+msgid "Add included recipe"
+msgstr "Přidat dílčí recept"
+
+msgid "Edit included recipe"
+msgstr "Upravit dílčí recept"
+
+msgid "Group"
+msgstr "Skupina"
+
+msgid "This will be used as a headline to group ingredients together"
+msgstr "Text bude použit jako nadpis pro skupinu ingrediencí"
+
+msgid "Journal"
+msgstr "Deník"
+
+msgid "Stock journal"
+msgstr "Deník zásob"
+
+msgid "Undone on"
+msgstr "Vráceno zpět:"
+
+msgid "Batteries journal"
+msgstr "Deník baterií"
+
+msgid "Undo charge cycle"
+msgstr "Vrátit zpět výměnu baterie"
+
+msgid "Undo chore execution"
+msgstr "Vrátit zpět provedení povinnosti"
+
+msgid "Chore execution successfully undone"
+msgstr "Provedení povinnosti odstraněno"
+
+msgid "Undo"
+msgstr "Vrátit"
+
+msgid "Booking successfully undone"
+msgstr "Stav byl úspěšně vrácen zpět"
+
+msgid "Charge cycle successfully undone"
+msgstr "Výměna baterie zrušena"
+
+msgid "Disable stock fulfillment checking for this ingredient"
+msgstr "Vypnout kontrolu stavu zásob pro tuto ingredienci"
+
+msgid "Add all list items to stock"
+msgstr "Přidat všechny položky seznamu do zásob"
+
+msgid "Add this item to stock"
+msgstr "Vyplnit údaje o koupi a přidat do zásob"
+
+msgid "Adding shopping list item %1$s of %2$s"
+msgstr "Přidána položka nákupního seznamu %1$s z %2$s"
+
+msgid "Use a specific stock item"
+msgstr "Ručně vybrat balení produktu ze zásob"
+
+msgid ""
+"The first item in this list would be picked by the default rule consume rule"
+" (Opened first, then first due first, then first in first out)"
+msgstr ""
+"První položka seznamu je vybrána podle pravidel: \n"
+"– první otevřené balení, \n"
+"– nejbližší datum spotřeby,\n"
+"– dříve nakoupeno, dříve spotřebováno"
+
+msgid "Mark %1$s of %2$s as open"
+msgstr "Otevřít %1$s produktu %2$s"
+
+msgid "Marked %1$s of %2$s as opened"
+msgstr "Otevřeli jste %1$s produktu %2$s"
+
+msgid "Mark as opened"
+msgstr "Označit jako otevřené"
+
+msgid "Not opened"
+msgstr "Neotevřené"
+
+msgid "Opened"
+msgid_plural "Opened"
+msgstr[0] "Otevřeno"
+msgstr[1] "Otevřené"
+msgstr[2] "Otevřených"
+msgstr[3] "Otevřených"
+
+msgid "%s opened"
+msgstr "%s otevřen"
+
+msgid "Product due"
+msgstr "Datum spotřeby"
+
+msgid "Task due"
+msgstr "Úkol do"
+
+msgid "Chore due"
+msgstr "Povinnost do"
+
+msgid "Battery charge cycle due"
+msgstr "Nabíjecí cyklus baterií do"
+
+msgid "Show clock in header"
+msgstr "Zobrazit hodiny v záhlaví"
+
+msgid "Stock settings"
+msgstr "Nastavení zásob"
+
+msgid "Shopping list to stock workflow"
+msgstr "Způsob přidávání produktů z nákupního seznamu do Přehledu zásob"
+
+msgid "Skip"
+msgstr "Přeskočit"
+
+msgid "Servings"
+msgstr "Porce"
+
+msgid "Costs"
+msgstr "Náklady"
+
+msgid "The ingredients listed here result in this amount of servings"
+msgstr "Zobrazené ingredience odpovídají tomuto počtu porcí"
+
+msgid "Do not check against the shopping list when adding missing items to it"
+msgstr ""
+"Přidat chybějící ingredience do nákupního seznamu, přestože v něm již jsou"
+
+msgid ""
+"By default the amount to be added to the shopping list is \"needed amount - "
+"stock amount - shopping list amount\" - when this is enabled, it is only "
+"checked against the stock amount, not against what is already on the "
+"shopping list"
+msgstr ""
+"Normálně je množství produktu vložené do nákupního seznamu výsledkem vzorce: potřebné množství – dostupné množství – množství produktu již v nákupním seznamu.\n"
+"Po zaškrtnutí nebude brán zřetel na množství produktu v nákupním seznamu."
+
+msgid "Picture"
+msgstr "Obrázek"
+
+msgid "Uncheck ingredients to not put them on the shopping list"
+msgstr "Odznačte, co se přidat nemá"
+
+msgid "This is for statistical purposes only"
+msgstr "Určeno pouze pro statistické účely"
+
+msgid "You have to select a recipe"
+msgstr "Recept je povinný údaj"
+
+msgid "Key type"
+msgstr "Typ klíče"
+
+msgid "Share/Integrate calendar (iCal)"
+msgstr "Sdílet kalendář (formát iCal)"
+
+msgid ""
+"Use the following (public) URL to share or integrate the calendar in iCal "
+"format"
+msgstr ""
+"Použijte tuto (veřejnou) URL adresu ke sdílení kalendáře jako iCal kalendář"
+
+msgid "Enable tare weight handling"
+msgstr "Použít táru"
+
+msgid ""
+"This is useful e.g. for flour in jars - on purchase/consume/inventory you "
+"always weigh the whole jar, the amount to be posted is then automatically "
+"calculated based on what is in stock and the tare weight defined below"
+msgstr ""
+"Hodí se například pro produkty v nádobách, které se zváží včetně ní. Tára je"
+" tedy hmotnost nádoby, která se automaticky odečte."
+
+msgid "Tare weight"
+msgstr "Tára"
+
+msgid ""
+"Tare weight handling enabled - please weigh the whole container, the amount "
+"to be posted will be automatically calculcated"
+msgstr ""
+"Je aktivní tára, prosím zvažte včetně nádoby, její váha bude automaticky "
+"odečtena"
+
+msgid "You have to select a location"
+msgstr "Musí být vybráno umístění"
+
+msgid "You have to select a store"
+msgstr "Obchod je povinný údaj"
+
+msgid "List"
+msgstr "Seznam"
+
+msgid "Gallery"
+msgstr "Galerie"
+
+msgid "The current picture will be deleted on save"
+msgstr "Obrázek se smaže až po kliknutí na jedno z tlačítek Uložit"
+
+msgid "Journal for this battery"
+msgstr "Deník k této baterii"
+
+msgid "System info"
+msgstr "Informace k verzi"
+
+msgid "Changelog"
+msgstr "Seznam změn"
+
+msgid "will be multiplied by a factor of %1$s to get %2$s"
+msgstr "bude vynásobena faktorem %1$s  pro získání %2$s"
+
+msgid "The given date is earlier than today, are you sure?"
+msgstr "Zadané datum je v minulosti, jste si jistí?"
+
+msgid "Product count"
+msgstr "Množství produktu"
+
+msgid ""
+"Type a new product name or barcode and hit TAB or ENTER to start a workflow"
+msgstr ""
+"Napište nové jméno produktu nebo sejměte nový čárový kód a stiskněte buď "
+"tabelátor nebo Enter pro přidání produktu., který ještě není v seznamu "
+"produktů."
+
+msgid ""
+"This will be used as the default setting when adding this product as a "
+"recipe ingredient"
+msgstr ""
+"Výchozí nastavení pro přidání tohoto produktu jako ingredience do receptu."
+
+msgid "Add item"
+msgstr "Přidat produkt"
+
+msgid "Selected shopping list"
+msgstr "Vybrat nákupní seznam"
+
+msgid "New shopping list"
+msgstr "Nový nákupní seznam"
+
+msgid "Delete shopping list"
+msgstr "Smazat nákupní seznam"
+
+msgid "Chores settings"
+msgstr "Nastavení povinností"
+
+msgid "Batteries settings"
+msgstr "Nastavení baterií"
+
+msgid "Tasks settings"
+msgstr "Nastavení úkolů"
+
+msgid "Create shopping list"
+msgstr "Vytvořit nákupní seznam"
+
+msgid "Are you sure you want to delete shopping list \"%s\"?"
+msgstr "Smazat nákupní seznam „%s?"
+
+msgid "Average shelf life"
+msgstr "Průměrná doba uskladnění"
+
+msgid "Spoil rate"
+msgstr "Kazivost"
+
+msgid "Show more"
+msgstr "Zobrazit více"
+
+msgid "Show less"
+msgstr "Zobrazit méně"
+
+msgid "The amount must be between %1$s and %2$s"
+msgstr "Množství musí být mezi %1$s a %2$s"
+
+msgid "Day of month"
+msgstr "Den v měsíci"
+
+msgid "Monday"
+msgstr "Pondělí"
+
+msgid "Tuesday"
+msgstr "Úterý"
+
+msgid "Wednesday"
+msgstr "Středa"
+
+msgid "Thursday"
+msgstr "Čtvrtek"
+
+msgid "Friday"
+msgstr "Pátek"
+
+msgid "Saturday"
+msgstr "Sobota"
+
+msgid "Sunday"
+msgstr "Neděle"
+
+msgid "Configure userfields"
+msgstr "Upravit sloupce tabulky"
+
+msgid "Userfields"
+msgstr "Vlastní sloupce tabulky"
+
+msgid "Entity"
+msgstr "Entita"
+
+msgid "Caption"
+msgstr "Nadpis"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Create userfield"
+msgstr "Vytvořit sloupec uživatelské tabulky"
+
+msgid "A entity is required"
+msgstr "Proměnná je povinný údaj"
+
+msgid "A caption is required"
+msgstr "Popisek je povinný údaj"
+
+msgid "A type is required"
+msgstr "Typ je je povinný údaj"
+
+msgid "Show as column in tables"
+msgstr "Zobrazit jako řádek v tabulkách"
+
+msgid "This is required and can only contain letters and numbers"
+msgstr "Toto je povinný údaj a může obsahovat pouze písmena a číslice"
+
+msgid "Edit userfield"
+msgstr "Upravit sloupec uživatelské tabulky"
+
+msgid "Plural forms"
+msgstr "Množné čislo"
+
+msgid "One plural form per line, the current language requires"
+msgstr "Zapište po jednom množném tvaru na řádek, podle pravidel jazyka"
+
+msgid "Plural count"
+msgstr "Počet možností množných čísel: "
+
+msgid "Plural rule"
+msgstr "Pravidlo pro množná čísla"
+
+msgid "in plural form"
+msgstr "v množném čísle"
+
+msgid "Not enough in stock, %s ingredient missing"
+msgid_plural "Not enough in stock, %s ingredients missing"
+msgstr[0] "Nedostatečná zásoba, chybí %s ingredience"
+msgstr[1] "Nedostatečná zásoba, chybí %s ingredience"
+msgstr[2] "Nedostatečná zásoba, chybí %s ingrediencí"
+msgstr[3] "Nedostatečná zásoba, chybí %s ingrediencí"
+
+msgid "Not enough in stock, but already on the shopping list"
+msgstr "Nemá dostatečnou zásobu, ale je na nákupním seznamu"
+
+msgid "Not enough in stock"
+msgstr "Nedostatečná zásoba"
+
+msgid "Default location"
+msgstr "Obvyklé umístění"
+
+msgid "Default amount for purchase"
+msgstr "Obvyklé množství k nákupu"
+
+msgid "Default amount for consume"
+msgstr "Výchozí množství ke spotřebě"
+
+msgid "Variable amount"
+msgstr "Proměnné množství"
+
+msgid ""
+"When this is not empty, it will be shown instead of the amount entered above"
+" while the amount there will still be used for stock fulfillment checking"
+msgstr ""
+"Pokud vyplníte množství sem, objeví se jako množství produktu v receptu. "
+"Ovšem kontrola stavu produktu bude stále prováděna podle množství o řádek "
+"výše."
+
+msgid "Track date only"
+msgstr "Zaznamenávat pouze datum"
+
+msgid "When enabled only the day of an execution is tracked, not the time"
+msgstr "Zaznamená se jen datum splnění, čas ne"
+
+msgid "Consume %1$s of %2$s"
+msgstr "Spotřebovat %1$s produktu %2$s"
+
+msgid "Meal plan"
+msgstr "Jídelníček"
+
+msgid "%s serving"
+msgid_plural "%s servings"
+msgstr[0] "%s porce"
+msgstr[1] "%s porce"
+msgstr[2] "%s porcí"
+msgstr[3] "%s porcí"
+
+msgid "Week costs"
+msgstr "Týdenní náklady"
+
+msgid "Configuration"
+msgstr "Nastavení"
+
+msgid "A predefined list of values, one per line"
+msgstr "Předdefinovaný seznam hodnot, jedna na řádek"
+
+msgid "Products"
+msgstr "Produkty"
+
+msgid "Marked task %s as completed on %s"
+msgstr "Úkol %s označen jako hotový v %s"
+
+msgid "Booking has subsequent dependent bookings, undo not possible"
+msgstr "Operace má závislé položky a proto nepůjde vrátit zpět."
+
+msgid "per serving"
+msgstr "na porci"
+
+msgid "Never"
+msgstr "Nikdy"
+
+msgid "Today"
+msgstr "Dnes"
+
+msgid "Undo task"
+msgstr "Vrátit úkol"
+
+msgid "Due date rollover"
+msgstr "Automatické posouvání termínu"
+
+msgid ""
+"When enabled the chore can never be overdue, the due date will shift forward"
+" each day when due"
+msgstr ""
+"Jakmile nadejde datum splnění povinnosti, začne se automaticky překládat na "
+"další (a další) den, takže povinnost nebude nikdy označena za nesplněnou"
+
+msgid "Location Content Sheet"
+msgstr "Tabulka umístění zásob "
+
+msgid "Print"
+msgstr "Vytisknout"
+
+msgid "all locations"
+msgstr "všechna umístění"
+
+msgid ""
+"Here you can print a page per location with the current stock, maybe to hang"
+" it there and note the consumed things on it"
+msgstr ""
+"Vytiskněte si stav zásob podle jejich umístění. Můžete jej umístit na "
+"jednotlivá místa a bez počítače zaznamenávat spotřebovaná množství."
+
+msgid "this location"
+msgstr "toto umístění"
+
+msgid "Consumed amount"
+msgstr "Spotřebované množství"
+
+msgid "Time of printing"
+msgstr "Čas tisku"
+
+msgid "Are you sure you want to delete equipment \"%s\"?"
+msgstr "Odstranit zařízení „%s“?"
+
+msgid "Parent product"
+msgstr "Nadřazený produkt"
+
+msgid ""
+"Not possible because this product is already used as a parent product in "
+"another product"
+msgstr "Tento produkt je již použitý jako nadřazený u jiného produktu"
+
+msgid "Default conversions"
+msgstr "Převody jednotek"
+
+msgid "Factor"
+msgstr "Násobek"
+
+msgid "1 %s is the same as..."
+msgstr "1 %s odpovídá…"
+
+msgid "Create QU conversion"
+msgstr "Nový převod měrné jednotky"
+
+msgid "Default for QU"
+msgstr "který bude výchozí pro měrnou jednotku:"
+
+msgid "Quantity unit from"
+msgstr "Z měrné jednotky"
+
+msgid "Quantity unit to"
+msgstr "Do měrné jednotky"
+
+msgid "This cannot be equal to %s"
+msgstr "Hodnota se nemůže rovnat %s"
+
+msgid "This means 1 %1$s is the same as %2$s %3$s"
+msgstr "1 %1$s odpovídá %2$s %3$s"
+
+msgid "QU conversions"
+msgstr "Převod měrných jednotek"
+
+msgid "Override for product"
+msgstr "která platí jen pro produkt"
+
+msgid "This equals %1$s %2$s"
+msgstr "To odpovídá %1$s %2$s "
+
+msgid "Edit QU conversion"
+msgstr "Upravit převod měrné jednotky"
+
+msgid "An assignment type is required"
+msgstr "Typ přiřazení je povinný"
+
+msgid "Assignment type"
+msgstr "Typ přiřazení"
+
+msgid ""
+"This means the next execution of this chore is scheduled at the same time "
+"(based on the start date) every day"
+msgid_plural ""
+"This means the next execution of this chore is scheduled at the same time "
+"(based on the start date) every %s days"
+msgstr[0] ""
+"Další provedení této povinnosti je naplánováno na stejný čas, jako byla "
+"provedena poprvé, každý den."
+msgstr[1] ""
+"Další provedení této povinnosti je naplánováno na stejný čas, jako byla "
+"provedena poprvé, každé %s dny."
+msgstr[2] ""
+"Další provedení této povinnosti je naplánováno na stejný čas, jako byla "
+"provedena poprvé, každých %s dní."
+msgstr[3] ""
+"Další provedení této povinnosti je naplánováno na stejný čas, jako byla "
+"provedena poprvé, každých %s dní."
+
+msgid ""
+"This means the next execution of this chore is scheduled %s hour after the "
+"last execution"
+msgid_plural ""
+"This means the next execution of this chore is scheduled %s hours after the "
+"last execution"
+msgstr[0] ""
+"Příští provedení této povinnosti má být za hodinu po jejím předchozím "
+"provedením."
+msgstr[1] ""
+"Příští provedení této povinnosti má být za %s hodiny po jejím předchozím "
+"provedením."
+msgstr[2] ""
+"Příští provedení této povinnosti má být za %s hodin po jejím předchozím "
+"provedením."
+msgstr[3] ""
+"Příští provedení této povinnosti má být za %s hodin po jejím předchozím "
+"provedením."
+
+msgid ""
+"This means the next execution of this chore is scheduled every week on the "
+"selected weekdays"
+msgid_plural ""
+"This means the next execution of this chore is scheduled every %s weeks on "
+"the selected weekdays"
+msgstr[0] ""
+"Příští provedení této povinnosti má být pŕíští týden ve zvolené dny v týdnu."
+msgstr[1] ""
+"Příští provedení této povinnosti má být každý %s týden a to ve zvolené dny v"
+" týdnu."
+msgstr[2] ""
+"Příští provedení této povinnosti má být každý %s týden a to ve zvolené dny v"
+" týdnu."
+msgstr[3] ""
+"Příští provedení této povinnosti má být každý %s týden a to ve zvolené dny v"
+" týdnu."
+
+msgid ""
+"This means the next execution of this chore is scheduled on the selected day"
+" every month"
+msgid_plural ""
+"This means the next execution of this chore is scheduled on the selected day"
+" every %s months"
+msgstr[0] ""
+"Příští provedení této povinnosti má být každý měsíc a to ve zvolený den v "
+"něm."
+msgstr[1] ""
+"Příští provedení této povinnosti má být každý %s. měsíc a to ve zvolený den "
+"v něm."
+msgstr[2] ""
+"Příští provedení této povinnosti má být každý %s. měsíc a to ve zvolený den "
+"v něm."
+msgstr[3] ""
+"Příští provedení této povinnosti má být každý %s. měsíc a to ve zvolený den "
+"v něm."
+
+msgid "This means the next execution of this chore is not scheduled"
+msgstr "To znamená, že další splnění povinnosti není naplánováno"
+
+msgid ""
+"This means the next execution of this chore will not be assigned to anyone"
+msgstr "To znamená, že další splnění povinnosti nebude nikomu zadáno"
+
+msgid ""
+"This means the next execution of this chore will be assigned to the one who "
+"executed it least"
+msgstr ""
+"To znamená, že další splnění povinnosti bude zadáno tomu, kdo splnil tuto "
+"povinnost jako poslední"
+
+msgid "This means the next execution of this chore will be assigned randomly"
+msgstr "To znamená, že další splnění povinnosti bude zadáno náhodně."
+
+msgid ""
+"This means the next execution of this chore will be assigned to the next one"
+" in alphabetical order"
+msgstr ""
+"To znamená, že další splnění povinnosti  bude zadáno dalšímu uživateli, "
+"řazeno dle abecedy"
+
+msgid "Assign to"
+msgstr "Přiřadit k"
+
+msgid "This assignment type requires that at least one is assigned"
+msgstr "Typ přiřazení vyžaduje nejméně jednoho přiřazeného"
+
+msgid "%s chore is assigned to me"
+msgid_plural "%s chores are assigned to me"
+msgstr[0] "Mám splnit %s povinnost"
+msgstr[1] "Mám splnit %s povinnosti"
+msgstr[2] "Mám splnit %s povinností"
+msgstr[3] "Mám splnit %s povinností"
+
+msgid "Assigned to me"
+msgstr "Přiřazeno mně"
+
+msgid "assigned to %s"
+msgstr "přiřazeno k %s"
+
+msgid "Assignment"
+msgstr "Přiřazení"
+
+msgid "Consume product on chore execution"
+msgstr "Spotřebovat produkt při splnění povinnosti"
+
+msgid "Are you sure you want to delete user field \"%s\"?"
+msgstr "Odstranit sloupec „%s“?"
+
+msgid "Userentities"
+msgstr "Uživatelské tabulky"
+
+msgid "Create userentity"
+msgstr "Nová uživatelská tabulka"
+
+msgid "Show in sidebar menu"
+msgstr "Zobrazit v postranní nabídce"
+
+msgid "Edit userentity"
+msgstr "Upravit uživatelskou tabulku"
+
+msgid "Edit %s"
+msgstr "Upravit %s"
+
+msgid "Create %s"
+msgstr "Vytvořit %s"
+
+msgid "Are you sure you want to delete this userobject?"
+msgstr "Odstranit položku definovanou uživatelem?"
+
+msgid "Icon CSS class"
+msgstr "CSS třída ikony"
+
+msgid "For example"
+msgstr "Například"
+
+msgid "Configure fields"
+msgstr "Upravit pole"
+
+msgid "Quantity unit plural form testing"
+msgstr "Zobrazení tvarů množných čísel měrných jednotek"
+
+msgid "Result"
+msgstr "Výsledek"
+
+msgid "Test plural forms"
+msgstr "Vyzkoušet množná čísla"
+
+msgid "Scan a barcode"
+msgstr "Naskenovat čárový kód"
+
+msgid "Error while initializing the barcode scanning library"
+msgstr "Chyba při inicializaci knihovny pro skenování čárových kódů"
+
+msgid ""
+"The resulting price of this ingredient will be multiplied by this factor"
+msgstr ""
+"Konečná cena této ingredience bude vynásobena tímto číslem. Vhodné např. pro"
+" prodej produktu vyrobeného z receptu."
+
+msgid "Price factor"
+msgstr "Násobek ceny ingredience"
+
+msgid "Do you find Grocy useful?"
+msgstr "Je pro vás Grocy užitečný?"
+
+msgid "Say thanks"
+msgstr "Poděkujte za aplikaci"
+
+msgid "Search for recipes containing this product"
+msgstr "Vyhledat recepty obsahující tento produkt"
+
+msgid "Add to shopping list"
+msgstr "Přidat do nákupního seznamu"
+
+msgid "Added %1$s of %2$s to the shopping list \"%3$s\""
+msgstr "Seznam „%3$s” se rozrostl o %1$s produktu %2$s"
+
+msgid "Output"
+msgstr "Výstup"
+
+msgid "Energy"
+msgstr "Energetická hodnota"
+
+msgid "Per stock quantity unit"
+msgstr "Na jednotku množství zásob"
+
+msgid "Barcode scanner testing"
+msgstr "Test skeneru čárových kódů"
+
+msgid "Expected barcode"
+msgstr "Očekávaný čárový kód"
+
+msgid "Scan field"
+msgstr "Naskenováno"
+
+msgid "Scanned barcodes"
+msgstr "Naskenované čárové kódy"
+
+msgid "Hit"
+msgstr "Správně"
+
+msgid "Miss"
+msgstr "Špatně"
+
+msgid "Display recipe"
+msgstr "Zobrazit recept"
+
+msgid "Accumulate sub products min. stock amount"
+msgstr "Sčítat minimální počet skladových zásob podřízených produktů"
+
+msgid ""
+"If enabled, the min. stock amount of sub products will be accumulated into "
+"this product, means the sub product will never be missing, only this product"
+msgstr ""
+"Pokud je zaškrtnuto, minimální množství zásob podřízených produktů bude "
+"přičteno do tohoto produktu. To znamená že podřízené produkty nikdy nebudou "
+"chybět, ale pouze tento produkt."
+
+msgid "Are you sure you want to remove this conversion?"
+msgstr "Odstranit tento převod?"
+
+msgid "Unit price"
+msgstr "Cena za jednotku"
+
+msgid "Total price"
+msgstr "Celková cena"
+
+msgid "in %s and based on the purchase quantity unit"
+msgstr "v %s a založené na měrných jednotkách nákupu"
+
+msgid "Unlimited"
+msgstr "Neomezeně"
+
+msgid "Clear"
+msgstr "Vymazat"
+
+msgid "Are you sure you want to remove the included recipe \"%s\"?"
+msgstr "Odstranit dílčí recept „%s“?"
+
+msgid "Period interval"
+msgstr "Interval opakování"
+
+msgid ""
+"This means the next execution of this chore is scheduled every year on the "
+"same day (based on the start date)"
+msgid_plural ""
+"This means the next execution of this chore is scheduled every %s years on "
+"the same day (based on the start date)"
+msgstr[0] ""
+"To znamená, že další splnění povinnosti je naplánováno jedenkrát za rok ve "
+"stejný den, určený podle podle počátečního."
+msgstr[1] ""
+"To znamená, že další splnění povinnosti je naplánováno na každý %s. rok ve "
+"stejný den, určený podle podle počátečního."
+msgstr[2] ""
+"To znamená, že další splnění povinnosti je naplánováno na každý %s. rok ve "
+"stejný den, určený podle podle počátečního."
+msgstr[3] ""
+"To znamená, že další splnění povinnosti je naplánováno na každý %s. rok ve "
+"stejný den, určený podle počátečního."
+
+msgid "Transfer"
+msgstr "Přesun"
+
+msgid "From location"
+msgstr "Z umístění"
+
+msgid "To location"
+msgstr "Do umístění"
+
+msgid "There are no units available at this location"
+msgstr "Nejsou žádné dostupné kusy v této lokaci"
+
+msgid "Amount: %1$s; Due on %2$s; Bought on %3$s"
+msgstr "Množství: %1$s; Datum min. trvanlivosti:%2$s; Koupeno: %3$s"
+
+msgid "Transfered %1$s of %2$s from %3$s to %4$s"
+msgstr "Přesunuto %1$s z %2$s z umístění %3$s do %4$s"
+
+msgid "Stock entries"
+msgstr "Seznam zásob"
+
+msgid "Best before date"
+msgstr "Datum min. trvanlivosti"
+
+msgid "Purchased date"
+msgstr "Datum nákupu"
+
+msgid "Consume all %s for this stock entry"
+msgstr "Spotřebovat celou zásobu produktu %s"
+
+msgid "The amount cannot be lower than %1$s"
+msgstr "Množství nemůže být menší než %1$s"
+
+msgid "Stock entry successfully updated"
+msgstr "Položka zásob úspěšně aktualizována"
+
+msgid "Edit stock entry"
+msgstr "Upravit zásobu"
+
+msgid ""
+"Camera access is only possible when supported and allowed by your browser "
+"and when Grocy is served via a secure (https://) connection"
+msgstr ""
+"Přístup ke kameře musí být ve vašem internetovém prohlížeči možný a zapnutý."
+" Navíc musí Grocy běžet na zabezpečeném severu (https://)."
+
+msgid "Keep screen on"
+msgstr "Nevypínat displej automaticky"
+
+msgid "Keep screen on while displaying a \"fullscreen-card\""
+msgstr "Nevypínat displej v režimu „přes celou stránku“."
+
+msgid "A purchased date is required"
+msgstr "Datum nákupu je povinné"
+
+msgid ""
+"When a product is selected, one unit (per serving in stock quantity unit) "
+"will be added to stock on consuming this recipe"
+msgstr ""
+"Pokud tu vyberete název produktu, bude po kliknutí na „Spotřebovat všechny "
+"ingredience použité v tomto receptu“ přidán do stavu zásob a to v množství "
+"odpovídajícím počtu porcí při spotřebování receptu."
+
+msgid "Produces product"
+msgstr "Recept vyrobí produkt"
+
+msgid "This booking cannot be undone"
+msgstr "Tato akce nemůže být vrácena zpět"
+
+msgid "Booking does not exist or was already undone"
+msgstr "Tato akce neexistuje nebo již byla vrácena zpět"
+
+msgid "Are you sure you want to delete API key \"%s\"?"
+msgstr "Odstranit API klíč „%s“?"
+
+msgid "Add note"
+msgstr "Přidat poznámku"
+
+msgid "per day"
+msgstr "zítra"
+
+msgid "Only undone items"
+msgstr "nevybrané produkty"
+
+msgid "Add product"
+msgstr "Přidat produkt"
+
+msgid "Consume all ingredients needed by this weeks recipes or products"
+msgstr ""
+"Zkonzumovat všechny ingredience potřebné pro recepty nebo produkty tohoto "
+"týdne"
+
+msgid "Meal plan recipe"
+msgstr "Recept jídelníčku"
+
+msgid "Meal plan note"
+msgstr "Poznámka jídelníčku"
+
+msgid "Meal plan product"
+msgstr "Produkt jídelníčku"
+
+msgid "Scan mode"
+msgstr "Režim skenování"
+
+msgid "on"
+msgstr "zapnuto"
+
+msgid "off"
+msgstr "vypnut"
+
+msgid ""
+"Scan mode is on but not all required fields could be populated automatically"
+msgstr ""
+"Skenovací režim je zapnutý, ale ne všechna vyžadovaná data mohou být "
+"vyplněna automaticky"
+
+msgid "Is freezer"
+msgstr "Místo je mrazící box"
+
+msgid "This cannot be the same as the \"From\" location"
+msgstr "Nemůže být stejné jako „Z umístění“"
+
+msgid "Thawed"
+msgstr "Rozmraženo"
+
+msgid "Frozen"
+msgstr "Zmraženo"
+
+msgid "Are you sure you want to delete userentity \"%s\"?"
+msgstr "Odstranit uživatelský sloupec tabulky „%s“?"
+
+msgid "Shopping list settings"
+msgstr "Nastavení nákupního seznamu"
+
+msgid "Show a month-view calendar"
+msgstr "Zobrazit měsíční kalendář"
+
+msgid "Desired servings"
+msgstr "Počet porcí"
+
+msgid "Recipes settings"
+msgstr "Nastavení receptu"
+
+msgid "Recipe card"
+msgstr "Karta receptu"
+
+msgid "Group ingredients by their product group"
+msgstr "Seskupit ingredience podle skupiny produktů"
+
+msgid "Unknown store"
+msgstr "Nepojmenovaný obchod"
+
+msgid "Store"
+msgstr "Obchod"
+
+msgid "Transaction successfully undone"
+msgstr "Transakce úspěšně vrácena zpět"
+
+msgid "Default store"
+msgstr "Obvyklý obchod"
+
+msgid "Consume this stock entry"
+msgstr "Spotřebovat všechny jednotky této položky"
+
+msgid "Mark this stock entry as open"
+msgstr "Označit nejstarší jednotku zásob jako otevřenou"
+
+msgid "Mark this item as done"
+msgstr "Je/není vybráno"
+
+msgid "Edit this item"
+msgstr "Upravit"
+
+msgid "Delete this item"
+msgstr "Smazat"
+
+msgid "Show an icon if the product is already on the shopping list"
+msgstr "Zobrazit ikonku pokud je produkt na nákupním seznamu"
+
+msgid "Calories"
+msgstr "Kalorie"
+
+msgid "means %1$s per %2$s"
+msgstr "to je %1$s za %2$s"
+
+msgid "Create recipe"
+msgstr "Vytvořit recept"
+
+msgid "Save & continue to add ingredients and included recipes"
+msgstr "Uložit a pokračovat pro přidání ingrediencí a zařazení do receptů"
+
+msgid "Save & continue"
+msgstr "Uložit a zůstat zde"
+
+msgid "Save & return to recipes"
+msgstr "Uložit a vrátit se do receptů"
+
+msgid "Stock value"
+msgstr "Cena zásob"
+
+msgid "Average price"
+msgstr "Průměrná cena"
+
+msgid "Active"
+msgstr "Aktivní"
+
+msgid "Barcodes"
+msgstr "Čárové kódy"
+
+msgid "Barcode"
+msgstr "Čárový kód"
+
+msgid "Create Barcode"
+msgstr "Vyvořit čárový kód"
+
+msgid "Barcode for product"
+msgstr "Čárový kód pro produkt"
+
+msgid "Edit Barcode"
+msgstr "Upravit čárový kód"
+
+msgid ""
+"Based on the prices of the default consume rule (Opened first, then first "
+"due first, then first in first out) for in stock ingredients and on the last"
+" price for missing ones"
+msgstr ""
+"Základem ceny je cena produktu v zásobě podle výchozího pořadí spotřeby "
+"produktů. Tedy nejprve se spotřebují otevřené, pak ty s nejbližším datem "
+"spotřeby a nakonec podle pravidla „dříve nakoupený – dříve spotřebovaný“. "
+"Pro chybějící produkty je použita cena z posledního nákupu."
+
+msgid "Clear filter"
+msgstr "Smazat filtr"
+
+msgid "Permissions for user %s"
+msgstr "Přístupová práva pro uživatele: %s"
+
+msgid "Are you sure you want to remove full permissions for yourself?"
+msgstr "Opravdu chcete odstranit všechna svoje oprávnění?"
+
+msgid "Permissions saved"
+msgstr "Změna přístupových práv uložena"
+
+msgid "You are not allowed to view this page"
+msgstr "Nemáte oprávnění zobrazit tuto stránku"
+
+msgid "Page not found"
+msgstr "Stránka nenalezena"
+
+msgid "Unauthorized"
+msgstr "Nemáte oprávnění"
+
+msgid "Error source"
+msgstr "Zdroj chyby"
+
+msgid "Error message"
+msgstr "Chybová zpráva"
+
+msgid "Stack trace"
+msgstr "Výpis běžících funkcí – stack trace"
+
+msgid "Easy error info copy & paste (for reporting)"
+msgstr ""
+"Budete-li psát vývojářům, pošlete jim text níže. Stačí do něj kliknout a "
+"celý se vybere (pro Ctrl-C)."
+
+msgid "This page does not exist"
+msgstr "Tato stránka neexistuje"
+
+msgid "You will be redirected to the default page in %s seconds"
+msgstr "Za %s s budete přesměrováni na výchozí stránku"
+
+msgid "Server error"
+msgstr "Chyba serveru"
+
+msgid "A server error occured while processing your request"
+msgstr ""
+"Při zpracování vašeho požadavku z webové stránky došlo k chybě na serveru"
+
+msgid "If you think this is a bug, please report it"
+msgstr "Pokud to vypadá, že je v naší aplikaci chyba, nahlašte to, prosím:"
+
+msgid "Language"
+msgstr "Jazyk"
+
+msgid "User settings"
+msgstr "Uživatelské nastavení"
+
+msgid "Default"
+msgstr "Výchozí"
+
+msgid "Stock journal summary"
+msgstr "Shrnutí deníku zásob"
+
+msgid "Journal summary"
+msgstr "Shrnutí deníku"
+
+msgid "Consume exact amount"
+msgstr "Spotřebovat přesné množství"
+
+msgid "Value"
+msgstr "Cena"
+
+msgid "%s total value"
+msgstr "celkem za %s"
+
+msgid ""
+"Show purchased date on purchase and inventory page (otherwise the purchased "
+"date defaults to today)"
+msgstr ""
+"Zobrazit datum nákupu na stránce nákupu. Jinak se bude ukládat aktuální "
+"datum."
+
+msgid "Common"
+msgstr "Nastavení pro všechny produkty"
+
+msgid "Decimal places allowed for amounts"
+msgstr "Počet desetinných míst pro množství produktu"
+
+msgid "Edit shopping list"
+msgstr "Upravit nákupní seznam"
+
+msgid "Save & continue to add quantity unit conversions & barcodes"
+msgstr "Uložit a pokračovat k přidání měrných jednotek a čárových kódů"
+
+msgid "Save & return to products"
+msgstr "Uložit a vrátit se do produktů"
+
+msgid "Save & continue to add conversions"
+msgstr "Uložit a pokračovat k přidání konverzí měrných jednotek"
+
+msgid "Save & return to quantity units"
+msgstr "Uložit a vrátit se do měrných jednotek"
+
+msgid "price"
+msgstr "cena"
+
+msgid "New stock amount"
+msgstr "Nové množství zásob"
+
+msgid "Price per stock unit"
+msgstr "Cena za jednotku zásob"
+
+msgid "Table options"
+msgstr "Nastavení tabulky"
+
+msgid "This product is currently on a shopping list"
+msgstr "Tento produkt je již v nákupním seznamu"
+
+msgid "Undo transaction"
+msgstr "Vrátit transakci"
+
+msgid "Transaction type"
+msgstr "Typ transakce"
+
+msgid "Transaction time"
+msgstr "Čas transakce"
+
+msgid "Chore journal"
+msgstr "Deník povinností"
+
+msgid "Track next chore schedule"
+msgstr "Označit následující datum povinnosti jako splněné"
+
+msgid "Mark task as completed"
+msgstr "Označit úkol jako hotový"
+
+msgid "Track charge cycle"
+msgstr "Zaznamenat výměnu/nabíjení"
+
+msgid "Battery journal"
+msgstr "Deník baterií"
+
+msgid "This product has a picture"
+msgstr "Tento produkt má obrázek"
+
+msgid "Consume this stock entry as spoiled"
+msgstr "Označit tuto zásobu jako zkaženou"
+
+msgid "Configure user permissions"
+msgstr "Upravit uživatelská oprávnění"
+
+msgid "Show a QR-Code for this API key"
+msgstr "Zobrazit QR kód pro tento API klíč"
+
+msgid ""
+"This is the default quantity unit used on purchase and when adding this "
+"product to the shopping list"
+msgstr ""
+"Výchozí množstevní jednotka pro akci Nakoupit a pro vkládání produktu do "
+"nákupního seznamu"
+
+msgid ""
+"Show a warning when the due date of the purchased product is earlier than "
+"the next due date in stock"
+msgstr ""
+"Upozorni, pokud je datum min. trvanlivosti (použitelnosti) nakoupeného "
+"produktu dříve, než nejbližší datum spotřeby produktu v zásobě."
+
+msgid "This is due earlier than already in stock items"
+msgstr "Datum min. trvanlivosti je dříve, než u produktů v zásobě"
+
+msgid ""
+"When enabled, after changing/scanning a product and if all fields could be "
+"automatically populated (by product and/or barcode defaults), the "
+"transaction is automatically submitted"
+msgstr ""
+"Umožní automatické provedení operace, pokud jsou k dispozici všechny údaje k"
+" produktu – buď ze seznamu produktů nebo z dat u čárového kódu."
+
+msgid "Quick consume amount"
+msgstr "Množství pro tlačítko Spotřebovat"
+
+msgid ""
+"This amount is used for the \"quick consume button\" on the stock overview "
+"page (related to quantity unit stock)"
+msgstr ""
+"Hodnota množství pro zelené tlačítko Spotřebovat v Přehledu zásob. Vztahuje "
+"se k měrné jednotce zásob."
+
+msgid ""
+"This amount is used for the \"quick open button\" on the stock overview page"
+" (related to quantity unit stock)"
+msgstr ""
+"Hodnota množství pro červené tlačítko Otevřít v Přehledu zásob. Vztahuje se "
+"k měrné jednotce zásob."
+
+msgid "Copy"
+msgstr "Kopírovat"
+
+msgid "Are you sure you want to remove this barcode?"
+msgstr "Odstranit tento čárový kód?"
+
+msgid "Due date type"
+msgstr "Typ trvanlivosti produktu"
+
+msgid ""
+"Based on the selected type, the highlighting on the stock overview page will"
+" be different"
+msgstr ""
+"Podle vybraného typu trvanlivosti bude produkt po datu min. trvanlivosti či "
+"použitelnosti v Přehledu zásob zvýrazněn různými barvami."
+
+msgid ""
+"Means that the product is maybe still safe to be consumed after its due date"
+" is reached"
+msgstr "Produkt lze konzumovat i po vypršení doby min. trvanlivosti"
+
+msgid "Expiration date"
+msgstr "Datum použitelnosti"
+
+msgid ""
+"Means that the product is not safe to be consumed after its due date is "
+"reached"
+msgstr "Po vypršení doby použitelnosti není vhodné produkt konzumovat"
+
+msgid ""
+"For purchases this amount of days will be added to today for the due date "
+"suggestion"
+msgstr ""
+"Tento počet dní bude přidán k dnešnímu datu jako návrh data minimální "
+"trvanlivosti"
+
+msgid "-1 means that this product will be never overdue"
+msgstr "zadáním -1 bude mít produkt neomezenou trvanlivost"
+
+msgid "Default due days"
+msgstr "Výchozí počet dní min. trvanlivosti"
+
+msgid ""
+"When this product was marked as opened, the due date will be replaced by "
+"today + this amount of days, but only if the resulting date is not after the"
+" original due date (a value of 0 disables this)"
+msgstr ""
+"Při označení jako Otevřený, bude nastavené datum min. trvanlivosti: dnes + "
+"tento počet dní. Ale jen pokud nové datum spotřeby nebude později, než "
+"původní. Hodnota 0 datum min. trvanlivosti (spotřeby) nemění."
+
+msgid "Default due days after opened"
+msgstr "Výchozí počet dní min. trvanlivosti po otevření"
+
+msgid ""
+"On moving this product to a freezer location (so when freezing it), the due "
+"date will be replaced by today + this amount of days"
+msgstr ""
+"Přesunete-li tento produkt do mrazničky, bude datum min. trvanlivosti "
+"vypočítáno jako součet dnešního data a počtu zde uvedených dní."
+
+msgid "Default due days after freezing"
+msgstr "Výchozí počet dní min. trvanlivosti po zamražení"
+
+msgid ""
+"On moving this product from a freezer location (so when thawing it), the due"
+" date will be replaced by today + this amount of days"
+msgstr ""
+"Při přesunutí produktu z mrazničky (produkt rozmražen) se datum min. "
+"trvanlivosti vypočítá jako dnešní datum + zadaný počet dní"
+
+msgid "Default due days after thawing"
+msgstr "Výchozí počet dní min. trvanlivosti po rozmrazení"
+
+msgid "Next due date"
+msgstr "Datum min. trvanlivosti"
+
+msgid "%s product is due"
+msgid_plural "%s products are due"
+msgstr[0] "%s produktu vyprší min. trvanlivost"
+msgstr[1] "%s  produktům vyprší min. trvanlivost"
+msgstr[2] "%s produktům vyprší min. trvanlivost"
+msgstr[3] "%s produktům vyprší min. trvanlivost"
+
+msgid "Due date"
+msgstr "Datum min. trvanlivosti"
+
+msgid "Never overdue"
+msgstr "Produkt má neomezenou trvanlivost"
+
+msgid "%s product is expired"
+msgid_plural "%s products are expired"
+msgstr[0] "%s produkt je po datu použitelnosti"
+msgstr[1] "%s produkty jsou po datu použitelnosti"
+msgstr[2] "%s produktů je po datu použitelnosti"
+msgstr[3] "%s produktů je po datu použitelnosti"
+
+msgid "Expired"
+msgstr "po době použitelnosti"
+
+msgid "Due soon days"
+msgstr "Počet dní ve žlutém filtru v Přehledu"
+
+msgid "Add overdue/expired products"
+msgstr "Přidat produkty po min. trvanlivosti/použitelnosti"
+
+msgid ""
+"Products with tare weight enabled are currently not supported for transfer"
+msgstr ""
+"Produkty s nastavenou tárou (pro váhu) nelze přesouvat mezi jednotlivými "
+"umístěními."
+
+msgid ""
+"This cannot be lower than %1$s or equal %2$s and needs to be a valid number "
+"with max. %3$s decimal places"
+msgstr ""
+"Hodnota nesmí být menší než %1$s nebo být rovna %2$s, s max. %3$s "
+"desetinnými místy"
+
+msgid ""
+"This must be between %1$s and %2$s, cannot equal %3$s and needs to be a "
+"valid number with max. %4$s decimal places"
+msgstr ""
+"Hodnota musí být mezi %1$s a %2$s, nesmí být rovna %3$s, s max. %4$s "
+"desetinnými místy"
+
+msgid ""
+"This cannot be lower than %1$s and needs to be a valid number with max. %2$s"
+" decimal places"
+msgstr "Hodnota nesmí být menší než %1$s a smí mít max. %2$s desetinná místa"
+
+msgid ""
+"This must between %1$s and %2$s and needs to be a valid number with max. "
+"%3$s decimal places"
+msgstr "Hodnota musí být mezi %1$s a %2$s, s max. %3$s desetinnými místy"
+
+msgid ""
+"Automatically do the booking using the last price and the amount of the "
+"shopping list item, if the product has \"Default due days\" set"
+msgstr ""
+"Má-li produkt vyplněno výchozí datum min. trvanlivosti, pak přidej produkt "
+"do stavu zásob automaticky s vyplněním počtu balení podle nákupního seznamu "
+"a ceny podle posledního nákupu."
+
+msgid ""
+"When moving products from/to a freezer location, the products due date is "
+"automatically adjusted according to the product settings"
+msgstr ""
+"Při přesunutí produktu z/do mrazničky, bude datum minimální trvanlivosti "
+"automaticky upraveno na základě parametrů tohoto produktu"
+
+msgid "This is the internal field name, e. g. for the API"
+msgstr "Toto je systémový název položky vhodný např. pro API"
+
+msgid "This is used to display the field on the frontend"
+msgstr "Takto se položka databáze zobrazuje ve webové stránce"
+
+msgid "Multiple Userfields will be ordered by that number on the input form"
+msgstr ""
+"Řada uživatelských sloupců bude uspořádána podle tohoto čísla při jejich "
+"zadávání"
+
+msgid "Sort number"
+msgstr "Uspořádávací číslo"
+
+msgid "Download file"
+msgstr "Stáhnout soubor"
+
+msgid "Use the products \"Quick consume amount\""
+msgstr "Použij množství pro tlačítka Spotřebovat z parametrů produktu"
+
+msgid "Disabled"
+msgstr "Vyřazeno"
+
+msgid ""
+"This also removes any stock amount, the journal and all other references of "
+"this product - consider disabling it instead, if you want to keep that and "
+"just hide the product."
+msgstr ""
+"Tímto smažete produkt ze všech přehledů. Pokud tento produkt již "
+"nepotřebujete, ale měl by být ponechán např. v historii nákupů, jen ho "
+"odznačte jako aktivní."
+
+msgid "Show disabled"
+msgstr "Zobrazit vyřazené"
+
+msgid "Never show on stock overview"
+msgstr "Nezobrazovat v Přehledu zásob"
+
+msgid "None"
+msgstr "Žádného"
+
+msgid "Group by"
+msgstr "Seskupovat podle"
+
+msgid "Ingredient group"
+msgstr "Skupina ingrediencí"
+
+msgid "Reset"
+msgstr "Resetovat"
+
+msgid "Are you sure you want to reset the table options?"
+msgstr "Uvést sloupce tabulky do výchozího stavu?"
+
+msgid "Hide/view columns"
+msgstr "Zobrazit/skrýt sloupce"
+
+msgid ""
+"A different amount/unit can then be used below while for stock fulfillment "
+"checking it is sufficient when any amount of the product in stock"
+msgstr ""
+"Je-li zaškrtnuto, smíte vybrat jakoukoliv měrnou jednotku produktu. V "
+"receptu se pak objeví, že je produkt v zásobě, je-li k dispozici jakékoliv "
+"jeho množství."
+
+msgid "Last price (Unit)"
+msgstr "Poslední cena (jednotka)"
+
+msgid "Last price (Total)"
+msgstr "Poslední cena (celkem)"
+
+msgid "Show header"
+msgstr "Zobrazit hlavičku"
+
+msgid "Group by product group"
+msgstr "Seskupovat podle skupiny produktů"
+
+msgid "Table"
+msgstr "Tabulku"
+
+msgid "Layout type"
+msgstr "Tisknout jako"
+
+msgid "Merge this product with another one"
+msgstr "Sloučit tento produkt s jiným"
+
+msgid "Merge products"
+msgstr "Sloučit produkty"
+
+msgid "Product to keep"
+msgstr "Zachovat produkt"
+
+msgid "Product to remove"
+msgstr "Produkt k odstranění"
+
+msgid "Error while merging"
+msgstr "Při slučování došlo k chybě"
+
+msgid "After merging, this product will be kept"
+msgstr "Po sloučení bude tento produkt zachován"
+
+msgid ""
+"After merging, all occurences of this product will be replaced by the kept "
+"product (means this product will not exist anymore)"
+msgstr ""
+"Po sloučení budou všechny výskyty tohoto produktu v seznamech nahrazeny "
+"produktem, který bude zachován."
+
+msgid "Merge"
+msgstr "Sloučit (do tohoto produktu)"
+
+msgid "Title"
+msgstr "Nadpis"
+
+msgid "Link"
+msgstr "Odkaz"
+
+msgid ""
+"The stock overview page lists all products which are currently in stock or "
+"below their min. stock amount - enable this to hide this product there "
+"always"
+msgstr ""
+"Stránka Přehledu zásob zobrazuje všechny produkty, které jsou v zásobě nebo "
+"pod jejich minimálním stavem. Zaškrtnutím se v něm produkt nikdy neobjeví."
+
+msgid "Print options"
+msgstr "Nastavení tisku"
+
+msgid "A product or a note is required"
+msgstr "Vložte jméno produktu, NEBO jen poznámku"
+
+msgid "Grocycode"
+msgstr "Grocycode"
+
+msgid "Download"
+msgstr "Stáhnout"
+
+# Example: Download *Product* Grocycode
+msgid "Download %s Grocycode"
+msgstr "Stáhnout Grocycode pro %s"
+
+msgid ""
+"Grocycode is a unique referer to this %s in your Grocy instance - print it "
+"onto a label and scan it like any other barcode"
+msgstr ""
+"Grocycode je totéž jako čárový kód z obalu produktu. Označuje produkt %s ve "
+"vaší databázi. Můžete si jej vytisknout a používat jako ostatní čárové kódy."
+
+# Abbreviation for "due date"
+msgid "DD"
+msgstr "Spotř. do:"
+
+msgid "Print on label printer"
+msgstr "Vytisknout na tiskárně nálepek"
+
+msgid "Default stock entry label"
+msgstr ""
+"Jak se změna množství produktu projeví v Seznamu zásob – výchozí nastavení"
+
+msgid "Stock entry label"
+msgstr "Jak se změna množství produktu projeví v Seznamu zásob"
+
+msgid "No label"
+msgstr "Všechna balení produktu budou jeden řádek, nálepka se nevytiskne"
+
+msgid "Single label"
+msgstr "Všechna balení produktu budou jeden řádek, vytiskne se 1 nálepka"
+
+msgid "Label per unit"
+msgstr "Každé balení produktu bude mít svůj řádek a vytisknutou nálepku"
+
+msgid "Error while executing WebHook"
+msgstr "Chyba při spuštění WebHook"
+
+# Example: Print *Product* Grocycode on label printer
+msgid "Print %s Grocycode on label printer"
+msgstr "Vytisknout Grocycode pro %s"
+
+msgid "Open stock entry label in new window"
+msgstr "Otevřít nálepku s čárovým kódem v nové záložce"
+
+msgid "Thermal printer"
+msgstr "Tiskárna na termocitlivý papír"
+
+msgid "Printing"
+msgstr "Probíhá tisk..."
+
+msgid "Connecting to printer..."
+msgstr "Připojování k tiskárně"
+
+msgid "Unable to print"
+msgstr "Nedaří se tisknout"
+
+msgid "Only done items"
+msgstr "vybrané produkty"
+
+msgid "Show only in stock products"
+msgstr "Zobrazit produkty se zásobou"
+
+msgid "Product description"
+msgstr "Popis produktu"
+
+# Example: *3.21 USD* per *Pack*
+msgid "%1$s per %2$s"
+msgstr "%1$s za %2$s"
+
+msgid "Mark this item as undone"
+msgstr "Vrátit zpět"
+
+msgid "Mandatory"
+msgstr "Povinné"
+
+msgid "Mandatory Userfield"
+msgstr "Povinný uživatelský údaj"
+
+msgid "When enabled, then this field must be filled on the destination form"
+msgstr "Použijete-li tento údaj ve formuláři, bude povinný"
+
+msgid "In stock products"
+msgstr "produkty se zásobou"
+
+msgid "Timestamp"
+msgstr "Čas zápisu"
+
+msgid "Should not be frozen"
+msgstr "Není určeno ke zmražení"
+
+msgid ""
+"When enabled, on moving this product to a freezer location (so when freezing"
+" it), a warning will be shown"
+msgstr ""
+"Při pokusu přesunout takto označený produkt do mrazničky se zobrazí varování"
+
+msgid "This product shouldn't be frozen"
+msgstr "Tento produkt by neměl být zmrazen"
+
+msgid "Copy all meal plan entries of %s"
+msgstr "Zkopíruj jídelníček ze dne %s do"
+
+msgid "A date is required"
+msgstr "Vyberte datum"
+
+msgid "Day"
+msgstr "Den"
+
+msgid "Add recipe"
+msgstr "Přidej recept"
+
+msgid "Copy this day"
+msgstr "Zkopíruj tento den do..."
+
+msgid "Date range"
+msgstr "Období"
+
+msgid "%s month"
+msgid_plural "%s months"
+msgstr[0] "%s měsíc"
+msgstr[1] "%s měsíce"
+msgstr[2] "%s měsíců"
+msgstr[3] "%s měsíců"
+
+msgid "%s year"
+msgid_plural "%s years"
+msgstr[0] "%s rok"
+msgstr[1] "%s roky"
+msgstr[2] "%s let"
+msgstr[3] "%s let"
+
+msgid "Display product"
+msgstr "Zobrazit produkt"
+
+msgid "Copy recipe"
+msgstr "Vytvořit kopii receptu"
+
+msgid "Copy of %s"
+msgstr "%s (Kopie)"
+
+msgid "Add decimal separator automatically for price inputs"
+msgstr "Automatické vkládání desetinné čárky"
+
+msgid ""
+"When enabled, you always have to enter the value including decimal places, "
+"the decimal separator will be automatically added based on the amount of "
+"allowed decimal places"
+msgstr ""
+"Cenu pak vždy zapíšete včetně desetinných míst. Desetinná čárka se vloží "
+"automaticky."
+
+msgid "Stock entry"
+msgstr "Položka zásob"
+
+msgid "Configure sections"
+msgstr "Rozdělení dne"
+
+msgid "Meal plan sections"
+msgstr "Rozdělení dne podle jídel"
+
+msgid "Create meal plan section"
+msgstr "Přidání části dne v jídelníčku podle podávaného jídla"
+
+msgid "Sections will be ordered by that number on the meal plan"
+msgstr ""
+"Seznam částí dne se setřídí vzestupně podle těchto čísel. První část dne "
+"bude mít tedy nejnižší (ale jinak libovolné) číslo a poslední část dne "
+"nejvyšší."
+
+msgid "Edit meal plan section"
+msgstr "Upravit část dne v jídelníčku"
+
+msgid "Are you sure you want to delete meal plan section \"%s\"?"
+msgstr "Odstranit rozdělení dne s názvem: %s?"
+
+msgid "Section"
+msgstr "Část dne v jídelníčku"
+
+msgid "Are you sure you want to empty the shopping list?"
+msgstr "Vyprázdnit nákupní seznam?"
+
+msgid "This is the default which will be prefilled on purchase"
+msgstr ""
+"Určuje, jak se změna množství balení produktu – funkce Nakoupit a Inventura "
+"– zapíše do Seznamu zásob a zda se k této změně vytisknou nálepky na produkt"
+
+msgid "Merge chores"
+msgstr "Spojení povinností"
+
+msgid "Chore to keep"
+msgstr "Povinnost, která zůstane zachována"
+
+msgid "After merging, this chore will be kept"
+msgstr "Povinnost, která zůstane zachována po sloučení"
+
+msgid "Chore to remove"
+msgstr "Povinnost, která bude odstraněna"
+
+msgid ""
+"After merging, all occurences of this chore will be replaced by the kept "
+"chore (means this chore will not exist anymore)"
+msgstr ""
+"Po sloučení bude tato povinnost v seznamech nahrazena povinností, která bude"
+" zachována."
+
+msgid "Due today"
+msgstr "má se splnit dnes"
+
+msgid "%s task is due to be done today"
+msgid_plural "%s tasks are due to be done today"
+msgstr[0] "Dnes má být hotov %s úkol"
+msgstr[1] "Dnes má být hotovo %s úkoly"
+msgstr[2] "Dnes má být hotovo %s úkolů"
+msgstr[3] "Dnes má být hotovo %s úkolů"
+
+msgid "%s chore is due to be done today"
+msgid_plural "%s chores are due to be done today"
+msgstr[0] "Dnes má být splněna %s povinnost"
+msgstr[1] "Dnes mají být splněny %s povinnosti"
+msgstr[2] "Dnes má být splněno %s povinností"
+msgstr[3] "Dnes má být splněno %s povinností"
+
+msgid "%s battery is due to be charged today"
+msgid_plural "%s batteries are due to be charged today"
+msgstr[0] "Dnes má být vyměněna/nabita %s baterie"
+msgstr[1] "Dnes mají být vyměněny/nabity %s baterie"
+msgstr[2] "Dnes má být vyměněno/nabito %s baterií"
+msgstr[3] "Dnes má být vyměněno/nabito %s baterií"
+
+msgid "Set to 0 to hide due soon filters/highlighting"
+msgstr "Zadejte 0 a žlutý filtr se nebude zobrazovat"
+
+msgid "Save & close"
+msgstr "Uložit a zavřít"
+
+msgid "Save & add another task"
+msgstr "Uložit a přidat další úkol"
+
+msgid "Treat opened as out of stock"
+msgstr "Považovat otevřené balení jako spotřebované"
+
+msgid ""
+"When enabled, opened items will be counted as missing for calculating if "
+"this product is below its minimum stock amount"
+msgstr ""
+"Otevřená balení tedy nebudou započítána do zásob. To lze využít pro "
+"plánování nákupů."
+
+msgid "Skipped"
+msgstr "Datum přeskočeno"
+
+msgid "Skip next chore schedule"
+msgstr "Přeskočit aktuální datum splnění úkolu"
+
+msgid "Time"
+msgstr "Čas"
+
+msgid "A start date is required"
+msgstr "Počáteční datum je povinné"
+
+msgid "Start date"
+msgstr "První datum pro splnění povinnosti"
+
+msgid "The start date cannot be changed when the chore was once tracked"
+msgstr ""
+"Jakmile byla povinnost jednou vykonána, její počáteční datum už nelze měnit"
+
+msgid "Show the recipe list and the recipe side by side"
+msgstr "Zobrazit seznam receptů a obsah vybraného receptu vedle sebe"
+
+msgid ""
+"This means the next execution of this chore is scheduled dynamically based "
+"on the past average execution frequency"
+msgstr ""
+"Následující datum pro splnění této povinnosti je stanovováno automaticky z "
+"průměrné frekvence plnění této povinnosti v minulosti"
+
+msgid "Average execution frequency"
+msgstr "Průměrná frekvence plnění této povinnosti"
+
+msgid "Reschedule next execution"
+msgstr "Změna data příštího plnění povinnosti"
+
+msgid "This can only be in the future"
+msgstr "Datum musí být v budoucnu"
+
+msgid "Rescheduled"
+msgstr "Datum změněno"
+
+msgid "Due score"
+msgstr "Index min. trvanlivosti"
+
+msgid ""
+"The higher this number is, the more ingredients currently in stock are due "
+"soon, overdue or already expired"
+msgstr ""
+"Čím je index vyšší, tím více ingrediencí se blíží datu min. trvanlivosti. V "
+"indexu dostává jeden bod každý produkt s blížící se dobou spotřeby, 10 bodů "
+"za každý produkt po době min. trvanlivosti a 20 bodů za každý produkt po "
+"době použitelnosti."
+
+msgid "Disable own stock"
+msgstr "Produkt nemá vlastní zásobu"
+
+msgid ""
+"When enabled, this product can't have own stock, means it will not be "
+"selectable on purchase (useful for parent products which are just used as a "
+"summary/total view of the child products)"
+msgstr ""
+"Tento produkt nebude možné vybrat při nákupu. To je vhodné pro nadřazené "
+"produkty, které používáte jen jako sumář řady podřízených produktů."
+
+msgid "Out of stock items will be shown at the products default location"
+msgstr "Produkty s nulovou zásobou budou zobrazeny na svém obvyklém místě"
+
+msgid "Show a little checkbox next to each ingredient to mark it as done"
+msgstr "Zobrazit zaškrtávací políčko u každé z ingrediencí"
+
+msgid ""
+"The ingredient is crossed out when clicked, the status is not saved, means "
+"reset when the page is reloaded"
+msgstr ""
+"Pokud na ingredienci kliknete, bude jen přeškrtnuta. Tento stav se nikam "
+"neukládá – slouží jen jako pomůcka při přípravě. Při obnovení stránky (F5) "
+"se všechny zaškrtnuté položky v seznamu vrátí zpět."
+
+msgid ""
+"The parent product %1$s is currently not in stock, %2$s is the current next "
+"sub product based on the default consume rule (Opened first, then first due "
+"first, then first in first out)"
+msgstr ""
+"Nadřízený produkt %1$s nemá žádnou zásobu. %2$s je vybraný podřízený produkt"
+" podle pravidel: nejprve se spotřebují otevřené, pak ty s nejbližším datem "
+"spotřeby a nakonec podle pravidla „dříve nakoupený, dříve spotřebovaný“."
+
+msgid "Night mode"
+msgstr "Tmavý motiv"
+
+msgid "On"
+msgstr "Zapnut"
+
+msgid "Use system setting"
+msgstr "Podle operačního systému"
+
+msgid "Off"
+msgstr "Vypnut"
+
+msgid ""
+"Automatically add products that are below their defined min. stock amount to"
+" the shopping list"
+msgstr ""
+"Automaticky vkládat produkty pod min. množstvím zásoby do nákupního seznamu:"
+
+msgid "Reassigned"
+msgstr "Změněno"
+
+msgid "Default value"
+msgstr "Výchozí hodnota"
+
+msgid "Now / today"
+msgstr "Datum a čas v okamžiku zápisu"
+
+msgid "Add meal plan entry"
+msgstr "Přidat položku jídelníčku"
+
+msgid "Edit meal plan entry"
+msgstr "Upravit položku jídelníčku"
+
+msgid "Default consume location"
+msgstr "Spotřebovávat z umístění"
+
+msgid "Stock entries at this location will be consumed first"
+msgstr ""
+"Produkty budou spotřebovávány nejprve z tohoto umístění, (nebude-li při "
+"spotřebě zadáno jiné umístění)"
+
+msgid "Move on open"
+msgstr "Přesunout „otevřený” produkt"
+
+msgid ""
+"When enabled, on marking this product as opened, the corresponding amount "
+"will be moved to the default consume location"
+msgstr ""
+"Označíte-li produkt jako otevřený, automaticky se přesune z Obvyklého "
+"umístění do Spotřebovávat z umístění. Abyste mohli funkci použít, musíte pro"
+" obě umístění vybrat různá místa."
+
+msgid "Moved to %1$s"
+msgstr "Produkt přesunut do: %1$s"
+
+msgid "Decimal places allowed for prices (input)"
+msgstr "Počet desetinných míst při zapisování ceny"
+
+msgid "Decimal places allowed for prices (display)"
+msgstr "Počet desetinných míst pro zobrazení ceny"
+
+msgid "Clear done items"
+msgstr "Odstranit všechna vybraná"
+
+msgid ""
+"This shows all to this product directly or indirectly related quantity units"
+" and their derived conversion factors"
+msgstr ""
+"Zobrazí všechny kombinace přepočtů měrných jednotek jak pro tento produkt "
+"zadaných, tak zděděných"
+
+msgid "Show resolved conversions"
+msgstr "Zobrazit všechny převody"
+
+msgid "QU conversions resolved"
+msgstr "Všechny převody měrných jednotek pro"
+
+msgid "Product specific QU conversions"
+msgstr "Převody měrných jednotek pro tento produkt"
+
+msgid "Default quantity unit consume"
+msgstr "Výchozí měrná jednotka pro spotřebu"
+
+msgid "This is the default quantity unit used when consuming this product"
+msgstr "Měrná jednotka produktu při kliknutí na tlačítko Spotřebovat"
+
+msgid "Add to meal plan"
+msgstr "Přidat do jídelníčku"
+
+msgid "Successfully added the recipe to the meal plan"
+msgstr "Recept byl přidán do jídelníčku"
+
+msgid "Reprint stock entry label"
+msgstr "Vytisknout nálepku produktu"
+
+msgid "Auto reprint stock entry label"
+msgstr "Vytisknout nálepky pro produkt při změně"
+
+msgid ""
+"When enabled, auto-changing the due date of a stock entry (by "
+"opening/freezing/thawing and having corresponding default due days set) will"
+" reprint its label"
+msgstr ""
+"Pokud se změní datum min. trvanlivosti/použitelnosti změnou jeho stavu "
+"(otevřením, zmražením, rozmrazením) a pokud jsou pro tyto změny stavu "
+"uloženy doby min. trvanlivosti, nálepka produktu se znovu vytiskne."
+
+msgid "Quick open amount"
+msgstr "Množství pro tlačítko Otevřít"
+
+msgid "Track chore execution now"
+msgstr "Splnění povinnosti s dnešním datem"
+
+msgid "Total"
+msgstr "Celkem"
+
+msgid "Apply"
+msgstr "Provést"
+
+msgid "Custom range"
+msgstr "Vlastní rozsah"
+
+msgid "Yesterday"
+msgstr "Včera"
+
+msgid "Last %1$s day"
+msgid_plural "Last %1$s days"
+msgstr[0] "Poslední %1$s den"
+msgstr[1] "Poslední %1$s dny"
+msgstr[2] "Posledních %1$s dní"
+msgstr[3] "Posledních %1$s dní"
+
+msgid "This month"
+msgstr "Tento měsíc"
+
+msgid "Last month"
+msgstr "Minulý měsíc"
+
+msgid "This year"
+msgstr "Letos"
+
+msgid "Last year"
+msgstr "Loni"
+
+msgid "Reports"
+msgstr "Přehledy"
+
+msgid "Spendings"
+msgstr "Výdaje"
+
+msgid "Stock report"
+msgstr "Přehled zásob"
+
+msgid "Out of stock products"
+msgstr "Produkty bez zásoby"
+
+msgid "Quantity unit for prices"
+msgstr "Měrná jednotka pro ceny"
+
+msgid ""
+"When displaying prices for this product, they will be related to this "
+"quantity unit"
+msgstr "Zobrazované ceny produktu budou odpovídat této měrné jednotce"
+
+msgid "This means 1 label will be printed"
+msgid_plural "This means %1$s labels will be printed"
+msgstr[0] "Vytiskne se 1nálepka"
+msgstr[1] "Vytisknou se %1$s nálepky"
+msgstr[2] "Vytiskne se %1$s nálepek"
+msgstr[3] "Vytiskne se %1$s nálepek"
+
+msgid "External barcode lookup"
+msgstr "Čtení čárového kódu modulem aplikace"
+
+msgid "Error while executing the barcode lookup plugin"
+msgstr "Vyhodnocení doplňkovým modulem se nezdařilo"
+
+msgid "Nothing was found for the given barcode"
+msgstr "Pro tento čárový kód nebylo nic nalezeno"
+
+msgid "Configure colors"
+msgstr "Změnit barvy"
+
+msgid "Swap track next schedule / track now buttons"
+msgstr ""
+"Změna funkce zeleného tlačítka: Zaznamenat splnění naplánované povinnosti "
+"NEBO Zaznamenat splnění povinnosti právě teď."
+
+msgid "Scheduled tracking time"
+msgstr "Naplánované splnění povinnosti"
+
+msgid "Time of tracking"
+msgstr "Plnění povinností"
+
+msgid "Show all out of stock products"
+msgstr "Zobrazit produkty bez zásoby"
+
+msgid ""
+"By default the stock overview page lists all products which are currently in"
+" stock or below their min. stock amount - when this is enabled, all (active)"
+" products are always shown"
+msgstr ""
+"Stránka Přehledu zásob zobrazuje všechny produkty, které jsou v zásobě nebo "
+"pod jejich minimálním stavem. Zaškrtnutím se zobrazí všechny (aktivní) "
+"produkty."
+
+msgid "No price information is available for at least one ingredient"
+msgstr "U nejméně jedné ingredience chybí informace o ceně"
+
+msgid ""
+"For ingredients that are only partially in stock, the in stock amount will "
+"be consumed."
+msgstr ""
+"U ingrediencí, kde není v zásobě celé jejich množství se spotřebuje jejich "
+"aktuální zásoba."
+
+msgid "Can't be opened"
+msgstr "Tento produkt nelze „otevřít“."
+
+msgid "Default purchase price type"
+msgstr "Výchozí druh ceny"
+
+msgid "This will be used as the default price type selection on purchase"
+msgstr "Toto bude použito jako výchozí druh ceny při nákupu"
+
+msgid "Unspecified"
+msgstr "Neurčené"
+
+msgid "Round up quantity amounts to the nearest whole number"
+msgstr "Zaokrouhlete množství na (nejbližší) celé číslo"
+
+msgid "Stock actions"
+msgstr "Operace se zásobami"
+
+msgid "List actions"
+msgstr "Operace se seznamem"

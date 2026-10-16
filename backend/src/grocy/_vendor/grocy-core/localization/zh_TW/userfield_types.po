@@ -1,0 +1,76 @@
+# 
+# Translators:
+# jd615645 <jd615645@gmail.com>, 2020
+# richegg Tsai <zxp86021@gmail.com>, 2020
+# 鍾佑豪 <zobuwei@gmail.com>, 2022
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:43+0000\n"
+"Last-Translator: 鍾佑豪 <zobuwei@gmail.com>, 2022\n"
+"Language-Team: Chinese (Taiwan) (https://app.transifex.com/grocy/teams/93189/zh_TW/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_TW\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Domain: grocy/userfield_types\n"
+
+# Text (single line)
+msgid "text-single-line"
+msgstr "單行文字"
+
+# Text (multi line)
+msgid "text-multi-line"
+msgstr "多行文字"
+
+# Number (integral)
+msgid "number-integral"
+msgstr "整數"
+
+# Number (decimal)
+msgid "number-decimal"
+msgstr "小數"
+
+# Number (currency)
+msgid "number-currency"
+msgstr ""
+
+# Date (without time)
+msgid "date"
+msgstr "日期"
+
+# Date & time
+msgid "datetime"
+msgstr "日期時間"
+
+# Checkbox
+msgid "checkbox"
+msgstr "勾選"
+
+# Select list (a single item can be selected)
+msgid "preset-list"
+msgstr "預設列表"
+
+# Select list (multiple items can be selected)
+msgid "preset-checklist"
+msgstr "預設勾選列表"
+
+# Link
+msgid "link"
+msgstr "連結"
+
+# Link (with title)
+msgid "link-with-title"
+msgstr "標題連結"
+
+# File
+msgid "file"
+msgstr "檔案"
+
+# Image
+msgid "image"
+msgstr "圖片"

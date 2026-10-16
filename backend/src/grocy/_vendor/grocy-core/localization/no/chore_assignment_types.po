@@ -1,0 +1,30 @@
+# 
+# Translators:
+# Kurt Inge Smådal, 2022
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-09-17 10:45+0000\n"
+"Last-Translator: Kurt Inge Smådal, 2022\n"
+"Language-Team: Norwegian (https://app.transifex.com/grocy/teams/93189/no/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/chore_assignment_types\n"
+
+msgid "no-assignment"
+msgstr "Ingen tildeling"
+
+msgid "who-least-did-first"
+msgstr "Den som har minst oppgaver"
+
+msgid "random"
+msgstr "Tilfeldig tildeling"
+
+msgid "in-alphabetical-order"
+msgstr "Alfabetisk"

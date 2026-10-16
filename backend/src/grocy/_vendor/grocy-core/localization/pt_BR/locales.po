@@ -1,0 +1,152 @@
+# 
+# Translators:
+# Fernando Luiz Bonifácio de Oliveira, 2022
+# Anti Gona, 2023
+# Aurelio Barreto <aurelio@aureliobarreto.com>, 2023
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2020-08-31 19:11+0000\n"
+"Last-Translator: Aurelio Barreto <aurelio@aureliobarreto.com>, 2023\n"
+"Language-Team: Portuguese (Brazil) (https://app.transifex.com/grocy/teams/93189/pt_BR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+"X-Domain: grocy/locales\n"
+
+# Czech
+msgid "cs"
+msgstr "Tcheco"
+
+# Danish
+msgid "da"
+msgstr "Dinamarquês"
+
+# German
+msgid "de"
+msgstr "Alemão"
+
+# Greek
+msgid "el_GR"
+msgstr "Grego"
+
+# English
+msgid "en"
+msgstr "Inglês"
+
+# English (Great Britain)
+msgid "en_GB"
+msgstr "Inglês Britânico"
+
+# Spanish
+msgid "es"
+msgstr "Espanhol"
+
+# French
+msgid "fr"
+msgstr "Francês"
+
+# Hungarian
+msgid "hu"
+msgstr "Húngaro"
+
+# Italian
+msgid "it"
+msgstr "Italiano"
+
+# Japanese
+msgid "ja"
+msgstr "Japonês"
+
+# Korean
+msgid "ko_KR"
+msgstr "Koreano"
+
+# Dutch
+msgid "nl"
+msgstr "Holandês"
+
+# Norwegian
+msgid "no"
+msgstr "Norueguês"
+
+# Polish
+msgid "pl"
+msgstr "Polonês"
+
+# Portuguese (Brazil)
+msgid "pt_BR"
+msgstr "Português (Brasil)"
+
+# Portuguese (Portugal)
+msgid "pt_PT"
+msgstr "Português (Portugal)"
+
+# Russian
+msgid "ru"
+msgstr "Russo"
+
+# Slovak
+msgid "sk_SK"
+msgstr "Eslovaco"
+
+# Slovenian
+msgid "sl"
+msgstr "Esloveno"
+
+# Swedish
+msgid "sv_SE"
+msgstr "Sueco"
+
+# Turkish
+msgid "tr"
+msgstr "Turco"
+
+# Chinese (Taiwan)
+msgid "zh_TW"
+msgstr "Chinês (Taiwan)"
+
+# Chinese (China)
+msgid "zh_CN"
+msgstr "Chinês (China)"
+
+# Hebrew (Israel)
+msgid "he_IL"
+msgstr "Hebraico (Israel)"
+
+# Tamil
+msgid "ta"
+msgstr "Tâmil"
+
+# Finnish
+msgid "fi"
+msgstr "Finlandês"
+
+# Catalan
+msgid "ca"
+msgstr "Catalão"
+
+# Lithuanian
+msgid "lt"
+msgstr "It"
+
+# Ukrainian
+msgid "uk"
+msgstr "uk"
+
+# Romanian
+msgid "ro_RO"
+msgstr "ro_RO"
+
+# Estonian
+msgid "et_EE"
+msgstr "et_EE"
+
+# Bulgarian
+msgid "bg_BG"
+msgstr ""

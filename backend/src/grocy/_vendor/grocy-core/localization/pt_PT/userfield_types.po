@@ -1,0 +1,76 @@
+# 
+# Translators:
+# Bernd Bestel <bernd@berrnd.de>, 2019
+# Ricardo Rodrigues <fenix999@gmail.com>, 2020
+# Joao Santos <joaocpdsantos@gmail.com>, 2021
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:43+0000\n"
+"Last-Translator: Joao Santos <joaocpdsantos@gmail.com>, 2021\n"
+"Language-Team: Portuguese (Portugal) (https://app.transifex.com/grocy/teams/93189/pt_PT/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_PT\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+"X-Domain: grocy/userfield_types\n"
+
+# Text (single line)
+msgid "text-single-line"
+msgstr "Texto (linha única)"
+
+# Text (multi line)
+msgid "text-multi-line"
+msgstr "Texto (múltiplas linhas)"
+
+# Number (integral)
+msgid "number-integral"
+msgstr "Número (inteiro)"
+
+# Number (decimal)
+msgid "number-decimal"
+msgstr "Número (décimal)"
+
+# Number (currency)
+msgid "number-currency"
+msgstr ""
+
+# Date (without time)
+msgid "date"
+msgstr "Data (sem horas)"
+
+# Date & time
+msgid "datetime"
+msgstr "Data e Hora"
+
+# Checkbox
+msgid "checkbox"
+msgstr "Checkbox"
+
+# Select list (a single item can be selected)
+msgid "preset-list"
+msgstr "Lista pré-defenida"
+
+# Select list (multiple items can be selected)
+msgid "preset-checklist"
+msgstr "lista-verificação-pré-defenida"
+
+# Link
+msgid "link"
+msgstr "Hiperligação"
+
+# Link (with title)
+msgid "link-with-title"
+msgstr "Hiperligação (com título)"
+
+# File
+msgid "file"
+msgstr "Ficheiro"
+
+# Image
+msgid "image"
+msgstr "Imagem"

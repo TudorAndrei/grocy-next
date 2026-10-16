@@ -5,6 +5,7 @@ spl_autoload_register(function (string $class): void {
     $prefixes = [
         'Grocy\\Services\\' => ['grocy-core/services/'],
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
+        'Grocy\\Middleware\\' => ['grocy-core/middleware/'],
         'Grocy\\Helpers\\' => ['grocy-core/helpers/'],
         'Mike42\\' => ['mike42-escpos-php/src/Mike42/', 'mike42-gfx-php/src/Mike42/'],
         'Eluceo\\iCal\\' => ['eluceo-ical/src/'],
@@ -19,6 +20,7 @@ spl_autoload_register(function (string $class): void {
         'Slim\\Http\\' => ['slim-http/src/'],
         'Slim\\Exception\\' => ['slim-framework/Slim/Exception/'],
         'Slim\\Psr7\\' => ['slim-psr7/src/'],
+        'Slim\\' => ['slim-framework/Slim/'],
         'Psr\\Http\\Message\\' => ['psr-http-message/src/', 'psr-http-factory/src/'],
         'Fig\\Http\\Message\\' => ['fig-http-message-util/src/'],
     ];

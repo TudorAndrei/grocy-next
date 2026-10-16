@@ -1,0 +1,77 @@
+# 
+# Translators:
+# Brian Moos Lindberg <brian@blueeel.dk>, 2019
+# Mihai Marinescu <mihai@marinescu.dk>, 2020
+# klavslund <klavslund@gmail.com>, 2021
+# G Momsen, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2019-05-01 17:43+0000\n"
+"Last-Translator: G Momsen, 2024\n"
+"Language-Team: Danish (https://app.transifex.com/grocy/teams/93189/da/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: da\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: grocy/userfield_types\n"
+
+# Text (single line)
+msgid "text-single-line"
+msgstr "tekst-enkelt-linje"
+
+# Text (multi line)
+msgid "text-multi-line"
+msgstr "tekst-flere-linjer"
+
+# Number (integral)
+msgid "number-integral"
+msgstr "tal-heltal"
+
+# Number (decimal)
+msgid "number-decimal"
+msgstr "tal-decimal"
+
+# Number (currency)
+msgid "number-currency"
+msgstr "tal-valuta"
+
+# Date (without time)
+msgid "date"
+msgstr "dato"
+
+# Date & time
+msgid "datetime"
+msgstr "datotid"
+
+# Checkbox
+msgid "checkbox"
+msgstr "afkrydsningsfelt"
+
+# Select list (a single item can be selected)
+msgid "preset-list"
+msgstr "forudindstillet-liste"
+
+# Select list (multiple items can be selected)
+msgid "preset-checklist"
+msgstr "forudindstillet-tjekliste"
+
+# Link
+msgid "link"
+msgstr "link"
+
+# Link (with title)
+msgid "link-with-title"
+msgstr "link-med-overskrift"
+
+# File
+msgid "file"
+msgstr "fil"
+
+# Image
+msgid "image"
+msgstr "billede"

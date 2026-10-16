@@ -1,0 +1,138 @@
+# 
+# Translators:
+# Pavel Paseka, 2022
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-05-01T17:59:17+00:00\n"
+"PO-Revision-Date: 2020-08-29 16:33+0000\n"
+"Last-Translator: Pavel Paseka, 2022\n"
+"Language-Team: Czech (https://app.transifex.com/grocy/teams/93189/cs/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
+"X-Domain: grocy/permissions\n"
+
+# All permissions
+msgid "ADMIN"
+msgstr "Administrátor"
+
+# Create users
+msgid "USERS_CREATE"
+msgstr "Vytvořit uživatele"
+
+# Edit users (including passwords)
+msgid "USERS_EDIT"
+msgstr "Upravovat uživatele"
+
+# Show users
+msgid "USERS_READ"
+msgstr "Zobrazení uživatelů"
+
+# Edit own user data / change own password
+msgid "USERS_EDIT_SELF"
+msgstr "Smí editovat sebe"
+
+# Undo charge cycle
+msgid "BATTERIES_UNDO_CHARGE_CYCLE"
+msgstr "Odznačit provedení nabíjení/výměny baterií"
+
+# Track charge cycle
+msgid "BATTERIES_TRACK_CHARGE_CYCLE"
+msgstr "Označit provedení nabíjení/výměny baterií"
+
+# Track execution
+msgid "CHORE_TRACK_EXECUTION"
+msgstr "Označit povinnost jako splněnou"
+
+# Undo execution
+msgid "CHORE_UNDO_EXECUTION"
+msgstr "Odznačit povinnost jako splněnou"
+
+# Edit master data
+msgid "MASTER_DATA_EDIT"
+msgstr "Upravovat Základní data"
+
+# Undo execution
+msgid "TASKS_UNDO_EXECUTION"
+msgstr "Odznačit úkol jako splněný"
+
+# Mark completed
+msgid "TASKS_MARK_COMPLETED"
+msgstr "Označit úkol jako splněný"
+
+# Edit stock entries
+msgid "STOCK_EDIT"
+msgstr "Upravovat stav zásob"
+
+# Transfer
+msgid "STOCK_TRANSFER"
+msgstr "Převádět zásoby"
+
+# Inventory
+msgid "STOCK_INVENTORY"
+msgstr "Provádět Inventuru zásob"
+
+# Consume
+msgid "STOCK_CONSUME"
+msgstr "Spotřebovávat zásoby"
+
+# Open products
+msgid "STOCK_OPEN"
+msgstr "Otevřít balení"
+
+# Purchase
+msgid "STOCK_PURCHASE"
+msgstr "Zaznamenat nákup"
+
+# Add items
+msgid "SHOPPINGLIST_ITEMS_ADD"
+msgstr "Přidat položku nákupního seznamu"
+
+# Remove items
+msgid "SHOPPINGLIST_ITEMS_DELETE"
+msgstr "Smazat položku nákupního seznamu"
+
+# User management
+msgid "USERS"
+msgstr "Uživatel"
+
+# Stock
+msgid "STOCK"
+msgstr "Zásoby"
+
+# Shopping list
+msgid "SHOPPINGLIST"
+msgstr "Nákupní seznam"
+
+# Chores
+msgid "CHORES"
+msgstr "Povinnosti"
+
+# Batteries
+msgid "BATTERIES"
+msgstr "Baterie"
+
+# Tasks
+msgid "TASKS"
+msgstr "Úkoly"
+
+# Recipes
+msgid "RECIPES"
+msgstr "Recepty"
+
+# Equipment
+msgid "EQUIPMENT"
+msgstr "Vybavení"
+
+# Calendar
+msgid "CALENDAR"
+msgstr "Přístup ke kalendáři"
+
+# Meal plan
+msgid "RECIPES_MEALPLAN"
+msgstr "Jídelníček"

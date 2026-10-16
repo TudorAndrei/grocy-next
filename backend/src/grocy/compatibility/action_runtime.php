@@ -3,25 +3,35 @@
 // Native permission checks use the same application connection as each action.
 function nativeAction(array $request, NativeDatabase $database): array
 {
-    global $GROCY_DEFAULT_USER_SETTINGS;
-    $GROCY_DEFAULT_USER_SETTINGS = json_decode(file_get_contents(__DIR__ . '/grocy_4_5_0_client_defaults.json'), true, 512, JSON_THROW_ON_ERROR)['user_settings'];
-    define('GROCY_DEFAULT_PERMISSIONS', $request['default_permissions']);
-    foreach ($request['configuration'] as $name => $value) {
-        define($name, $value);
-    }
-    (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
-    $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
-        $request['method'], 'http://localhost/api/?' . base64_decode($request['query_string'], true)
-    );
-    $http = $http->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(
-        base64_decode($request['json'], true)
-    ));
-    if ($request['content_type'] !== null) {
-        $http = $http->withHeader('Content-Type', $request['content_type']);
-    }
-    $http = new Slim\Http\ServerRequest($http);
     $response = nativeApiResponse();
     try {
+        global $GROCY_DEFAULT_USER_SETTINGS;
+        $GROCY_DEFAULT_USER_SETTINGS = [];
+        define('GROCY_DEFAULT_PERMISSIONS', $request['default_permissions']);
+        foreach ($request['configuration'] as $name => $value) {
+            define($name, $value);
+        }
+        require __DIR__ . '/../_vendor/grocy-core/config-dist.php';
+        (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
+        $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
+            $request['method'], $request['uri']
+        )->withoutHeader('Host');
+        foreach ($request['headers'] as [$name, $value]) {
+            $http = $http->withAddedHeader(base64_decode($name), base64_decode($value));
+        }
+        $http = $http->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(
+            base64_decode($request['json'], true)
+        ));
+        $http = new Slim\Http\ServerRequest($http);
+        $_SERVER['HTTP_HOST'] = $http->getHeaderLine('Host');
+        if ($http->getUri()->getScheme() === 'https') $_SERVER['HTTPS'] = 'on';
+        if ($http->hasHeader('X-Forwarded-Proto')) $_SERVER['HTTP_X_FORWARDED_PROTO'] = $http->getHeaderLine('X-Forwarded-Proto');
+        if ($http->hasHeader('User-Agent')) $_SERVER['HTTP_USER_AGENT'] = $http->getHeaderLine('User-Agent');
+        $user = $database->users(GROCY_USER_ID);
+        define('GROCY_AUTHENTICATED', true);
+        define('GROCY_USER_USERNAME', $user->username);
+        define('GROCY_USER_PICTURE_FILE_NAME', $user->picture_file_name);
+        define('GROCY_LOCALE', (new NativeLocaleMiddleware())->selectLocale($http));
         [$controller, $method, $args] = match ($request['route']) {
             'task_complete' => [new NativeTasksController($database), 'MarkTaskAsCompleted', ['taskId' => $request['object_id']]],
             'task_undo' => [new NativeTasksController($database), 'UndoTask', ['taskId' => $request['object_id']]],
@@ -82,11 +92,17 @@ function nativeAction(array $request, NativeDatabase $database): array
             'battery_label' => [new NativeBatteriesController($database), 'BatteryPrintLabel', ['batteryId' => $request['object_id']]],
             'recipe_label' => [new NativeRecipesController($database), 'RecipePrintLabel', ['recipeId' => $request['object_id']]],
             'shopping_thermal' => [new NativePrintController($database), 'PrintShoppingListThermal', []],
+            'system_info' => [new NativeSystemController($database), 'GetSystemInfo', []],
+            'system_time' => [new NativeSystemController($database), 'GetSystemTime', []],
+            'system_config' => [new NativeSystemController($database), 'GetConfig', []],
+            'system_changed' => [new NativeSystemController($database), 'GetDbChangedTime', []],
+            'system_strings' => [new NativeSystemController($database), 'GetLocalizationStrings', []],
+            'system_missing' => [new NativeSystemController($database), 'LogMissingLocalization', []],
             'calendar_ical' => [new NativeCalendarController($database), 'Ical', []],
             'calendar_sharing' => [new NativeCalendarController($database), 'IcalSharingLink', []],
             default => throw new RuntimeException('Unknown native action route'),
         };
-        $response = $controller->$method($http, $response, $args);
+        $response = (new Slim\Handlers\Strategies\RequestResponse())([$controller, $method], $http, $response, $args);
     } catch (Throwable $error) {
         $status = $error instanceof Slim\Exception\HttpException ? $error->getCode() : 500;
         $response = $response->withStatus($status)->withJson([
