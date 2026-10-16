@@ -2,7 +2,7 @@
 
 Audit date: 2026-10-16. Baseline: Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`.
 
-The backend has routes for all 86 contract operations. The audit found missing state changes despite that route coverage. The repairs below address those findings. Full behavior parity for every client and input is not established by these checks.
+All 86 contract operations now execute the original Grocy 4.5.0 route declarations and controllers. Compatibility includes native errors, partial writes, and known defects. The sections below record the repairs and their checks. The separate `/api/v2` extensions keep their application rules.
 
 ## Catalog and database rules
 
@@ -610,3 +610,25 @@ After the final renderer correction, the complete local suite passed 995 tests a
 Five further configuration comparisons fail. Plain configuration output is lost in production and development mode. Output before a cache redirect gives native HTTP 200 but local HTTP 302. A custom configuration header is missing locally. A configuration error handler produces native `HANDLED:` output, while the backend still emits the standard notice. Invalid configuration output and a user-created buffer passed their controls. Configuration code still runs in the CLI context, so further work must preserve its HTTP output, headers, and handlers.
 
 The unchanged release also shows a separate PHP 8.4 difference. With displayed development errors and the installed HTTP buffer, `/api/user` emits three service declaration deprecations before its JSON body. The backend loads those service classes earlier and does not emit the same response output. The source method-error response is HTTP 405 with a normal JSON body. The renderer correction fixes that method-error failure, but service declaration output still needs repair. Full runtime parity remains incomplete.
+
+## Native HTTP request execution
+
+All compatibility operations now execute the original route declarations and controllers in a real PHP HTTP request. Configuration, authentication, controllers, SQL callbacks, and response output share that request. A private Unix socket carries SQL messages to the existing application connection. HTTP output stays separate from those messages. File bodies stream through the original response emitter. Each request process stops after its response or after a failure. Application shutdown also closes active request processes.
+
+Configuration now retains real PHP output, headers, output buffers, custom error handlers, shutdown functions, and exit. PHP determines the status and headers when output occurs before a cache redirect. Invalid configuration and early exit also retain their native response. The former CLI cookie and HTTP output emulation is removed. Native PHP parses the actual request cookies and body.
+
+Original service classes now load when the request first uses them. This retains the PHP 8.4 service declaration warnings after buffer cleanup. The independent HTTP test probe loads the unchanged release declarations at the same stages. Its code cache is disabled so each probe retains declaration diagnostics. Source comparisons preserve each diagnostic message and format while normalizing installed file paths and line numbers.
+
+The configuration regression first failed eight local cases on the committed baseline. All eight source cases passed. The new HTTP transport also exposed two existing regular expression failures. PHP error settings did not follow SQL callbacks outside the suspended request. One persistent request fiber now executes configuration, authentication, actions, and nested SQL callbacks. Existing null and invalid-pattern comparisons pass after this correction.
+
+Three upgrade tests used the current API to create old records before the required native permission views existed. Their setup now stores those records directly in the saved schema. All checks after the upgrade remain active. The complete graph test retains its saved fields, extension data, custom views, triggers, constraints, counters, and exact next task ID. Worker tests cover failed startup, interrupted requests, filtered input after recovery, no partial insert, later successful actions, and process shutdown.
+
+The final PHP 8.4 source comparison passed all 72 development cases with both the installed 4 KiB HTTP buffer and no buffer. The public Linux matrix passed 80 checks with displayed and hidden warnings. Both new and saved Linux databases passed 48 selected HTTP workflows, 38 session cases, all eight configuration cases, the constructor-output check, and six cache-order checks. They also passed native key and raw byte checks, base paths, HTML errors, files, plugins, images, mode databases, and restart preservation. All 45 views and 54 triggers retain their original definitions and order.
+
+Linux CLI initialization, imports, saved custom triggers, BLOB values, stock, recipes, calendar, printing, barcode lookup, all 33 locales, and process shutdown passed. The wheel and image match all 3,424 application and bundled source files. All 3,228 managed vendor files match the pinned release and Git bytes. All 366 original Grocy core files retain their release bytes. All 11 PHP adapters pass syntax checks. No database revision is required.
+
+The complete local suite passed 1,003 tests and skipped 978 reference or feature-profile cases. The complete reference suite passed 1,877 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest. The focused request and storage selection passed 202 tests. The buffered PHP profile passed 186 selected cases in Europe/Bucharest. The hidden-error profile passed 110 selected cases in UTC. Both disabled-feature cases passed in each time zone. The final image is `sha256:281bb27ee1ed5e7509324de2b11693230b6a5a5b89d247f20f748254124233db`. Its application source matches the tested Linux image exactly. Its additional change is the final setup documentation.
+
+Ruff, basedpyright, changed-file formatting, PHP syntax, and diff checks pass. The general formatter also reports six unchanged files outside this repair. Their contents remain unchanged. The test probe received one final code-cache correction after the complete runs. The final probe passed all 80 selected reference cases on PHP 8.3 and all 80 public Linux cases on PHP 8.4. Production adapters add 872 lines and remove 681. Tests and test support add 166 lines and remove 100.
+
+All confirmed API and logic differences recorded in this audit are corrected. All 86 contract operations now use the original controllers and services. The existing combined-purchase comparison still requires full-entry deletion when either purchase is undone. The backend copies this Grocy 4.5.0 behavior. The verification uses PHP 8.3.31 locally and PHP 8.4.26 on Linux. Installed file paths and line numbers are normalized when comparing diagnostic output. The separate application APIs retain their documented extension rules.

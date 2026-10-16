@@ -7,16 +7,22 @@ The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, Less
 Generic object reads and custom field operations now use the original pinned Grocy classes. Native
 SQLite queries apply PHP query parsing, filters, order, limits, and offsets. The read adapter returns
 PHP response bytes and native column order. SQLite regular expressions use PHP `mb_ereg`, including
-its rules for nulls, invalid patterns, and long patterns. A separate PHP worker answers SQLite function
-calls while the main worker waits for the database. The native `ceil` function also uses PHP.
+its rules for nulls, invalid patterns, and long patterns. SQL callbacks run in the same PHP HTTP request
+as configuration, authentication, and controllers. The native `ceil` function also uses PHP.
+
+All compatibility operations use the original route declarations and controllers. Each request runs
+in its own PHP HTTP process. A private Unix socket carries SQL messages to the application connection.
+PHP sends the actual HTTP response. Configuration output, headers, output buffers, error handlers,
+shutdown functions, and exit retain their native effects. Displayed development warnings follow the
+installed PHP version, including PHP 8.4 service declaration warnings before JSON.
 
 The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. Filtered list reads use the native Grocy controllers. The `§` operator uses the native PHP regular expression function.
 
 The database uses all 45 pinned Grocy views and all 54 native triggers in their original creation order. Quantity conversion and recipe views read current records. Native triggers maintain the internal caches and inverse conversions. The permission hierarchy stores the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
 
-The `/api/v2` API adds nutrition, API key management, and meal completion. MCP and the web application use the same domain services as the compatibility API.
+The `/api/v2` API adds nutrition, API key management, and meal completion. MCP and v2 keep their application access rules. Native operations use the same application database.
 
-System information reports the pinned Grocy API version and a separate application version. Configuration exposes public Grocy feature flags and the display currency. Localization strings use the pinned English defaults. System time supports offsets in seconds. Database change time includes SQLite WAL writes.
+System information reports the pinned Grocy API version. Configuration uses the original defaults and configured values. Localization uses the bundled locale files. System time supports offsets in seconds. Database change time uses the main database file timestamp.
 
 System information includes the pinned database version, 253. Its `php_version` field reports the input worker's PHP runtime version. System and database change times use the server time zone. Record timestamps use spaces and whole seconds. Timed calendar events include the time zone, equal start and end times, and time zone transitions for the event range.
 

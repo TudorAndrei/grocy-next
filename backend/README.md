@@ -8,17 +8,22 @@ library with Grocy 4.5.0 settings. Slim parses request bodies. LessQL compiles p
 executes generic object graphs with native PDO quoting. Each generic SQL statement commits separately,
 as in Grocy 4.5.0. PHP also assembles custom field responses with its native array keys and comparisons.
 Generic reads and custom fields use the pinned Grocy controller and field service. Their original source,
-OpenAPI file, and license are in `_vendor/grocy-core`. A second PHP worker evaluates SQLite regular
-expressions and ceiling values. Both workers stop with the application. Generic read responses keep
-PHP JSON encoding, native column order, status, and headers.
+OpenAPI file, and license are in `_vendor/grocy-core`. Each compatibility request has one PHP HTTP
+process. Configuration, authentication, controllers, response output, and SQLite callbacks share that
+request. A private Unix socket carries SQL messages to the application database. HTTP output stays
+separate from those messages. Responses keep PHP JSON encoding, native column order, status, and headers.
 The original Grocy routes, Slim router, and CORS middleware select HTTP methods and route errors.
 HEAD requests execute GET and return no body. OPTIONS requests return an empty 200 response.
 Compatibility responses use native wildcard CORS headers. Unauthorized responses have no body.
-The separate routing worker stops with the application and restarts after a worker failure.
+The request process stops after the response. A later request starts a new process after a failure.
 `/api/openapi/specification` uses the original controller and includes current custom entities.
 Compatibility requests load `$GROCY_DATAPATH/config.php` and native setting overrides.
-The first request after a version, base URL, or base path change returns the native HTTP 302
+PHP retains configuration output, headers, output buffers, error handlers, shutdown functions, and exit.
+Development warnings follow the installed PHP version and HTTP settings. PHP 8.4 service declaration
+warnings can appear before JSON, as in the original release.
+The first request after a version, base URL, or base path change sends the native cache
 redirect to the configured root URL. This occurs before authentication and CORS.
+Earlier output can commit HTTP 200 before PHP can send that redirect, as in Grocy 4.5.0.
 `GROCY_BASE_PATH` selects the API path prefix. Original Slim routes and Blade templates
 retain prefixed login redirects and HTML error responses.
 Demo and prerelease modes use `grocy_<locale>.db` in the data directory.
