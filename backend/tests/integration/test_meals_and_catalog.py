@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -88,17 +89,6 @@ def test_print_output_and_equipment_roundtrip(client: TestClient, api_headers: d
     assert product.status_code == 200
     assert product.json()["grocycode"] == "grcy:p:1"
     assert product.json()["product"] == "Greek Yogurt"
-    client.post(
-        "/api/stock/shoppinglist/add-product",
-        headers=api_headers,
-        json={"product_id": 1, "product_amount": 2},
-    )
-    printed = client.get(
-        "/api/print/shoppinglist/thermal?list=1&printHeader=false", headers=api_headers
-    )
-    assert printed.status_code == 200
-    assert printed.json()["text"] == "2 Greek Yogurt\n"
-    assert printed.json()["result"] == "READY"
 
 
 def test_label_parameters_override_fields_before_due_date(client, api_headers, monkeypatch):
@@ -133,13 +123,15 @@ def test_label_parameters_override_fields_before_due_date(client, api_headers, m
     )
 
 
+@pytest.mark.parametrize("setting", ["thermal_printer_device", "tprinter_connector"])
 def test_thermal_printer_device_receives_output(
-    client: TestClient, api_headers: dict, tmp_path, monkeypatch
+    client: TestClient, api_headers: dict, tmp_path, monkeypatch, setting
 ):
     from grocy.core.config import get_settings
 
     device = tmp_path / "printer"
-    monkeypatch.setattr(get_settings(), "thermal_printer_device", str(device))
+    monkeypatch.setattr(get_settings(), "thermal_printer_device", str(tmp_path / "legacy-device"))
+    monkeypatch.setattr(get_settings(), setting, str(device))
     client.post(
         "/api/stock/shoppinglist/add-product",
         headers=api_headers,
@@ -148,4 +140,4 @@ def test_thermal_printer_device_receives_output(
     response = client.get("/api/print/shoppinglist/thermal?printHeader=false", headers=api_headers)
     assert response.status_code == 200
     assert response.json()["result"] == "OK"
-    assert device.read_bytes() == b"\x1b@2 Greek Yogurt\n\n\n\n\x1dV\x00"
+    assert device.read_bytes() == b"\x1b@2 Pieces  Greek Yogurt\n\x1bd\x03\x1dVA\x03"

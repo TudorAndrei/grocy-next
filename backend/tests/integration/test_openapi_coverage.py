@@ -85,7 +85,6 @@ def test_system_and_user_surface(client: TestClient, api_headers: dict[str, str]
         "/api/users",
         "/api/stock/volatile",
         "/api/calendar/ical",
-        "/api/print/shoppinglist/thermal",
     ):
         response = client.get(path, headers=api_headers)
         assert response.status_code == 200, path

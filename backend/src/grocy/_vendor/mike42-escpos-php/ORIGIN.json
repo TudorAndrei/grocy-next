@@ -1,0 +1,42 @@
+{
+  "package": "mike42/escpos-php",
+  "version": "v4.0",
+  "source": "https://github.com/mike42/escpos-php.git",
+  "commit": "74fd89a3384135c90a8c6dc4b724e03df7c0e4f9",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CONTRIBUTORS.md": "88405c264f2dd156b0ce93dd6936697635ab2f789c47f300c4cd5c65bc144ff4",
+    "LICENSE.md": "51613db189f05462ee3fae44442d8cf49fc623aa5ecd3667d92fa65ee4642154",
+    "src/Mike42/Escpos/CapabilityProfile.php": "481ab1246233ba42fe6c4dc82b26a1f1360f74d50365fe3844e57e22d7fdcd4a",
+    "src/Mike42/Escpos/CodePage.php": "27d9d408cb5782e0e64a5b6c6eb05aabf36d198bc0c1919b0a98f38c774b5dff",
+    "src/Mike42/Escpos/Devices/AuresCustomerDisplay.php": "c6cfa125b535117b023d9b1016bf917ea4d9251c7c1f64397e9e9f6133f7a978",
+    "src/Mike42/Escpos/EscposImage.php": "7138ce9855b3e3a6d805d97ff3138cd5a72f74220f20d96414194e67bfaf58ef",
+    "src/Mike42/Escpos/Experimental/Unifont/ColumnFormatGlyph.php": "5599a8e1de44ba122c934e43868cb89ff585f7dd94471ee1808f512451585b38",
+    "src/Mike42/Escpos/Experimental/Unifont/ColumnFormatGlyphFactory.php": "66a11d52e281a2ca774a9e1d7ad51d1c6c3e576899f8fea5b26c125fb8d4917c",
+    "src/Mike42/Escpos/Experimental/Unifont/FontMap.php": "d76ee86eadf7ad20df4abe61af37ad01e5062ee0baa185874ce2f9814d65631d",
+    "src/Mike42/Escpos/Experimental/Unifont/UnifontGlyphFactory.php": "64eddc1713c3de4213f089cd2a6a87fafe8672da2b92b361fdec9e73281fcc3f",
+    "src/Mike42/Escpos/Experimental/Unifont/UnifontPrintBuffer.php": "4290f41d66e4fadd9120dff9c483db40249a1242c19297f7736034a791a37f46",
+    "src/Mike42/Escpos/GdEscposImage.php": "da60f051d3a70726abfea655369aef6b70f8a8741251d5eaf31d4e13855db6e7",
+    "src/Mike42/Escpos/ImagickEscposImage.php": "78adf023865f435084f0ecb907bfbe4614030b374d2a562a8416635b207ab372",
+    "src/Mike42/Escpos/NativeEscposImage.php": "0c0dc240cfe46e4974fa8a85d0a9a8686a0889be6518122bfcb4f26695e04171",
+    "src/Mike42/Escpos/PrintBuffers/cache/Characters-default.ser.z": "7b804c0462c9bd4dc3d0d98dd1ddaaba90e58d41ec3cca1c648d2da55ad24458",
+    "src/Mike42/Escpos/PrintBuffers/cache/Characters-OCD-300.ser.z": "0964f2a3fba600ff8060ec89926ec83e9e630e0be04fa1d78ee1aa20b5d24634",
+    "src/Mike42/Escpos/PrintBuffers/cache/Characters-simple.ser.z": "ef103f6d743b50939bafc467a522d5c393cb2acd2240c547e8e6424d7194445b",
+    "src/Mike42/Escpos/PrintBuffers/EscposPrintBuffer.php": "e92d2f0c8b89272675b1c07b35704faa12bd54a9d20e6d6dea46e5b0b25c1cca",
+    "src/Mike42/Escpos/PrintBuffers/ImagePrintBuffer.php": "0448758aca19d45881c371353a441f15959499e82663c4a5cb36a59880c6841d",
+    "src/Mike42/Escpos/PrintBuffers/PrintBuffer.php": "cfe9880b182625af9714d4b986bb14be5f5a2b295581b65f7dc0e9404bcdc766",
+    "src/Mike42/Escpos/PrintConnectors/CupsPrintConnector.php": "c671a0a7e83156723e37c9588a11836514d551d5bfaf06004ad5d61625856b9e",
+    "src/Mike42/Escpos/PrintConnectors/DummyPrintConnector.php": "c37b5d16144d9a0b601eed5b51777fdf1f975aff0c55c5425389230e55da8f3d",
+    "src/Mike42/Escpos/PrintConnectors/FilePrintConnector.php": "a88dfb4cd54d998d76b7e689a3d00d42dcda2de31221e560a39a84ff3e8432a2",
+    "src/Mike42/Escpos/PrintConnectors/MultiplePrintConnector.php": "1dc88f5dd7adfeb9b319a04b912b3aba6a501463b4f6b8e2906da5e615a56ac8",
+    "src/Mike42/Escpos/PrintConnectors/NetworkPrintConnector.php": "2965d5266084663497b4d8d4547c7158baccfb4c68ca3dd6d60f62b0d66f7c10",
+    "src/Mike42/Escpos/PrintConnectors/PrintConnector.php": "13e6add23fdd0bad034c40067ee3eed8d8c62fa01e5a4d453c8e66594f8a86f0",
+    "src/Mike42/Escpos/PrintConnectors/RawbtPrintConnector.php": "04afd51fd13eb9bea9c1a1f3d19762e08be90e1688d014ada233f3fdca31bd37",
+    "src/Mike42/Escpos/PrintConnectors/UriPrintConnector.php": "cd2f21d402ae11a3da98505e16441f535951a01bb0b104f4d52d42db1a72f6aa",
+    "src/Mike42/Escpos/PrintConnectors/WindowsPrintConnector.php": "1767484316d88549354631e2abec1278b259e24953b4911ca8ebc064e4e4aa8e",
+    "src/Mike42/Escpos/Printer.php": "28aebeeea2f6885d0822c07a95946aa05b2981bc0913864ffad12e1f380b15a7",
+    "src/Mike42/Escpos/resources/capabilities.json": "a4c9e53a9387c56553b6cdf3f00659e8301f134ff21a1829ce411aba345af165"
+  }
+}

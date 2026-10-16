@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     thermal_printer_device: str = ""
     thermal_printer_host: str = ""
     thermal_printer_port: int = 9100
+    tprinter_is_network_printer: bool | str = False
+    tprinter_print_quantity_name: bool | str = True
+    tprinter_print_notes: bool | str = True
+    tprinter_ip: str = "127.0.0.1"
+    tprinter_port: int = 9100
+    tprinter_connector: str = "/dev/usb/lp0"
     feature_flag_stock: bool | str = True
     feature_flag_shoppinglist: bool | str = True
     feature_flag_recipes: bool | str = True
@@ -67,7 +73,14 @@ class Settings(BaseSettings):
             for name, value in values.items():
                 if (
                     name.startswith("feature_flag_")
-                    or name in {"label_printer_run_server", "label_printer_hook_json"}
+                    or name
+                    in {
+                        "label_printer_run_server",
+                        "label_printer_hook_json",
+                        "tprinter_is_network_printer",
+                        "tprinter_print_quantity_name",
+                        "tprinter_print_notes",
+                    }
                 ) and isinstance(value, str):
                     value = value.rstrip("\r\n")
                     values[name] = {"true": True, "false": False}.get(value.lower(), value)
@@ -91,6 +104,24 @@ class Settings(BaseSettings):
     def feature_enabled(self, name: str) -> bool:
         value = self.feature_flags()[f"FEATURE_FLAG_{name.upper()}"]
         return value is not False and value not in ("", "0")
+
+    def thermal_printer_configuration(self) -> dict[str, Any]:
+        values = {
+            name.upper(): getattr(self, name)
+            for name in type(self).model_fields
+            if name.startswith("tprinter_")
+        }
+        aliases = {
+            "tprinter_connector": ("thermal_printer_device", ""),
+            "tprinter_ip": ("thermal_printer_host", ""),
+            "tprinter_port": ("thermal_printer_port", 9100),
+        }
+        for name, (legacy, default) in aliases.items():
+            if name not in self.model_fields_set and getattr(self, legacy) != default:
+                values[name.upper()] = getattr(self, legacy)
+        if "tprinter_is_network_printer" not in self.model_fields_set and self.thermal_printer_host:
+            values["TPRINTER_IS_NETWORK_PRINTER"] = True
+        return values
 
     def label_printer_runs_on_server(self) -> bool:
         value = self.label_printer_run_server

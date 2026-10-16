@@ -27,6 +27,11 @@ trait NativeListContext
         return new NativeApiKeyService($this->database);
     }
 
+    protected function getPrintService()
+    {
+        return new NativePrintService($this->database);
+    }
+
     protected function getCalendarService()
     {
         return new NativeCalendarService($this->database);
@@ -64,6 +69,7 @@ class NativeChoresService extends Grocy\Services\ChoresService { use NativeListC
 class NativeBatteriesService extends Grocy\Services\BatteriesService { use NativeListContext; }
 class NativeStockService extends Grocy\Services\StockService { use NativeListContext; }
 class NativeRecipesService extends Grocy\Services\RecipesService { use NativeListContext; }
+class NativePrintService extends Grocy\Services\PrintService { use NativeListContext; }
 class NativeApiKeyService extends Grocy\Services\ApiKeyService { use NativeListContext; }
 
 class NativeCalendarService extends Grocy\Services\CalendarService
@@ -83,6 +89,8 @@ class NativeBatteriesController extends Grocy\Controllers\BatteriesApiController
 class NativeStockController extends Grocy\Controllers\StockApiController { use NativeListContext; }
 class NativeRecipesController extends Grocy\Controllers\RecipesApiController { use NativeListContext; }
 class NativeUsersController extends Grocy\Controllers\UsersApiController { use NativeListContext; }
+
+class NativePrintController extends Grocy\Controllers\PrintApiController { use NativeListContext; }
 
 class NativeCalendarController extends Grocy\Controllers\CalendarApiController
 {

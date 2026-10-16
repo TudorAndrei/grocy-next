@@ -1789,3 +1789,185 @@ def test_reference_stock_label_modes_and_disabled_printer_controls(
             == 200
         )
         assert len(printer) == 1
+
+
+@pytest.fixture
+def thermal_printer(reference, monkeypatch, tmp_path):
+    from grocy.core.config import get_settings
+
+    database = os.getenv("GROCY_REFERENCE_DATABASE")
+    if not database:
+        pytest.skip("A local disposable reference is required for thermal printer setup")
+    overrides = Path(database).parent / "settingoverrides"
+    overrides.mkdir(exist_ok=True)
+    previous = {}
+    aliases = {
+        "TPRINTER_CONNECTOR": "thermal_printer_device",
+        "TPRINTER_IP": "thermal_printer_host",
+        "TPRINTER_PORT": "thermal_printer_port",
+    }
+
+    class ThermalPrinter:
+        output = tmp_path / "receipt"
+
+        def setting(self, name, value):
+            path = overrides / f"{name}.txt"
+            previous.setdefault(path, path.read_bytes() if path.exists() else None)
+            path.write_text(str(value).lower() if isinstance(value, bool) else str(value))
+            monkeypatch.setattr(get_settings(), name.lower(), value)
+            if name in aliases:
+                monkeypatch.setattr(get_settings(), aliases[name], value)
+
+    device = ThermalPrinter()
+    device.setting("TPRINTER_IS_NETWORK_PRINTER", False)
+    device.setting("TPRINTER_CONNECTOR", str(device.output))
+    try:
+        yield device
+    finally:
+        for path, contents in previous.items():
+            if contents is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(contents)
+
+
+def thermal_list(app, name):
+    unit = create(app, "quantity_units", {"name": "Piece " + name, "name_plural": "Pieces " + name})
+    location = create(app, "locations", {"name": "Thermal kitchen " + name})
+    product = create(
+        app,
+        "products",
+        {
+            "name": "Receipt product " + name,
+            "location_id": location,
+            "qu_id_stock": unit,
+            "qu_id_purchase": unit,
+        },
+    )
+    shopping = create(app, "shopping_lists", {"name": "Printer list " + name})
+    create(
+        app,
+        "shopping_list",
+        {
+            "shopping_list_id": shopping,
+            "product_id": product,
+            "amount": 2.6,
+            "qu_id": unit,
+            "note": "Crème €",
+        },
+    )
+    create(
+        app,
+        "shopping_list",
+        {
+            "shopping_list_id": shopping,
+            "amount": 1.5,
+            "note": "Loose item",
+            "done": 1,
+        },
+    )
+    return shopping
+
+
+@pytest.mark.parametrize(
+    "header,list_form,quantity_names,notes",
+    [
+        (None, "{}", True, True),
+        ("true", "{}", True, True),
+        ("false", "{}", True, True),
+        ("TRUE", "{}", True, True),
+        ("1", "{}", True, True),
+        ("", "{}", True, True),
+        ("false", "0{}", False, True),
+        ("false", "{}.0", True, False),
+        ("false", "{}e0", False, False),
+    ],
+)
+def test_reference_native_thermal_file_output(
+    client, api_headers, reference, thermal_printer, header, list_form, quantity_names, notes
+):
+    client.headers.update(api_headers)
+    thermal_printer.setting("TPRINTER_PRINT_QUANTITY_NAME", quantity_names)
+    thermal_printer.setting("TPRINTER_PRINT_NOTES", notes)
+    # Grocy's printer route runs even when the UI feature flag is disabled.
+    thermal_printer.setting("FEATURE_FLAG_THERMAL_PRINTER", False)
+    outputs = []
+    name = uuid4().hex
+    for app in (reference, client):
+        shopping = thermal_list(app, name)
+        params = [("list", list_form.format(shopping))]
+        if header is not None:
+            params.append(("printHeader", header))
+        response = app.get("/api/print/shoppinglist/thermal", params=params)
+        assert response.status_code == 200, response.text
+        assert response.json() == {"result": "OK"}
+        receipt = thermal_printer.output.read_bytes()
+        assert b"Receipt product" in receipt and b"Loose item" in receipt
+        assert receipt.startswith(b"\x1b@") and receipt.endswith(b"\x1dV\x41\x03")
+        # The two calls can span a minute boundary. Only the clock text can differ.
+        outputs.append(re.sub(rb"\d{2}/\d{2}/\d{4} \d{2}:\d{2}", b"CLOCK", receipt))
+    assert outputs[0] == outputs[1]
+
+
+@pytest.mark.parametrize("failure", ["missing-parent", "empty-path", "network"])
+def test_reference_native_thermal_connector_errors(
+    client, api_headers, reference, thermal_printer, tmp_path, failure
+):
+    import socket
+
+    client.headers.update(api_headers)
+    if failure == "network":
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        thermal_printer.setting("TPRINTER_IS_NETWORK_PRINTER", True)
+        thermal_printer.setting("TPRINTER_IP", "127.0.0.1")
+        thermal_printer.setting("TPRINTER_PORT", port)
+    else:
+        path = "" if failure == "empty-path" else str(tmp_path / "missing" / "printer")
+        thermal_printer.setting("TPRINTER_CONNECTOR", path)
+    results = []
+    for app in (reference, client):
+        shopping = create(app, "shopping_lists", {"name": "Failed print " + uuid4().hex})
+        response = app.get("/api/print/shoppinglist/thermal", params={"list": shopping})
+        assert response.status_code == (500 if failure == "empty-path" else 400), response.text
+        results.append(response.json()["error_message"])
+    assert results[0] == results[1]
+
+
+def test_reference_native_thermal_network_output(client, api_headers, reference, thermal_printer):
+    from queue import Queue
+    from socketserver import BaseRequestHandler, ThreadingTCPServer
+
+    received = Queue()
+
+    class Receiver(BaseRequestHandler):
+        def handle(self):
+            chunks = []
+            while chunk := self.request.recv(4096):
+                chunks.append(chunk)
+            received.put(b"".join(chunks))
+
+    with ThreadingTCPServer(("127.0.0.1", 0), Receiver) as server:
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        thermal_printer.setting("TPRINTER_IS_NETWORK_PRINTER", True)
+        thermal_printer.setting("TPRINTER_IP", "127.0.0.1")
+        thermal_printer.setting("TPRINTER_PORT", server.server_address[1])
+        client.headers.update(api_headers)
+        outputs = []
+        name = uuid4().hex
+        try:
+            for app in (reference, client):
+                shopping = thermal_list(app, name)
+                response = app.get(
+                    "/api/print/shoppinglist/thermal",
+                    params={"list": shopping, "printHeader": "false"},
+                )
+                assert response.status_code == 200 and response.json() == {"result": "OK"}
+                outputs.append(received.get(timeout=5))
+            assert outputs[0] == outputs[1]
+            assert b"Receipt product" in outputs[0]
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)

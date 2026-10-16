@@ -4584,3 +4584,23 @@ def test_native_calendar_expired_secret_uses_local_clock_and_rotates(api, execut
     assert replacement.status_code == 200, replacement.text
     assert replacement.json()["url"] != link
     assert api.get(replacement.json()["url"], headers={"GROCY-API-KEY": ""}).status_code == 200
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "missing", "2147483647"])
+def test_native_thermal_missing_list_uses_source_error(api, value):
+    response = api.get("/api/print/shoppinglist/thermal", params={"list": value})
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "Shopping list does not exist"}
+
+
+def test_native_thermal_permission_error_precedes_list_validation(api):
+    name = uuid4().hex
+    assert api.post("/api/users", json={"username": name, "password": "test"}).status_code == 204
+    user = api.get("/api/users", params={"query[]": "username=" + name}).json()[0]["id"]
+    assert api.put(f"/api/users/{user}/permissions", json={"permissions": []}).status_code == 204
+    response = api.get(
+        "/api/print/shoppinglist/thermal?list=missing",
+        headers={"GROCY-API-KEY": user_key(api, user)},
+    )
+    assert response.status_code == 400, response.text
+    assert response.json() == {"error_message": "Permission missing: SHOPPINGLIST"}

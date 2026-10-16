@@ -55,6 +55,9 @@ async def native_action_response(
         GROCY_LABEL_PRINTER_HOOK_JSON=settings.label_printer_hook_json,
         GROCY_LABEL_PRINTER_PARAMS=settings.label_printer_params,
     )
+    configuration.update(
+        {"GROCY_" + name: value for name, value in settings.thermal_printer_configuration().items()}
+    )
     result = await runtime.native_action(
         route=route,
         object_id=object_id,

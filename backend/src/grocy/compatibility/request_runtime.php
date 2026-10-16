@@ -6,6 +6,7 @@ spl_autoload_register(function (string $class): void {
         'Grocy\\Services\\' => ['grocy-core/services/'],
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
         'Grocy\\Helpers\\' => ['grocy-core/helpers/'],
+        'Mike42\\' => ['mike42-escpos-php/src/Mike42/', 'mike42-gfx-php/src/Mike42/'],
         'Eluceo\\iCal\\' => ['eluceo-ical/src/'],
         'Gettext\\Languages\\' => ['gettext-languages/src/'],
         'Gettext\\' => ['gettext-gettext/src/'],
