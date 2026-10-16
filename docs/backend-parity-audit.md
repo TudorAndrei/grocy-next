@@ -448,3 +448,25 @@ Upgrade kept all original rows and allocation counters. Restart kept complete da
 The final image is `sha256:ad411c10d4673ab09452b06d204f6d44def5fd3dbfac8de12fffa3c80c08fc48`. The wheel and image match all 962 current application and bundled source files. All 811 managed vendor files retain their original bytes in Git. All 47 Grocy core files match the pinned release archive exactly. The seven PHP adapters include the shared native file service. Ruff, basedpyright, and PHP syntax checks passed.
 
 Remaining system behavior and further request, authentication, and permission cases still require work. Full runtime parity remains incomplete.
+
+## Native system routes and locales
+
+All six system routes now execute the unchanged system controller and application service. The request adapter forwards headers and the URL. The original locale middleware selects a saved user locale before request language preferences. All release translations are bundled. The original Slim request-response strategy validates controller results.
+
+Time queries retain PHP integer validation, query-array errors, overflow behavior, native response fields, and PHP date formatting. System information reports the request user agent, PHP and SQLite runtime versions, operating system, and the saved native migration version. Configuration reports the original defaults and current printer, plugin, locale, and URL settings. Localization responses retain the native cache header. Recipe copies now use the selected locale.
+
+Database change time now uses the main database file timestamp. It retains Grocy's behavior when WAL has newer writes. The production missing-translation method returns null in the original controller. The original Slim strategy raises its response type error. The backend now returns that native 500 response, including when the request body contains invalid JSON.
+
+Revision 0022 records native schema version 253 only when the version table is empty. Supplied migration history remains unchanged. Imports now copy that history and preserve raw timestamp text. Imports also keep the native calendar key type. They no longer change it to the old application calendar type. The import check proves that the saved calendar secret remains in the sharing link after upgrade.
+
+The final baseline failed 25 local comparison cases and passed 20 reference controls. Both additional import and main-file timestamp cases also failed on the previous backend. The repaired system, locale, current configuration, and unused user-date selection passed all 45 focused comparisons in Europe/Bucharest. All 100 integration and unit cases passed. The former system smoke checks for a successful missing-translation call and an application-only entity inventory were removed. Their public operations now have stronger source comparisons and actual object requests.
+
+The full local suite passed 853 tests and skipped 819 reference or feature-profile cases. The full comparison suite passed 1,571 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
+
+The Linux image passed 48 selected HTTP cases on both a new database and a saved revision 0020 database. Four direct database or shared-fixture cases were skipped over HTTP. Separate Linux checks passed all 33 locales, user and header locale selection, localized recipe copy, current configuration, request metadata, live migration versions, integer and overflow rules, the production response error, and main-file timestamps. Import checks retained native migration history, year 0000, fractional timestamps, and canonical calendar key types.
+
+Upgrade kept all original rows and allocation counters. Restart kept complete database state, user plugins, and image bytes. All 45 source views and 54 source triggers retained their definitions and order. The earlier native stock, recipe, calendar, thermal printer, barcode, BLOB, CLI initialization, saved custom trigger, and worker cleanup checks also passed.
+
+The image is `sha256:7e2f3aa473815b073a3b4e062c36a39c986ddfb0dea325a3730d0e5644f67b85`. The image and wheel match all 1,266 current application and bundled source files. All 1,114 managed vendor files retain their original bytes in Git. All 348 Grocy core files match the pinned release archive. Ruff, basedpyright, and PHP syntax checks passed.
+
+Authentication use records and expiry still require work. The final audit must also check unused user-setting dates, default-setting propagation, configuration modes, HTTP methods, and common error behavior. Full runtime parity remains incomplete.

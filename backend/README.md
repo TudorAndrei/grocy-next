@@ -42,6 +42,15 @@ Put user PHP plugins in `$GROCY_DATAPATH/plugins`. `GROCY_DATAPATH` defaults to 
 User plugins take precedence over bundled plugins. Downloaded product pictures use `GROCY_FILES_ROOT`.
 Lookup requires `MASTER_DATA_EDIT`, including requests that do not add a product.
 Native plugin errors, query parsing, and partial product, barcode, image, and conversion saves remain unchanged.
+System routes use the original system controller and application service.
+Time offsets use PHP integer validation. System information reports the native PHP and SQLite runtime,
+the request user agent, and the saved Grocy schema version. Configuration uses the original defaults.
+`GROCY_DEFAULT_LOCALE`, `GROCY_BASE_URL`, and `GROCY_DISABLE_URL_REWRITING` select native locale and URL behavior.
+The original locale middleware selects translations from user settings and `Accept-Language`.
+All release locale files are bundled. Localization responses retain their native cache header.
+Database change time uses the main database file timestamp. WAL timestamps do not replace it.
+The production missing-translation route retains Grocy's null-response error.
+Native schema version 253 is recorded when no version history exists. Imports keep supplied history and calendar key types.
 Calendar export and sharing links use the original controller, calendar service, key service,
 and eluceo/iCal 2.14.0. PHP handles date parsing, event IDs, escaping, folding, and time zones.
 Native calendar secrets use their original key type and the server's local clock for expiry.

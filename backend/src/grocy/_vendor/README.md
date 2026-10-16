@@ -80,3 +80,9 @@ application service and version file supply the image request user agent.
 The shared native file adapter directs image downloads and public file requests
 to the configured storage root. Request workers use the persistent data directory
 for user plugins and keep their serializer cache in a separate temporary directory.
+
+System requests use the original system controller, application service,
+configuration defaults, locale middleware, and all release localization files.
+The native request adapter supplies the original headers and URL. The original
+Slim request-response strategy checks controller results. The database adapter
+uses the application database path for the native file timestamp operation.
