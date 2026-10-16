@@ -16,6 +16,14 @@ HEAD requests execute GET and return no body. OPTIONS requests return an empty 2
 Compatibility responses use native wildcard CORS headers. Unauthorized responses have no body.
 The separate routing worker stops with the application and restarts after a worker failure.
 `/api/openapi/specification` uses the original controller and includes current custom entities.
+Compatibility requests load `$GROCY_DATAPATH/config.php` and native setting overrides.
+The first request after a version, base URL, or base path change returns the native HTTP 302
+redirect to the configured root URL. This occurs before authentication and CORS.
+`GROCY_BASE_PATH` selects the API path prefix. Original Slim routes and Blade templates
+retain prefixed login redirects and HTML error responses.
+Demo and prerelease modes use `grocy_<locale>.db` in the data directory.
+`Setting('DEMO_DB_SUFFIX', 'suffix')` in `config.php` replaces the locale in that filename.
+These files use the original PDO connection and stay separate from the main application database.
 File requests use the original Grocy file controller and service with the pinned Gumlet image
 library and PHP GD. Each request has its own PHP process. Uploads and downloads use streams.
 The process stops when the response ends, the client disconnects, or the application stops.
@@ -33,6 +41,8 @@ Stock bookings, inventory, opening, transfers, entry edits, merges, barcode acti
 also use the original controller and service. All five label endpoints use the original controllers.
 They use the pinned Guzzle packages and original webhook helper. Native errors and partial writes
 remain unchanged. Raw product deletes clear application nutrition references inside the source transaction.
+Equivalent purchases can combine into one stock entry. Undo of either purchase deletes that
+full entry, as in Grocy 4.5.0.
 Thermal shopping lists use the original printer controller, stock formatting, and printer service.
 The release's mike42/escpos-php 4.0 and gfx-php 0.6 packages produce the receipt bytes.
 Set `GROCY_TPRINTER_IS_NETWORK_PRINTER`, `GROCY_TPRINTER_IP`, and `GROCY_TPRINTER_PORT`
