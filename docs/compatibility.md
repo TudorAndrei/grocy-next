@@ -90,6 +90,8 @@ Stock purchases, consumption, opening, transfers, inventory, entry edits, merges
 
 The native consumption controller retains its `transactiontype` field typo. Nonempty text passed as a PHP boolean can become true, including `spoiled: "false"`. Purchase label modes outside 0 through 2 use the original runtime branches. An entry edit requires `amount`. If `open` is omitted, it can save an old booking before returning the native type error. Native merge uses the existing product-deletion cleanup for nutrition records inside its transaction. A rejected merge restores those records and permits a retry.
 
+Calendar export and sharing links execute the original controller and services with the pinned eluceo/iCal library. Event IDs change on each export. PHP supports year 0000 and retains native malformed-date errors. The original service selects a valid shared calendar key across users and replaces expired keys. Native secrets use the `special-purpose-calendar-ical` type and local server time for expiry. Saved application `calendar` keys remain valid only for calendar access. Authentication avoids parsing unused user timestamps. The former Python calendar serializer, time-zone builder, and unused household service are removed.
+
 ## Boundaries
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.

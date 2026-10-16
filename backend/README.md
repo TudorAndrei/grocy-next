@@ -29,6 +29,11 @@ also use the original controller and service. All five label endpoints use the o
 They use the pinned Guzzle packages and original webhook helper. Native errors and partial writes
 remain unchanged. Raw product deletes clear application nutrition references inside the source transaction.
 The external barcode provider and thermal printer paths still use application code.
+Calendar export and sharing links use the original controller, calendar service, key service,
+and eluceo/iCal 2.14.0. PHP handles date parsing, event IDs, escaping, folding, and time zones.
+Native calendar secrets use their original key type and the server's local clock for expiry.
+Saved application calendar subscriptions remain valid. Authentication reads only identity fields,
+so unused user dates do not block access.
 The web recipe page uses `/api/v2/recipes/{id}` routes for selected servings and ingredient details.
 Set `TZ` to select the same server time zone for Python and the PHP workers.
 User, permission, and single-setting operations also use the original Grocy controller.

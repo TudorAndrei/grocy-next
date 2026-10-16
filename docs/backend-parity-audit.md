@@ -392,3 +392,21 @@ The Linux image passed 65 selected HTTP checks on both a fresh database and a sa
 The image is `sha256:5381d0ae460c0838bb4dc6fe3249a32735dc4e54bd799de3bf4916830e72924c`. The image and wheel match all 801 current application and bundled source files. All 651 vendor checksums retain their original bytes in Git. Ruff, basedpyright, and PHP syntax checks passed. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
 
 This batch needs no database revision. External barcode providers, thermal printing, calendar date limits, remaining system behavior, and further combined request and permission cases still require work. Full runtime parity remains incomplete.
+
+## Native calendar export and sharing links
+
+Calendar export and sharing links now execute the unchanged calendar controller, calendar service, API key service, and URL manager. The release's eluceo/iCal 2.14.0 library handles event IDs, dates, time zones, escaping, and folding. The original response keeps its calendar content type and attachment name. Task descriptions remain empty. Event IDs change on each export. Stock, task, chore, battery, and meal events retain year 0000 dates. Malformed task dates and meal section times retain the original PHP type errors.
+
+Sharing links use the original 50-character alphanumeric secret and `special-purpose-calendar-ical` key type. The service reuses a valid key across users. It does not repair keys owned by deleted users. Native calendar key expiry uses the server's local clock and whole seconds. Authentication now selects only identity and validity fields. It does not parse unused user timestamps. Saved application `calendar` keys still permit calendar access. Other API key expiry rules remain unchanged.
+
+The former Python calendar serializer, time-zone builder, unused household service, and unused label builder are removed. No database revision is needed.
+
+The initial nine calendar cases failed on the previous backend and passed against Grocy 4.5.0. The three additional authentication cases also failed locally before the authentication repair and passed against the reference. After the repair, the focused calendar, chore schedule, and reference calendar selection passed 55 checks in Europe/Bucharest. All nine access and user-deletion integration checks passed. The earlier full integration and unit selection passed 98 checks.
+
+The full local suite passed 806 tests and skipped 756 reference or feature-profile cases. The full comparison suite passed 1,463 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest. The final whole-second text expiry comparison also passed 19 selected local checks and all 24 calendar comparisons in Europe/Bucharest.
+
+The Linux image passed 26 selected HTTP checks on both a new database and a saved revision 0020 database. Four direct database or shared-fixture cases were skipped over HTTP. Separate Linux checks proved native and saved calendar secrets, calendar-only scope, local expiry, secret rotation, unused user dates, MIME headers, empty task descriptions, random event IDs, and year 0000 dates. The saved fixture had a fractional chore start date. Export retained the native type error. The HTTP checks then used a whole-second chore date. Upgrade kept all original rows and allocation counters. Restart kept complete state. All 45 source views and 54 source triggers retained their definitions and order. CLI initialization, import, saved custom triggers, BLOB values, native stock and recipe actions, and worker cleanup also passed.
+
+The image is `sha256:73571a09edb218475e3697499b064816d272da3453da8b35210f6ad9317f1dd4`. The wheel and image match all 868 current application and bundled source files. All 720 managed vendor files retain their original bytes in Git. All 40 Grocy core files and 65 iCal files match the pinned release archive exactly. Ruff, basedpyright, and PHP syntax checks passed. A repository-wide format check still reports four pre-existing files. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
+
+External barcode providers, thermal printing, remaining system behavior, and further request, authentication, and permission cases still require work. Full runtime parity remains incomplete.

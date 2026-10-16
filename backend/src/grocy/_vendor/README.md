@@ -60,3 +60,9 @@ read operations, and undo now use the original stock controller and service.
 All five label endpoints use their original controllers and the pinned webhook code.
 The adapter applies the existing nutrition cleanup to raw product deletion inside
 Grocy's transaction. This prevents local extension constraints from blocking native merges.
+
+Calendar requests use the original calendar controller, calendar service, API key service,
+and URL manager. The release's eluceo/iCal 2.14.0 runtime and MIT license are included.
+The adapter supplies the request base URL and application connection. The original code
+retains event IDs, date parsing, escaping, line folding, time zones, and shared key selection.
+Responses with a disposition header retain their content type, as in JsonMiddleware.
