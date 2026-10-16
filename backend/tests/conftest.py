@@ -19,7 +19,8 @@ from grocy.main import create_app
 
 
 @pytest.fixture(autouse=True)
-def _reset_settings() -> Iterator[None]:
+def _reset_settings(monkeypatch, tmp_path) -> Iterator[None]:
+    monkeypatch.setenv("GROCY_DATAPATH", str(tmp_path / "native-data"))
     clear_settings_cache()
     reset_engine()
     yield

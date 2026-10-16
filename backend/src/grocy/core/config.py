@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     mcp_enabled: bool = True
     mcp_api_key: str = ""
     files_root: Path = Path("data/files")
+    datapath: Path = Path("data")
+    stock_barcode_lookup_plugin: str = "OpenFoodFactsBarcodeLookupPlugin"
     max_upload_bytes: int = 20 * 1024 * 1024
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
-    barcode_provider_url: str = "https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     label_printer_webhook: str = ""
     label_printer_run_server: bool | str = True
     label_printer_hook_json: bool | str = True

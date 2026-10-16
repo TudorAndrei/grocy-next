@@ -1,10 +1,8 @@
-from typing import Annotated, Any
-
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, Request, Response
 
 from grocy.api.compatibility.responses import native_action_response, native_list_response
 from grocy.core.auth import AuthenticatedActor, CurrentActor
-from grocy.core.deps import DbSession, StockSvc
+from grocy.core.deps import DbSession
 
 router = APIRouter(tags=["stock"])
 
@@ -296,11 +294,8 @@ async def stock_undo_transaction(
 
 @router.get("/api/stock/barcodes/external-lookup/{barcode}")
 async def stock_external_barcode_lookup(
-    barcode: str,
-    _actor: CurrentActor,
-    stock: StockSvc,
-    add: Annotated[bool, Query()] = False,
-) -> dict[str, Any]:
-    if add:
-        _actor.require("MASTER_DATA_EDIT")
-    return await stock.external_barcode_lookup(barcode, add=add)
+    barcode: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(
+        request, session, "stock_external_barcode", barcode, actor.user_id
+    )

@@ -15,9 +15,10 @@ from grocy.core.time import server_timezone
 
 
 class InputPurifier:
-    def __init__(self, executable: str, *, user_id: int = 1) -> None:
+    def __init__(self, executable: str, *, user_id: int = 1, datapath: Path | None = None) -> None:
         self.executable = executable
         self.user_id = user_id
+        self.datapath = datapath
         self.php_version = ""
         self._lock = asyncio.Lock()
         self._process: asyncio.subprocess.Process | None = None
@@ -48,6 +49,7 @@ class InputPurifier:
                 str(Path(__file__).with_suffix(".php")),
                 self._cache.name,
                 str(self.user_id),
+                str(self.datapath or self._cache.name),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -186,12 +188,13 @@ class InputPurifier:
         content_type: str | None,
         query_string: bytes,
         default_permissions: list[str],
+        datapath: Path,
         configuration: dict[str, Any],
         execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         # Grocy's current user is a PHP constant. Each action owns its request context.
-        worker = InputPurifier(self.executable, user_id=user_id)
+        worker = InputPurifier(self.executable, user_id=user_id, datapath=datapath)
         try:
             return await worker._request(
                 body,

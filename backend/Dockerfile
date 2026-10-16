@@ -16,6 +16,7 @@ RUN uv sync --frozen --no-dev
 ENV GROCY_HOST=0.0.0.0
 ENV GROCY_PORT=8000
 ENV GROCY_FILES_ROOT=/data/files
+ENV GROCY_DATAPATH=/data
 ENV GROCY_DATABASE_URL=sqlite+aiosqlite:////data/grocy.db
 
 EXPOSE 8000

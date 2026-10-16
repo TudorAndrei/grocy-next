@@ -1227,59 +1227,6 @@ class StockService:
             "bookings_undone": len(logs),
         }
 
-    async def external_barcode_lookup(self, barcode: str, *, add: bool = False) -> dict:
-        import httpx
-
-        from grocy.core.config import get_settings
-        from grocy.db.models.catalog import ProductBarcode, QuantityUnit
-
-        if not barcode.isascii() or not barcode.isdigit() or not 4 <= len(barcode) <= 32:
-            raise GrocyError("Barcode must contain 4 to 32 digits", code="invalid_barcode")
-        url = get_settings().barcode_provider_url
-        if not url:
-            raise GrocyError("Barcode provider is disabled", status_code=503)
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(
-                    url.format(barcode=barcode),
-                    headers={"User-Agent": "GrocyNext/0.1 (household inventory)"},
-                )
-                response.raise_for_status()
-                data = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
-            raise GrocyError("Barcode provider request failed", status_code=502) from exc
-        if not isinstance(data, dict) or not isinstance(data.get("product", {}), dict):
-            raise GrocyError("Barcode provider returned invalid data", status_code=502)
-        raw = data.get("product", {})
-        name = raw.get("product_name") or raw.get("generic_name")
-        if not name:
-            raise NotFoundError("Barcode provider has no product name")
-        result = {"name": name, "barcode": barcode, "provider": "openfoodfacts", "product": raw}
-        if add:
-            existing = await self.session.scalar(
-                select(ProductBarcode).where(ProductBarcode.barcode == barcode)
-            )
-            if existing:
-                result["created_object_id"] = existing.product_id
-            else:
-                location = await self.session.scalar(
-                    select(Location).order_by(Location.id).limit(1)
-                )
-                unit = await self.session.scalar(
-                    select(QuantityUnit).order_by(QuantityUnit.id).limit(1)
-                )
-                if location is None or unit is None:
-                    raise GrocyError("Create a location and quantity unit first")
-                product = Product(
-                    name=name, location_id=location.id, qu_id_purchase=unit.id, qu_id_stock=unit.id
-                )
-                self.session.add(product)
-                await self.session.flush()
-                self.session.add(ProductBarcode(product_id=product.id, barcode=barcode))
-                await self.session.commit()
-                result["created_object_id"] = product.id
-        return result
-
     async def _undo_single(self, actor: Actor, log: StockLog) -> None:
         _ = actor
         snapshot = {}

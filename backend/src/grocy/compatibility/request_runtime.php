@@ -39,6 +39,7 @@ require __DIR__ . '/../_vendor/ralouphie-getallheaders/src/getallheaders.php';
 require __DIR__ . '/../_vendor/grocy-core/helpers/extensions.php';
 require __DIR__ . '/../_vendor/guzzlehttp-guzzle/src/functions_include.php';
 require __DIR__ . '/../_vendor/symfony-deprecation-contracts/function.php';
+require __DIR__ . '/file_service_runtime.php';
 
 function parsedBody(string $raw, string $method, ?string $contentType)
 {

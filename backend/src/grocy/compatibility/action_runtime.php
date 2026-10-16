@@ -75,6 +75,7 @@ function nativeAction(array $request, NativeDatabase $database): array
             'stock_transfer_barcode' => [new NativeStockController($database), 'TransferProductByBarcode', ['barcode' => $request['object_id']]],
             'stock_inventory' => [new NativeStockController($database), 'InventoryProduct', ['productId' => $request['object_id']]],
             'stock_inventory_barcode' => [new NativeStockController($database), 'InventoryProductByBarcode', ['barcode' => $request['object_id']]],
+            'stock_external_barcode' => [new NativeStockController($database), 'ExternalBarcodeLookup', ['barcode' => $request['object_id']]],
             'stock_barcode' => [new NativeStockController($database), 'ProductDetailsByBarcode', ['barcode' => $request['object_id']]],
             'stock_merge' => [new NativeStockController($database), 'MergeProducts', ['productIdToKeep' => $request['object_id'], 'productIdToRemove' => $request['arguments']['remove_id']]],
             'chore_label' => [new NativeChoresController($database), 'ChorePrintLabel', ['choreId' => $request['object_id']]],

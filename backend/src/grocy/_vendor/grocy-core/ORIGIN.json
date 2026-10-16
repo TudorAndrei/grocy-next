@@ -49,6 +49,11 @@
     "services/ApiKeyService.php": "65d11acaf4888463fd6b8dccb9287ed9134c6f42bcf934d263cda36e9f58f16b",
     "helpers/UrlManager.php": "e8ed68e3ed4f953ca6df25f6c47f9c6b69f9ddc22e59b13a73c3a71f11aa9594",
     "controllers/PrintApiController.php": "287cd4e5aa51a5ef93deb789d9f382a9c64bae891a3699fdd8b4c92e57775034",
-    "services/PrintService.php": "eee72b86c0c2e93e5560da89ae7ec2cc2a2dce41aea61aedfe9c71a56a211226"
+    "services/PrintService.php": "eee72b86c0c2e93e5560da89ae7ec2cc2a2dce41aea61aedfe9c71a56a211226",
+    "helpers/BaseBarcodeLookupPlugin.php": "8a0fff3e3a6b19c890b3df0dae81c6a559eb33cea230df528e994b01e37c89b4",
+    "plugins/OpenFoodFactsBarcodeLookupPlugin.php": "80f7bcfc616cf46cd17b18853a07c2a4455a55b1b082fd866cd665b80e40967f",
+    "plugins/DemoBarcodeLookupPlugin.php": "eb1b77a935ffd057b93aa5dcb2ce2509f806506957914e567fcee82dda76613e",
+    "services/ApplicationService.php": "a6ea7bce5f643304e1128347b2511de34f49a2c85d9f52e5616f8bc102b6d2b0",
+    "version.json": "f3a63b6d9772812771445c7202781710ba9fd276cac69653c26bd283fe2e4cb2"
   }
 }

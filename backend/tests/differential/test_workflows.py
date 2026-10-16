@@ -4604,3 +4604,283 @@ def test_native_thermal_permission_error_precedes_list_validation(api):
     )
     assert response.status_code == 400, response.text
     assert response.json() == {"error_message": "Permission missing: SHOPPINGLIST"}
+
+
+@pytest.fixture
+def barcode_plugin(api, catalog, monkeypatch, tmp_path):
+    """Install a user plugin through Grocy's supported plugin directory."""
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if reference:
+        database = os.getenv("GROCY_REFERENCE_DATABASE")
+        if not database:
+            pytest.skip("A disposable reference data directory is required")
+        root = Path(database).parent
+    elif hasattr(api, "portal"):
+        root = tmp_path / "native-data"
+        monkeypatch.setattr(get_settings(), "datapath", root)
+        monkeypatch.setattr(get_settings(), "files_root", tmp_path / "files")
+    else:
+        pytest.skip("User plugin checks need access to the disposable data directory")
+    plugins = root / "plugins"
+    plugins.mkdir(parents=True, exist_ok=True)
+    path = plugins / "OpenFoodFactsBarcodeLookupPlugin.php"
+    output = plugins / "lookup.json"
+    previous = path.read_bytes() if path.exists() else None
+    # This real user plugin replaces the bundled plugin and exposes its constructor data.
+    path.write_text("""<?php
+class OpenFoodFactsBarcodeLookupPlugin extends Grocy\\Helpers\\BaseBarcodeLookupPlugin {
+    public const PLUGIN_NAME = 'User plugin';
+    protected function ExecuteLookup($barcode) {
+        $value = json_decode(file_get_contents(__DIR__ . '/lookup.json'), true);
+        if (isset($value['product'])) {
+            $value = $value['product'];
+            $value['__barcode'] = $barcode;
+            if (!isset($value['location_id'])) $value['location_id'] = $this->Locations[0]->id;
+            if (!isset($value['qu_id_purchase'])) {
+                $value['qu_id_purchase'] = $this->QuantityUnits[0]->id;
+            }
+            if (!isset($value['qu_id_stock'])) $value['qu_id_stock'] = $this->QuantityUnits[0]->id;
+        }
+        return $value;
+    }
+}
+""")
+
+    class Plugin:
+        name = "Looked up " + uuid4().hex
+        barcode = "code-Ä-" + uuid4().hex
+
+        def result(self, value):
+            output.write_text(json.dumps(value))
+
+        def product(self, **fields):
+            self.result(
+                {
+                    "product": {
+                        "name": self.name,
+                        "__qu_factor_purchase_to_stock": 1,
+                        **fields,
+                    }
+                }
+            )
+
+        def request(self, **params):
+            return api.get("/api/stock/barcodes/external-lookup/" + self.barcode, params=params)
+
+    plugin = Plugin()
+    plugin.product()
+    try:
+        yield plugin
+    finally:
+        if previous is None:
+            path.unlink(missing_ok=True)
+        else:
+            path.write_bytes(previous)
+        output.unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize("add", [None, "true", "false", "1", "TRUE", ""])
+def test_native_external_lookup_preserves_plugin_output_and_add_query(api, barcode_plugin, add):
+    plugin = barcode_plugin
+    response = plugin.request(**({} if add is None else {"add": add}))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["name"] == plugin.name
+    assert result["__barcode"] == plugin.barcode
+    assert result["__qu_factor_purchase_to_stock"] == 1
+    saved = rows(api, "products", name=plugin.name)
+    assert len(saved) == (1 if add == "true" else 0)
+    assert ("id" in result) == (add == "true")
+    if saved:
+        assert result["id"] == str(saved[0]["id"])
+        assert saved[0]["location_id"] == result["location_id"]
+        barcodes = rows(api, "product_barcodes", product_id=result["id"])
+        assert [entry["barcode"] for entry in barcodes] == [plugin.barcode]
+        duplicate = plugin.request(add="true")
+        assert duplicate.status_code == 400
+        assert duplicate.json() == {"error_message": f'Product "{plugin.name}" already exists'}
+
+
+@pytest.mark.parametrize(
+    "value,message",
+    [
+        (None, None),
+        ([], "Plugin output must be an associative array"),
+        ("invalid", "Plugin output must be an associative array"),
+        ({"name": "Missing fields"}, "Plugin output does not provide needed property location_id"),
+        ({"product": {"location_id": -1}}, "Provided location_id (-1) is not a valid location id"),
+        (
+            {"product": {"qu_id_purchase": -1}},
+            "Provided qu_id_purchase (-1) is not a valid quantity unit id",
+        ),
+        (
+            {"product": {"qu_id_stock": -1}},
+            "Provided qu_id_stock (-1) is not a valid quantity unit id",
+        ),
+        (
+            {"product": {"__qu_factor_purchase_to_stock": 0}},
+            "Provided __qu_factor_purchase_to_stock is empty or not a number",
+        ),
+    ],
+)
+def test_native_external_lookup_validates_user_plugin_output(api, barcode_plugin, value, message):
+    if isinstance(value, dict) and "product" in value:
+        barcode_plugin.product(**value["product"])
+    else:
+        barcode_plugin.result(value)
+    response = barcode_plugin.request(add="true")
+    assert response.status_code == (200 if message is None else 400), response.text
+    assert response.json() == (None if message is None else {"error_message": message})
+
+
+@pytest.mark.parametrize("add", ["false", "true"])
+def test_native_external_lookup_requires_master_edit_before_plugin(api, barcode_plugin, add):
+    name = uuid4().hex
+    assert api.post("/api/users", json={"username": name, "password": "test"}).status_code == 204
+    user = api.get("/api/users", params={"query[]": "username=" + name}).json()[0]["id"]
+    assert api.put(f"/api/users/{user}/permissions", json={"permissions": [9]}).status_code == 204
+    response = api.get(
+        "/api/stock/barcodes/external-lookup/" + barcode_plugin.barcode,
+        params={"add": add},
+        headers={"GROCY-API-KEY": user_key(api, user)},
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["error_message"] == "Permission missing: MASTER_DATA_EDIT"
+    assert rows(api, "products", name=barcode_plugin.name) == []
+
+
+def test_native_external_lookup_keeps_partial_product_on_barcode_error(
+    api, barcode_plugin, execute_sql
+):
+    name = barcode_plugin.name.replace("'", "''")
+    execute_sql(
+        "CREATE TRIGGER lookup_barcode_failure BEFORE INSERT ON product_barcodes "
+        f"WHEN NEW.product_id=(SELECT id FROM products WHERE name='{name}') "
+        "BEGIN SELECT RAISE(ABORT,'Barcode blocked'); END"
+    )
+    try:
+        response = barcode_plugin.request(add="true")
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 Barcode blocked"
+        }
+        saved = rows(api, "products", name=barcode_plugin.name)
+        assert len(saved) == 1
+        assert rows(api, "product_barcodes", product_id=saved[0]["id"]) == []
+    finally:
+        execute_sql("DROP TRIGGER lookup_barcode_failure")
+
+
+@pytest.mark.parametrize("status,different_units", [(200, False), (404, False), (200, True)])
+def test_native_external_lookup_saves_image_and_unit_conversion(
+    api, barcode_plugin, catalog, status, different_units
+):
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Thread
+
+    from PIL import Image
+
+    _, unit, other_unit, _ = catalog
+    output = BytesIO()
+    Image.new("RGB", (3, 2), "blue").save(output, "PNG")
+    picture = output.getvalue()
+    requests = []
+
+    class ImageServer(BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append((self.path, self.headers.get("User-Agent")))
+            self.send_response(status)
+            self.send_header("Content-Type", "image/png")
+            self.end_headers()
+            self.wfile.write(picture)
+
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ImageServer)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        barcode_plugin.name = "Crème <b>raw</b> " + uuid4().hex
+        barcode_plugin.barcode = "image-" + uuid4().hex
+        barcode_plugin.product(
+            qu_id_stock=unit,
+            qu_id_purchase=other_unit if different_units else unit,
+            __qu_factor_purchase_to_stock=2.5,
+            __image_url=f"http://127.0.0.1:{server.server_port}/product.png",
+        )
+        response = barcode_plugin.request(add="true")
+        assert response.status_code == (400 if different_units else 200), response.text
+        saved = rows(api, "products", name=barcode_plugin.name)
+        assert len(saved) == 1
+        product = saved[0]
+        assert product["name"] == barcode_plugin.name
+        conversions = rows(api, "quantity_unit_conversions", product_id=product["id"])
+        if different_units:
+            assert response.json() == {
+                "error_message": (
+                    "SQLSTATE[23000]: Integrity constraint violation: 19 "
+                    "QU conversion already exists"
+                )
+            }
+            assert {
+                (row["from_qu_id"], row["to_qu_id"], row["factor"]) for row in conversions
+            } == {(other_unit, unit, 1), (unit, other_unit, 1)}
+            barcodes = rows(api, "product_barcodes", product_id=product["id"])
+            assert [row["barcode"] for row in barcodes] == [barcode_plugin.barcode]
+        else:
+            assert response.json()["id"] == str(product["id"])
+            assert conversions == []
+        assert requests == [("/product.png", "Grocy/4.5.0 (https://grocy.info)")]
+        if status == 200:
+            filename = barcode_plugin.barcode + ".png"
+            assert product["picture_file_name"] == filename
+            encoded = base64.b64encode(filename.encode()).decode()
+            downloaded = api.get("/api/files/productpictures/" + encoded)
+            assert downloaded.status_code == 200, downloaded.text
+            assert downloaded.content == picture
+        else:
+            assert product["picture_file_name"] is None
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+@pytest.mark.parametrize(
+    "plugin,message",
+    [
+        ("", "No barcode lookup plugin defined"),
+        ("MissingPlugin", "Plugin MissingPlugin was not found"),
+    ],
+)
+def test_native_external_lookup_keeps_plugin_loader_errors(
+    api, barcode_plugin, monkeypatch, plugin, message
+):
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    override = previous = None
+    if reference:
+        override = (
+            Path(os.environ["GROCY_REFERENCE_DATABASE"]).parent
+            / "settingoverrides"
+            / "STOCK_BARCODE_LOOKUP_PLUGIN.txt"
+        )
+        override.parent.mkdir(exist_ok=True)
+        previous = override.read_bytes() if override.exists() else None
+        override.write_text(plugin)
+    else:
+        monkeypatch.setattr(get_settings(), "stock_barcode_lookup_plugin", plugin)
+    try:
+        response = barcode_plugin.request()
+        assert response.status_code == 400, response.text
+        assert response.json() == {"error_message": message}
+    finally:
+        if override is not None:
+            if previous is None:
+                override.unlink(missing_ok=True)
+            else:
+                override.write_bytes(previous)

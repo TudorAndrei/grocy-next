@@ -24,7 +24,10 @@ try {
     require __DIR__ . '/generic_runtime.php';
     require __DIR__ . '/list_runtime.php';
     require __DIR__ . '/action_runtime.php';
-    define('GROCY_DATAPATH', $argv[1]);
+    define('GROCY_DATAPATH', $argv[3] ?? $argv[1]);
+    if (!is_dir(GROCY_DATAPATH)) {
+        mkdir(GROCY_DATAPATH, 0700, true);
+    }
     define('GROCY_MODE', 'production');
     define('GROCY_USER_ID', (int)($argv[2] ?? 1));
     if (!is_dir(GROCY_DATAPATH . '/viewcache')) {
