@@ -28,7 +28,15 @@ Stock bookings, inventory, opening, transfers, entry edits, merges, barcode acti
 also use the original controller and service. All five label endpoints use the original controllers.
 They use the pinned Guzzle packages and original webhook helper. Native errors and partial writes
 remain unchanged. Raw product deletes clear application nutrition references inside the source transaction.
-The external barcode provider and thermal printer paths still use application code.
+Thermal shopping lists use the original printer controller, stock formatting, and printer service.
+The release's mike42/escpos-php 4.0 and gfx-php 0.6 packages produce the receipt bytes.
+Set `GROCY_TPRINTER_IS_NETWORK_PRINTER`, `GROCY_TPRINTER_IP`, and `GROCY_TPRINTER_PORT`
+for a TCP printer, or `GROCY_TPRINTER_CONNECTOR` for a device or output file.
+`GROCY_TPRINTER_PRINT_QUANTITY_NAME` and `GROCY_TPRINTER_PRINT_NOTES` control receipt details.
+Existing `GROCY_THERMAL_PRINTER_DEVICE`, `GROCY_THERMAL_PRINTER_HOST`, and
+`GROCY_THERMAL_PRINTER_PORT` settings remain aliases. Explicit native settings take precedence.
+An unconfigured or failed printer returns the native error. The route runs independently of its UI feature flag.
+The external barcode provider still uses application code.
 Calendar export and sharing links use the original controller, calendar service, key service,
 and eluceo/iCal 2.14.0. PHP handles date parsing, event IDs, escaping, folding, and time zones.
 Native calendar secrets use their original key type and the server's local clock for expiry.

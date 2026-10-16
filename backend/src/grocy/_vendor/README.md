@@ -66,3 +66,10 @@ and URL manager. The release's eluceo/iCal 2.14.0 runtime and MIT license are in
 The adapter supplies the request base URL and application connection. The original code
 retains event IDs, date parsing, escaping, line folding, time zones, and shared key selection.
 Responses with a disposition header retain their content type, as in JsonMiddleware.
+
+Thermal printing uses the original print controller and service with the release's
+mike42/escpos-php 4.0 and gfx-php 0.6 source files, capability data, and licenses.
+The adapter supplies the native printer settings and application connection.
+The original code formats shopping rows and writes ESC/POS commands through its
+file or network connector. Query parsing, permission order, encoding, and errors
+remain in the unchanged source.
