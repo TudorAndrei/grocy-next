@@ -366,7 +366,9 @@ function nativeCorsHeaders(): array
 function nativeEncodedResponse($response): array
 {
     // Keep JsonMiddleware and the outer CorsMiddleware headers.
-    $response = $response->withHeader('Content-Type', 'application/json');
+    if (!$response->hasHeader('Content-Disposition')) {
+        $response = $response->withHeader('Content-Type', 'application/json');
+    }
     foreach (nativeCorsHeaders() as $name => $values) {
         $response = $response->withHeader($name, $values);
     }

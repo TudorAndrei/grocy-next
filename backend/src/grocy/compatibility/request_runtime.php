@@ -6,6 +6,7 @@ spl_autoload_register(function (string $class): void {
         'Grocy\\Services\\' => ['grocy-core/services/'],
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
         'Grocy\\Helpers\\' => ['grocy-core/helpers/'],
+        'Eluceo\\iCal\\' => ['eluceo-ical/src/'],
         'Gettext\\Languages\\' => ['gettext-languages/src/'],
         'Gettext\\' => ['gettext-gettext/src/'],
         'GuzzleHttp\\Promise\\' => ['guzzlehttp-promises/src/'],

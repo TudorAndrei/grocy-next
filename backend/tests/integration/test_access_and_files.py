@@ -131,6 +131,22 @@ def test_calendar_subscription_is_scoped_and_escaped(client: TestClient, api_hea
     assert client.get("/api/stock", headers={"GROCY-API-KEY": secret}).status_code == 401
     assert client.get(f"/api/stock?secret={secret}").status_code == 401
 
+    from grocy.db.models.users import ApiKey
+    from grocy.db.session import get_session_factory
+
+    legacy = "saved-calendar-subscription"
+
+    async def save_legacy_key():
+        async with get_session_factory()() as session:
+            session.add(ApiKey(api_key=legacy, user_id=1, key_type="calendar"))
+            await session.commit()
+
+    portal = client.portal
+    assert portal is not None
+    portal.call(save_legacy_key)
+    assert client.get(f"/api/calendar/ical?secret={legacy}").status_code == 200
+    assert client.get("/api/stock", headers={"GROCY-API-KEY": legacy}).status_code == 401
+
 
 def test_extension_picture_response_preserves_original_and_aspect_ratio(
     client: TestClient, api_headers: dict, tmp_path: Path, monkeypatch

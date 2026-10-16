@@ -1,185 +1,21 @@
-import secrets
-from datetime import UTC, datetime, time
-
 from fastapi import APIRouter, Request, Response
-from sqlalchemy import select
 
-from grocy.compatibility.calendar import timezone_component
-from grocy.core.auth import CurrentActor
-from grocy.core.config import get_settings
+from grocy.api.compatibility.responses import native_action_response
+from grocy.core.auth import AuthenticatedActor
 from grocy.core.deps import DbSession
-from grocy.core.time import server_timezone
-from grocy.db.models.catalog import Product
-from grocy.db.models.household import Task
-from grocy.db.models.mealplan import MealPlanEntry, MealPlanSection
-from grocy.db.models.recipes import Recipe
-from grocy.db.models.users import ApiKey
-from grocy.domains.household.service import HouseholdService
-from grocy.domains.stock.service import StockService
 
 router = APIRouter(tags=["calendar"])
 
 
-def _escape(text: str) -> str:
-    return (
-        text.replace("\\", "\\\\")
-        .replace("\r", "")
-        .replace("\n", "\\n")
-        .replace(",", "\\,")
-        .replace(";", "\\;")
-    )
-
-
-def _fold(line: str) -> str:
-    parts, current = [], ""
-    for char in line:
-        if len((current + char).encode()) > 75:
-            parts.append(current)
-            current = " "
-        current += char
-    return "\r\n".join([*parts, current])
-
-
 @router.get("/api/calendar/ical")
-async def calendar_ical(_actor: CurrentActor, session: DbSession) -> Response:
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:Grocy", "CALSCALE:GREGORIAN"]
-    zone = server_timezone()
-    settings = get_settings()
-    event_times: list[datetime] = []
-
-    def event(uid: str, start: str, title: str, description: str = "") -> None:
-        key, _, value = start.partition(":")
-        timed = key == "DTSTART"
-        scheduled = datetime.strptime(value, "%Y%m%dT%H%M%S" if timed else "%Y%m%d")
-        event_times.append(scheduled.replace(tzinfo=zone))
-        if timed:
-            start = f"DTSTART:{value}Z" if zone.key == "UTC" else f"DTSTART;TZID={zone.key}:{value}"
-        lines.extend(
-            [
-                "BEGIN:VEVENT",
-                f"UID:{uid}@grocy-next",
-                f"DTSTAMP:{stamp}",
-                start,
-                *([start.replace("DTSTART", "DTEND", 1)] if timed else []),
-                f"SUMMARY:{_escape(title)}",
-                f"DESCRIPTION:{_escape(description)}",
-                "END:VEVENT",
-            ]
-        )
-
-    meals = (
-        (await session.execute(select(MealPlanEntry))).scalars().all()
-        if settings.feature_enabled("RECIPES_MEALPLAN")
-        else []
-    )
-    for meal in meals:
-        if meal.done:
-            continue
-        title = meal.note or "Meal"
-        if meal.recipe_id:
-            recipe = await session.get(Recipe, meal.recipe_id)
-            title = recipe.name if recipe else title
-        elif meal.product_id:
-            product = await session.get(Product, meal.product_id)
-            title = product.name if product else title
-        section = await session.get(MealPlanSection, meal.section_id) if meal.section_id else None
-        clock = (section.time_info or section.time_hms) if section else None
-        start = f"DTSTART;VALUE=DATE:{meal.day.strftime('%Y%m%d')}"
-        if clock:
-            try:
-                scheduled = datetime.combine(meal.day, time.fromisoformat(clock))
-                start = f"DTSTART:{scheduled.strftime('%Y%m%dT%H%M%S')}"
-            except ValueError:
-                pass
-        prefix = {
-            "recipe": "Meal plan recipe",
-            "product": "Meal plan product",
-            "note": "Meal plan note",
-        }.get(meal.type, "Meal plan")
-        title = f"{prefix}: {section.name + ': ' if section else ''}{title}"
-        event(
-            f"meal-plan-{meal.id}",
-            start,
-            title,
-            meal.note or "",
-        )
-    for stock in (
-        await StockService(session).current_stock()
-        if settings.feature_enabled("STOCK_BEST_BEFORE_DATE_TRACKING")
-        else []
-    ):
-        due = stock["best_before_date"]
-        if due and stock["amount"] > 0:
-            event(
-                f"product-{stock['product_id']}",
-                f"DTSTART;VALUE=DATE:{str(due).replace('-', '')}",
-                f"Product due: {stock['product']['name']}",
-            )
-    tasks = (
-        (await session.execute(select(Task).where(Task.due_date.is_not(None), Task.done == 0)))
-        .scalars()
-        .all()
-    )
-    for task in tasks if settings.feature_enabled("TASKS") else []:
-        if task.due_date:
-            event(
-                f"task-{task.id}",
-                f"DTSTART;VALUE=DATE:{task.due_date.strftime('%Y%m%d')}",
-                f"Task due: {task.name}",
-                task.description or "",
-            )
-    household = HouseholdService(session)
-    for chore in await household.list_chores() if settings.feature_enabled("CHORES") else []:
-        due = chore["next_estimated_execution_time"]
-        if due:
-            scheduled = datetime.fromisoformat(due)
-            start = f"DTSTART:{scheduled.strftime('%Y%m%dT%H%M%S')}"
-            if chore["track_date_only"]:
-                start = f"DTSTART;VALUE=DATE:{scheduled.strftime('%Y%m%d')}"
-            title = f"Chore due: {chore['name']}"
-            assigned = chore.get("next_execution_assigned_user")
-            if assigned:
-                title += f" (assigned to {assigned['display_name']})"
-            event(
-                f"chore-{chore['id']}",
-                start,
-                title,
-            )
-    for battery in (
-        await household.list_batteries() if settings.feature_enabled("BATTERIES") else []
-    ):
-        due = battery["next_estimated_charge_time"]
-        if due:
-            event(
-                f"battery-{battery['id']}",
-                f"DTSTART:{datetime.fromisoformat(due).strftime('%Y%m%dT%H%M%S')}",
-                f"Battery charge cycle due: {battery['name']}",
-            )
-    if event_times:
-        lines.extend(timezone_component(zone, min(event_times), max(event_times)))
-    lines.append("END:VCALENDAR")
-    return Response(
-        "\r\n".join(_fold(line) for line in lines) + "\r\n",
-        media_type="text/calendar",
-        headers={"Content-Disposition": 'attachment; filename="Grocy.ics"'},
-    )
+async def calendar_ical(
+    request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(request, session, "calendar_ical", "", actor.user_id)
 
 
 @router.get("/api/calendar/ical/sharing-link")
 async def calendar_sharing_link(
-    request: Request, actor: CurrentActor, session: DbSession
-) -> dict[str, str]:
-    key = await session.scalar(
-        select(ApiKey).where(ApiKey.user_id == actor.user_id, ApiKey.key_type == "calendar")
-    )
-    if key is None:
-        key = ApiKey(
-            user_id=actor.user_id,
-            api_key=secrets.token_urlsafe(32),
-            key_type="calendar",
-            description="Calendar subscription",
-        )
-        session.add(key)
-        await session.commit()
-    return {"url": f"{request.base_url}api/calendar/ical?secret={key.api_key}"}
+    request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await native_action_response(request, session, "calendar_sharing", "", actor.user_id)

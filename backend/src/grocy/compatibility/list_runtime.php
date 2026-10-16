@@ -22,6 +22,16 @@ trait NativeListContext
         return new NativeUsersService($this->database);
     }
 
+    protected function getApiKeyService()
+    {
+        return new NativeApiKeyService($this->database);
+    }
+
+    protected function getCalendarService()
+    {
+        return new NativeCalendarService($this->database);
+    }
+
     protected function getTasksService()
     {
         return new NativeTasksService($this->database);
@@ -54,6 +64,18 @@ class NativeChoresService extends Grocy\Services\ChoresService { use NativeListC
 class NativeBatteriesService extends Grocy\Services\BatteriesService { use NativeListContext; }
 class NativeStockService extends Grocy\Services\StockService { use NativeListContext; }
 class NativeRecipesService extends Grocy\Services\RecipesService { use NativeListContext; }
+class NativeApiKeyService extends Grocy\Services\ApiKeyService { use NativeListContext; }
+
+class NativeCalendarService extends Grocy\Services\CalendarService
+{
+    use NativeListContext { __construct as private setDatabase; }
+
+    public function __construct(NativeDatabase $database)
+    {
+        $this->setDatabase($database);
+        parent::__construct();
+    }
+}
 
 class NativeTasksController extends Grocy\Controllers\TasksApiController { use NativeListContext; }
 class NativeChoresController extends Grocy\Controllers\ChoresApiController { use NativeListContext; }
@@ -61,6 +83,25 @@ class NativeBatteriesController extends Grocy\Controllers\BatteriesApiController
 class NativeStockController extends Grocy\Controllers\StockApiController { use NativeListContext; }
 class NativeRecipesController extends Grocy\Controllers\RecipesApiController { use NativeListContext; }
 class NativeUsersController extends Grocy\Controllers\UsersApiController { use NativeListContext; }
+
+class NativeCalendarController extends Grocy\Controllers\CalendarApiController
+{
+    use NativeListContext { __construct as private setDatabase; }
+
+    public function __construct(NativeDatabase $database)
+    {
+        $this->setDatabase($database);
+        $this->AppContainer = new class {
+            public function get(string $name)
+            {
+                return match ($name) {
+                    'UrlManager' => new Grocy\Helpers\UrlManager(GROCY_BASE_URL),
+                    default => throw new RuntimeException('Unknown native calendar dependency'),
+                };
+            }
+        };
+    }
+}
 
 // DatabaseService retains its raw SQL and explicit transaction calls.
 class NativeRawReader

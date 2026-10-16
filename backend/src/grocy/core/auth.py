@@ -3,13 +3,14 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
 from grocy.core.permissions import resolve_permissions
+from grocy.core.time import server_timezone
 from grocy.db.models.users import ApiKey, User, UserPermission
 from grocy.db.session import get_session_factory
 
@@ -66,6 +67,7 @@ async def authenticate_request(
     candidates = [
         (key, "default"),
         (request.query_params.get(settings.api_key_header), "default"),
+        (calendar_secret, "special-purpose-calendar-ical"),
         (calendar_secret, "calendar"),
     ]
     if not any(candidate for candidate, _ in candidates):
@@ -101,32 +103,39 @@ def require_request_permission(request: Request, actor: Actor) -> None:
 
 
 async def authenticate_key(session: AsyncSession, key: str, *, key_type: str = "default") -> Actor:
+    if key_type == "special-purpose-calendar-ical":
+        local_time = datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S")
+        valid = ApiKey.expires > local_time
+    else:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        valid = or_(ApiKey.expires.is_(None), ApiKey.expires >= now)
     stmt = (
-        select(ApiKey, User)
+        select(ApiKey.user_id, User.id, User.username, valid)
+        .select_from(ApiKey)
         .outerjoin(User, ApiKey.user_id == User.id)
         .where(ApiKey.api_key == key, ApiKey.key_type == key_type)
     )
     identity = (await session.execute(stmt)).first()
     if identity is None:
         raise UnauthorizedError("Invalid API key")
-    row, user = identity
-    if row.expires is not None and row.expires < datetime.now(UTC).replace(tzinfo=None):
+    user_id, existing_user_id, username, is_valid = identity
+    if not is_valid:
         raise UnauthorizedError("API key expired")
-    if user is None:
+    if existing_user_id is None:
         raise _MissingKeyUser("Invalid API key")
-    session.info["actor_user_id"] = row.user_id
+    session.info["actor_user_id"] = user_id
     ids = set(
         (
             await session.execute(
-                select(UserPermission.permission_id).where(UserPermission.user_id == row.user_id)
+                select(UserPermission.permission_id).where(UserPermission.user_id == user_id)
             )
         )
         .scalars()
         .all()
     )
     return Actor(
-        user_id=row.user_id,
-        username=user.username,
+        user_id=user_id,
+        username=username,
         api_key=key,
         is_admin=1 in ids,
         permissions=resolve_permissions(ids),

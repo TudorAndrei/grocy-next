@@ -47,6 +47,8 @@ async def native_action_response(
         "GROCY_" + name: value for name, value in settings.feature_flags().items()
     }
     configuration.update(
+        GROCY_BASE_URL=str(request.base_url),
+        GROCY_DISABLE_URL_REWRITING=False,
         GROCY_DEFAULT_LOCALE="en",
         GROCY_LABEL_PRINTER_WEBHOOK=settings.label_printer_webhook,
         GROCY_LABEL_PRINTER_RUN_SERVER=settings.label_printer_run_server,

@@ -43,6 +43,10 @@
     "localization/en/permissions.po": "20f3b37715e5ddc7ca1595cac242d0c767cf78904b88686a44a58b8a3579d076",
     "localization/en/stock_transaction_types.po": "85c9daa07aa1d68265a1d5f85e77bce8d855a2f1fa93f230a5fc762a4768cdcd",
     "localization/en/strings.po": "2f07e6ce890094c5ca3779c41ae2e7c456c2769b66431f1f6bdc7d4f7404d848",
-    "localization/en/userfield_types.po": "f8cf23c1181bb2893c030b13b59cd57c0f29f76e36bdd40e93c01c777ff949f0"
+    "localization/en/userfield_types.po": "f8cf23c1181bb2893c030b13b59cd57c0f29f76e36bdd40e93c01c777ff949f0",
+    "controllers/CalendarApiController.php": "26dbfc0e14c0da22c5148566fdc37103cb75728429088770539e828e536313cd",
+    "services/CalendarService.php": "b32d22775c7bdc132574cdcee240652bf6c8f6207c6f94173920c1a3940db598",
+    "services/ApiKeyService.php": "65d11acaf4888463fd6b8dccb9287ed9134c6f42bcf934d263cda36e9f58f16b",
+    "helpers/UrlManager.php": "e8ed68e3ed4f953ca6df25f6c47f9c6b69f9ddc22e59b13a73c3a71f11aa9594"
   }
 }

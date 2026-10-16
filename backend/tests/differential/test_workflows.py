@@ -4416,3 +4416,171 @@ def test_native_stock_self_merge_keeps_original_error_and_stock(api, catalog):
     assert response.json() == {"error_message": "$productIdToKeep cannot equal $productIdToRemove"}
     assert rows(api, "stock", product_id=product) == before_stock
     assert rows(api, "stock_log", product_id=product) == before_log
+
+
+def test_native_calendar_task_ids_and_description_follow_release(api):
+    name = "Native calendar " + uuid4().hex
+    task = create(
+        api, "tasks", name=name, description="Private task details", due_date="2027-01-04"
+    )
+    try:
+        ids = []
+        for _ in range(2):
+            response = api.get("/api/calendar/ical")
+            assert response.status_code == 200, response.text
+            assert response.headers["content-type"] == "text/calendar; charset=utf-8"
+            assert response.headers["content-disposition"] == 'attachment; filename="Grocy.ics"'
+            events = [
+                part
+                for part in response.text.replace("\r\n ", "").split("BEGIN:VEVENT")
+                if "SUMMARY:Task due: " + name in part
+            ]
+            assert len(events) == 1
+            event = events[0].split("END:VEVENT")[0]
+            uid = re.search(r"(?m)^UID:([^\r\n]+)", event)
+            assert uid is not None and re.fullmatch(r"[0-9a-f]{32}", uid.group(1))
+            ids.append(uid.group(1))
+            assert "DESCRIPTION:\r\n" in event
+        assert ids[0] != ids[1]
+    finally:
+        api.delete(f"/api/objects/tasks/{task}")
+
+
+@pytest.mark.parametrize("kind", ["stock", "task", "chore", "battery", "meal"])
+def test_native_calendar_exports_year_zero_dates(api, catalog, kind):
+    product, _, _, _ = catalog
+    name = "Calendar zero " + uuid4().hex
+    resource = record = None
+    if kind == "stock":
+        assert api.put(f"/api/objects/products/{product}", json={"name": name}).status_code == 204
+        response = api.post(
+            f"/api/stock/products/{product}/add",
+            json={"amount": 1, "best_before_date": "0000-01-04"},
+        )
+        assert response.status_code == 200, response.text
+        expected = "00000104"
+    elif kind == "task":
+        resource = "tasks"
+        record = create(api, resource, name=name, due_date="0000-01-04")
+        expected = "00000104"
+    elif kind == "chore":
+        resource = "chores"
+        record = create(
+            api,
+            resource,
+            name=name,
+            period_type="daily",
+            start_date="0000-01-04 09:00:00",
+            track_date_only=0,
+        )
+        expected = "00000104T090000"
+    elif kind == "battery":
+        resource = "batteries"
+        record = create(api, resource, name=name, charge_interval_days=7)
+        assert (
+            api.post(
+                f"/api/batteries/{record}/charge", json={"tracked_time": "0000-01-01 10:00:00"}
+            ).status_code
+            == 200
+        )
+        expected = "00000108T100000"
+    else:
+        resource = "meal_plan"
+        record = create(api, resource, day="0000-01-04", type="note", note=name)
+        expected = "00000104"
+    try:
+        response = api.get("/api/calendar/ical")
+        assert response.status_code == 200, response.text
+        events = [
+            part
+            for part in response.text.replace("\r\n ", "").split("BEGIN:VEVENT")
+            if name in part
+        ]
+        assert len(events) == 1
+        start = re.search(r"(?m)^DTSTART[^:]*:([^\r\n]+)", events[0])
+        assert start is not None and start.group(1).removesuffix("Z") == expected
+    finally:
+        if resource:
+            api.delete(f"/api/objects/{resource}/{record}")
+        else:
+            api.delete(f"/api/objects/products/{product}")
+
+
+def test_native_calendar_sharing_keys_keep_source_shape_and_global_reuse(api):
+    first = api.get("/api/calendar/ical/sharing-link")
+    assert first.status_code == 200, first.text
+    link = first.json()["url"]
+    key = link.split("secret=", 1)[1]
+    assert re.fullmatch(r"[A-Za-z0-9]{50}", key)
+    for _ in range(2):
+        name = uuid4().hex
+        assert (
+            api.post("/api/users", json={"username": name, "password": "test"}).status_code == 204
+        )
+        user = api.get("/api/users", params={"query[]": "username=" + name}).json()[0]["id"]
+        assert (
+            api.put(f"/api/users/{user}/permissions", json={"permissions": [9]}).status_code == 204
+        )
+        user_token = user_key(api, user)
+        headers = {"GROCY-API-KEY": user_token}
+        result = api.get("/api/calendar/ical/sharing-link", headers=headers)
+        assert result.status_code == 200 and result.json() == {"url": link}, result.text
+        exported = api.get("/api/calendar/ical", headers=headers)
+        assert exported.status_code == 200, exported.text
+
+
+@pytest.mark.parametrize("kind", ["task", "meal"])
+def test_native_calendar_invalid_date_retains_php_type_error(api, kind):
+    name = uuid4().hex
+    section = None
+    if kind == "task":
+        resource = "tasks"
+        record = create(api, resource, name=name, due_date="invalid")
+    else:
+        resource = "meal_plan"
+        section = create(api, "meal_plan_sections", name=name, time_info="invalid")
+        record = create(api, resource, day="2027-01-04", type="note", note=name, section_id=section)
+    try:
+        response = api.get("/api/calendar/ical")
+        assert response.status_code == 500, response.text
+        assert "DateTimeInterface, false given" in response.json()["error_message"]
+        assert set(response.json()) == {"error_message", "error_details"}
+    finally:
+        api.delete(f"/api/objects/{resource}/{record}")
+        if section is not None:
+            api.delete(f"/api/objects/meal_plan_sections/{section}")
+
+
+@pytest.mark.parametrize("created", ["0000-01-04 10:00:00", "invalid"])
+def test_native_calendar_auth_does_not_parse_unused_user_dates(api, execute_sql, created):
+    name = uuid4().hex
+    assert api.post("/api/users", json={"username": name, "password": "test"}).status_code == 204
+    user = api.get("/api/users", params={"query[]": "username=" + name}).json()[0]["id"]
+    key = user_key(api, user)
+    execute_sql(f"UPDATE users SET row_created_timestamp='{created}' WHERE id={user}")
+    headers = {"GROCY-API-KEY": key}
+    for path in ["/api/calendar/ical", "/api/calendar/ical/sharing-link"]:
+        response = api.get(path, headers=headers)
+        assert response.status_code == 200, response.text
+
+
+def test_native_calendar_expired_secret_uses_local_clock_and_rotates(api, execute_sql):
+    execute_sql(
+        "UPDATE api_keys SET expires='2000-01-01 00:00:00' "
+        "WHERE key_type='special-purpose-calendar-ical'"
+    )
+    first = api.get("/api/calendar/ical/sharing-link")
+    assert first.status_code == 200, first.text
+    link = first.json()["url"]
+    key = link.split("secret=", 1)[1]
+    assert re.fullmatch(r"[A-Za-z0-9]{50}", key)
+    assert api.get(link, headers={"GROCY-API-KEY": ""}).status_code == 200
+    now = api.get("/api/system/time").json()["time_local_sqlite3"]
+    expired = (datetime.fromisoformat(now) - timedelta(seconds=1)).isoformat(sep=" ")
+    execute_sql(f"UPDATE api_keys SET expires='{expired}' WHERE api_key='{key}'")
+    denied = api.get(link, headers={"GROCY-API-KEY": ""})
+    assert denied.status_code == 401, denied.text
+    replacement = api.get("/api/calendar/ical/sharing-link")
+    assert replacement.status_code == 200, replacement.text
+    assert replacement.json()["url"] != link
+    assert api.get(replacement.json()["url"], headers={"GROCY-API-KEY": ""}).status_code == 200

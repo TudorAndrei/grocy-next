@@ -80,6 +80,8 @@ function nativeAction(array $request, NativeDatabase $database): array
             'chore_label' => [new NativeChoresController($database), 'ChorePrintLabel', ['choreId' => $request['object_id']]],
             'battery_label' => [new NativeBatteriesController($database), 'BatteryPrintLabel', ['batteryId' => $request['object_id']]],
             'recipe_label' => [new NativeRecipesController($database), 'RecipePrintLabel', ['recipeId' => $request['object_id']]],
+            'calendar_ical' => [new NativeCalendarController($database), 'Ical', []],
+            'calendar_sharing' => [new NativeCalendarController($database), 'IcalSharingLink', []],
             default => throw new RuntimeException('Unknown native action route'),
         };
         $response = $controller->$method($http, $response, $args);
