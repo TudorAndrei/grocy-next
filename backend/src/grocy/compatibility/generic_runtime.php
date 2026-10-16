@@ -422,10 +422,12 @@ function nativeErrorDetails(Throwable $error): array
 
 function nativeDatabaseRequest(array $request, PDO $schema): array
 {
-    $database = new NativeDatabase($schema);
+    $database = $GLOBALS['NativeRequestDatabase'] ?? new NativeDatabase($schema);
+    if (defined('NATIVE_REQUEST_CONTEXT')) $GLOBALS['NativeRequestDatabase'] = $database;
     $fiber = new Fiber(function () use ($request, $database) {
         $parsing = false;
         try {
+            if ($request['operation'] === 'context') return nativeRequestContext($request, $database);
             if ($request['operation'] === 'action') {
                 return nativeAction($request, $database);
             }

@@ -16,11 +16,17 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
     executable = get_settings().php_executable
     processes = tmp_path / "processes.txt"
     wrapper = tmp_path / "php-worker"
+    fail_request = tmp_path / "fail-request"
     wrapper.write_text(
         f"#!{sys.executable}\n"
         "import os, sys\n"
+        "from pathlib import Path\n"
         f"with open({str(processes)!r}, 'a') as output:\n"
         "    output.write(str(os.getpid()) + '\\n')\n"
+        f"failure = Path({str(fail_request)!r})\n"
+        "if failure.exists() and '-' in sys.argv:\n"
+        "    failure.unlink()\n"
+        "    sys.exit(1)\n"
         f"os.execvp({executable!r}, [{executable!r}, *sys.argv[1:]])\n"
     )
     wrapper.chmod(0o700)
@@ -41,45 +47,24 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
     name = uuid4().hex
     with TestClient(create_app()) as client:
         client.headers.update(api_headers)
-        pid = int(processes.read_text().splitlines()[-1])
         assert client.options("/api/objects/locations").status_code == 200
-        original_pids = live_workers()
-        os.kill(pid, signal.SIGTERM)
-        for _ in range(3):
-            response = client.post(
-                "/api/objects/locations",
-                json={"name": name, "description": '<a href="javascript:x()">Link</a>'},
-            )
-            assert response.status_code in (200, 503), response.text
-            if response.status_code == 200:
-                location = response.json()["created_object_id"]
-                assert client.get(f"/api/objects/locations/{location}").json()["description"] == (
-                    "<a>Link</a>"
-                )
-                break
-            assert (
-                client.get("/api/objects/locations", params={"query[]": f"name={name}"}).json()
-                == []
-            )
-        else:
-            pytest.fail("The purifier did not recover after its worker stopped")
+        fail_request.touch()
+        response = client.post(
+            "/api/objects/locations",
+            json={"name": name, "description": '<a href="javascript:x()">Link</a>'},
+        )
+        assert response.status_code == 503, response.text
+        assert client.get("/api/objects/locations", params={"query[]": f"name={name}"}).json() == []
+        response = client.post(
+            "/api/objects/locations",
+            json={"name": name, "description": '<a href="javascript:x()">Link</a>'},
+        )
+        assert response.status_code == 200, response.text
+        location = response.json()["created_object_id"]
+        assert client.get(f"/api/objects/locations/{location}").json()["description"] == (
+            "<a>Link</a>"
+        )
         pids = live_workers()
-        assert original_pids - {pid} < pids and len(pids - original_pids) == 1
-        with pytest.raises(ProcessLookupError):
-            os.kill(pid, 0)
-        for protocol_pid in original_pids - {pid}:
-            os.kill(protocol_pid, signal.SIGTERM)
-        for _ in range(3):
-            response = client.get(f"/api/objects/locations/{location}")
-            assert response.status_code in (200, 503), response.text
-            if response.status_code == 200:
-                assert response.json()["description"] == "<a>Link</a>"
-                break
-        else:
-            pytest.fail("The native HTTP worker did not recover")
-        recovered_pids = live_workers()
-        assert pids - original_pids < recovered_pids and len(recovered_pids - pids) == 1
-        pids = recovered_pids
         parameters = (("query[]", f"name={name}"), ("query[]", "description§Link"))
         matching = client.get("/api/objects/locations", params=parameters)
         assert matching.status_code == 200, matching.text

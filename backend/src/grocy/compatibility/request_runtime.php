@@ -3,6 +3,9 @@
 // Runtime inputs use the pinned packages in ../_vendor. Each has its own license.
 spl_autoload_register(function (string $class): void {
     $prefixes = [
+        'DI\\' => ['php-di/src/'],
+        'Invoker\\' => ['php-di-invoker/src/'],
+        'Laravel\\SerializableClosure\\' => ['laravel-serializable-closure/src/'],
         'Grocy\\Services\\' => ['grocy-core/services/'],
         'Grocy\\Controllers\\' => ['grocy-core/controllers/'],
         'Grocy\\Middleware\\' => ['grocy-core/middleware/'],
@@ -47,6 +50,7 @@ require __DIR__ . '/../_vendor/guzzlehttp-guzzle/src/functions_include.php';
 require __DIR__ . '/../_vendor/symfony-deprecation-contracts/function.php';
 require __DIR__ . '/file_service_runtime.php';
 require __DIR__ . '/../_vendor/nikic-fast-route/src/functions.php';
+require __DIR__ . '/../_vendor/php-di/src/functions.php';
 
 function parsedBody(string $raw, string $method, ?string $contentType)
 {

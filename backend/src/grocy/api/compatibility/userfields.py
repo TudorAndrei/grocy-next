@@ -17,7 +17,9 @@ async def get_userfields(
     session: DbSession,
 ) -> Response:
     result = await GenericObjectsService(session).get_userfields(
-        entity, object_id, request.app.state.input_purifier
+        entity,
+        object_id,
+        getattr(request.state, "native_runtime", request.app.state.input_purifier),
     )
     return native_response(result)
 
@@ -35,7 +37,7 @@ async def put_userfields(
         entity,
         object_id,
         await request.body(),
-        request.app.state.input_purifier,
+        getattr(request.state, "native_runtime", request.app.state.input_purifier),
         ", ".join(request.headers.getlist("content-type")),
     )
     return Response(status_code=204)

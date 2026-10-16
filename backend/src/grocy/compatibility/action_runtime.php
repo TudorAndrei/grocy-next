@@ -5,52 +5,21 @@ function nativeAction(array $request, NativeDatabase $database): array
 {
     $response = nativeApiResponse();
     try {
-        global $GROCY_DEFAULT_USER_SETTINGS;
-        $GROCY_DEFAULT_USER_SETTINGS = [];
-        define('GROCY_DEFAULT_PERMISSIONS', $request['default_permissions']);
-        foreach ($request['configuration'] as $name => $value) {
-            define($name, $value);
+        if (!defined('NATIVE_REQUEST_CONTEXT')) {
+            global $GROCY_DEFAULT_USER_SETTINGS;
+            $GROCY_DEFAULT_USER_SETTINGS = [];
+            define('GROCY_DEFAULT_PERMISSIONS', $request['default_permissions']);
+            foreach ($request['configuration'] as $name => $value) define($name, $value);
+            require __DIR__ . '/../_vendor/grocy-core/config-dist.php';
+            (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
         }
-        require __DIR__ . '/../_vendor/grocy-core/config-dist.php';
-        (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
-        $http = (new Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest(
-            $request['method'], $request['uri']
-        )->withoutHeader('Host');
-        foreach ($request['headers'] as [$name, $value]) {
-            $http = $http->withAddedHeader(base64_decode($name), base64_decode($value));
+        $http = nativeHttpRequest($request)->withBody(
+            (new Slim\Psr7\Factory\StreamFactory())->createStream(base64_decode($request['json'], true))
+        );
+        if ($request['route'] === 'authenticate') return nativeAuthenticate($request, $database, $http);
+        if (!defined('GROCY_AUTHENTICATED')) {
+            nativeAttachIdentity($database->users($request['user_id'] ?? GROCY_USER_ID), $http);
         }
-        $http = $http->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(
-            base64_decode($request['json'], true)
-        ));
-        $http = new Slim\Http\ServerRequest($http);
-        $_SERVER['HTTP_HOST'] = $http->getHeaderLine('Host');
-        if ($http->getUri()->getScheme() === 'https') $_SERVER['HTTPS'] = 'on';
-        if ($http->hasHeader('X-Forwarded-Proto')) $_SERVER['HTTP_X_FORWARDED_PROTO'] = $http->getHeaderLine('X-Forwarded-Proto');
-        if ($http->hasHeader('User-Agent')) $_SERVER['HTTP_USER_AGENT'] = $http->getHeaderLine('User-Agent');
-        if ($request['route'] === 'authenticate') {
-            (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'instance'))->setValue(
-                null, new NativeReadDatabaseService($database)
-            );
-            $app = nativeRouter();
-            $http = (new Slim\Middleware\RoutingMiddleware(
-                $app->getRouteResolver(), $app->getRouteCollector()->getRouteParser()
-            ))->performRouting($http);
-            $user = (new NativeApiKeyAuthMiddleware($request['arguments']['header']))->authenticate($http);
-            return nativeEncodedResponse($response->withJson([
-                'user_id' => $user === null ? null : $user->id,
-                'selected' => $database->authenticatedKeySelected,
-                'header' => base64_encode($http->getHeaderLine($request['arguments']['header'])),
-                'query_key' => is_string($http->getQueryParam($request['arguments']['header']))
-                    ? base64_encode($http->getQueryParam($request['arguments']['header'])) : null,
-                'secret' => is_string($http->getQueryParam('secret'))
-                    ? base64_encode($http->getQueryParam('secret')) : null,
-            ]));
-        }
-        $user = $database->users(GROCY_USER_ID);
-        define('GROCY_AUTHENTICATED', true);
-        define('GROCY_USER_USERNAME', $user->username);
-        define('GROCY_USER_PICTURE_FILE_NAME', $user->picture_file_name);
-        define('GROCY_LOCALE', (new NativeLocaleMiddleware())->selectLocale($http));
         [$controller, $method, $args] = match ($request['route']) {
             'task_complete' => [new NativeTasksController($database), 'MarkTaskAsCompleted', ['taskId' => $request['object_id']]],
             'task_undo' => [new NativeTasksController($database), 'UndoTask', ['taskId' => $request['object_id']]],
@@ -130,7 +99,9 @@ function nativeAction(array $request, NativeDatabase $database): array
             'error_details' => nativeErrorDetails($error),
         ]);
     } finally {
-        (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, null);
+        if (!defined('NATIVE_REQUEST_CONTEXT')) {
+            (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, null);
+        }
     }
     return nativeEncodedResponse($response);
 }

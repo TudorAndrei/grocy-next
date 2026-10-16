@@ -36,7 +36,11 @@ async def configure_compatibility_queries(session: AsyncSession) -> None:
     rows = await session.execute(
         select(UserSetting.key, UserSetting.value).where(UserSetting.user_id == user_id)
     )
-    settings = {**client_defaults()["user_settings"], **{key: value for key, value in rows}}
+    settings = {
+        **client_defaults()["user_settings"],
+        **session.info.get("native_user_defaults", {}),
+        **{key: value for key, value in rows},
+    }
 
     connection = await session.connection()
     await connection.run_sync(register_compatibility_functions, settings)

@@ -25,12 +25,17 @@ try {
     require __DIR__ . '/list_runtime.php';
     require __DIR__ . '/action_runtime.php';
     require __DIR__ . '/protocol_runtime.php';
+    require __DIR__ . '/context_runtime.php';
     define('GROCY_DATAPATH', $argv[3] ?? $argv[1]);
     if (!is_dir(GROCY_DATAPATH)) {
         mkdir(GROCY_DATAPATH, 0700, true);
     }
-    define('GROCY_MODE', 'production');
-    define('GROCY_USER_ID', (int)($argv[2] ?? 1));
+    if (($argv[2] ?? '1') === '-') {
+        define('NATIVE_REQUEST_CONTEXT', true);
+    } else {
+        define('GROCY_MODE', 'production');
+        define('GROCY_USER_ID', (int)($argv[2] ?? 1));
+    }
     if (!is_dir(GROCY_DATAPATH . '/viewcache')) {
         mkdir(GROCY_DATAPATH . '/viewcache', 0700, true);
     }
@@ -56,10 +61,6 @@ while (($line = fgets(STDIN)) !== false) {
     try {
         $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
         $id = $request['id'];
-        if (($request['operation'] ?? 'purify') === 'protocol') {
-            reply(['id' => $id, 'ok' => true, 'body' => nativeProtocol($request)]);
-            continue;
-        }
         if (($request['operation'] ?? 'purify') === 'sqlite_function') {
             try {
                 $value = nativeSqliteFunction($request['name'], $request['arguments']);
@@ -70,7 +71,7 @@ while (($line = fgets(STDIN)) !== false) {
             reply(['id' => $id, 'ok' => true, 'body' => $body]);
             continue;
         }
-        if (in_array($request['operation'] ?? 'purify', ['generic', 'field_write', 'field_read', 'generic_read', 'list_read', 'action'], true)) {
+        if (in_array($request['operation'] ?? 'purify', ['context', 'generic', 'field_write', 'field_read', 'generic_read', 'list_read', 'action'], true)) {
             reply(['id' => $id, 'ok' => true, 'body' => nativeDatabaseRequest($request, $nativeSchema)]);
             continue;
         }

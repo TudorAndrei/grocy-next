@@ -1,0 +1,26 @@
+{
+  "package": "laravel/serializable-closure",
+  "version": "v2.0.4",
+  "source": "https://github.com/laravel/serializable-closure.git",
+  "commit": "b352cf0534aa1ae6b4d825d1e762e35d43f8a841",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "src/Contracts/Serializable.php": "79b41fc264a780c02b44dc2e6bc39a45a5f2ae5a3c65e9b9ba8a479274b723d8",
+    "src/Contracts/Signer.php": "ea0d8bae268556e4ceada6cfab250e81cf5159299a3c423e2e8e7ec10b5f44f9",
+    "src/Exceptions/InvalidSignatureException.php": "48d8a92e8d123173fa22b0fe4b73d4c479782c0d700738c9d2dd089964c136b1",
+    "src/Exceptions/MissingSecretKeyException.php": "fa23f20825fec450ccd6aabeb265f4a24b0c88b394e9411f1942d0243f8b6fb9",
+    "src/Exceptions/PhpVersionNotSupportedException.php": "ac152d5135a8448d1def7f237902b06f219162170df61e74e2aa233976294936",
+    "src/SerializableClosure.php": "ae5ad6984ae554f77e55e96e1e9e8ee6a2c4448ce499da80f1d9f99932270ae0",
+    "src/Serializers/Native.php": "a480004d6d79a30d77add8e8f842c22675fe03dc92ffbd6d4a042dc87b680360",
+    "src/Serializers/Signed.php": "9aa6e67489b22c4fb30774c0093f991430a974031c5aca937951400167d1e3af",
+    "src/Signers/Hmac.php": "98787868794c6fbc2cef01f4bd9b2e4c3176fe276ec5228613b7ac0cecf7fe9b",
+    "src/Support/ClosureScope.php": "f572fd7333540f2d9866e8627c05db532c89d59015bb2d1101d73883fd4a5019",
+    "src/Support/ClosureStream.php": "a7743b54d1366d9701c2b1cc936dbc208c7f42c45b2faf3db31cfc231821ef25",
+    "src/Support/ReflectionClosure.php": "a215c929cf311e9f0425bc679179605ba6c64f73cb284230976923be0eb264af",
+    "src/Support/SelfReference.php": "893fe6ea49c05a95e475735f0044ecde606a4d828f74444e4ef3fadc753e0234",
+    "src/UnsignedSerializableClosure.php": "e25a2e489c87a0a326273bf31658c1fe4633d02e5a2ec37abc7427dab97d63cf"
+  }
+}

@@ -4,10 +4,16 @@ import base64
 from typing import Any
 
 from fastapi import Request, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from grocy.api.compatibility.responses import native_configuration
+from grocy.compatibility.generic import NativeStatements
 from grocy.compatibility.purifier import InputPurifier
+from grocy.compatibility.values import decode_value
+from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
+from grocy.db.session import get_session_factory
 
 
 class NativeProtocol:
@@ -24,11 +30,40 @@ class NativeProtocol:
         ):
             await self.app(scope, receive, send)
             return
-        runtime: InputPurifier = scope["app"].state.input_purifier
+        settings = get_settings()
+        parent: InputPurifier = scope["app"].state.input_purifier
+        runtime = InputPurifier(
+            settings.php_executable,
+            user_id=None,
+            datapath=settings.datapath.resolve(),
+            function_runtime=parent,
+        )
+        async with get_session_factory()() as session:
+            try:
+                await self.native_request(scope, receive, send, runtime, session)
+            finally:
+                await runtime.close()
+
+    async def native_request(
+        self,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+        runtime: InputPurifier,
+        session: AsyncSession,
+    ) -> None:
+        settings = get_settings()
+        request = Request(scope)
         method = scope["method"]
         try:
-            result: dict[str, Any] = await runtime.protocol(
-                method, scope.get("raw_path", path.encode())
+            result: dict[str, Any] = await runtime.request_context(
+                method=method,
+                uri=str(request.url),
+                headers=scope["headers"],
+                configuration=native_configuration(session),
+                default_permissions=settings.default_permissions,
+                api_key_header=settings.api_key_header,
+                execute=NativeStatements(session, runtime).execute,
             )
         except GrocyError as error:
             response = await grocy_error_handler(Request(scope), error)
@@ -36,6 +71,18 @@ class NativeProtocol:
                 response.body = b""
             await response(scope, receive, send)
             return
+        state = scope.setdefault("state", {})
+        state["native_runtime"] = runtime
+        state["grocy_session"] = session
+        state["native_context"] = result.get("context", {})
+        if context := result.get("context"):
+            session.info["native_user_defaults"] = {
+                "stock_due_soon_days": decode_value(context["stock_due_soon_days"])
+            }
+            base_path = context["base_path"]
+            if base_path and scope["path"].startswith(base_path):
+                scope["root_path"] = base_path
+                scope["grocy_api_path"] = scope["path"][len(base_path) :]
         cors = [
             (name.lower().encode(), ", ".join(values).encode())
             for name, values in result["headers"].items()

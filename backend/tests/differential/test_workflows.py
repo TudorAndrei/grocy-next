@@ -370,7 +370,8 @@ def test_authenticated_access_without_module_permissions(api, catalog):
                     }
                 elif resource in {"tasks", "batteries"}:
                     permission = (
-                        "TASKS_MARK_COMPLETED" if resource == "tasks"
+                        "TASKS_MARK_COMPLETED"
+                        if resource == "tasks"
                         else "BATTERIES_TRACK_CHARGE_CYCLE"
                     )
                     assert response.json()["error_message"] == f"Permission missing: {permission}"
@@ -2858,10 +2859,15 @@ def test_native_generic_json_uses_php_encoding(api):
     assert response.headers["content-type"] == "application/json"
     assert b'"description":"\\u00c4\\/\\ud83e\\uddc0"' in response.content
     assert response.json()["description"] == "Ä/🧀"
-    prefix = json.dumps(
-        {"id": record, "name": name, "description": "Ä/🧀", "row_created_timestamp": timestamp},
-        ensure_ascii=True, separators=(",", ":"),
-    ).replace("/", "\\/").encode()
+    prefix = (
+        json.dumps(
+            {"id": record, "name": name, "description": "Ä/🧀", "row_created_timestamp": timestamp},
+            ensure_ascii=True,
+            separators=(",", ":"),
+        )
+        .replace("/", "\\/")
+        .encode()
+    )
     assert response.content.startswith(prefix[:-1] + b",")
 
 
@@ -2934,8 +2940,13 @@ def test_native_nested_nonfinite_numbers_use_lessql_storage(api, method, number)
     marker = "number_" + uuid4().hex
     root = create(api, "shopping_list", note=marker + "_old") if method == "put" else None
     body = (
-        '{"note":"' + marker + '_root","shopping_listList":[{"note":"'
-        + marker + '_child","amount":' + number + '}]}'
+        '{"note":"'
+        + marker
+        + '_root","shopping_listList":[{"note":"'
+        + marker
+        + '_child","amount":'
+        + number
+        + "}]}"
     )
     path = "/api/objects/shopping_list" + (f"/{root}" if root is not None else "")
     response = getattr(api, method)(
@@ -3882,8 +3893,12 @@ def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure
         version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
         assert response.json() == {
             "error_message": (
-                ("There is no active transaction" if version >= (8, 4) else
-                 "SQLSTATE[HY000]: General error: 1 cannot rollback - no transaction is active")
+                (
+                    "There is no active transaction"
+                    if version >= (8, 4)
+                    else "SQLSTATE[HY000]: General error: 1 cannot rollback - "
+                    "no transaction is active"
+                )
                 if failure == "ROLLBACK"
                 else "SQLSTATE[23000]: Integrity constraint violation: 19 Merge blocked"
             )
@@ -4828,9 +4843,10 @@ def test_native_external_lookup_saves_image_and_unit_conversion(
                     "QU conversion already exists"
                 )
             }
-            assert {
-                (row["from_qu_id"], row["to_qu_id"], row["factor"]) for row in conversions
-            } == {(other_unit, unit, 1), (unit, other_unit, 1)}
+            assert {(row["from_qu_id"], row["to_qu_id"], row["factor"]) for row in conversions} == {
+                (other_unit, unit, 1),
+                (unit, other_unit, 1),
+            }
             barcodes = rows(api, "product_barcodes", product_id=product["id"])
             assert [row["barcode"] for row in barcodes] == [barcode_plugin.barcode]
         else:
@@ -5197,3 +5213,243 @@ def test_native_api_key_raw_bytes_and_nested_values(api, execute_sql, case, stat
             execute_sql(f"DELETE FROM api_keys WHERE CAST(api_key AS BLOB)=X'{prefix_key}'")
         if collision_key is not None:
             execute_sql(f"DELETE FROM api_keys WHERE CAST(api_key AS BLOB)=X'{collision_key}'")
+
+
+@pytest.fixture
+def runtime_configuration(api):
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if reference:
+        database = os.getenv("GROCY_REFERENCE_DATABASE")
+        if not database:
+            pytest.skip("Configuration checks need the disposable reference directory")
+        path = Path(database).parent / "config.php"
+    elif hasattr(api, "portal"):
+        path = get_settings().datapath / "config.php"
+    else:
+        pytest.skip("Configuration checks need access to the backend data directory")
+    previous = path.read_bytes() if path.exists() else None
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    def configure(code):
+        path.write_bytes(
+            b"<?php\n" + code.encode() + b"\n" + (previous or b"").removeprefix(b"<?php")
+        )
+
+    try:
+        yield configure
+    finally:
+        if previous is None:
+            path.unlink(missing_ok=True)
+        else:
+            path.write_bytes(previous)
+
+
+def test_native_configuration_defaults_and_saved_setting_precedence(api, runtime_configuration):
+    runtime_configuration(
+        "DefaultUserSetting('stock_due_soon_days', 37);"
+        "DefaultUserSetting('stock_decimal_places_amounts', 2);"
+        "DefaultUserSetting('native_nested_default', ['key' => [1, true, null]]);"
+        "Setting('CURRENCY', 'EUR');"
+    )
+    settings = api.get("/api/user/settings")
+    assert settings.status_code == 200, settings.text
+    assert settings.json()["stock_due_soon_days"] == 37
+    assert settings.json()["stock_decimal_places_amounts"] == 2
+    assert settings.json()["native_nested_default"] == {"key": [1, True, None]}
+    assert api.get("/api/system/config").json()["CURRENCY"] == "EUR"
+    path = "/api/user/settings/stock_decimal_places_amounts"
+    try:
+        assert api.put(path, json={"value": 3}).status_code == 204
+        assert api.get(path).json() == {"value": "3"}
+    finally:
+        assert api.delete(path).status_code == 204
+    assert api.get(path).json() == {"value": 2}
+    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 4);")
+    assert api.get("/api/user/settings/stock_due_soon_days").json() == {"value": 4}
+
+
+def test_native_configured_due_days_reach_recipe_sql(api, catalog, runtime_configuration):
+    from datetime import date
+
+    product, unit, *_ = catalog
+    recipe = create(api, "recipes", name=uuid4().hex)
+    create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=1, qu_id=unit)
+    due = (date.today() + timedelta(days=20)).isoformat()
+    assert (
+        api.post(
+            f"/api/stock/products/{product}/add", json={"amount": 1, "best_before_date": due}
+        ).status_code
+        == 200
+    )
+    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 37);")
+    assert rows(api, "recipes_pos_resolved", recipe_id=recipe)[0]["due_score"] == 1
+    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 4);")
+    assert rows(api, "recipes_pos_resolved", recipe_id=recipe)[0]["due_score"] == 0
+
+
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [
+        (
+            "Setting('MODE', 'wrong');",
+            'Invalid mode "wrong" set, only production, dev, demo, prerelease allowed',
+        ),
+        (
+            "Setting('DEFAULT_LOCALE', 'wrong');",
+            'Invalid locale "wrong" set, locale needs to exist in folder localization',
+        ),
+        ("Setting('CURRENCY', 'EURO');", "CURRENCY is not in ISO 4217 format (three letter code)"),
+        (
+            "Setting('CALENDAR_FIRST_DAY_OF_WEEK', 7);",
+            "Invalid value for CALENDAR_FIRST_DAY_OF_WEEK",
+        ),
+        (
+            "Setting('MEAL_PLAN_FIRST_DAY_OF_WEEK', -2);",
+            "Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK",
+        ),
+        (
+            "DefaultUserSetting('auto_night_mode_time_range_from', '25:00');",
+            "auto_night_mode_time_range_from is not in HH:mm format (25:00)",
+        ),
+    ],
+)
+def test_native_configuration_errors_precede_http_and_authentication(
+    api, runtime_configuration, code, message
+):
+    runtime_configuration(code)
+    for method in ("GET", "OPTIONS"):
+        response = api.request(method, "/api/user", headers={"GROCY-API-KEY": "invalid"})
+        assert response.status_code == 200, response.text
+        assert response.text == "Invalid setting in config.php: " + message
+        assert response.headers["content-type"] == "text/html; charset=UTF-8"
+        assert "access-control-allow-origin" not in response.headers
+
+
+@pytest.mark.parametrize("mode", ["disabled", "dev"])
+def test_native_authentication_bypass_uses_default_identity(api, runtime_configuration, mode):
+    runtime_configuration(
+        "Setting('DISABLE_AUTH', true);"
+        if mode == "disabled"
+        else "Setting('MODE', 'dev'); ini_set('display_errors', '0');"
+    )
+    response = api.get("/api/user", headers={"GROCY-API-KEY": "invalid"})
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["id"] == 1
+
+
+@pytest.mark.parametrize(
+    "case", ["valid", "expired", "null", "orphan-key", "duplicate", "percent", "plus", "array"]
+)
+def test_native_session_cookie_authentication_and_use_time(api, execute_sql, case):
+    key = uuid4().hex + (" a+b" if case in {"percent", "plus"} else "")
+    expiry = (
+        "NULL"
+        if case == "null"
+        else "'2000-01-01 00:00:00'"
+        if case == "expired"
+        else "'2999-12-31 23:59:59'"
+    )
+    execute_sql(f"INSERT INTO sessions(session_key,user_id,expires) VALUES ('{key}',1,{expiry})")
+    headers = {"GROCY-API-KEY": "", "Cookie": "grocy_session=" + key}
+    orphan = uuid4().hex
+    if case == "duplicate":
+        headers["Cookie"] += "; grocy_session=invalid"
+    elif case == "percent":
+        headers["Cookie"] = "grocy_session=" + key.replace(" ", "%20").replace("+", "%2B")
+    elif case == "array":
+        headers["Cookie"] = "grocy_session[]=" + key
+    elif case == "orphan-key":
+        execute_sql(
+            "INSERT INTO api_keys(api_key,user_id,expires) "
+            f"VALUES ('{orphan}',2147483647,'2999-12-31 23:59:59')"
+        )
+        headers["GROCY-API-KEY"] = orphan
+    valid = case not in {"expired", "null", "array"}
+    try:
+        response = api.get("/api/user", headers=headers)
+        assert response.status_code == (200 if valid else 401), response.text
+        if valid:
+            assert response.json()[0]["id"] == 1
+        used = execute_sql(f"SELECT last_used FROM sessions WHERE session_key='{key}'")[0][0]
+        assert bool(used) == valid
+    finally:
+        execute_sql(f"DELETE FROM sessions WHERE session_key='{key}'")
+        execute_sql(f"DELETE FROM api_keys WHERE api_key='{orphan}'")
+
+
+@pytest.mark.parametrize("case", ["new", "missing", "duplicate", "env"])
+def test_native_reverse_proxy_identity_and_default_permissions(
+    api, execute_sql, runtime_configuration, case
+):
+    runtime_configuration(
+        "Setting('AUTH_CLASS', 'Grocy\\\\Middleware\\\\ReverseProxyAuthMiddleware');"
+        "Setting('DEFAULT_PERMISSIONS', ['TASKS_MARK_COMPLETED']);"
+        + (
+            "Setting('REVERSE_PROXY_AUTH_USE_ENV', true);"
+            "Setting('REVERSE_PROXY_AUTH_HEADER', 'HTTP_REMOTE_USER');"
+            if case == "env"
+            else "Setting('REVERSE_PROXY_AUTH_HEADER', 'Remote-User');"
+        )
+    )
+    username = "proxy-" + uuid4().hex
+    headers = [("GROCY-API-KEY", "")]
+    if case != "missing":
+        headers.append(("Remote-User", username))
+    if case == "duplicate":
+        headers.append(("Remote-User", "second"))
+        username += ", second"
+    response = api.get("/api/user", headers=headers)
+    if case == "missing":
+        assert response.status_code == 500, response.text
+        assert response.json()["error_message"] == (
+            "ReverseProxyAuthMiddleware: Remote-User header is missing or invalid"
+        )
+        return
+    assert response.status_code == 200, response.text
+    user = response.json()[0]
+    assert user["username"] == username
+    assert api.get("/api/user", headers=headers).json()[0]["id"] == user["id"]
+    assert api.get("/api/objects/tasks", headers=headers).status_code == 200
+    task = create(api, "tasks", name=uuid4().hex)
+    assert api.post(f"/api/tasks/{task}/complete", headers=headers, json={}).status_code == 204
+    assert (
+        api.post("/api/objects/tasks", headers=headers, json={"name": uuid4().hex}).status_code
+        == 403
+    )
+    assert execute_sql(
+        "SELECT COUNT(*) FROM user_permissions p JOIN permission_hierarchy h "
+        f"ON p.permission_id=h.id WHERE p.user_id={user['id']} AND h.name='TASKS_MARK_COMPLETED'"
+    ) == [(1,)]
+
+
+@pytest.mark.parametrize(
+    "auth_class", ["ApiKeyAuthMiddleware", "SessionAuthMiddleware", "LdapAuthMiddleware"]
+)
+def test_native_configured_authentication_class_selects_credentials(
+    api, execute_sql, runtime_configuration, auth_class
+):
+    runtime_configuration(f"Setting('AUTH_CLASS', 'Grocy\\\\Middleware\\\\{auth_class}');")
+    key, cookie = uuid4().hex, uuid4().hex
+    execute_sql(
+        f"INSERT INTO api_keys(api_key,user_id,expires) VALUES ('{key}',1,'2999-12-31 23:59:59')"
+    )
+    execute_sql(
+        "INSERT INTO sessions(session_key,user_id,expires) "
+        f"VALUES ('{cookie}',1,'2999-12-31 23:59:59')"
+    )
+    try:
+        by_key = api.get("/api/user", headers={"GROCY-API-KEY": key, "Cookie": ""})
+        assert by_key.status_code == (401 if auth_class == "SessionAuthMiddleware" else 200), (
+            by_key.text
+        )
+        by_cookie = api.get(
+            "/api/user", headers={"GROCY-API-KEY": "", "Cookie": "grocy_session=" + cookie}
+        )
+        assert by_cookie.status_code == (401 if auth_class == "ApiKeyAuthMiddleware" else 200), (
+            by_cookie.text
+        )
+    finally:
+        execute_sql(f"DELETE FROM api_keys WHERE api_key='{key}'")
+        execute_sql(f"DELETE FROM sessions WHERE session_key='{cookie}'")

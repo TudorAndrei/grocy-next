@@ -1,0 +1,27 @@
+{
+  "package": "php-di/invoker",
+  "version": "2.3.6",
+  "source": "https://github.com/PHP-DI/Invoker.git",
+  "commit": "59f15608528d8a8838d69b422a919fd6b16aa576",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "7d4d13e96f05ca304a601fb84e052c03efa0c134ac3d1d639ea4fab6b0e1572f",
+    "src/CallableResolver.php": "e7f01f292d2a216e031afbd0d6f7d04ef5923002ee36ca2e1491d172746d18c9",
+    "src/Exception/InvocationException.php": "72e9426b9970e64f516b1c286a2b3de43a26552ffddaba49dbc8eaaac71f726e",
+    "src/Exception/NotCallableException.php": "658bd1f4316f39d3529a8aa9f57643c99e665efd2ceac64e108abd847e82cf39",
+    "src/Exception/NotEnoughParametersException.php": "3470ef72c233170ced17502347d260f26371c89838aefbd0a06092f069cf1618",
+    "src/Invoker.php": "f281a50f84c7bda662758bb49165ae7ad29180819c772af74002d84ca17526f8",
+    "src/InvokerInterface.php": "3bad426241de52af48b6e18b8b56d2cc905fa3e8efd2c4fe7c4dccaad47238ea",
+    "src/ParameterResolver/AssociativeArrayResolver.php": "6614489a17bb126c572439a93989c5f5258bc5453bee799a95a1e39911666345",
+    "src/ParameterResolver/Container/ParameterNameContainerResolver.php": "a04743f49d076da2c14a997ff246f33a002399644506e4874819071961718c0a",
+    "src/ParameterResolver/Container/TypeHintContainerResolver.php": "560bb0d9f8dd0f0a60c4f8d295edce8125fdecb98f5037ce60f10abf0b65528c",
+    "src/ParameterResolver/DefaultValueResolver.php": "77e75d57d585f400416819d37a16ab9941b9f5ece279d0f2a749737c48202cc6",
+    "src/ParameterResolver/NumericArrayResolver.php": "5573a18cc28297b966c0be65784a8dba46a9944c75a30383b2877332296c0a57",
+    "src/ParameterResolver/ParameterResolver.php": "f9cdc422caad0f77a937d571a1a7c781af54a2d07089f767ba1c55efd07ff13c",
+    "src/ParameterResolver/ResolverChain.php": "cf46519ec4bf835bd28f9d238e05b482c8b8ae1b0b36f973de1433d4431347e2",
+    "src/ParameterResolver/TypeHintResolver.php": "cb9a7e0446584f0d04b0e89463e309b9f21a969b2cfb6b9abfc5af0f4614a84e",
+    "src/Reflection/CallableReflection.php": "acf92c2f7f356e713f2654a9ef5dbde7d3393432d61991131b931186819094cd"
+  }
+}

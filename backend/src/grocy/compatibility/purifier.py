@@ -1,5 +1,7 @@
 """Run the pinned PHP request, field, and database logic."""
 
+from __future__ import annotations
+
 import asyncio
 import base64
 import json
@@ -15,10 +17,18 @@ from grocy.core.time import server_timezone
 
 
 class InputPurifier:
-    def __init__(self, executable: str, *, user_id: int = 1, datapath: Path | None = None) -> None:
+    def __init__(
+        self,
+        executable: str,
+        *,
+        user_id: int | None = 1,
+        datapath: Path | None = None,
+        function_runtime: InputPurifier | None = None,
+    ) -> None:
         self.executable = executable
         self.user_id = user_id
         self.datapath = datapath
+        self.function_runtime = function_runtime
         self.php_version = ""
         self._lock = asyncio.Lock()
         self._process: asyncio.subprocess.Process | None = None
@@ -26,7 +36,6 @@ class InputPurifier:
         self._cache: TemporaryDirectory[str] | None = None
         self._sequence = 0
         self._functions: InputPurifier | None = None
-        self._protocol: InputPurifier | None = None
 
     async def start(self) -> None:
         async with self._lock:
@@ -49,7 +58,7 @@ class InputPurifier:
                 f"date.timezone={server_timezone().key}",
                 str(Path(__file__).with_suffix(".php")),
                 self._cache.name,
-                str(self.user_id),
+                str(self.user_id) if self.user_id is not None else "-",
                 str(self.datapath or self._cache.name),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
@@ -77,16 +86,32 @@ class InputPurifier:
             while await process.stderr.read(8192):
                 pass
 
-    async def protocol(self, method: str, path: bytes) -> dict[str, Any]:
-        if self._protocol is None:
-            self._protocol = InputPurifier(self.executable)
-        return await self._protocol._request(
+    async def request_context(
+        self,
+        *,
+        method: str,
+        uri: str,
+        headers: list[tuple[bytes, bytes]],
+        configuration: dict[str, Any],
+        default_permissions: list[str],
+        api_key_header: str,
+        execute: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        return await self._request(
             b"",
             {
-                "operation": "protocol",
+                "operation": "context",
                 "method": method,
-                "path": base64.b64encode(path).decode("ascii"),
+                "uri": uri,
+                "headers": [
+                    [base64.b64encode(name).decode(), base64.b64encode(value).decode()]
+                    for name, value in headers
+                ],
+                "configuration": configuration,
+                "default_permissions": default_permissions,
+                "api_key_header": api_key_header,
             },
+            execute=execute,
         )
 
     async def purify(self, body: bytes) -> Any:
@@ -175,6 +200,8 @@ class InputPurifier:
         )
 
     async def sqlite_function(self, name: str, arguments: tuple) -> dict[str, Any]:
+        if self.function_runtime is not None:
+            return await self.function_runtime.sqlite_function(name, arguments)
         # A separate worker can answer while the main worker waits for SQLite.
         if self._functions is None:
             self._functions = InputPurifier(self.executable)
@@ -209,7 +236,11 @@ class InputPurifier:
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         # Grocy's current user is a PHP constant. Each action owns its request context.
-        worker = InputPurifier(self.executable, user_id=user_id, datapath=datapath)
+        worker = (
+            self
+            if self.user_id is None
+            else InputPurifier(self.executable, user_id=user_id, datapath=datapath)
+        )
         try:
             return await worker._request(
                 body,
@@ -217,6 +248,7 @@ class InputPurifier:
                     "operation": "action",
                     "route": route,
                     "object_id": object_id,
+                    "user_id": user_id,
                     "method": method,
                     "content_type": content_type,
                     "query_string": base64.b64encode(query_string).decode("ascii"),
@@ -232,7 +264,8 @@ class InputPurifier:
                 execute=execute,
             )
         finally:
-            await worker.close()
+            if worker is not self:
+                await worker.close()
 
     async def _request(
         self,
@@ -313,9 +346,6 @@ class InputPurifier:
             if self._functions is not None:
                 await self._functions.close()
                 self._functions = None
-            if self._protocol is not None:
-                await self._protocol.close()
-                self._protocol = None
             if self._cache is not None:
                 self._cache.cleanup()
                 self._cache = None

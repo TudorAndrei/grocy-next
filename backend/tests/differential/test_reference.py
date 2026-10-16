@@ -63,10 +63,12 @@ def printer(reference, monkeypatch):
             self.statuses = []
 
         def setting(self, name, value):
-            path = overrides / f"{name}.txt"
-            if path not in previous:
-                previous[path] = path.read_bytes() if path.exists() else None
-            path.write_text(str(value).lower() if isinstance(value, bool) else value)
+            for directory in (overrides, get_settings().datapath / "settingoverrides"):
+                directory.mkdir(parents=True, exist_ok=True)
+                path = directory / f"{name}.txt"
+                if path not in previous:
+                    previous[path] = path.read_bytes() if path.exists() else None
+                path.write_text(str(value).lower() if isinstance(value, bool) else value)
             monkeypatch.setattr(get_settings(), name.lower(), value)
 
     received = Printer()
@@ -1811,9 +1813,11 @@ def thermal_printer(reference, monkeypatch, tmp_path):
         output = tmp_path / "receipt"
 
         def setting(self, name, value):
-            path = overrides / f"{name}.txt"
-            previous.setdefault(path, path.read_bytes() if path.exists() else None)
-            path.write_text(str(value).lower() if isinstance(value, bool) else str(value))
+            for directory in (overrides, get_settings().datapath / "settingoverrides"):
+                directory.mkdir(parents=True, exist_ok=True)
+                path = directory / f"{name}.txt"
+                previous.setdefault(path, path.read_bytes() if path.exists() else None)
+                path.write_text(str(value).lower() if isinstance(value, bool) else str(value))
             monkeypatch.setattr(get_settings(), name.lower(), value)
             if name in aliases:
                 monkeypatch.setattr(get_settings(), aliases[name], value)

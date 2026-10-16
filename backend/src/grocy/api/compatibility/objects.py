@@ -20,7 +20,10 @@ async def list_objects(
     session: DbSession,
 ) -> Response:
     result = await GenericObjectsService(session).read_objects(
-        entity, None, request.scope["query_string"], request.app.state.input_purifier
+        entity,
+        None,
+        request.scope["query_string"],
+        getattr(request.state, "native_runtime", request.app.state.input_purifier),
     )
     return native_response(result)
 
@@ -36,7 +39,7 @@ async def create_object(
         result = await GenericObjectsService(session).create_entity(
             entity,
             await request.body(),
-            request.app.state.input_purifier,
+            getattr(request.state, "native_runtime", request.app.state.input_purifier),
             ", ".join(request.headers.getlist("content-type")),
         )
     except DBAPIError as error:
@@ -54,7 +57,10 @@ async def get_object(
     session: DbSession,
 ) -> Response:
     result = await GenericObjectsService(session).read_objects(
-        entity, object_id, request.scope["query_string"], request.app.state.input_purifier
+        entity,
+        object_id,
+        request.scope["query_string"],
+        getattr(request.state, "native_runtime", request.app.state.input_purifier),
     )
     return native_response(result)
 
@@ -72,7 +78,7 @@ async def update_object(
             entity,
             object_id,
             await request.body(),
-            request.app.state.input_purifier,
+            getattr(request.state, "native_runtime", request.app.state.input_purifier),
             ", ".join(request.headers.getlist("content-type")),
         )
     except DBAPIError as error:
@@ -97,7 +103,9 @@ async def delete_object(
 ) -> Response:
     try:
         await GenericObjectsService(session).delete_entity(
-            entity, object_id, request.app.state.input_purifier
+            entity,
+            object_id,
+            getattr(request.state, "native_runtime", request.app.state.input_purifier),
         )
     except DBAPIError as error:
         await session.rollback()

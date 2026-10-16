@@ -23,7 +23,9 @@ def native_response(result: dict[str, Any]) -> Response:
 async def native_list_response(
     request: Request, session: AsyncSession, route: str, object_id: str | None = None
 ) -> Response:
-    runtime: InputPurifier = request.app.state.input_purifier
+    runtime: InputPurifier = getattr(
+        request.state, "native_runtime", request.app.state.input_purifier
+    )
     result = await runtime.native_list(
         route=route,
         object_id=object_id,
@@ -33,17 +35,7 @@ async def native_list_response(
     return native_response(result)
 
 
-async def native_action_response(
-    request: Request,
-    session: AsyncSession,
-    route: str,
-    object_id: str,
-    user_id: int,
-    *,
-    arguments: dict[str, str] | None = None,
-    body: bytes | None = None,
-) -> Response:
-    runtime: InputPurifier = request.app.state.input_purifier
+def native_configuration(session: AsyncSession) -> dict[str, Any]:
     settings = get_settings()
     configuration: dict[str, Any] = {
         "GROCY_" + name: value for name, value in settings.feature_flags().items()
@@ -53,6 +45,7 @@ async def native_action_response(
         GROCY_DISABLE_URL_REWRITING=settings.disable_url_rewriting,
         GROCY_DEFAULT_LOCALE=settings.default_locale,
         GROCY_DISABLE_AUTH=False,
+        GROCY_MODE=settings.mode,
         GROCY_CURRENCY=settings.currency,
         GROCY_STOCK_BARCODE_LOOKUP_PLUGIN=settings.stock_barcode_lookup_plugin,
         NATIVE_FILES_ROOT=str(settings.files_root.resolve()),
@@ -68,6 +61,24 @@ async def native_action_response(
     configuration["NATIVE_DATABASE_FILE"] = (
         str(Path(filename).resolve()) if filename and filename != ":memory:" else None
     )
+    return configuration
+
+
+async def native_action_response(
+    request: Request,
+    session: AsyncSession,
+    route: str,
+    object_id: str,
+    user_id: int,
+    *,
+    arguments: dict[str, str] | None = None,
+    body: bytes | None = None,
+) -> Response:
+    runtime: InputPurifier = getattr(
+        request.state, "native_runtime", request.app.state.input_purifier
+    )
+    settings = get_settings()
+    configuration = native_configuration(session)
     result = await runtime.native_action(
         route=route,
         object_id=object_id,

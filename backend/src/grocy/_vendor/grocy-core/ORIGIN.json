@@ -361,6 +361,12 @@
     "controllers/OpenApiController.php": "8ec700a4625ead5d0d221dafc80d6b66323bcfe8af54eb3fe14e32c144d6890d",
     "middleware/CorsMiddleware.php": "2967a8044ca3644d09c6d38cc4066f2b54be449516fc1848825ddd70194b0970",
     "middleware/AuthMiddleware.php": "5cd8cc8cdb67657cb2b0262cb1928bfd44037212fa7836508a42257e27a55bec",
-    "middleware/ApiKeyAuthMiddleware.php": "ecf18bf055bc990ef7c760eaf9f0b1f6e9c9bbdc7ea4e4d7a9eb41bd2c6fed21"
+    "middleware/ApiKeyAuthMiddleware.php": "ecf18bf055bc990ef7c760eaf9f0b1f6e9c9bbdc7ea4e4d7a9eb41bd2c6fed21",
+    "helpers/ConfigurationValidator.php": "be21897290fe95103b62d5d1f560380d0ce8d3c0a6f48a931ff9ab81f1ef09bc",
+    "services/SessionService.php": "0f6d6cdf3373db16667acc02fc34ec3eb0d0e383d674cdb06335f7c4adea11d6",
+    "middleware/DefaultAuthMiddleware.php": "04875f38c07f6d678887adf2c1867641011e7859b776f979d8ce55c9f611b0ec",
+    "middleware/SessionAuthMiddleware.php": "223f814efc5bb5446722d79688337d140704d6f05c0b499664e37ffee5bc0057",
+    "middleware/ReverseProxyAuthMiddleware.php": "c5740d7324f4ecf8ef36b1da2938c857379d416835b5ec191c2dc25b2eef838c",
+    "middleware/LdapAuthMiddleware.php": "c80269e0772a973d7ca3ea3fc65e1695b3432c3e02eed05d7b9e263a78912d95"
   }
 }

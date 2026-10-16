@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     app_name: str = "grocy-next"
     php_executable: str = "php"
+    mode: str = "production"
     currency: str = "USD"
     default_locale: str = "en"
     base_url: str = "/"

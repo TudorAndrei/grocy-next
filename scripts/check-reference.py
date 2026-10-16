@@ -131,6 +131,8 @@ def run_reference(
                     php,
                     "-d",
                     f"date.timezone={timezone}",
+                    "-d",
+                    "opcache.enable=0",
                     "-S",
                     f"127.0.0.1:{port}",
                     "-t",
