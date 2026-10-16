@@ -5018,12 +5018,21 @@ def test_native_setting_dates_do_not_block_requests(api, execute_sql, timestamp)
         ("query-array", 401, False),
         ("query-array-override", 200, True),
         ("query-array-extra", 500, False),
+        ("named-query", 200, True),
+        ("unknown-name", 500, False),
+        ("nested-selected", 500, True),
     ],
 )
 def test_native_api_key_checks_and_use_records(api, execute_sql, case, expected_status, used):
     from grocy.core.time import server_timezone
 
-    key = "0" if case == "zero" else "native-auth-" + uuid4().hex
+    key = (
+        "0"
+        if case == "zero"
+        else "Array"
+        if case == "nested-selected"
+        else "native-auth-" + uuid4().hex
+    )
     now = datetime.now(server_timezone())
     expires = "2999-12-31 23:59:59"
     if case == "null-expiry":
@@ -5038,8 +5047,7 @@ def test_native_api_key_checks_and_use_records(api, execute_sql, case, expected_
     expiry_sql = "NULL" if expires is None else f"'{expires}'"
     user_id = 2147483647 if case == "orphan" else 1
     execute_sql(
-        "INSERT INTO api_keys(api_key,user_id,expires) "
-        f"VALUES ('{key}',{user_id},{expiry_sql})"
+        f"INSERT INTO api_keys(api_key,user_id,expires) VALUES ('{key}',{user_id},{expiry_sql})"
     )
     headers = [("GROCY-API-KEY", key)]
     params = []
@@ -5059,6 +5067,22 @@ def test_native_api_key_checks_and_use_records(api, execute_sql, case, expected_
             )
         if case == "query-array-extra":
             params.append(("GROCY-API-KEY[]", "extra"))
+    if case in {"named-query", "unknown-name", "nested-selected"}:
+        headers = [("GROCY-API-KEY", "invalid")]
+        if case == "named-query":
+            params = [
+                ("GROCY-API-KEY[:1]", key),
+                ("GROCY-API-KEY[:2]", "0000-01-01 00:00:00"),
+                ("GROCY-API-KEY[:3]", "default"),
+            ]
+        elif case == "unknown-name":
+            params = [("GROCY-API-KEY[unknown]", key)]
+        else:
+            params = [
+                ("GROCY-API-KEY[0][]", "invalid"),
+                ("GROCY-API-KEY[1]", "0000-01-01 00:00:00"),
+                ("GROCY-API-KEY[2]", "default"),
+            ]
     try:
         for _ in range(2):
             before = datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S")
@@ -5073,8 +5097,103 @@ def test_native_api_key_checks_and_use_records(api, execute_sql, case, expected_
             if expected_status == 401:
                 assert response.content == b""
             elif expected_status == 500:
-                assert response.json()["error_message"] == (
-                    "SQLSTATE[HY000]: General error: 25 column index out of range"
-                )
+                if case == "nested-selected":
+                    assert response.json()["error_message"] == (
+                        "PDO::quote(): Argument #1 ($string) must be of type string, array given"
+                    )
+                else:
+                    assert response.json()["error_message"] == (
+                        "SQLSTATE[HY000]: General error: 25 column index out of range"
+                    )
     finally:
         execute_sql(f"DELETE FROM api_keys WHERE api_key='{key}'")
+
+
+@pytest.mark.parametrize(
+    "case,status,used",
+    [
+        ("invalid-query", 401, False),
+        ("invalid-header", 401, False),
+        ("nested-query", 401, False),
+        ("stored-query", 200, True),
+        ("stored-header", 200, True),
+        ("stored-header-collision", 200, True),
+        ("stored-nul-missing-query", 401, True),
+        ("stored-nul-prefix-query", 200, True),
+        ("stored-binary-nul-prefix-query", 200, True),
+    ],
+)
+def test_native_api_key_raw_bytes_and_nested_values(api, execute_sql, case, status, used):
+    from urllib.parse import quote_from_bytes
+
+    key = b"native-byte-" + uuid4().hex.encode() + b"\xff"
+    prefix_key = None
+    collision_key = None
+    if case == "stored-header-collision":
+        collision_key = key.decode("latin1").encode().hex()
+        execute_sql(
+            "INSERT INTO api_keys(api_key,user_id,expires,key_type) "
+            f"VALUES (CAST(X'{collision_key}' AS TEXT),2147483647,NULL,'grocy-next')"
+        )
+    if "nul" in case:
+        prefix = key if "binary" in case else key[:-1]
+        key = prefix + b"\0tail"
+        if "prefix" in case:
+            prefix_key = prefix.hex()
+            execute_sql(
+                "INSERT INTO api_keys(api_key,user_id,expires) "
+                f"VALUES (CAST(X'{prefix_key}' AS TEXT),1,'2999-12-31 23:59:59')"
+            )
+    hex_key = key.hex()
+    if used:
+        execute_sql(
+            "INSERT INTO api_keys(api_key,user_id,expires) "
+            f"VALUES (CAST(X'{hex_key}' AS TEXT),1,'2999-12-31 23:59:59')"
+        )
+    try:
+        for _ in range(2):
+            if "header" in case:
+                headers = [(b"GROCY-API-KEY", key)]
+                if hasattr(api, "portal"):
+                    # TestClient encodes non-ASCII header values again. ASGITransport
+                    # passes request.headers.raw to the same production application.
+                    async def send(current_headers):
+                        async with httpx.AsyncClient(
+                            transport=httpx.ASGITransport(app=api.app),
+                            base_url=str(api.base_url),
+                        ) as client:
+                            return await client.get("/api/system/info", headers=current_headers)
+
+                    response = api.portal.call(send, headers)
+                else:
+                    response = api.get("/api/system/info", headers=headers)
+            else:
+                query = (
+                    "GROCY-API-KEY[][]=invalid"
+                    if case == "nested-query"
+                    else "GROCY-API-KEY=" + quote_from_bytes(key, safe="")
+                )
+                response = api.get(
+                    "/api/system/info?" + query, headers={"GROCY-API-KEY": "invalid"}
+                )
+            assert response.status_code == status, response.text
+            if status == 401:
+                assert response.content == b""
+            else:
+                assert response.json()["grocy_version"]["Version"] == "4.5.0"
+            if used:
+                last_used = execute_sql(
+                    f"SELECT last_used FROM api_keys WHERE CAST(api_key AS BLOB)=X'{hex_key}'"
+                )[0][0]
+                assert isinstance(last_used, str) and len(last_used) == 19
+            if prefix_key is not None:
+                assert execute_sql(
+                    f"SELECT last_used FROM api_keys WHERE CAST(api_key AS BLOB)=X'{prefix_key}'"
+                ) == [(None,)]
+    finally:
+        if used:
+            execute_sql(f"DELETE FROM api_keys WHERE CAST(api_key AS BLOB)=X'{hex_key}'")
+        if prefix_key is not None:
+            execute_sql(f"DELETE FROM api_keys WHERE CAST(api_key AS BLOB)=X'{prefix_key}'")
+        if collision_key is not None:
+            execute_sql(f"DELETE FROM api_keys WHERE CAST(api_key AS BLOB)=X'{collision_key}'")

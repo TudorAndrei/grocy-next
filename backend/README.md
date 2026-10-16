@@ -66,6 +66,9 @@ Expiry uses the local server clock and a strict whole-second comparison. Null ex
 Valid credentials save `last_used` before the user lookup. The main database file time stays unchanged.
 Application keys use the separate `grocy-next` type and retain their existing expiry rules.
 Revision 0023 separates saved application keys and protects imported native key identities.
+Prepared parameters use native PDO validation and string conversion.
+Invalid UTF-8 text remains raw bytes until the original PHP controller encodes its response.
+Native key headers and query values retain these bytes. Nested query arrays use PDO's original conversion.
 The web recipe page uses `/api/v2/recipes/{id}` routes for selected servings and ingredient details.
 Set `TZ` to select the same server time zone for Python and the PHP workers.
 User, permission, and single-setting operations also use the original Grocy controller.

@@ -1,5 +1,7 @@
 <?php
 
+require __DIR__ . '/binding_runtime.php';
+
 // Execute Grocy 4.5.0's pinned LessQL against the application's SQLite connection.
 // The private schema checks native column names before local extensions can affect SQL.
 class NativeDatabase extends LessQL\Database
@@ -25,7 +27,18 @@ class NativeDatabase extends LessQL\Database
                 $columns[] = $check->getColumnMeta($index)['name'];
             }
         }
-        return new NativeStatement($this, $query, $this->context, $columns);
+        return new NativeStatement($this, $query, $this->context, $columns, new NativeBindings($this->schema, $query));
+    }
+
+    public function quote($value)
+    {
+        $quoted = parent::quote($value);
+        if (!mb_check_encoding($quoted, 'UTF-8') && str_starts_with($quoted, "'") && str_ends_with($quoted, "'")) {
+            // Preserve the original PDO quote result, including NUL truncation.
+            $text = str_replace("''", "'", substr($quoted, 1, -1));
+            return "(+CAST(X'" . bin2hex($text) . "' AS TEXT))";
+        }
+        return $quoted;
     }
 
     public function lastInsertId($sequence = null)
@@ -146,6 +159,7 @@ class NativeStatement
         private string $query,
         private array $context,
         private ?array $columns,
+        private ?NativeBindings $bindings = null,
     ) {
     }
 
@@ -156,8 +170,13 @@ class NativeStatement
 
     public function execute($parameters = null)
     {
+        $query = $this->bindings === null ? $this->query : $this->bindings->execute($parameters);
+        $context = $this->context;
+        if (isset($context['before_query']) && $this->bindings !== null) {
+            $context['before_query'] = $this->bindings->renderRelated($context['before_query']);
+        }
         $result = Fiber::suspend([
-            'query' => $this->query, 'parameters' => $parameters ?? [], 'context' => $this->context,
+            'query' => $query, 'context' => $context, 'columns' => $this->columns,
         ]);
         if ($result['transaction_aborted'] ?? false) {
             $this->database->sqliteAbortedTransaction();

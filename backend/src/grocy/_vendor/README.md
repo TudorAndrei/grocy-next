@@ -97,5 +97,8 @@ Native authentication uses the unchanged API key middleware, its base middleware
 The adapter supplies the request, route context, and application database connection.
 The original service retains local expiry, credential order, use timestamps, and orphan-user behavior.
 The database adapter restores the main file timestamp after the native use update.
-PDO leaves omitted bindings null and rejects extra bindings with SQLite error 25.
-The Python statement adapter retains both rules when the driver reports a binding count error.
+The binding adapter validates parameters through native PDO EXPLAIN statements.
+It retains parameter names, string conversion, omitted values, and SQLite error 25.
+Nested arrays use PDO's `Array` text. Binary text retains its bytes and SQLite text type.
+The adapter sends completed SQL to Python, so Python does not convert native parameters.
+Original response columns retain their native names and order.

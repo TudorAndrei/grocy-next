@@ -213,3 +213,12 @@ Missing bindings become null. Extra bindings return the original SQLite error 25
 Application keys use the separate `grocy-next` type. Their UTC expiry and null expiry rules remain available.
 Application calendar keys keep their existing scope. An application header key takes precedence over query keys.
 Revision 0023 separates saved application keys. Import identity records protect source key types.
+
+Prepared parameters now use the real PDO driver for validation before the application executes SQL.
+Parameter values retain PDO string conversion, named bindings, omitted values, and native binding errors.
+Nested arrays become the text `Array`. Invalid UTF-8 and embedded NUL bytes keep the native SQLite text type.
+The generated SQL removes CAST affinity with unary plus, as required by
+[SQLite's expression affinity rules](https://www.sqlite.org/datatype3.html#affinity_of_expressions).
+Invalid text remains bytes when Python fetches it. PHP then retains its native response-encoding rules.
+API keys with invalid UTF-8 can authenticate through their original header or query value.
+Invalid byte values that do not identify a valid key return the native empty 401 response.

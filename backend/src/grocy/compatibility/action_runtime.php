@@ -39,9 +39,11 @@ function nativeAction(array $request, NativeDatabase $database): array
             return nativeEncodedResponse($response->withJson([
                 'user_id' => $user === null ? null : $user->id,
                 'selected' => $database->authenticatedKeySelected,
-                'header' => $http->getHeaderLine($request['arguments']['header']),
-                'query_key' => $http->getQueryParam($request['arguments']['header']),
-                'secret' => $http->getQueryParam('secret'),
+                'header' => base64_encode($http->getHeaderLine($request['arguments']['header'])),
+                'query_key' => is_string($http->getQueryParam($request['arguments']['header']))
+                    ? base64_encode($http->getQueryParam($request['arguments']['header'])) : null,
+                'secret' => is_string($http->getQueryParam('secret'))
+                    ? base64_encode($http->getQueryParam('secret')) : null,
             ]));
         }
         $user = $database->users(GROCY_USER_ID);

@@ -1,11 +1,10 @@
 """Execute native SQL with PDO statement and explicit transaction boundaries."""
 
 import asyncio
-import re
 from typing import Any
 
 from sqlalchemy.engine import Connection
-from sqlalchemy.exc import DBAPIError, ProgrammingError
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.purifier import InputPurifier
@@ -39,9 +38,6 @@ class NativeStatements:
     async def execute(self, step: dict[str, Any]) -> dict[str, Any]:
         context = step["context"]
         action, table = context["action"], context["table"]
-        parameters = step["parameters"]
-        if isinstance(parameters, list):
-            parameters = tuple(parameters)
         try:
             if action in {"begin", "commit", "rollback"}:
                 return await self._change_transaction(action)
@@ -51,42 +47,27 @@ class NativeStatements:
             await connection.run_sync(self._register_functions, asyncio.get_running_loop())
             if table == "products" and action == "delete":
                 before = (
-                    (await connection.exec_driver_sql(context["before_query"], parameters))
+                    (await connection.exec_driver_sql(context["before_query"]))
                     .mappings()
                     .all()
                 )
                 for row in before:
                     await self._delete_nutrition(row["id"])
-            try:
-                result = await connection.exec_driver_sql(step["query"], parameters)
-            except ProgrammingError as error:
-                missing = re.fullmatch(
-                    r"Incorrect number of bindings supplied\. The current statement uses (\d+), "
-                    r"and there are (\d+) supplied\.",
-                    str(error.orig),
-                )
-                if not isinstance(parameters, tuple) or missing is None:
-                    raise
-                required, supplied = map(int, missing.groups())
-                if required < supplied:
-                    if not self.transaction:
-                        await self.session.rollback()
-                    return {"error": "SQLSTATE[HY000]: General error: 25 column index out of range"}
-                if required == supplied:
-                    raise
-                # PDO leaves omitted positional bindings null. SQLite's Python
-                # driver rejects them before execution, so supply those nulls.
-                result = await connection.exec_driver_sql(
-                    step["query"], parameters + (None,) * (required - supplied)
-                )
+            result = await connection.exec_driver_sql(step["query"])
+            names = list(result.keys()) if result.returns_rows else []
+            rows = []
+            if result.returns_rows:
+                for row in result:
+                    actual = dict(zip(names, row, strict=True))
+                    rows.append(
+                        {
+                            name: encode_value(actual[name] if name in actual else row[index])
+                            for index, name in enumerate(step.get("columns") or names)
+                        }
+                    )
             response: dict[str, Any] = {
                 "row_count": max(result.rowcount, 0),
-                "rows": [
-                    {name: encode_value(value) for name, value in row.items()}
-                    for row in result.mappings()
-                ]
-                if result.returns_rows
-                else []
+                "rows": rows,
             }
             if action in {"insert", "execute"} and result.rowcount > 0:
                 response["insert_id"] = str(result.lastrowid)

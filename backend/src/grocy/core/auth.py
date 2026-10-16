@@ -1,3 +1,4 @@
+import base64
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated
@@ -94,7 +95,16 @@ async def authenticate_native_request(request: Request, session: AsyncSession) -
 
     from grocy.api.compatibility.responses import native_action_response
 
-    header = ", ".join(request.headers.getlist(get_settings().api_key_header))
+    header_name = get_settings().api_key_header.lower().encode()
+    raw_header = b", ".join(
+        value.strip(b" \t")
+        for name, value in request.scope["headers"]
+        if name.lower() == header_name
+    )
+    try:
+        header = raw_header.decode()
+    except UnicodeDecodeError:
+        header = ""
     if header not in {"", "0"}:
         try:
             return await authenticate_key(session, header, key_type="grocy-next")
@@ -129,7 +139,13 @@ async def authenticate_native_request(request: Request, session: AsyncSession) -
         (body["query_key"], "grocy-next"),
         (body["secret"] if request.url.path == "/api/calendar/ical" else None, "calendar"),
     ]:
-        if not isinstance(key, str) or key in {"", "0"}:
+        if not isinstance(key, str):
+            continue
+        try:
+            key = base64.b64decode(key).decode()
+        except UnicodeDecodeError:
+            continue
+        if key in {"", "0"}:
             continue
         try:
             return await authenticate_key(session, key, key_type=key_type)

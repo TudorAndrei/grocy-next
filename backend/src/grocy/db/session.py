@@ -24,6 +24,14 @@ def reset_engine() -> None:
     _session_factory = None
 
 
+def _native_text(value: bytes) -> str | bytes | None:
+    try:
+        return value.decode() or None
+    except UnicodeDecodeError:
+        # PDO fetches invalid UTF-8 as bytes; JSON encoding decides whether it is valid.
+        return value
+
+
 def get_engine(settings: Settings | None = None) -> AsyncEngine:
     global _engine, _session_factory
     if _engine is None:
@@ -46,7 +54,7 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
             @event.listens_for(_engine.sync_engine, "connect")
             def configure_connection(connection: Any, _record: Any) -> None:
                 # Grocy uses PDO::NULL_EMPTY_STRING when it reads SQLite text.
-                connection.driver_connection.text_factory = lambda value: value.decode() or None
+                connection.driver_connection.text_factory = _native_text
                 cursor = connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.execute(f"PRAGMA busy_timeout={cfg.database_busy_timeout_ms}")
