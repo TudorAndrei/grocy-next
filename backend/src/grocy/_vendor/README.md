@@ -54,3 +54,9 @@ service, Gettext 4.8.12, Languages 2.12.1, and the release's English translation
 Recipe output labels use the original Grocycode and webhook helpers. Guzzle 7.9.3,
 Promises 2.2.0, PSR-7 2.7.1, HTTP Client 1.0.3, and Deprecation Contracts 3.5.1 supply
 its native HTTP behavior. Each included package has its license and checksums.
+
+Stock bookings, inventory, entry edits, opening, transfers, merges, barcode actions,
+read operations, and undo now use the original stock controller and service.
+All five label endpoints use their original controllers and the pinned webhook code.
+The adapter applies the existing nutrition cleanup to raw product deletion inside
+Grocy's transaction. This prevents local extension constraints from blocking native merges.

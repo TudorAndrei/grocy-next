@@ -24,7 +24,11 @@ Recipe fulfillment, consumption, copy, missing-ingredient actions, and all six s
 also use the original controllers and services. Raw prepared statements retain native insert IDs.
 Recipe consumption commits ingredients before output creation. Copy can retain its new parent
 when a later insert fails. The included Gettext packages load the original English translations.
-Native recipe output labels use the pinned Guzzle packages and original webhook helper.
+Stock bookings, inventory, opening, transfers, entry edits, merges, barcode actions, reads, and undo
+also use the original controller and service. All five label endpoints use the original controllers.
+They use the pinned Guzzle packages and original webhook helper. Native errors and partial writes
+remain unchanged. Raw product deletes clear application nutrition references inside the source transaction.
+The external barcode provider and thermal printer paths still use application code.
 The web recipe page uses `/api/v2/recipes/{id}` routes for selected servings and ingredient details.
 Set `TZ` to select the same server time zone for Python and the PHP workers.
 User, permission, and single-setting operations also use the original Grocy controller.

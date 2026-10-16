@@ -86,6 +86,10 @@ Recipe fulfillment, consumption, copy, and missing-ingredient actions use the or
 
 All six shopping actions also use the original stock controller and service. PHP retains integer amount conversion, default list selection, boolean filtering, null body errors, and permission order. The web recipe page uses `/api/v2/recipes/{id}/fulfillment`, `/consume`, and `/add-not-fulfilled-products-to-shoppinglist` for selected servings and ingredient details. These extension writes require the stock consumption or shopping add permission.
 
+Stock purchases, consumption, opening, transfers, inventory, entry edits, merges, barcode actions, remaining stock reads, and undo execute the original stock controller and service. PHP retains scalar conversion, numeric URL rules, date parsing, permission order, and partial writes. Labels also use the original product, stock entry, chore, battery, and recipe controllers with native Guzzle requests and errors. External barcode providers and thermal printing still use application code.
+
+The native consumption controller retains its `transactiontype` field typo. Nonempty text passed as a PHP boolean can become true, including `spoiled: "false"`. Purchase label modes outside 0 through 2 use the original runtime branches. An entry edit requires `amount`. If `open` is omitted, it can save an old booking before returning the native type error. Native merge uses the existing product-deletion cleanup for nutrition records inside its transaction. A rejected merge restores those records and permits a retry.
+
 ## Boundaries
 
 Route and entity coverage does not prove complete upstream behavior parity. The PHP comparison suite covers selected state changes. Full differential coverage for all options and third party clients is not established.
