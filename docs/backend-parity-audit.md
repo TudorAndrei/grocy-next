@@ -486,3 +486,29 @@ The image is `sha256:1ceb3e38f25f19244ea19cc6b22626b9aaa04a5e8a8c9332547f34e643a
 The full local suite passed 855 tests and skipped 833 reference or feature-profile cases. The full comparison suite passed 1,587 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
 
 Authentication use records and expiry, setting defaults, configuration modes, and more combined request and permission cases remain open. Full runtime parity remains incomplete.
+
+## Native API key authentication and use records
+
+Native credentials now use the unchanged API key middleware, its base middleware, and API key service. The adapter supplies the request, native route context, and application database connection. The original service retains local whole-second expiry, null-expiry rejection, PHP empty values, repeated-header handling, query parsing, calendar scope, and credential selection. Valid checks save `last_used` before the user lookup. This also updates a key whose user was deleted. The main database file timestamp is restored after that write. A repeated request within one second can skip the unchanged write and still authenticate.
+
+Array query values retain the original LessQL behavior. An array can replace all three validation parameters, including the expiry threshold. This native behavior remains unchanged. PDO supplies null for omitted bindings. Extra bindings retain SQLite error 25. The Python statement adapter now applies these rules after its driver rejects the binding count.
+
+Application keys use the separate `grocy-next` type. New CLI, bootstrap, and v2 keys retain the existing application expiry rules. A valid application header takes precedence over query credentials. Application calendar keys retain their existing scope. Revision 0023 classifies saved application keys without changing their secrets, users, expiry values, or counters. New imports record native key identities. Older imports recover those identities from their saved source copy. Both ID and secret must match. Imported keys remain excluded from application-key classification, including native keys with null expiry or application-shaped text.
+
+The isolated baseline reproduced five differences. All five passed after the repair. The expanded public comparison passed all 28 cases against Grocy 4.5.0. These include local expiry, null expiry, key `0`, duplicate headers and query parameters, fallback, orphan users, repeated use, text expiry, array replacement, and binding errors. The additional array-error case failed before the binding repair. The new import and main-file-time tests both failed on the committed previous backend and passed after the repair. Both current and saved import formats keep their native and application expiry rules.
+
+The first broad integration and unit run passed 102 tests. Its remaining schema expectation omitted the new metadata table. The corrected six-case saved-graph selection passed. File streaming, worker recovery, transient worker shutdown, native key use timestamps, main-file time, and application credential priority also passed.
+
+The Linux image passed 48 selected HTTP workflows on both a new database and a saved revision 0020 database. Four direct database cases were skipped over HTTP. Additional real HTTP checks passed repeated native key use, orphan selection before fallback, null expiry, key `0`, duplicate headers, query fallback, native array replacement and errors, application header priority, saved use timestamps, and unchanged main-file time. A probe initially supplied a valid application fallback while it expected 401. The corrected probe removed that fallback from the invalid-key cases and passed.
+
+The saved database kept its records and allocation counters. The old application key type changed to `grocy-next` as required by revision 0023. Restart kept complete database state, plugins, and image bytes. All 45 original views and 54 original triggers retained their definitions and order. Linux CLI initialization, imports, saved custom triggers, BLOB values, stock, recipes, calendar, printing, barcode lookup, all 33 locales, and worker shutdown also passed.
+
+The image is `sha256:ac384924b27744783ec0c375f6ff7954c981cb2c7d26e32f58c335c02d1664d5`. The wheel and image match all 1,383 current application and bundled source files. All 1,223 managed vendor files match the pinned release archive and staged Git bytes. All 354 bundled Grocy core files retain their release bytes. Ruff, basedpyright, and syntax checks for all eight PHP adapters passed.
+
+All 86 API operations declared in the original route file have application routes. HEAD and OPTIONS use the original Slim rules. This route inventory does not prove full logic parity.
+
+The full local suite passed 872 tests and skipped 847 reference or feature-profile cases. The full comparison suite passed 1,615 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
+
+A separate follow-up probe found remaining query-byte and nested-array differences. An invalid UTF-8 query key returns native 401 but local 503. A stored native key with that byte authenticates in Grocy but returns local 503. A nested query array returns native 401 but local 500. Header-byte comparisons also need a real HTTP check because TestClient changes non-ASCII header encoding. These probes remain outside the passing suite and require further repair.
+
+Setting defaults, configuration modes, arbitrary request bytes, and further combined request and permission cases still need comparison. Full runtime parity remains incomplete.
