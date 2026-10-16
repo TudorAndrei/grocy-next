@@ -470,3 +470,19 @@ Upgrade kept all original rows and allocation counters. Restart kept complete da
 The image is `sha256:7e2f3aa473815b073a3b4e062c36a39c986ddfb0dea325a3730d0e5644f67b85`. The image and wheel match all 1,266 current application and bundled source files. All 1,114 managed vendor files retain their original bytes in Git. All 348 Grocy core files match the pinned release archive. Ruff, basedpyright, and PHP syntax checks passed.
 
 Authentication use records and expiry still require work. The final audit must also check unused user-setting dates, default-setting propagation, configuration modes, HTTP methods, and common error behavior. Full runtime parity remains incomplete.
+
+## Native HTTP routing and API specification
+
+HTTP method selection now uses the original Grocy route declarations and Slim router. The pinned FastRoute and PSR packages supply its dependencies. The original CORS middleware handles preflight requests and wildcard headers. The original exception controller formats route errors. HEAD executes the matching GET operation and returns no body. OPTIONS returns an empty 200 response before authentication. Unauthorized responses retain the native empty body and HTML content type. An unknown API path can return 405 because the native wildcard OPTIONS route matches that path. Application v2 and health routes keep their existing request rules.
+
+The original OpenAPI controller now serves `/api/openapi/specification`. It adds current custom entities, the release version, and request URLs. Setting queries select only keys and values. Unused year 0000 or malformed setting timestamps no longer block requests. No database revision is needed.
+
+The first baseline failed 13 local cases and passed two reference workflow controls. The additional API specification case also failed locally after its source request passed. All 16 focused comparison cases passed after the repair. The worker recovery test now checks replacement workers and shutdown without assuming a fixed total worker count. It also stops the separate HTTP worker and proves request recovery. Both worker integration cases passed.
+
+The Linux image passed 48 selected HTTP workflows on both a new database and a saved revision 0020 database. Four direct database cases were skipped over HTTP. Additional real HTTP checks passed HEAD, OPTIONS, method errors, wildcard CORS, empty unauthorized responses, and the original API specification. Upgrade and restart kept all saved core records and allocation counters. All 45 original views and 54 original triggers retained their definitions and order. CLI initialization, imports, custom triggers, BLOB data, native actions, all 33 locales, saved plugins and images, and worker shutdown also passed.
+
+The image is `sha256:1ceb3e38f25f19244ea19cc6b22626b9aaa04a5e8a8c9332547f34e643aa41dc`. The wheel and image match all 1,380 current application and bundled source files. All 1,221 managed vendor files match the pinned release archive and staged Git bytes. All 352 bundled Grocy core files retain their release bytes. Ruff, basedpyright, and syntax checks for all eight PHP adapters passed.
+
+The full local suite passed 855 tests and skipped 833 reference or feature-profile cases. The full comparison suite passed 1,587 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
+
+Authentication use records and expiry, setting defaults, configuration modes, and more combined request and permission cases remain open. Full runtime parity remains incomplete.
