@@ -36,7 +36,12 @@ for a TCP printer, or `GROCY_TPRINTER_CONNECTOR` for a device or output file.
 Existing `GROCY_THERMAL_PRINTER_DEVICE`, `GROCY_THERMAL_PRINTER_HOST`, and
 `GROCY_THERMAL_PRINTER_PORT` settings remain aliases. Explicit native settings take precedence.
 An unconfigured or failed printer returns the native error. The route runs independently of its UI feature flag.
-The external barcode provider still uses application code.
+External barcode lookup uses the unchanged stock controller, plugin loader, and plugin validation.
+The default is the original Open Food Facts plugin. `GROCY_STOCK_BARCODE_LOOKUP_PLUGIN` selects a plugin.
+Put user PHP plugins in `$GROCY_DATAPATH/plugins`. `GROCY_DATAPATH` defaults to `data`. Docker uses `/data`.
+User plugins take precedence over bundled plugins. Downloaded product pictures use `GROCY_FILES_ROOT`.
+Lookup requires `MASTER_DATA_EDIT`, including requests that do not add a product.
+Native plugin errors, query parsing, and partial product, barcode, image, and conversion saves remain unchanged.
 Calendar export and sharing links use the original controller, calendar service, key service,
 and eluceo/iCal 2.14.0. PHP handles date parsing, event IDs, escaping, folding, and time zones.
 Native calendar secrets use their original key type and the server's local clock for expiry.

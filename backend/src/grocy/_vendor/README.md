@@ -73,3 +73,10 @@ The adapter supplies the native printer settings and application connection.
 The original code formats shopping rows and writes ESC/POS commands through its
 file or network connector. Query parsing, permission order, encoding, and errors
 remain in the unchanged source.
+
+External barcode lookup uses the unchanged stock controller, stock service, base
+plugin validator, and bundled Open Food Facts and demo plugins. The release's
+application service and version file supply the image request user agent.
+The shared native file adapter directs image downloads and public file requests
+to the configured storage root. Request workers use the persistent data directory
+for user plugins and keep their serializer cache in a separate temporary directory.

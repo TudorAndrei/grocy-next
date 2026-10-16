@@ -428,3 +428,23 @@ The Linux image passed 31 selected HTTP cases on both a new database and a saved
 The final image is `sha256:6f72660cca02a9e0e1f475a811bd82f7c74d9d2e325212815fbf48488f8eee64`. The wheel and image match all 956 current application and bundled source files. All 806 managed vendor files retain their original bytes in Git. All 42 Grocy core files and 84 printer package files match the pinned release archive exactly. Ruff, basedpyright, and PHP syntax checks passed.
 
 External barcode providers, remaining system behavior, and further request, authentication, and permission cases still require work. Full runtime parity remains incomplete.
+
+## Native external barcode lookup
+
+External barcode lookup now executes the unchanged stock controller and service. The release's base plugin validator, Open Food Facts plugin, and demo plugin are bundled without changes. Open Food Facts remains the default. User PHP plugins take precedence over bundled plugins. Native actions now use the persistent `GROCY_DATAPATH` directory. Their serializer cache remains temporary. Docker uses `/data` for plugin data.
+
+The original controller requires master-data edit permission for all lookups. It accepts arbitrary barcode text and keeps the exact `add` query rules. Plugin validation retains its native errors, null output, required fields, active entity references, and conversion factor checks. Successful additions return a string product ID. Duplicate product names fail before later writes. The former Python provider implementation and its unused URL setting are removed.
+
+Image downloads use the original Guzzle code and source version user agent. A shared native file adapter directs both downloaded pictures and public file requests to `GROCY_FILES_ROOT`. Image request errors remain ignored. A later barcode insert error leaves the product and image saved. Different purchase and stock units expose another native partial-write case. Product creation saves reciprocal conversion rows with factor 1. The later explicit conversion insert can then fail with `QU conversion already exists`. The product, barcode, image, and both default conversion rows remain saved.
+
+All 22 new public cases failed on the previous route and passed against Grocy 4.5.0. After the repair, all 44 focused comparisons passed. The cases cover user plugin precedence, arbitrary barcode text, add values, exact plugin output errors, permissions, string IDs, duplicate names, image download success and failure, public file retrieval, raw plugin names, and barcode or conversion partial saves. All 99 integration and unit cases passed. The test fixture uses an isolated persistent data directory.
+
+The full local suite passed 834 tests and skipped 796 reference or feature-profile cases. The full comparison suite passed 1,530 tests and skipped one disabled-feature case in each of UTC and Europe/Bucharest.
+
+The Linux image passed 31 selected HTTP cases on both a new database and a saved revision 0020 database. Four direct database or shared-fixture cases were skipped over HTTP. Separate Linux checks passed the original bundled demo plugin, user plugin precedence, query parsing, Guzzle image requests and user agents, native file reads, ignored image errors, partial barcode writes, and reciprocal conversion conflicts. Real HTTP checks passed a Unicode image filename and exact picture bytes. User plugins and image bytes survived container restart. A new request after restart used the saved plugin.
+
+Upgrade kept all original rows and allocation counters. Restart kept complete database state. All 45 source views and 54 source triggers retained their definitions and order. The earlier CLI initialization, import, custom trigger, BLOB, native stock, recipe, calendar, thermal printer, and worker cleanup checks also passed.
+
+The final image is `sha256:ad411c10d4673ab09452b06d204f6d44def5fd3dbfac8de12fffa3c80c08fc48`. The wheel and image match all 962 current application and bundled source files. All 811 managed vendor files retain their original bytes in Git. All 47 Grocy core files match the pinned release archive exactly. The seven PHP adapters include the shared native file service. Ruff, basedpyright, and PHP syntax checks passed.
+
+Remaining system behavior and further request, authentication, and permission cases still require work. Full runtime parity remains incomplete.
