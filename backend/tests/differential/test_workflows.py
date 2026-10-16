@@ -5216,7 +5216,7 @@ def test_native_api_key_raw_bytes_and_nested_values(api, execute_sql, case, stat
 
 
 @pytest.fixture
-def runtime_configuration(api):
+def native_data_directory(api):
     from grocy.core.config import get_settings
 
     reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
@@ -5224,11 +5224,16 @@ def runtime_configuration(api):
         database = os.getenv("GROCY_REFERENCE_DATABASE")
         if not database:
             pytest.skip("Configuration checks need the disposable reference directory")
-        path = Path(database).parent / "config.php"
+        return Path(database).parent
     elif hasattr(api, "portal"):
-        path = get_settings().datapath / "config.php"
+        return get_settings().datapath
     else:
         pytest.skip("Configuration checks need access to the backend data directory")
+
+
+@pytest.fixture
+def runtime_configuration(api, native_data_directory):
+    path = native_data_directory / "config.php"
     previous = path.read_bytes() if path.exists() else None
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -5244,6 +5249,152 @@ def runtime_configuration(api):
             path.unlink(missing_ok=True)
         else:
             path.write_bytes(previous)
+        api.options("/api/system/info", follow_redirects=False)
+
+
+@pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
+def test_native_cache_change_redirects_before_authentication(api, runtime_configuration, method):
+    runtime_configuration("Setting('BASE_URL', '/startup-gap');")
+    headers = dict(api.headers)
+    try:
+        api.headers.pop("GROCY-API-KEY", None)
+        response = api.request(method, "/api/system/info", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"] == "/startup-gap/"
+        assert response.content == b""
+        assert "access-control-allow-origin" not in response.headers
+        assert api.get("/api/system/info", follow_redirects=False).status_code == 401
+    finally:
+        api.headers.update(headers)
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "authenticated", "status"),
+    [
+        ("GET", "/system/info", True, 200),
+        ("HEAD", "/system/info", True, 200),
+        ("OPTIONS", "/system/info", False, 200),
+        ("GET", "/system/info", False, 302),
+        ("PATCH", "/system/info", True, 500),
+        ("GET", "/missing-route", True, 500),
+    ],
+)
+def test_native_base_path_uses_original_routes_and_error_pages(
+    api, runtime_configuration, method, path, authenticated, status
+):
+    runtime_configuration("Setting('BASE_PATH', '/parity');")
+    assert api.options("/api/system/info", follow_redirects=False).status_code == 302
+    headers = dict(api.headers)
+    try:
+        if not authenticated:
+            api.headers.pop("GROCY-API-KEY", None)
+        response = api.request(method, "/parity/api" + path, follow_redirects=False)
+        assert response.status_code == status, response.text
+        if status == 302:
+            assert response.headers["location"].endswith("/login")
+            assert response.content == b""
+        elif status in {404, 500}:
+            assert response.headers["content-type"].startswith("text/html")
+            assert b"<!DOCTYPE html>" in response.content
+        elif method in {"HEAD", "OPTIONS"}:
+            assert response.content == b""
+        else:
+            assert response.json()["grocy_version"]["Version"] == "4.5.0"
+    finally:
+        api.headers.update(headers)
+
+
+@pytest.mark.parametrize("mode", ["demo", "prerelease"])
+def test_native_mode_uses_uninitialized_separate_database(
+    api, runtime_configuration, native_data_directory, mode
+):
+    path = native_data_directory / ("grocy_missing_" + uuid4().hex + ".db")
+    runtime_configuration(
+        f"Setting('MODE', '{mode}');Setting('DEMO_DB_SUFFIX', '{path.stem[6:]}');"
+    )
+    try:
+        response = api.get("/api/user", follow_redirects=False)
+        assert response.status_code == 500, response.text
+        assert path.exists()
+        with sqlite3.connect(path) as database:
+            assert database.execute("SELECT name FROM sqlite_master").fetchall() == []
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_native_base_path_dispatches_encoded_file_routes(api, runtime_configuration):
+    from urllib.parse import quote
+
+    runtime_configuration("Setting('BASE_PATH', '/parity');")
+    assert api.options("/api/system/info", follow_redirects=False).status_code == 302
+    name = "Prefixed Ä " + uuid4().hex + ".bin"
+    encoded = quote(base64.b64encode(name.encode()).decode(), safe="")
+    path = "/parity/api/files/productpictures/" + encoded
+    content = b"\x00\xffnative bytes"
+
+    def download(method):
+        if not hasattr(api, "portal"):
+            return api.request(method, path)
+
+        # TestClient converts response headers to ASCII strings. Keep their bytes.
+        async def request():
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=api.app),
+                base_url=str(api.base_url),
+                headers=api.headers,
+            ) as direct:
+                return await direct.request(method, path)
+
+        return api.portal.call(request)
+
+    try:
+        response = api.put(path, content=content)
+        assert response.status_code == 204, response.text
+        response = download("GET")
+        assert response.status_code == 200, response.text
+        assert response.content == content
+        assert response.headers["content-disposition"] == f'inline; filename="{name}"'
+        assert download("HEAD").content == b""
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(("mode", "suffix"), [("demo", None), ("prerelease", "custom_mode")])
+def test_native_mode_reads_and_writes_its_own_database(
+    api, runtime_configuration, native_data_directory, mode, suffix
+):
+    from grocy.db.native_schema import SCHEMA
+
+    path = native_data_directory / f"grocy_{suffix or 'de'}.db"
+    assert not path.exists()
+    username = "Mode owner " + uuid4().hex
+    task_name = "Mode task " + uuid4().hex
+    with sqlite3.connect(path) as database:
+        for kind in ("ddl", "views", "triggers"):
+            for statement in SCHEMA[kind].values():
+                database.execute(statement)
+        database.execute("INSERT INTO users(id,username,password) VALUES (1,?,'')", (username,))
+        database.executemany(
+            "INSERT INTO permission_hierarchy(id,name,parent) VALUES (?,?,?)", SCHEMA["permissions"]
+        )
+        database.execute("INSERT INTO user_permissions(user_id,permission_id) VALUES (1,1)")
+    code = f"Setting('MODE', '{mode}');Setting('DEFAULT_LOCALE', 'de');"
+    if suffix:
+        code += f"Setting('DEMO_DB_SUFFIX', '{suffix}');"
+    runtime_configuration(code)
+    try:
+        response = api.get("/api/user")
+        assert response.status_code == 200, response.text
+        assert response.json()[0]["username"] == username
+        task = create(api, "tasks", name=task_name)
+        response = api.post(f"/api/tasks/{task}/complete", json={})
+        assert response.status_code == 204, response.text
+        with sqlite3.connect(path) as database:
+            assert database.execute("SELECT done FROM tasks WHERE id=?", (task,)).fetchone() == (1,)
+        runtime_configuration("")
+        assert all(row["name"] != task_name for row in rows(api, "tasks"))
+    finally:
+        path.unlink(missing_ok=True)
 
 
 def test_native_configuration_defaults_and_saved_setting_precedence(api, runtime_configuration):

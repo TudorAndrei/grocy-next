@@ -1,0 +1,20 @@
+{
+  "package": "berrnd/slim-blade-view",
+  "version": "v1.2.1",
+  "source": "https://github.com/berrnd/slim-blade-view.git",
+  "commit": "cf8a5718e0804801230d41d2f9a44e00a0d49376",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "example/public/index.php": "e38af2a2adc06eaea14864cfaa3030a2b74667349c7bfef2fac8a4b90a9ab685",
+    "example/views/profile.blade.php": "3cf7cc10f2a631a425da7fdb52a2c0a8a5b3a7dadcbdba1814a60ee2ba571c70",
+    "LICENSE": "bc8ded9eba20829121a34b7c70c7169dac9b5907bcc41a7989d9226717912a2b",
+    "phpunit.xml.dist": "0e0c1785280d1dfe7c660b5b1e8ebdf2daab4947537a380b7cd8f6ac7094cccb",
+    "README.md": "a6055461b9c6b2d6c87ff7db268b6693afe8ff7c2be430f36ca4ec92c615e31e",
+    "src/Blade.php": "f695f9d32c3f8ca9dd3fd92f50ae223170f31977343c3b2dbec980c7f5a75346",
+    "tests/another/example2.blade.php": "21ff6ff6361f927001b5aae2563fdbc7b5d6e9317336542656dc41880960fd02",
+    "tests/BladeTest.php": "102b2409cc1cd21403f8de0a87ecb2e0829d60551938c3e85511e7f9bef0e228",
+    "tests/templates/example.blade.php": "e2af3f5acfc14c29fc3fcd098a515abd264382c2a7009461c2d91ea0a69da244"
+  }
+}

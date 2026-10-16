@@ -1,0 +1,16 @@
+{
+  "package": "webman/blade",
+  "version": "v1.5.6",
+  "source": "https://github.com/webman-php/blade.git",
+  "commit": "10da43ff070558d820ba3653cc67540457fab629",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "README.md": "25ee72533ab8566dc163b4a72ff0fa300b426d9b5779058fdad775586597352b",
+    "src/Application.php": "2b9987a1efef165c730b6aafd033d8bf1fc990969c6935515effffef3d120580",
+    "src/Blade.php": "1a661447776ff8c5bc9cd103d80443712a6ad8141b0c9c4e93e7d4edb351faf3",
+    "src/Config.php": "4c00e9cb9ed700b1844870184b0e928e3f360e9ddd4ddcee93b25614a1c0ed81",
+    "src/ViewServiceProvider.php": "936892ca6fa496df4e3b94c606e56b84d9570fa4685587b0c4563fff52b647ad"
+  }
+}

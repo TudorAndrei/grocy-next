@@ -1,0 +1,20 @@
+{
+  "package": "carbonphp/carbon-doctrine-types",
+  "version": "3.2.0",
+  "source": "https://github.com/CarbonPHP/carbon-doctrine-types.git",
+  "commit": "18ba5ddfec8976260ead6e866180bd5d2f71aa1d",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE": "cf9aa3a6374d6e4a4f0f886c484426200f83f2d05fedc1b66e09a3b74c05e5ea",
+    "README.md": "953807414fdae59ee1a0f5a24e8b759301fac2804954a415675e210ca0a61563",
+    "src/Carbon/Doctrine/CarbonDoctrineType.php": "bd473d953b519beb4fdb1af26964321ee9fe7a7ed73474aa238a630e432aa970",
+    "src/Carbon/Doctrine/CarbonImmutableType.php": "3dd7360c838af41c862e3f3fc3e2f5a9e1f0bc90a1668bf71acd5b765c411897",
+    "src/Carbon/Doctrine/CarbonType.php": "1d73b7b5cbb6a5c332e21fdb93b84ede922901152a17af885b3a3e3e3d099c74",
+    "src/Carbon/Doctrine/CarbonTypeConverter.php": "f2e3fadeadf2eb869ed479c0f387bd0c5d953dd2497c206d64fd8da29875e97e",
+    "src/Carbon/Doctrine/DateTimeDefaultPrecision.php": "18ddf052751eef5568d959fce27883399ab5e46a9490a70344ce503f642fb52a",
+    "src/Carbon/Doctrine/DateTimeImmutableType.php": "eddb0dcd82ded9e7c3025e2b41fe654161dbbc013ac5f9386f80fd8623273f12",
+    "src/Carbon/Doctrine/DateTimeType.php": "30e19093fff903cbf357fbc777ee120dcf344d310a486442b3e77700dc478e7f"
+  }
+}

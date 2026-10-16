@@ -1,0 +1,29 @@
+{
+  "package": "illuminate/container",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/container.git",
+  "commit": "57d786330a14a792bd9bb8183a799893d3f15caa",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "Attributes/Auth.php": "b3f455e8a227f45014c3074ab5e9c1286235e1f354621c0e903b1773c25ecb3c",
+    "Attributes/Authenticated.php": "b86beb1bf4c8f32223bff2698d2f65c90ef259c9bb0e63be73558ef8d9fc8039",
+    "Attributes/Cache.php": "58658b55104b7ca5d288d01d4c2eef08f7cf04eac361fd3ed80987b99a3a8fe3",
+    "Attributes/Config.php": "89a1426e874971bb3b4c4601cdc0596a3422dba1cdb4be6669d30ef3e173628a",
+    "Attributes/CurrentUser.php": "96528cb35f082daf3ac83e5a2bcfb347856dc68e3e0be54aff2f38f3562db44d",
+    "Attributes/Database.php": "d6f0e01b8e8bbece6d2365a1374559778326ce59d297571ed5e30f3a032911c5",
+    "Attributes/DB.php": "3225ee504e23af4e92ea3930016c866412b4f32e709b1ca2f8276f0c9b035589",
+    "Attributes/Log.php": "5241190602eda36d7086de722f421fdcca1a1b089472ac6616a7209876c3956f",
+    "Attributes/RouteParameter.php": "eea2458b2bfcd4e40d3b809f4b0c63e70120e99069f1706c934c434a52f81c73",
+    "Attributes/Storage.php": "93c70f1543400e134ed7a2a1bce06695cf8947c59c3712f4597b137a72bcb466",
+    "Attributes/Tag.php": "9d78576a141a89c50dbc56072af8b85944d55ad4c0077733d75c1828d9c1bc47",
+    "BoundMethod.php": "f4db667a9c51b26d826799340f5f6eae8190a07a2d2aa65bbdc6ae56c1948e2f",
+    "Container.php": "df2184e4706b0b97551a7a4edcca939aede3475272684576d46255388108df76",
+    "ContextualBindingBuilder.php": "e1145cdaf10d4dfcd2940c9a77b41d6ca87e537b5c1ce12b6330aabb68ae8729",
+    "EntryNotFoundException.php": "e11e35f16c5fdc9d6cb55bef67db07e33c578cb2b7772a4deada551af239f50b",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "RewindableGenerator.php": "cc2739fd789ef8a804272e7b64805811f53724df040047306c30ceebb4330d22",
+    "Util.php": "61762b6832c5da1434e6ca6472688c4aa934fd0af130a2fc967ff0401f43ef5b"
+  }
+}

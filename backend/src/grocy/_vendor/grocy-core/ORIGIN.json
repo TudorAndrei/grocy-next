@@ -367,6 +367,12 @@
     "middleware/DefaultAuthMiddleware.php": "04875f38c07f6d678887adf2c1867641011e7859b776f979d8ce55c9f611b0ec",
     "middleware/SessionAuthMiddleware.php": "223f814efc5bb5446722d79688337d140704d6f05c0b499664e37ffee5bc0057",
     "middleware/ReverseProxyAuthMiddleware.php": "c5740d7324f4ecf8ef36b1da2938c857379d416835b5ec191c2dc25b2eef838c",
-    "middleware/LdapAuthMiddleware.php": "c80269e0772a973d7ca3ea3fc65e1695b3432c3e02eed05d7b9e263a78912d95"
+    "middleware/LdapAuthMiddleware.php": "c80269e0772a973d7ca3ea3fc65e1695b3432c3e02eed05d7b9e263a78912d95",
+    "middleware/JsonMiddleware.php": "b4f784c48381cb76938d0f700e3246ff6fcdb7012bdfc57bc1170e93ca8d0905",
+    "views/layout/default.blade.php": "cf8d8974eaf140b7e5e590d2793ff98b12e524e8f5c92ab350905fcafa9e8ae0",
+    "views/errors/403.blade.php": "9601870b95d3a35e1891012478445b3df310670972b2fe7b5e478378e62aeb99",
+    "views/errors/404.blade.php": "51b49ab4f01e135c5b26631b734a5e39db4aa423c995784ade47608a2c61d21d",
+    "views/errors/500.blade.php": "d6d28f9da5ebfb3d137e679d823c1a2c221e7cb2588b57135821492a644ace5f",
+    "views/errors/base.blade.php": "3dff355c0bb91dc55292dea4d7e9a214f23865e0829e31d08d9328e0016ad685"
   }
 }

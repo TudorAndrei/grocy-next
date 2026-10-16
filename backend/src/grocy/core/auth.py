@@ -136,6 +136,12 @@ async def authenticate_native_request(request: Request, session: AsyncSession) -
     if body["selected"]:
         if body["user_id"] is None:
             raise _MissingKeyUser("Invalid API key")
+        if context.get("direct_database"):
+            return Actor(
+                user_id=body["user_id"],
+                username="",
+                is_admin=False,
+            )
         return await actor_for_user(session, body["user_id"], allow_missing=bypass)
     # Application keys retain their extension expiry rules and calendar scope.
     for key, key_type in [

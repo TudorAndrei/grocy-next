@@ -40,6 +40,7 @@ async def test_native_file_streams_close_after_disconnect_and_shutdown(tmp_path,
             headers={"GROCY-API-KEY": "dev-key"},
         ) as api,
     ):
+        await api.options("/api/system/info")
         assert (await api.put(path, content=payload)).status_code == 204
         assert (await api.get(path)).content == payload
         sent = []

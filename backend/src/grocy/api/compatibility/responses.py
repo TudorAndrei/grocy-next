@@ -3,6 +3,7 @@
 import base64
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote_from_bytes
 
 from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +14,27 @@ from grocy.core.config import get_settings
 
 
 def native_response(result: dict[str, Any]) -> Response:
-    return Response(
+    response = Response(
         content=base64.b64decode(result["response"]),
         status_code=result["status"],
-        headers={name: ", ".join(values) for name, values in result["headers"].items()},
     )
+    headers = {
+        name.lower().encode(): ", ".join(values).encode()
+        for name, values in result["headers"].items()
+    }
+    response.raw_headers = [
+        *((name, value) for name, value in response.raw_headers if name not in headers),
+        *headers.items(),
+    ]
+    return response
+
+
+def native_uri(request: Request) -> str:
+    raw = request.scope.get("raw_path")
+    if raw is None:
+        return str(request.url)
+    path = quote_from_bytes(raw, safe="/%:@!$&'()*+,;=-._~")
+    return str(request.url.replace(path=path))
 
 
 async def native_list_response(
@@ -87,7 +104,7 @@ async def native_action_response(
         body=await request.body() if body is None else body,
         content_type=request.headers.get("content-type"),
         query_string=request.scope["query_string"],
-        uri=str(request.url),
+        uri=native_uri(request),
         headers=request.scope["headers"],
         default_permissions=settings.default_permissions,
         datapath=settings.datapath.resolve(),

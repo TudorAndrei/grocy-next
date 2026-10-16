@@ -20,6 +20,7 @@ def test_native_value_deletion_keeps_orphans_and_empty_write_allocation(
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
     clear_settings_cache()
     with TestClient(create_app(), headers={"GROCY-API-KEY": "dev-key"}) as api:
+        api.options("/api/system/info")
         body = {
             "entity": "locations",
             "name": "saved",
@@ -107,6 +108,7 @@ def test_legacy_field_upgrade_keeps_values_counters_and_custom_sql(tmp_path: Pat
     _legacy_fields(database, monkeypatch)
     clear_settings_cache()
     with TestClient(create_app(), headers={"GROCY-API-KEY": "dev-key"}) as api:
+        api.options("/api/system/info")
         with sqlite3.connect(database) as db:
             rows = db.execute(
                 "SELECT id,field_id,object_id,value FROM userfield_values ORDER BY id"

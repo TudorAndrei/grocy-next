@@ -156,6 +156,7 @@ def test_disabled_location_tracking_restores_default_for_existing_user(tmp_path:
     monkeypatch.setenv("GROCY_FEATURE_FLAG_STOCK_LOCATION_TRACKING", "0")
     clear_settings_cache()
     with TestClient(create_app()) as app:
+        app.options("/api/system/info")
         headers = {"GROCY-API-KEY": "locations-key"}
         response = app.get("/api/objects/locations", headers=headers)
         assert response.status_code == 200, response.text
@@ -201,6 +202,7 @@ def test_existing_project_database_upgrades_at_startup(tmp_path: Path, monkeypat
     monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
     clear_settings_cache()
     with TestClient(create_app()) as upgraded:
+        upgraded.options("/api/system/info")
         headers = {"GROCY-API-KEY": "upgrade-key"}
         stock = upgraded.get("/api/stock/products/1", headers=headers)
         assert stock.status_code == 200
@@ -281,6 +283,7 @@ def test_database_change_time_uses_main_file_timestamp(
     monkeypatch.setenv("GROCY_DATABASE_WAL", "true")
     clear_settings_cache()
     with TestClient(create_app(), headers=api_headers) as app:
+        app.options("/api/system/info")
         database = tmp_path / "wal.db"
         wal = tmp_path / "wal.db-wal"
         assert wal.exists()
@@ -316,6 +319,7 @@ def test_upgrade_restores_derived_meals_and_inverse_conversions(tmp_path: Path, 
     clear_settings_cache()
     headers = {"GROCY-API-KEY": "dev-key"}
     with TestClient(create_app()) as app:
+        app.options("/api/system/info")
         assert (
             app.post(
                 "/api/objects/meal_plan",
@@ -341,6 +345,7 @@ def test_upgrade_restores_derived_meals_and_inverse_conversions(tmp_path: Path, 
         """)
     clear_settings_cache()
     with TestClient(create_app()) as app:
+        app.options("/api/system/info")
         recipes = app.get(
             "/api/objects/recipes",
             headers=headers,
@@ -396,6 +401,7 @@ def test_import_keeps_deleted_user_references_and_id_sequence(tmp_path: Path, mo
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
     clear_settings_cache()
     with TestClient(create_app(), headers={"GROCY-API-KEY": "import-owner"}) as app:
+        app.options("/api/system/info")
         assert app.get("/api/user", headers={"GROCY-API-KEY": "deleted-key"}).status_code == 401
         created = app.post("/api/users", json={"username": "Next", "password": "test"})
         assert created.status_code == 204, created.text
@@ -448,6 +454,7 @@ def test_import_keeps_native_version_history_and_calendar_secret(tmp_path, monke
     monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
     clear_settings_cache()
     with TestClient(create_app(), headers={"GROCY-API-KEY": "import-admin"}) as app:
+        app.options("/api/system/info")
         assert app.get("/api/system/info").json()["db_version"] == 253
         link = app.get("/api/calendar/ical/sharing-link")
         assert link.status_code == 200 and link.json()["url"].endswith(
@@ -500,6 +507,7 @@ def test_imported_and_application_keys_keep_distinct_expiry_rules(
     monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
     clear_settings_cache()
     with TestClient(create_app()) as api:
+        api.options("/api/system/info")
         assert api.get("/api/user", headers={"GROCY-API-KEY": imported_key}).status_code == 401
         for key in ["native-owner", "saved-app-key"]:
             response = api.get("/api/user", headers={"GROCY-API-KEY": key})

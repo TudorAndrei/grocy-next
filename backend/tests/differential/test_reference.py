@@ -1794,7 +1794,7 @@ def test_reference_stock_label_modes_and_disabled_printer_controls(
 
 
 @pytest.fixture
-def thermal_printer(reference, monkeypatch, tmp_path):
+def thermal_printer(reference, client, monkeypatch, tmp_path):
     from grocy.core.config import get_settings
 
     database = os.getenv("GROCY_REFERENCE_DATABASE")
@@ -1835,6 +1835,7 @@ def thermal_printer(reference, monkeypatch, tmp_path):
                 path.write_bytes(contents)
         if any(path.name == "BASE_URL.txt" for path in previous):
             reference.get("/api/system/info")
+            client.options("/api/system/info")
 
 
 def thermal_list(app, name):
@@ -2028,6 +2029,7 @@ def test_reference_native_system_config_exposes_current_printer_and_url_settings
         thermal_printer.setting(name, value)
     # Grocy refreshes its view cache once after the base URL changes.
     reference.get("/api/system/config")
+    client.options("/api/system/config")
     for app in (reference, client):
         response = app.get("/api/system/config")
         assert response.status_code == 200, response.text

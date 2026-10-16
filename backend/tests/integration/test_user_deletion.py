@@ -50,6 +50,7 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
     clear_settings_cache()
     with TestClient(create_app(), headers=api_headers) as old:
         # Store the legacy user before the native permission views exist.
+        old.options("/api/system/info")
         with sqlite3.connect(database) as connection:
             user = connection.execute(
                 "INSERT INTO users(username,password,row_created_timestamp) VALUES ('Former','',?)",
@@ -111,6 +112,7 @@ def test_user_deletion_after_upgrade_keeps_saved_records(
         )
         assert result.returncode == 0, result.stdout + result.stderr
     with TestClient(create_app(), headers=api_headers) as upgraded:
+        upgraded.options("/api/system/info")
         assert upgraded.get("/api/stock/products/1").status_code == 200
         invalid_task = upgraded.post(
             "/api/objects/tasks", json={"name": "Invalid completion", "done": 2}
@@ -170,11 +172,13 @@ def test_deleted_last_user_stays_deleted_after_restart(tmp_path: Path, monkeypat
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
     clear_settings_cache()
     with TestClient(create_app(), headers=api_headers) as app:
+        app.options("/api/system/info")
         assert app.delete("/api/users/1").status_code == 204
         assert app.get("/api/user").status_code == 401
     reset_engine()
     clear_settings_cache()
     with TestClient(create_app(), headers=api_headers) as restarted:
+        restarted.options("/api/system/info")
         assert restarted.get("/api/user").status_code == 401
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT COUNT(*) FROM users").fetchone() == (0,)

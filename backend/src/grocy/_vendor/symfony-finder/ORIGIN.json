@@ -1,0 +1,37 @@
+{
+  "package": "symfony/finder",
+  "version": "v7.2.2",
+  "source": "https://github.com/symfony/finder.git",
+  "commit": "87a71856f2f56e4100373e92529eed3171695cfb",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CHANGELOG.md": "4110584b397f4c0306dff1faf48e8e6afd9c45d0f18bb456d47d3207c5c8bf16",
+    "Comparator/Comparator.php": "92dac05933e1b4e24e086c709c3fa130bd6ec6bca767f29350fef9eb66308519",
+    "Comparator/DateComparator.php": "2f8b4b5107787ec2ddc575b21689bfb4042cec00413cc7e63f6524747ba61ac2",
+    "Comparator/NumberComparator.php": "80f7ad00271d77df0ac446f3baef98851ec286fbbd072d813e5e40da8e1ac1ea",
+    "Exception/AccessDeniedException.php": "3226ca3e2ca3f4134848d00be239b0f248421e2e54ed3b29c7164961a8716611",
+    "Exception/DirectoryNotFoundException.php": "ba32193716dbfb31862aa71672721f227f34d22c1405c976dba7b5861cb65934",
+    "Finder.php": "d08df7d5488a5b95de07d3848d65e4c15b48859a243c4b9ba059cad26a923888",
+    "Gitignore.php": "edfd2426b36d625c205bae210e22f41d3aa69f72f565481fd3391b309f0f30c4",
+    "Glob.php": "f72d8b86bbffd89cb2b4c223d34a6ef46443b2bb5fedfcc1582872c9e29539cb",
+    "Iterator/CustomFilterIterator.php": "bbebec425e304af330c2bb6fe135e6c4ad4981740610d5dac6f4080061d04298",
+    "Iterator/DateRangeFilterIterator.php": "f7260da11feb1a7437df15e5b4e1ad2a774f44ac962a6a2977c4902ab8597802",
+    "Iterator/DepthRangeFilterIterator.php": "df7a5895af8049d64bb696e25ff94d6406325f636e392adb3d51a61ba8ce7937",
+    "Iterator/ExcludeDirectoryFilterIterator.php": "21b47e1fda95301ef73c44f274f54ab4c62079aeb6918b37a0dbfe8df8049bc5",
+    "Iterator/FilecontentFilterIterator.php": "e7001267c61b8d22d5b947c84a367d2a5774a348c52a946c778f582828c76ef8",
+    "Iterator/FilenameFilterIterator.php": "644be82f17157f4a047e2534337554ba01770d72f161b81002335d42bb60d538",
+    "Iterator/FileTypeFilterIterator.php": "789d89ad1f386978450ab0da7c0bb6cba40e966df0f120168e8b884b1a5f4ba7",
+    "Iterator/LazyIterator.php": "ae33bc32d083ff619e8dbeaca29a8628653ba67e99ec8acfd661a2d5e3458bda",
+    "Iterator/MultiplePcreFilterIterator.php": "e161cb9202f0dca399053b1743e3688f30acc4181473101ef8e7438c8eb28ab5",
+    "Iterator/PathFilterIterator.php": "2aa90e1708b2e1d3942ecbffd863fce26af3c7f34ca6b2ac14108cbffe4f4c09",
+    "Iterator/RecursiveDirectoryIterator.php": "3b168c48648e752076edfd788c0c4f23ca4df8461a194994d7c29a14a0129c22",
+    "Iterator/SizeRangeFilterIterator.php": "94f22df2a22059d4e3560c3b2ea51ffc0edc72aa91cdbc7012c531575c871e1e",
+    "Iterator/SortableIterator.php": "9c270a0e68924cf693acaef73c70032264a9fc4d47cd572c3c49d33fc7e1708e",
+    "Iterator/VcsIgnoredFilterIterator.php": "72387026c614f764fbafc6fdb13c92d7d653f6522a8e54b0314c15d794b20f17",
+    "LICENSE": "18da7e490d2aa77197a0619b25bcc771a0110132a9d76071665718d3295e73cb",
+    "README.md": "f3e510df4eaf53b6d368e58333b942e2d4672964876ac42e64eb832b5a566849",
+    "SplFileInfo.php": "da6853542932f7fec11532fce59835d6fe650b94d459798db8d0bbf8f9c42d9c"
+  }
+}

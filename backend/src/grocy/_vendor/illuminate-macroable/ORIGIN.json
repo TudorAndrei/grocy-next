@@ -1,0 +1,13 @@
+{
+  "package": "illuminate/macroable",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/macroable.git",
+  "commit": "e862e5648ee34004fa56046b746f490dfa86c613",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "Traits/Macroable.php": "50fa4e0aa4e5c0b0e7fb6566fb3fc991808681fba5c81db09e0f8641c7e9d524"
+  }
+}

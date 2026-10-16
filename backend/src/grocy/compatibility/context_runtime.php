@@ -8,7 +8,7 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
         $GROCY_DEFAULT_USER_SETTINGS = [];
         define('GROCY_IS_EMBEDDED_INSTALL', false);
         foreach ($request['configuration'] as $name => $value) {
-            if (!str_starts_with($name, 'GROCY_')) define($name, $value);
+            if (!str_starts_with($name, 'GROCY_') && $name !== 'NATIVE_DATABASE_FILE') define($name, $value);
         }
         (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'DbConnection'))->setValue(null, $database);
         (new ReflectionProperty(Grocy\Services\DatabaseService::class, 'instance'))->setValue(null, new NativeReadDatabaseService($database));
@@ -30,12 +30,32 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
             return nativeContextTerminal(200, $body);
         }
         ob_end_clean();
+        $cache = GROCY_DATAPATH . '/viewcache';
+        $hash = hash('sha256', file_get_contents(__DIR__ . '/../_vendor/grocy-core/version.json') . GROCY_BASE_URL . GROCY_BASE_PATH);
+        if (!file_exists($cache . '/' . $hash . '.txt')) {
+            EmptyFolder($cache);
+            touch($cache . '/' . $hash . '.txt');
+            if (function_exists('opcache_reset')) opcache_reset();
+            $result = nativeContextTerminal(302, '');
+            $result['headers']['Location'] = [(new Grocy\Helpers\UrlManager(GROCY_BASE_URL))->ConstructUrl('/')];
+            return $result;
+        }
+        $nativeService = new Grocy\Services\DatabaseService();
+        $modeDatabase = in_array(GROCY_MODE, ['demo', 'prerelease'], true);
+        define('NATIVE_DATABASE_FILE', $modeDatabase
+            ? (new ReflectionMethod(Grocy\Services\DatabaseService::class, 'GetDbFilePath'))->invoke($nativeService)
+            : $request['configuration']['NATIVE_DATABASE_FILE']);
+        if ($modeDatabase) $database->useNativeDatabase($nativeService->GetDbConnectionRaw());
         if (in_array(GROCY_MODE, ['dev', 'demo', 'prerelease'], true) || GROCY_DISABLE_AUTH === true) {
             define('GROCY_USER_ID', 1);
         }
         $container = new DI\Container();
         $container->set('ApiKeyHeaderName', $request['api_key_header']);
         $container->set('UrlManager', new Grocy\Helpers\UrlManager(GROCY_BASE_URL));
+        $container->set('view', fn() => new Slim\Views\Blade(
+            __DIR__ . '/../_vendor/grocy-core/views', GROCY_DATAPATH . '/viewcache'
+        ));
+        $GLOBALS['NativeContainer'] = $container;
         $class = GROCY_AUTH_CLASS;
         $GLOBALS['NativeAuthentication'] = new $class($container, new Slim\Psr7\Factory\ResponseFactory());
         $app = nativeRouter();
@@ -49,6 +69,9 @@ function nativeRequestContext(array $request, NativeDatabase $database): array
             'disable_auth' => (bool)GROCY_DISABLE_AUTH,
             'base_path' => GROCY_BASE_PATH,
             'auth_class' => GROCY_AUTH_CLASS,
+            'direct_database' => $database->direct,
+            'is_api_route' => str_starts_with($http->getUri()->getPath(), '/api/'),
+            'login_url' => $container->get('UrlManager')->ConstructUrl('/login'),
             'stock_due_soon_days' => nativeEncodeValue($GROCY_DEFAULT_USER_SETTINGS['stock_due_soon_days']),
         ];
         return $result;
@@ -81,6 +104,8 @@ function nativeHttpRequest(array $request)
         $_SERVER['HTTP_' . str_replace('-', '_', strtoupper($name))] = implode(', ', $values);
     }
     $_SERVER['HTTP_HOST'] = $http->getHeaderLine('Host');
+    $_SERVER['REQUEST_URI'] = $http->getRequestTarget();
+    $_GET = $http->getQueryParams();
     if ($http->getUri()->getScheme() === 'https') $_SERVER['HTTPS'] = 'on';
     return $http;
 }

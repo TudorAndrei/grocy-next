@@ -1,0 +1,20 @@
+{
+  "package": "symfony/polyfill-mbstring",
+  "version": "v1.31.0",
+  "source": "https://github.com/symfony/polyfill-mbstring.git",
+  "commit": "85181ba99b2345b0ef10ce42ecac37612d9fd341",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "bootstrap.php": "8ed6c4de6d1427bbc30b4ef11ebf0e274b9791e07f45420280e3064567e599ac",
+    "bootstrap80.php": "badffedae400e1430c07decd8e9ffd007c1ba1c39e7e665326da3b73bfe3d8ee",
+    "LICENSE": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31",
+    "Mbstring.php": "788b7065d4291a8f14e7dcacc4be35c83a9b5f3ac5c2bdc57f819fff0c6864eb",
+    "README.md": "7686ab9250b91f0b706d6a5aac4e6bbf4b8865ec323bbb420343f19e98d91d14",
+    "Resources/unidata/caseFolding.php": "99cea898c03847d05e1c143cf64183c57749b93f578f5bfcd856f89d700b9b85",
+    "Resources/unidata/lowerCase.php": "df2b1879ae0f74d86996a4790de37b534c1b406002930550bc087885ae54f0ea",
+    "Resources/unidata/titleCaseRegexp.php": "4eef657adbee39f7badd695b1d60b152b047385966a98b6d8d411554573ec596",
+    "Resources/unidata/upperCase.php": "4ae4778ee941291582b801bcddeaac401068e0e5dde7357ef06f9e882131b026"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "package": "symfony/clock",
+  "version": "v7.2.0",
+  "source": "https://github.com/symfony/clock.git",
+  "commit": "b81435fbd6648ea425d1ee96a2d8e68f4ceacd24",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CHANGELOG.md": "cd3b92b53964fb07c83114c2b1d9c2c34ee6a3c80206095f0499e51c9abc4d50",
+    "Clock.php": "c4f44f7e1009d49150e5fbd22d634d15465049ff480999167efeaecdc8020dd5",
+    "ClockAwareTrait.php": "02f49eccc6d76b796c06411f3429c71703763dd7945434644ac95f726081984d",
+    "ClockInterface.php": "2891af990ae9b5ab2792813e191d1efc11f9d04095427a4b27feaa6022e2d2ed",
+    "DatePoint.php": "83970312340ff599e27094cd86142098fe4d2a7d90962595945a90dbd73dd0ed",
+    "LICENSE": "6439cc1bba78b7de0c1905b0643679a5a7768ba020a090370d7742030303c6b2",
+    "MockClock.php": "735f70e72d54b82808a764a2ddf90a6fa1dae5e008f6a3b77a3b8209d60b92cd",
+    "MonotonicClock.php": "94d8c0eb7dc195ec1109fca71244271f1f344baad2bfdec393a5ec1e261d3639",
+    "NativeClock.php": "e93ae77586671392fb288f18cbaccb7534496e09d4131573b58d0dc85dbe4822",
+    "README.md": "f7a49ae6af0085b8bfdc79c6cc079fde5e1bbbfeb73a99b3da6f18f33544ab3e",
+    "Resources/now.php": "26423cefde6ed92b0e0d5476a890f91c199546fc23b7c07f6c252c8c8f74934a"
+  }
+}

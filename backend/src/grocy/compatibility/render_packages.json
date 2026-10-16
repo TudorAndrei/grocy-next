@@ -1,0 +1,95 @@
+{
+  "prefixes": {
+    "voku\\": [
+      "voku-portable-ascii/src/voku/"
+    ],
+    "Symfony\\Polyfill\\Php83\\": [
+      "symfony-polyfill-php83/"
+    ],
+    "Symfony\\Polyfill\\Mbstring\\": [
+      "symfony-polyfill-mbstring/"
+    ],
+    "Symfony\\Contracts\\Translation\\": [
+      "symfony-translation-contracts/"
+    ],
+    "Symfony\\Component\\Translation\\": [
+      "symfony-translation/"
+    ],
+    "Symfony\\Component\\Finder\\": [
+      "symfony-finder/"
+    ],
+    "Symfony\\Component\\Clock\\": [
+      "symfony-clock/"
+    ],
+    "Slim\\Views\\": [
+      "berrnd-slim-blade-view/src/"
+    ],
+    "Ramsey\\Uuid\\": [
+      "ramsey-uuid/src/"
+    ],
+    "Ramsey\\Collection\\": [
+      "ramsey-collection/src/"
+    ],
+    "Psr\\SimpleCache\\": [
+      "psr-simple-cache/src/"
+    ],
+    "Psr\\Clock\\": [
+      "psr-clock/src/"
+    ],
+    "Jenssegers\\Blade\\": [
+      "webman-blade/src/"
+    ],
+    "Illuminate\\View\\": [
+      "illuminate-view/"
+    ],
+    "Illuminate\\Support\\": [
+      "illuminate-support/",
+      "illuminate-collections/",
+      "illuminate-conditionable/",
+      "illuminate-macroable/"
+    ],
+    "Illuminate\\Pipeline\\": [
+      "illuminate-pipeline/"
+    ],
+    "Illuminate\\Filesystem\\": [
+      "illuminate-filesystem/"
+    ],
+    "Illuminate\\Events\\": [
+      "illuminate-events/"
+    ],
+    "Illuminate\\Contracts\\": [
+      "illuminate-contracts/"
+    ],
+    "Illuminate\\Container\\": [
+      "illuminate-container/"
+    ],
+    "Illuminate\\Bus\\": [
+      "illuminate-bus/"
+    ],
+    "Doctrine\\Inflector\\": [
+      "doctrine-inflector/lib/Doctrine/Inflector/"
+    ],
+    "Carbon\\Doctrine\\": [
+      "carbonphp-carbon-doctrine-types/src/Carbon/Doctrine/"
+    ],
+    "Carbon\\": [
+      "nesbot-carbon/src/Carbon/"
+    ],
+    "Brick\\Math\\": [
+      "brick-math/src/"
+    ]
+  },
+  "files": [
+    "symfony-polyfill-mbstring/bootstrap.php",
+    "illuminate-collections/functions.php",
+    "illuminate-collections/helpers.php",
+    "symfony-polyfill-php83/bootstrap.php",
+    "symfony-clock/Resources/now.php",
+    "symfony-translation/Resources/functions.php",
+    "illuminate-support/functions.php",
+    "illuminate-support/helpers.php",
+    "illuminate-events/functions.php",
+    "illuminate-filesystem/functions.php",
+    "ramsey-uuid/src/functions.php"
+  ]
+}

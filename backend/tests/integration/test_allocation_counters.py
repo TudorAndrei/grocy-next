@@ -49,6 +49,7 @@ def test_import_keeps_all_native_allocation_history(tmp_path: Path, monkeypatch)
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
     clear_settings_cache()
     with TestClient(create_app(), headers={"GROCY-API-KEY": "import-owner"}) as app:
+        app.options("/api/system/info")
         location = app.post("/api/objects/locations", json={"name": "Next"})
         assert location.status_code == 200, location.text
         assert int(location.json()["created_object_id"]) == expected["locations"] + 1
@@ -122,6 +123,7 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
     headers = {"GROCY-API-KEY": "dev-key"}
     with TestClient(create_app(), headers=headers) as old:
 
+        old.options("/api/system/info")
         def create_saved(table: str, **body):
             # Revision 0013 had ORM defaults, before native SQL defaults were installed.
             defaults = {
@@ -267,6 +269,7 @@ def test_upgrade_keeps_a_complete_saved_graph_and_new_id_allocation(tmp_path: Pa
     reset_engine()
     monkeypatch.setenv("GROCY_AUTO_CREATE_SCHEMA", "true")
     with TestClient(create_app(), headers=headers) as upgraded:
+        upgraded.options("/api/system/info")
         assert _data_snapshot(database) == after
         assert upgraded.get("/api/stock/products/1").json()["stock_amount"] == 2
         battery = upgraded.get("/api/batteries/1")

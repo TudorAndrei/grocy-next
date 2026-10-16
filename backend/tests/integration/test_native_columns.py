@@ -54,6 +54,7 @@ def test_native_sql_inserts_use_database_defaults_and_allow_null_timestamps(
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{database}")
     clear_settings_cache()
     with TestClient(create_app()) as api, sqlite3.connect(database) as db:
+        api.options("/api/system/info")
         db.row_factory = sqlite3.Row
         columns = ",".join(f'"{key}"' for key in body)
         placeholders = ",".join("?" for _key in body)

@@ -1,16 +1,21 @@
 """Apply the original Grocy route, CORS, and HTTP response rules."""
 
-import base64
 from typing import Any
 
-from fastapi import Request, Response
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from grocy.api.compatibility.responses import native_configuration
+from grocy.api.compatibility.responses import (
+    native_action_response,
+    native_configuration,
+    native_response,
+    native_uri,
+)
 from grocy.compatibility.generic import NativeStatements
 from grocy.compatibility.purifier import InputPurifier
 from grocy.compatibility.values import decode_value
+from grocy.core.auth import authenticate_request
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
 from grocy.db.session import get_session_factory
@@ -24,7 +29,7 @@ class NativeProtocol:
         path = scope.get("path", "")
         if (
             scope["type"] != "http"
-            or not path.startswith("/api/")
+            or "/api/" not in path
             or path.startswith("/api/v2/")
             or path in {"/api/v2", "/api/health"}
         ):
@@ -53,12 +58,12 @@ class NativeProtocol:
         session: AsyncSession,
     ) -> None:
         settings = get_settings()
-        request = Request(scope)
+        request = Request(scope, receive)
         method = scope["method"]
         try:
             result: dict[str, Any] = await runtime.request_context(
                 method=method,
-                uri=str(request.url),
+                uri=native_uri(request),
                 headers=scope["headers"],
                 configuration=native_configuration(session),
                 default_permissions=settings.default_permissions,
@@ -113,6 +118,16 @@ class NativeProtocol:
                         [(b"content-type", b"text/html; charset=UTF-8"), (b"content-length", b"0")]
                     )
                 message = {**message, "headers": [*headers, *cors]}
+                context = state["native_context"]
+                if unauthorized and context and not context["is_api_route"]:
+                    message = {
+                        **message,
+                        "status": 302,
+                        "headers": [
+                            *message["headers"],
+                            (b"location", context["login_url"].encode()),
+                        ],
+                    }
                 if startup["output"] and startup["committed"]:
                     # PHP has already sent these headers before Grocy can change them.
                     message = {
@@ -127,11 +142,20 @@ class NativeProtocol:
             await send(message)
 
         if not result["matched"]:
-            response = Response(
-                content=base64.b64decode(result["response"]),
-                status_code=result["status"],
-                headers={name: ", ".join(values) for name, values in result["headers"].items()},
-            )
+            response = native_response(result)
+            await response(scope, receive, native_send)
+            return
+        context = state["native_context"]
+        if context["base_path"] or context["direct_database"]:
+            try:
+                actor = await authenticate_request(
+                    request, session, request.headers.get("GROCY-API-KEY")
+                )
+                response = await native_action_response(
+                    request, session, "dispatch", "", actor.user_id
+                )
+            except GrocyError as error:
+                response = await grocy_error_handler(request, error)
             await response(scope, receive, native_send)
             return
         if method == "HEAD":

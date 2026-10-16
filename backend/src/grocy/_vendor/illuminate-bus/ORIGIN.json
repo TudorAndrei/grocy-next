@@ -1,0 +1,27 @@
+{
+  "package": "illuminate/bus",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/bus.git",
+  "commit": "3aacdeb893bf5869aa4c066cb91050c3f5f7c005",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "Batch.php": "441fa489e437fcba507e62f34dcbf15b277adfa6550ce8661a5b36be42d598d7",
+    "Batchable.php": "835224b9b452626bef0f998fab40b82f774d28e6f440df4bffaf54929b044b91",
+    "BatchFactory.php": "4d6b599e22fd6adb5f2164c80b1a3275c60a3662c8820c91a7e562612697919d",
+    "BatchRepository.php": "63568750c81d8d1d15141d0ece2298f19ed8a0e025e780fd3cfa2440b0a2c7f8",
+    "BusServiceProvider.php": "f238cf595be81c42f78a3f65f8b393e0033e15e196fd57c7127b79daaece7b4c",
+    "ChainedBatch.php": "b8925d69dd4b5b07f4aa0be86b2c6fd09977a38f2fb9dc248ff6e2e4dad75d72",
+    "DatabaseBatchRepository.php": "58355e4de2e9a1f37dc1cfa4d325ebbca4a5d545fea337a9a5cf1f02e55fd419",
+    "Dispatcher.php": "5389b6dae7c0946c099619b6f7f9a75a13e12e3ea9cb06bf03b80062726158d2",
+    "DynamoBatchRepository.php": "3dde1a06057cc098e0b257d1765721211fb172812ecc733479a341692864425a",
+    "Events/BatchDispatched.php": "da7be3693b99ceb8fb7bd4ec9031b5e6f76075abc894e8523bd683d11196658d",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "PendingBatch.php": "6aa3d334a3dc6411f68f931869db76e31b85e28dfa81f8dc917f2b4e13a92e5f",
+    "PrunableBatchRepository.php": "8cdaa9bfd0d6ae985cbe7a5fa45b378356e26b075e4a890146b6052ea9be6927",
+    "Queueable.php": "6f5e6c24444378268d443334beb682c18c9a243bf26b423aa44c6a0e504e6ed2",
+    "UniqueLock.php": "bba46a4c8382c9a9568bd53c1cb3c8201e9b3df7dece80af0247e0b0d508e7ea",
+    "UpdatedBatchJobCounts.php": "d8ec17723c890a6d1e40a3ac1701d9659047895df5f46aecd17d829162c132a2"
+  }
+}

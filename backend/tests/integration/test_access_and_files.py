@@ -289,6 +289,7 @@ def test_native_key_use_preserves_file_time_and_credential_priority(tmp_path, mo
     monkeypatch.setenv("GROCY_DATABASE_WAL", "false")
     clear_settings_cache()
     with TestClient(create_app()) as api:
+        api.options("/api/system/info")
         with sqlite3.connect(database) as db:
             db.execute(
                 "INSERT INTO api_keys(api_key,user_id,expires) "

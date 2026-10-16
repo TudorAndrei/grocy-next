@@ -1,0 +1,15 @@
+{
+  "package": "illuminate/pipeline",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/pipeline.git",
+  "commit": "6a19a86af3373f8dec4a2db71aae5ca0f02d36fa",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "Hub.php": "e7dfa3499acd0b8922b7095e91433a2d8a2fafd9a44b8b8016441a5d64016890",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "Pipeline.php": "0797646f1a5c1e996dfc9e0711980c5bf29bfe730dd03a86a28a812812feef3c",
+    "PipelineServiceProvider.php": "2fb537aca1e59b3685910eefb5940828b7712709b29170c2e2a2e5252bf74649"
+  }
+}

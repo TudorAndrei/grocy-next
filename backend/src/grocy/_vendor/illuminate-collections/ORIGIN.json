@@ -1,0 +1,22 @@
+{
+  "package": "illuminate/collections",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/collections.git",
+  "commit": "0094b162fa505126c1391222f27fd98734d24525",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "Arr.php": "c4d0a126207d6f4ea84bfc91a6306024a5e363a4590124e2b6f81a4bb076e51e",
+    "Collection.php": "1435439b26d48f8e8aa2881644b24395d8886738f0f9b9c511ce4b2c8af19b53",
+    "Enumerable.php": "d3382a1b18bb796ed76cace9ea66fcd9ecd7f5387b8767bb089edf8e1ed2b43f",
+    "functions.php": "8308c0ddc8e20ec2fd6c362632aa4548612135932e255de6837cf30749ee55a8",
+    "helpers.php": "d892654ac1a1c85238f1c2195242fb45583809d115627f0a121671f638a3cfa3",
+    "HigherOrderCollectionProxy.php": "dcab4bb505e243c61287c7826dfa2c61a111450190f5286b72f20005e6bd5b39",
+    "ItemNotFoundException.php": "d13145020ea5e0022409d856fceae6f5dcead1a1bf5d1043dade8048240c6925",
+    "LazyCollection.php": "a2f17673afa8891f4ee0ed420819058fbb8a6b1d09ffc47087c9cb0ee9930d56",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "MultipleItemsFoundException.php": "075e8390f47e7d98be2b0ff39511a0dbfc7e43690e0d33a6bf382e81ecd7d6e1",
+    "Traits/EnumeratesValues.php": "417219e20b2d34d5f857d9140471b9dfbe668a633f7a7cc0ae19d87497f59d65"
+  }
+}

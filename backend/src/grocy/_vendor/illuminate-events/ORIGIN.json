@@ -1,0 +1,19 @@
+{
+  "package": "illuminate/events",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/events.git",
+  "commit": "79ff0a834e48833fb74004957e19ae07c9e031af",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CallQueuedListener.php": "b190b27552ae2225b3d5d4b12eea687ddbae796fa4ff61aa3f53be4f3e493017",
+    "Dispatcher.php": "a29d14230d6f1ced399eaaa8fbb54cc2dccbff1a30b26a6f661fc7a116ee2ea5",
+    "EventServiceProvider.php": "fcfe706b5f2fae0eba651d603fa3171987e160ffd996aae412233f49d8d5d91d",
+    "functions.php": "221d89afd239e808020dc473d2c7935caa51ba5b9e7f8fe00bf4201f47db6d39",
+    "InvokeQueuedClosure.php": "a2ef1e86f36bcf524d183cc316f75e83d3935a569bf953ceba7f7cea63ece532",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "NullDispatcher.php": "81135cdea6177000faf6583fb9a546e9aef80a6b7426f4335b78fa6ea2f2e470",
+    "QueuedClosure.php": "b82887264aead73c2a8253ac3f4424702c3e9f2a154ff3d6e21593dfc90682c8"
+  }
+}

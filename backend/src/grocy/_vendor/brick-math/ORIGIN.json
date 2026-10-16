@@ -1,0 +1,29 @@
+{
+  "package": "brick/math",
+  "version": "0.12.3",
+  "source": "https://github.com/brick/math.git",
+  "commit": "866551da34e9a618e64a819ee1e01c20d8a588ba",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CHANGELOG.md": "a476a7011353918d6498b48fe452f5efead129a94f69b3ea84e6becd8c0674c6",
+    "LICENSE": "d2625cc652e6ffa9f16827f1dba2d83ac12b050dc8150a38720420dbb810cae3",
+    "psalm-baseline.xml": "a1bf69780f3d8c34aab3f8f243abf32126dfda749cce6b2cf32c13fe50cb5646",
+    "src/BigDecimal.php": "5d9b14d32cd5fe95df0fd344b466a7bbbc36b81de76b750abb1cb777907275fd",
+    "src/BigInteger.php": "1bc7df79f41a5d3f91371b3bd156127afbc321c3abd85b2173cbc529ec62b1fe",
+    "src/BigNumber.php": "cfc49ec554e4cd1c6ff8b77edcc80d943e5803dcc9d753d5ebcb65b8ae42bf06",
+    "src/BigRational.php": "daa2272c411c052a437162a2bafc761dd40574c0d5941f954d36b7689b61e5a5",
+    "src/Exception/DivisionByZeroException.php": "a65e7307afc6671e76fac9e0e64d70986a2bba61738978cf185ef469a19821b4",
+    "src/Exception/IntegerOverflowException.php": "27ff8348f863894592c9ef7d687b6026bc931308aeca083d16090ad855a07d61",
+    "src/Exception/MathException.php": "796f15e4afa34025fb431ef3f773072954a74fd072c1f2c6f4ccd32164752597",
+    "src/Exception/NegativeNumberException.php": "9b74142e2c0c4921893d1ae96549f7769f518c6f9775b63a24823d105467da6b",
+    "src/Exception/NumberFormatException.php": "93c2bd2e19d4497f2b47102a0c4f4176d23e42b03b2983d4e3db0d7d3ffbd4e5",
+    "src/Exception/RoundingNecessaryException.php": "43997b0b4779555f9edb4fca54cf7748bb9e8eaedf840b364f0b02a5028f895c",
+    "src/Internal/Calculator/BcMathCalculator.php": "ab2d4ab335b0ec29d5531fba0d781f11acce4d9eb476ea944827488cb8149c7d",
+    "src/Internal/Calculator/GmpCalculator.php": "9efcd3055789ec6403358a2a67049238dbf3dfa21cd3b0d55669a672f3c99a21",
+    "src/Internal/Calculator/NativeCalculator.php": "81f6f89f6e60f988c7dd1c071a69cd761f654b927195803cd6f4a3f4e5dbfcec",
+    "src/Internal/Calculator.php": "f7f892979fc9797b0502e44176bd9a76bb45d7193c78f809e93c57be33e9d91d",
+    "src/RoundingMode.php": "397d6d8004dfeb6b8d950937c07c65f47342eb4ea3f0ddcc0348be77c8e3f799"
+  }
+}

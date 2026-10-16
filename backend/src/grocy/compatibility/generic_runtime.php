@@ -9,6 +9,7 @@ class NativeDatabase extends LessQL\Database
     public string $insertId = '0';
     public array $context = [];
     public bool $authenticatedKeySelected = false;
+    public bool $direct = false;
 
     public function __construct(private PDO $schema)
     {
@@ -17,6 +18,7 @@ class NativeDatabase extends LessQL\Database
 
     public function prepare($query)
     {
+        if ($this->direct) return $this->schema->prepare($query);
         $check = $this->schema->prepare($query);
         $columns = null;
         if (($this->context['action'] ?? null) === 'select') {
@@ -33,6 +35,7 @@ class NativeDatabase extends LessQL\Database
     public function quote($value)
     {
         $quoted = parent::quote($value);
+        if ($this->direct) return $quoted;
         if (!mb_check_encoding($quoted, 'UTF-8') && str_starts_with($quoted, "'") && str_ends_with($quoted, "'")) {
             // Preserve the original PDO quote result, including NUL truncation.
             $text = str_replace("''", "'", substr($quoted, 1, -1));
@@ -43,7 +46,15 @@ class NativeDatabase extends LessQL\Database
 
     public function lastInsertId($sequence = null)
     {
+        if ($this->direct) return parent::lastInsertId($sequence);
         return $this->insertId;
+    }
+
+    public function useNativeDatabase(PDO $pdo): void
+    {
+        $this->schema = $pdo;
+        parent::__construct($pdo);
+        $this->direct = true;
     }
 
     public function select($table, $options = [])
@@ -93,6 +104,7 @@ class NativeDatabase extends LessQL\Database
         $method = match ($action) {
             'begin' => 'beginTransaction', 'commit' => 'commit', 'rollback' => 'rollBack',
         };
+        if ($this->direct) return $this->schema->$method();
         if ($action === 'begin') {
             $this->schema->beginTransaction();
         } elseif (!$this->schema->inTransaction()) {
@@ -392,11 +404,14 @@ function nativeCorsHeaders(): array
     ];
 }
 
-function nativeEncodedResponse($response): array
+function nativeEncodedResponse($response, bool $json = true): array
 {
     // Keep JsonMiddleware and the outer CorsMiddleware headers.
-    if (!$response->hasHeader('Content-Disposition')) {
+    if ($json && !$response->hasHeader('Content-Disposition')) {
         $response = $response->withHeader('Content-Type', 'application/json');
+    }
+    if (!$response->hasHeader('Content-Type')) {
+        $response = $response->withHeader('Content-Type', ini_get('default_mimetype') . '; charset=' . ini_get('default_charset'));
     }
     foreach (nativeCorsHeaders() as $name => $values) {
         $response = $response->withHeader($name, $values);

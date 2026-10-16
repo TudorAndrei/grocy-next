@@ -49,6 +49,7 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
 
     name = uuid4().hex
     with TestClient(create_app()) as client:
+        client.options("/api/system/info")
         client.headers.update(api_headers)
         assert client.options("/api/objects/locations").status_code == 200
         fail_request.touch()

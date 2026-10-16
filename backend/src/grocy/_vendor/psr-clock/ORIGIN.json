@@ -1,0 +1,15 @@
+{
+  "package": "psr/clock",
+  "version": "1.0.0",
+  "source": "https://github.com/php-fig/clock.git",
+  "commit": "e41a24703d4560fd0acb709162f73b8adfc3aa0d",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CHANGELOG.md": "733c47bd58564ace4d007f31a9c175f0a6bf435087b2c0a7ff7ac0361c5b1751",
+    "LICENSE": "8f35dcf3247dcce7f0c4d1ad51de19726a56a43ced7a59ad1df0378125ac9227",
+    "README.md": "8ae27d483ba087f4233dfdd12f096fe712a8c71b34a55932cafcd70f401af531",
+    "src/ClockInterface.php": "da2cd72f7727f28088ea329d6e23cdb8167f0170aabf6d1cc59662eb04f6eb3f"
+  }
+}

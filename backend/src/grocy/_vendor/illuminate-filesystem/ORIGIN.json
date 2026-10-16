@@ -1,0 +1,21 @@
+{
+  "package": "illuminate/filesystem",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/filesystem.git",
+  "commit": "e59cfec3c16d71be2da85cf9385ddd82f0c15857",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "AwsS3V3Adapter.php": "fff589a428567e580c1afae27207d915ecc766339d6fcd315341ceb6986999d0",
+    "Filesystem.php": "ade84674816a37adfa2e83c9a6fa8a57b2811bc98392c409872eac9417965538",
+    "FilesystemAdapter.php": "bd2f7471973d588e77df45794fd84da70cc517edb52506c20808c047804b2412",
+    "FilesystemManager.php": "d9409fa8630753557ce253d4bd9b22aae274c07203d0c4c3c46517d47f1ff866",
+    "FilesystemServiceProvider.php": "aba434011738b3d67f14e9c8a334d5316ec4dfc24d638f8dd80f4a94cb5cc83d",
+    "functions.php": "2b74b06d7157dfadcc1ff2dcc92fb51300b1a732d30645d6ed9f297e61153096",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "LocalFilesystemAdapter.php": "a4f6459698bc7cdf8f8dc3a3fb3598092d53841958a557eb2bc21bce81032671",
+    "LockableFile.php": "7743ce35b1b0969594f9f90e4925dd7287d5e297aa6ade3edb1ec5b222be7470",
+    "ServeFile.php": "8f4503a2860b044454a8a8f7c611378b8d303f668efaa9861bd1d7a7f64f4100"
+  }
+}

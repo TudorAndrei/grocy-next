@@ -20,6 +20,10 @@ function nativeAction(array $request, NativeDatabase $database): array
         if (!defined('GROCY_AUTHENTICATED')) {
             nativeAttachIdentity($database->users($request['user_id'] ?? GROCY_USER_ID), $http);
         }
+        if ($request['route'] === 'dispatch') {
+            $response = nativeDispatch($http, $database);
+            return nativeEncodedResponse($response, false);
+        }
         [$controller, $method, $args] = match ($request['route']) {
             'task_complete' => [new NativeTasksController($database), 'MarkTaskAsCompleted', ['taskId' => $request['object_id']]],
             'task_undo' => [new NativeTasksController($database), 'UndoTask', ['taskId' => $request['object_id']]],
@@ -93,6 +97,9 @@ function nativeAction(array $request, NativeDatabase $database): array
         };
         $response = (new Slim\Handlers\Strategies\RequestResponse())([$controller, $method], $http, $response, $args);
     } catch (Throwable $error) {
+        if (isset($http) && !str_starts_with($http->getUri()->getPath(), '/api/')) {
+            return nativeEncodedResponse((new NativeExceptionController(nativeRouter()))($http, $error, true, false, false), false);
+        }
         $status = $error instanceof Slim\Exception\HttpException ? $error->getCode() : 500;
         $response = $response->withStatus($status)->withJson([
             'error_message' => $error->getMessage(),

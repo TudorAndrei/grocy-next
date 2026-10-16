@@ -1,0 +1,18 @@
+{
+  "package": "symfony/translation-contracts",
+  "version": "v3.5.1",
+  "source": "https://github.com/symfony/translation-contracts.git",
+  "commit": "4667ff3bd513750603a09c8dedbea942487fb07c",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "CHANGELOG.md": "73122a1fa6a74b5d5235721839bef8f2756e0c0927feeeea36b141417bcea164",
+    "LICENSE": "375396ec5755e9c27dd9c513c0eb4c2923881aba98b941f156e92ed6ec1cfa19",
+    "LocaleAwareInterface.php": "a4d6ff9c371281aec3fb6dd7eadec85700a25b22ea24e4c9ec14f92a36dbe80c",
+    "README.md": "2fb6a2b032778a724d3bd3f187c78a8ab1a634135c6f8f2b031f53b8c9c592e9",
+    "TranslatableInterface.php": "38c3c12b0ac83afe1413a7086feb66896bd5437834ef2f9c50bd2eed5bc61a62",
+    "TranslatorInterface.php": "0f3dd9aa6abe2a52389eeb817113e975df6f66f227e17f685723c8075430425e",
+    "TranslatorTrait.php": "6f5d8263243ba7732b6af94a62a10536d5b28adae48ffc309354663d3e62679f"
+  }
+}

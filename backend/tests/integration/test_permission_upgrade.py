@@ -62,6 +62,7 @@ def test_existing_permission_rows_keep_their_counter_after_replacement(tmp_path:
     clear_settings_cache()
     reset_engine()
     with TestClient(create_app(), headers=headers) as upgraded:
+        upgraded.options("/api/system/info")
         assert upgraded.put(path, json={"permissions": []}).status_code == 204
         assert upgraded.post(path, json={"permission_id": 7}).status_code == 204
         assert upgraded.get(path).json() == [

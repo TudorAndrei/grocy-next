@@ -102,6 +102,7 @@ class NativeRecipesController extends Grocy\Controllers\RecipesApiController { u
 class NativeUsersController extends Grocy\Controllers\UsersApiController { use NativeListContext; }
 
 class NativeSystemController extends Grocy\Controllers\SystemApiController { use NativeListContext; }
+class NativeFileRoutesController extends Grocy\Controllers\FilesApiController { use NativeListContext; }
 
 class NativeLocaleMiddleware extends Grocy\Middleware\LocaleMiddleware
 {

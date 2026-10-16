@@ -1,0 +1,14 @@
+{
+  "package": "illuminate/conditionable",
+  "version": "v12.3.0",
+  "source": "https://github.com/illuminate/conditionable.git",
+  "commit": "a2b3c66f3ca532e12e694bd5c9254adc303b922d",
+  "license": [
+    "MIT"
+  ],
+  "files": {
+    "HigherOrderWhenProxy.php": "58792b8ae906c51c5124d9ff031cfbcd3585c6f88b06000c13e113b75f8f78f8",
+    "LICENSE.md": "7b4f9149597fbae2ce689bc9317d1869e17f1b3fa5f01c289998c108f8c37cf7",
+    "Traits/Conditionable.php": "5697fdba0acb78ca0b4e122e5c459cd5d97d000ed9b14fed31271cb7ffd44225"
+  }
+}

@@ -31,6 +31,9 @@ spl_autoload_register(function (string $class): void {
         'Psr\\Http\\Message\\' => ['psr-http-message/src/', 'psr-http-factory/src/'],
         'Fig\\Http\\Message\\' => ['fig-http-message-util/src/'],
     ];
+    static $renderPackages = null;
+    $renderPackages ??= json_decode(file_get_contents(__DIR__ . '/render_packages.json'), true);
+    $prefixes = array_merge($renderPackages['prefixes'], $prefixes);
     foreach ($prefixes as $prefix => $directories) {
         if (!str_starts_with($class, $prefix)) {
             continue;
@@ -51,6 +54,9 @@ require __DIR__ . '/../_vendor/symfony-deprecation-contracts/function.php';
 require __DIR__ . '/file_service_runtime.php';
 require __DIR__ . '/../_vendor/nikic-fast-route/src/functions.php';
 require __DIR__ . '/../_vendor/php-di/src/functions.php';
+foreach (json_decode(file_get_contents(__DIR__ . '/render_packages.json'), true)['files'] as $file) {
+    require __DIR__ . '/../_vendor/' . $file;
+}
 
 function parsedBody(string $raw, string $method, ?string $contentType)
 {

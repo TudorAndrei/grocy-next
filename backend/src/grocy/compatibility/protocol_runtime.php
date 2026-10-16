@@ -16,8 +16,31 @@ class NativeExceptionController extends Grocy\Controllers\ExceptionController
 {
     public function __construct(Slim\App $app)
     {
-        (new ReflectionProperty(Grocy\Controllers\ExceptionController::class, 'app'))->setValue($this, $app);
+        parent::__construct($app, $GLOBALS['NativeContainer']);
     }
+}
+
+function nativeDispatch($http, NativeDatabase $database)
+{
+    $container = $GLOBALS['NativeContainer'];
+    foreach (['Tasks', 'Chores', 'Batteries', 'Stock', 'Recipes', 'Users', 'System', 'Print', 'Calendar'] as $name) {
+        $class = 'Native' . $name . 'Controller';
+        $container->set('Grocy\\Controllers\\' . $name . 'ApiController', fn() => new $class($database));
+    }
+    $container->set(Grocy\Controllers\FilesApiController::class, fn() => new NativeFileRoutesController($database));
+    $container->set(Grocy\Controllers\GenericEntityApiController::class, fn() => new NativeGenericController($database));
+    $container->set(Grocy\Controllers\OpenApiController::class, fn() => new NativeOpenApiController($database));
+    $factory = new Slim\Http\Factory\DecoratedResponseFactory(
+        new Slim\Psr7\Factory\ResponseFactory(), new Slim\Psr7\Factory\StreamFactory()
+    );
+    $app = new Slim\App($factory, $container);
+    require __DIR__ . '/../_vendor/grocy-core/routes.php';
+    if (!empty(GROCY_BASE_PATH)) $app->setBasePath(GROCY_BASE_PATH);
+    $app->addRoutingMiddleware();
+    $errors = $app->addErrorMiddleware(true, false, false);
+    $errors->setDefaultErrorHandler(new NativeExceptionController($app));
+    $app->add(new Grocy\Middleware\CorsMiddleware($factory));
+    return $app->handle($http);
 }
 
 class NativeRoutingHandler implements Psr\Http\Server\RequestHandlerInterface

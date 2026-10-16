@@ -38,6 +38,7 @@ def client() -> Iterator[TestClient]:
     clear_settings_cache()
     reset_engine()
     with TestClient(create_app()) as test_client:
+        test_client.options("/api/system/info")
         yield test_client
 
 
