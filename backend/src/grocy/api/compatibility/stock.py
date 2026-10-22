@@ -408,5 +408,10 @@ async def stock_undo_transaction(
 
 
 @router.get("/api/stock/barcodes/external-lookup/{barcode}")
-async def stock_external_barcode_lookup(barcode: str) -> Response:
-    raise GrocyError("External barcode lookup requires native PHP parity mode", status_code=501)
+async def stock_external_barcode_lookup(
+    barcode: str,
+    actor: CurrentActor,
+    stock: StockSvc,
+    add: Annotated[str | None, Query()] = None,
+) -> dict[str, Any] | None:
+    return await stock.external_barcode_lookup(actor, barcode, add=add == "true")

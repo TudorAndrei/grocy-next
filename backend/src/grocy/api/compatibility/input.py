@@ -12,7 +12,6 @@ from fastapi import Request, Response
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, model_validator
 
-from grocy.compatibility.purifier import InputPurifier
 from grocy.core.auth import authenticate_request, get_db_session, require_request_permission
 from grocy.core.errors import GrocyError
 

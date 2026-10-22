@@ -5,15 +5,15 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
+
+from grocy.core.config import clear_settings_cache, get_settings
+from grocy.main import create_app
 
 requires_native_php = pytest.mark.skipif(
     os.getenv("GROCY_USE_NATIVE_PHP", "false").lower() not in ("1", "true", "yes"),
     reason="requires GROCY_USE_NATIVE_PHP",
 )
-from fastapi.testclient import TestClient
-
-from grocy.core.config import clear_settings_cache, get_settings
-from grocy.main import create_app
 
 
 @pytest.mark.skipif(os.name != "posix", reason="The worker executable fixture uses a POSIX script")

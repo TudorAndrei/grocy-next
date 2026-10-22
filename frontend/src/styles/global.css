@@ -1106,6 +1106,72 @@ html[data-theme="dark"] .link-list a {
   font-size: 0.82rem;
 }
 
+.meal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 1rem 0 1.75rem;
+}
+.meal-day {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 0.65rem 0.7rem;
+  min-height: 9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.meal-day[data-today="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.meal-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+.meal-day-empty {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.meal-day-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.meal-entry {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+.meal-entry p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.meal-entry-section {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 1100px) {
+  .meal-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .meal-week {
+    grid-template-columns: 1fr;
+  }
+}
+
 .tab-panel {
   margin-top: 1rem;
 }

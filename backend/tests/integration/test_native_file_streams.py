@@ -7,15 +7,15 @@ import sys
 
 import httpx
 import pytest
+from starlette.requests import ClientDisconnect
+
+from grocy.core.config import clear_settings_cache, get_settings
+from grocy.main import create_app
 
 requires_native_php = pytest.mark.skipif(
     os.getenv("GROCY_USE_NATIVE_PHP", "false").lower() not in ("1", "true", "yes"),
     reason="requires GROCY_USE_NATIVE_PHP",
 )
-from starlette.requests import ClientDisconnect
-
-from grocy.core.config import clear_settings_cache, get_settings
-from grocy.main import create_app
 
 
 @pytest.mark.skipif(os.name != "posix", reason="The process fixture uses a POSIX executable")

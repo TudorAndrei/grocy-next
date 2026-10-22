@@ -89,7 +89,7 @@ export function StockActions({ productId }: { productId: number }) {
   const names = (id: number) =>
     locations.data?.find((l) => l.id === id)?.name ?? `Location #${id}`;
   return (
-    <section className="panel panel-inner">
+    <section id="stock-actions" className="panel panel-inner">
       <h2>Stock</h2>
       {stock.isPending && <LoadingBlock label="Loading stock..." />}
       {stock.data && (

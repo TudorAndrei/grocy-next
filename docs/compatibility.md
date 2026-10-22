@@ -2,21 +2,15 @@
 
 The baseline is Grocy v4.5.0 at commit `21aa5eab218c8466f90729154cb293fffbe10c21`. The OpenAPI file and its hash are in `contracts/`. Permission IDs and their parent relationships follow upstream migration 0110.
 
-The backend requires PHP 8.1 through 8.4 for its pinned HTMLPurifier, Slim, LessQL, and Gumlet runtime. It also requires the PDO SQLite and GD extensions. Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes the runtime. See [the backend setup](../backend/README.md).
+**Default runtime is Python.** Compatibility routes are served by FastAPI domain services with `GROCY_USE_NATIVE_PHP=false` (the default). Local development, `docker compose up`, and the normal test suite use this path. PHP is not required for day-to-day use.
 
-Generic object reads and custom field operations now use the original pinned Grocy classes. Native
-SQLite queries apply PHP query parsing, filters, order, limits, and offsets. The read adapter returns
-PHP response bytes and native column order. SQLite regular expressions use PHP `mb_ereg`, including
-its rules for nulls, invalid patterns, and long patterns. SQL callbacks run in the same PHP HTTP request
-as configuration, authentication, and controllers. The native `ceil` function also uses PHP.
+**Optional native PHP mode** (`GROCY_USE_NATIVE_PHP=true`) runs the pinned Grocy controllers for differential parity. That mode needs PHP 8.1 through 8.4 with PDO SQLite, GD, and the other extensions listed in [the backend setup](../backend/README.md). Set `GROCY_PHP_EXECUTABLE` when the executable is not named `php`. The Docker image includes PHP so CI and parity jobs can enable this mode without changing the default Compose path.
 
-All compatibility operations use the original route declarations and controllers. Each request runs
-in its own PHP HTTP process. A private Unix socket carries SQL messages to the application connection.
-PHP sends the actual HTTP response. Configuration output, headers, output buffers, error handlers,
-shutdown functions, and exit retain their native effects. Displayed development warnings follow the
-installed PHP version, including PHP 8.4 service declaration warnings before JSON.
+When native PHP is enabled, generic object reads and custom field operations use the original pinned Grocy classes. Native SQLite queries apply PHP query parsing, filters, order, limits, and offsets. The read adapter returns PHP response bytes and native column order. SQLite regular expressions use PHP `mb_ereg`, including its rules for nulls, invalid patterns, and long patterns. SQL callbacks run in the same PHP HTTP request as configuration, authentication, and controllers. The native `ceil` function also uses PHP. Each request runs in its own PHP HTTP process. A private Unix socket carries SQL messages to the application connection. PHP sends the actual HTTP response. Configuration output, headers, output buffers, error handlers, shutdown functions, and exit retain their native effects. Displayed development warnings follow the installed PHP version, including PHP 8.4 service declaration warnings before JSON.
 
-The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. Filtered list reads use the native Grocy controllers. The `§` operator uses the native PHP regular expression function.
+The rest of this document describes contract coverage and, where noted, native PHP / reference-server behavior used for parity checks. The Python default aims for the same routes and response shapes; full byte-level and edge-case parity is verified with the optional comparison suite below.
+
+The compatibility API implements the 86 operations in the contract. It returns stock booking arrays and uses status 204 for empty actions. The generic API supports the 33 listable entities, including calculated view records. The contract blocks generic API key reads and writes. The separate `/api/v2/api-keys` API manages keys. List queries support `query[]`, `order`, `limit`, and `offset`. Query operators are `=`, `!=`, `~`, `!~`, `<`, `>`, `<=`, and `>=`. In native PHP mode, filtered list reads use the native Grocy controllers and the `§` operator uses the native PHP regular expression function.
 
 The database uses all 45 pinned Grocy views and all 54 native triggers in their original creation order. Quantity conversion and recipe views read current records. Native triggers maintain the internal caches and inverse conversions. The permission hierarchy stores the pinned permission records. The application package includes the SQL definitions and Grocy's license notice.
 
@@ -24,7 +18,7 @@ The `/api/v2` API adds nutrition, API key management, and meal completion. MCP a
 
 System information reports the pinned Grocy API version. Configuration uses the original defaults and configured values. Localization uses the bundled locale files. System time supports offsets in seconds. Database change time uses the main database file timestamp.
 
-System information includes the pinned database version, 253. Its `php_version` field reports the input worker's PHP runtime version. System and database change times use the server time zone. Record timestamps use spaces and whole seconds. Timed calendar events include the time zone, equal start and end times, and time zone transitions for the event range.
+System information includes the pinned database version, 253. In native PHP mode, its `php_version` field reports the input worker's PHP runtime version. System and database change times use the server time zone. Record timestamps use spaces and whole seconds. Timed calendar events include the time zone, equal start and end times, and time zone transitions for the event range.
 
 User preferences include the pinned defaults. Stored values can be null. Deleting a preference restores its default. Database upgrades preserve existing values and add update timestamps.
 
@@ -34,9 +28,11 @@ Custom field reads include declared fields with null values when no value is sto
 
 ## Verification
 
-The normal test suite checks API routes, response types, storage, stock quantities, recipe units, undo, permissions, files, calendars, import, and MCP startup.
+The normal test suite runs against the Python default runtime. It checks API routes, response types, storage, stock quantities, recipe units, undo, permissions, files, calendars, import, and MCP startup.
 
-To run the PHP comparisons with a new reference database:
+To exercise native PHP workers locally, set `GROCY_USE_NATIVE_PHP=true` (and install PHP as in [the backend setup](../backend/README.md)). Compose and the default API image leave this unset/false.
+
+To run the PHP reference comparisons with a new reference database:
 
 ```bash
 uv run --project backend python scripts/check-reference.py

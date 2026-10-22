@@ -61,12 +61,7 @@ async def recipe_add_missing(
 
 @router.post("/api/recipes/{recipe_id}/copy")
 async def recipe_copy(recipe_id: int, _actor: CurrentActor, recipes: RecipesSvc) -> dict[str, Any]:
-    recipe = await recipes.get(recipe_id)
-    copy = await recipes.create(
-        f"{recipe.name} (copy)",
-        description=recipe.description,
-        base_servings=recipe.base_servings,
-    )
+    copy = await recipes.copy(recipe_id)
     return {"created_object_id": str(copy.id)}
 
 

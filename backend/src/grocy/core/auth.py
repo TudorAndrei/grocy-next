@@ -229,6 +229,7 @@ async def authenticate_key(
         raise UnauthorizedError("API key expired")
     stamp = datetime.now(server_timezone()).replace(tzinfo=None)
     database = session.get_bind().engine.url.database
+    path: Path | None = None
     preserve_mtime = None
     if database and database != ":memory:":
         path = Path(database)
@@ -238,7 +239,7 @@ async def authenticate_key(
         update(ApiKey).where(ApiKey.api_key == key).values(last_used=stamp)
     )
     await session.commit()
-    if preserve_mtime is not None:
+    if preserve_mtime is not None and path is not None:
         os.utime(path, (preserve_mtime.st_atime, preserve_mtime.st_mtime))
     if existing_user_id is None:
         raise _MissingKeyUser("Invalid API key")

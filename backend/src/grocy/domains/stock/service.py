@@ -84,7 +84,7 @@ class StockService:
         commit: bool = True,
         exact_amount: bool = False,
         stock_label_type: int = 0,
-    ) -> dict:
+    ) -> list[dict]:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get_active(product_id)
@@ -130,7 +130,6 @@ class StockService:
         )
         if remaining == 0:
             raise GrocyError("No transaction was found for the given amount")
-        last_log_id = None
         stock_id = ""
         while remaining > 0:
             portion = min(Decimal("1"), remaining) if stock_label_type == 2 else remaining
@@ -148,7 +147,7 @@ class StockService:
             )
             self.session.add(entry)
             await self.session.flush()
-            log = await self._add_log(
+            await self._add_log(
                 actor=actor,
                 product_id=product.id,
                 amount=portion,
@@ -163,7 +162,6 @@ class StockService:
                 note=note,
                 transaction_id=transaction_id,
             )
-            last_log_id = log.id
             if label_details is not None:
                 # Grocy saves the purchase before printing, then combines entries.
                 if commit:
@@ -201,7 +199,7 @@ class StockService:
         exact_amount: bool = True,
         transaction_type: str = "consume",
         transaction_id: str | None = None,
-    ) -> dict:
+    ) -> list[dict]:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get_active(product_id)
@@ -247,7 +245,6 @@ class StockService:
                 code="insufficient_stock",
             )
         transaction_id = transaction_id or uuid.uuid4().hex
-        last_log_id = None
         for entry in entries:
             if remaining <= 0:
                 break
@@ -256,7 +253,7 @@ class StockService:
             before = self._serialize_entry(entry)
             entry.amount -= take
             remaining -= take * factor
-            log = await self._add_log(
+            await self._add_log(
                 actor=actor,
                 product_id=entry.product_id,
                 amount=-take,
@@ -274,7 +271,6 @@ class StockService:
                 stock_row_id=entry.id,
                 transaction_id=transaction_id,
             )
-            last_log_id = log.id
             if entry.amount == 0:
                 await self.session.delete(entry)
         from grocy.domains.shopping.service import ShoppingService
@@ -295,7 +291,7 @@ class StockService:
         *,
         stock_entry_id: str | None = None,
         allow_subproduct_substitution: bool = False,
-    ) -> dict:
+    ) -> list[dict]:
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("amount must be positive", code="invalid_amount")
         product = await self.products.get_active(product_id)
@@ -332,7 +328,6 @@ class StockService:
             )
             factors[child.id] = Decimal(str(raw_factor)) if raw_factor is not None else Decimal("1")
         transaction_id = uuid.uuid4().hex
-        last_log_id = None
         for entry in closed:
             if remaining <= 0:
                 break
@@ -381,7 +376,7 @@ class StockService:
             entry.open = 1
             entry.opened_date = datetime.combine(date.today(), datetime.min.time())
             remaining -= take
-            log = await self._add_log(
+            await self._add_log(
                 actor=actor,
                 product_id=entry.product_id,
                 amount=take,
@@ -398,7 +393,6 @@ class StockService:
                 shopping_location_id=entry.shopping_location_id,
                 note=entry.note,
             )
-            last_log_id = log.id
             if (
                 product.move_on_open
                 and product.default_consume_location_id
@@ -433,7 +427,7 @@ class StockService:
         stock_entry_id: str | None = None,
         transaction_id: str | None = None,
         commit: bool = True,
-    ) -> dict:
+    ) -> list[dict]:
         if location_id_from == location_id_to:
             raise GrocyError(
                 "source and destination locations must differ", code="invalid_transfer"
@@ -461,7 +455,6 @@ class StockService:
         )
         transaction_id = transaction_id or uuid.uuid4().hex
         remaining = amount
-        last_log_id = None
         for entry in entries:
             if remaining <= 0:
                 break
@@ -538,7 +531,7 @@ class StockService:
                 )
                 self.session.add(destination)
             await self.session.flush()
-            log = await self._add_log(
+            await self._add_log(
                 actor=actor,
                 product_id=product_id,
                 amount=take,
@@ -555,7 +548,6 @@ class StockService:
                 transaction_id=transaction_id,
                 correlation_id=correlation_id,
             )
-            last_log_id = log.id
             remaining -= take
         if commit:
             await self.session.commit()
@@ -576,7 +568,7 @@ class StockService:
         shopping_location_id: int | None = None,
         note: str | None = None,
         stock_label_type: int = 0,
-    ) -> dict:
+    ) -> list[dict]:
         if not new_amount.is_finite() or new_amount < 0:
             raise GrocyError("new amount must be non-negative", code="invalid_amount")
         product = await self.products.get_active(product_id)
@@ -620,7 +612,6 @@ class StockService:
                 code="insufficient_stock",
             )
         transaction_id = uuid.uuid4().hex
-        last_log_id = None
         for entry in entries:
             if remaining <= 0:
                 break
@@ -628,7 +619,7 @@ class StockService:
             before = self._serialize_entry(entry)
             entry.amount -= take
             remaining -= take
-            log = await self._add_log(
+            await self._add_log(
                 actor=actor,
                 product_id=product_id,
                 amount=-take,
@@ -642,7 +633,6 @@ class StockService:
                 price=entry.price,
                 undo_data=json.dumps({"before": before}),
             )
-            last_log_id = log.id
             if entry.amount == 0:
                 await self.session.delete(entry)
         await self.session.commit()
@@ -1102,7 +1092,9 @@ class StockService:
             await self.session.rollback()
             message = str(error.orig) if error.orig else str(error)
             if "Blocked merge" in message or "ABORT" in message.upper():
-                raise GrocyError(message.split(":", 1)[-1].strip(), status_code=400, code=None)
+                raise GrocyError(
+                    message.split(":", 1)[-1].strip(), status_code=400, code=None
+                ) from error
             raise
 
     async def product_by_barcode(self, barcode: str) -> dict:
@@ -1115,7 +1107,7 @@ class StockService:
         barcode: str,
         amount: Decimal,
         **kwargs: Any,
-    ) -> dict:
+    ) -> list[dict]:
         product = await self.products.get_by_barcode(barcode)
         return await self.purchase(actor, product.id, amount, **kwargs)
 
@@ -1125,7 +1117,7 @@ class StockService:
         barcode: str,
         amount: Decimal,
         **kwargs: Any,
-    ) -> dict:
+    ) -> list[dict]:
         product = await self.products.get_by_barcode(barcode)
         code = parse_product_code(barcode)
         if code and code[1]:
@@ -1138,7 +1130,7 @@ class StockService:
         barcode: str,
         amount: Decimal = Decimal("1"),
         **kwargs: Any,
-    ) -> dict:
+    ) -> list[dict]:
         product = await self.products.get_by_barcode(barcode)
         code = parse_product_code(barcode)
         if code and code[1]:
@@ -1153,7 +1145,7 @@ class StockService:
         location_id_from: int,
         location_id_to: int,
         **kwargs: Any,
-    ) -> dict:
+    ) -> list[dict]:
         product = await self.products.get_by_barcode(barcode)
         code = parse_product_code(barcode)
         if code and code[1]:
@@ -1168,7 +1160,7 @@ class StockService:
         barcode: str,
         new_amount: Decimal,
         **kwargs: Any,
-    ) -> dict:
+    ) -> list[dict]:
         product = await self.products.get_by_barcode(barcode)
         return await self.inventory(actor, product.id, new_amount, **kwargs)
 
@@ -1553,3 +1545,10 @@ class StockService:
             "note": row.note,
             "row_created_timestamp": database_time(row.row_created_timestamp),
         }
+
+    async def external_barcode_lookup(
+        self, actor: Actor, barcode: str, *, add: bool = False
+    ) -> dict[str, Any] | None:
+        from grocy.domains.stock.barcode_lookup import external_barcode_lookup
+
+        return await external_barcode_lookup(self.session, actor, barcode, add=add)

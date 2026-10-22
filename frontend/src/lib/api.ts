@@ -272,9 +272,9 @@ export const api = {
       `/api/stock/products/by-barcode/${encodeURIComponent(barcode)}`,
     ),
 
-  externalBarcodeLookup: (barcode: string) =>
-    request<unknown>(
-      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}`,
+  externalBarcodeLookup: (barcode: string, add = false) =>
+    request<Record<string, unknown> | null>(
+      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}${add ? "?add=1" : ""}`,
     ),
 
   stockActionByBarcode: (

@@ -85,7 +85,7 @@ function StockPage() {
     <>
       <PageHeader
         title="Stock overview"
-        lead="What is on hand right now — purchase, consume, and catch items before they expire."
+        lead="What is on hand right now — quick +1 or consume here, or open a product for purchase, transfer, and inventory."
         actions={
           <>
             <Link to="/journal" className="btn btn-ghost btn-sm">Journal</Link>
@@ -188,6 +188,7 @@ function StockPage() {
                         <Link
                           to="/products/$productId"
                           params={{ productId: String(item.id) }}
+                          hash="stock-actions"
                           className="row-link"
                         >
                           {item.name}
@@ -206,6 +207,14 @@ function StockPage() {
                           >
                             Purchase
                           </button>
+                          <Link
+                            to="/products/$productId"
+                            params={{ productId: String(item.id) }}
+                            hash="stock-actions"
+                            className="btn btn-ghost btn-sm"
+                          >
+                            Stock actions
+                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -243,6 +252,7 @@ function StockPage() {
                         <Link
                           to="/products/$productId"
                           params={{ productId: String(item.product_id) }}
+                          hash="stock-actions"
                           className="row-link"
                         >
                           {item.product.name}
@@ -283,6 +293,14 @@ function StockPage() {
                           >
                             Consume
                           </button>
+                          <Link
+                            to="/products/$productId"
+                            params={{ productId: String(item.product_id) }}
+                            hash="stock-actions"
+                            className="btn btn-ghost btn-sm"
+                          >
+                            Stock actions
+                          </Link>
                         </div>
                       </td>
                     </tr>
