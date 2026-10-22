@@ -14,8 +14,10 @@ from grocy.compatibility.files import NativeFiles
 from grocy.compatibility.http_request import NativeHttpRequests
 from grocy.compatibility.protocol import NativeProtocol
 from grocy.compatibility.purifier import InputPurifier
+from grocy.compatibility.runtime import PythonRuntime
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
+from grocy.core.grocy_cors import GrocyCorsHeadersMiddleware
 from grocy.db.models.catalog import Location
 from grocy.db.seed import seed_if_empty
 from grocy.db.session import configure_sqlite, get_engine, get_session_factory, upgrade_schema
@@ -40,20 +42,33 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
             if await session.get(Location, 1) is None:
                 session.add(Location(id=1, name="Default"))
                 await session.commit()
-    purifier = InputPurifier(settings.php_executable)
-    files = NativeFiles(settings.php_executable)
-    http = NativeHttpRequests(settings.php_executable, settings.datapath.resolve())
-    try:
+    runtime = PythonRuntime()
+    purifier = None
+    files = None
+    http = None
+    if settings.use_native_php:
+        purifier = InputPurifier(settings.php_executable)
+        files = NativeFiles(settings.php_executable)
+        http = NativeHttpRequests(settings.php_executable, settings.datapath.resolve())
         await purifier.start()
+    else:
+        await runtime.start()
+    try:
         if _app is not None:
-            _app.state.input_purifier = purifier
+            _app.state.input_purifier = purifier or runtime
             _app.state.native_files = files
             _app.state.native_http = http
+            _app.state.use_native_php = settings.use_native_php
         yield
     finally:
-        await http.close()
-        await files.close()
-        await purifier.close()
+        if http is not None:
+            await http.close()
+        if files is not None:
+            await files.close()
+        if purifier is not None:
+            await purifier.close()
+        else:
+            await runtime.close()
         await engine.dispose()
 
 
@@ -71,7 +86,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(NativeProtocol)
+    app.add_middleware(GrocyCorsHeadersMiddleware)
+    if settings.use_native_php:
+        app.add_middleware(NativeProtocol)
     app.add_exception_handler(GrocyError, grocy_error_handler)
 
     @app.exception_handler(IntegrityError)

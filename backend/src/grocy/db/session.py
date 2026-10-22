@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 
+from grocy.compatibility.sqlite_functions import register_sqlite_functions
 from grocy.core.config import Settings, get_settings
 
 _engine: AsyncEngine | None = None
@@ -53,6 +54,7 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
 
             @event.listens_for(_engine.sync_engine, "connect")
             def configure_connection(connection: Any, _record: Any) -> None:
+                register_sqlite_functions(connection)
                 # Grocy uses PDO::NULL_EMPTY_STRING when it reads SQLite text.
                 connection.driver_connection.text_factory = _native_text
                 cursor = connection.cursor()

@@ -20,6 +20,7 @@ dependencies = [
     "fastmcp>=2.0.0",
     "pillow>=11,<13",
     "regex>=2024.11.6",
+    "bcrypt>=5.0.0",
 ]
 
 [project.scripts]

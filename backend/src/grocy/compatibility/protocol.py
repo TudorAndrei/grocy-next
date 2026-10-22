@@ -31,7 +31,7 @@ class NativeProtocol:
         request = Request(scope, receive)
         settings = get_settings()
         async with get_session_factory()() as session:
-            statements = NativeStatements(session, runtime)
+            statements = NativeStatements(session)
             try:
                 result = await runtime.request_context(
                     method=scope["method"],

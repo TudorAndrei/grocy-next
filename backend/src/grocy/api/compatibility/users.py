@@ -1,91 +1,99 @@
-"""Run the pinned Grocy user, permission, and setting controller."""
+from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
-from grocy.api.compatibility.responses import native_action_response
-from grocy.core.auth import AuthenticatedActor
+from grocy.compatibility.input import json_body
+from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
+from grocy.domains.users.service import UsersService
 
 router = APIRouter(tags=["users"])
 
 
 @router.get("/api/user")
-async def get_current_user(
-    request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(request, session, "user_current", "", actor.user_id)
+async def get_current_user(actor: CurrentActor, session: DbSession) -> list[dict[str, Any]]:
+    return await UsersService(session).current_user(actor.user_id)
 
 
 @router.get("/api/user/settings")
-async def get_user_settings(
-    request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(request, session, "settings", "", actor.user_id)
+async def get_user_settings(actor: CurrentActor, session: DbSession) -> dict[str, Any]:
+    return await UsersService(session).settings(actor.user_id)
 
 
 @router.get("/api/user/settings/{setting_key}")
 async def get_user_setting(
-    setting_key: str, request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(request, session, "setting_get", setting_key, actor.user_id)
+    setting_key: str, actor: CurrentActor, session: DbSession
+) -> dict[str, Any]:
+    return {"value": await UsersService(session).setting(actor.user_id, setting_key)}
 
 
 @router.put("/api/user/settings/{setting_key}", status_code=204)
 async def put_user_setting(
-    setting_key: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    setting_key: str, request: Request, actor: CurrentActor, session: DbSession
 ) -> Response:
-    return await native_action_response(request, session, "setting_set", setting_key, actor.user_id)
+    payload = await json_body(request)
+    value = payload.get("value")
+    if value is None and "value" in payload:
+        value = ""
+    await UsersService(session).set_setting(actor.user_id, setting_key, value)
+    return Response(status_code=204)
 
 
 @router.delete("/api/user/settings/{setting_key}", status_code=204)
 async def delete_user_setting(
-    setting_key: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    setting_key: str, actor: CurrentActor, session: DbSession
 ) -> Response:
-    return await native_action_response(
-        request, session, "setting_delete", setting_key, actor.user_id
-    )
+    await UsersService(session).delete_setting(actor.user_id, setting_key)
+    return Response(status_code=204)
 
 
 @router.get("/api/users")
-async def list_users(request: Request, actor: AuthenticatedActor, session: DbSession) -> Response:
-    return await native_action_response(request, session, "users", "", actor.user_id)
+async def list_users(
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, Any]]:
+    return await UsersService(session).list_users(request.scope["query_string"])
 
 
 @router.post("/api/users", status_code=204)
-async def create_user(request: Request, actor: AuthenticatedActor, session: DbSession) -> Response:
-    return await native_action_response(request, session, "user_create", "", actor.user_id)
+async def create_user(request: Request, _actor: CurrentActor, session: DbSession) -> Response:
+    await UsersService(session).create_user(await json_body(request))
+    return Response(status_code=204)
 
 
 @router.put("/api/users/{user_id}", status_code=204)
 async def update_user(
-    user_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    return await native_action_response(request, session, "user_edit", user_id, actor.user_id)
+    await UsersService(session).update_user(user_id, await json_body(request))
+    return Response(status_code=204)
 
 
 @router.delete("/api/users/{user_id}", status_code=204)
-async def delete_user(
-    user_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(request, session, "user_delete", user_id, actor.user_id)
+async def delete_user(user_id: str, _actor: CurrentActor, session: DbSession) -> Response:
+    await UsersService(session).delete_user(user_id)
+    return Response(status_code=204)
 
 
 @router.get("/api/users/{user_id}/permissions")
 async def get_user_permissions(
-    user_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(request, session, "permissions_get", user_id, actor.user_id)
+    user_id: str, _actor: CurrentActor, session: DbSession
+) -> list[dict[str, Any]]:
+    return await UsersService(session).permissions(user_id)
 
 
 @router.post("/api/users/{user_id}/permissions", status_code=204)
 async def add_user_permission(
-    user_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    return await native_action_response(request, session, "permission_add", user_id, actor.user_id)
+    payload = await json_body(request)
+    await UsersService(session).add_permission(user_id, payload.get("permission_id"))
+    return Response(status_code=204)
 
 
 @router.put("/api/users/{user_id}/permissions", status_code=204)
 async def set_user_permissions(
-    user_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    return await native_action_response(request, session, "permissions_set", user_id, actor.user_id)
+    payload = await json_body(request)
+    await UsersService(session).set_permissions(user_id, payload.get("permissions"))
+    return Response(status_code=204)

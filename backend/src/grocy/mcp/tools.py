@@ -57,7 +57,7 @@ async def inventory_purchase(
     from datetime import date
 
     bbd = date.fromisoformat(best_before_date) if best_before_date else None
-    return await StockService(session).purchase(
+    logs = await StockService(session).purchase(
         actor,
         product_id,
         Decimal(str(amount)),
@@ -65,6 +65,7 @@ async def inventory_purchase(
         price=Decimal(str(price)) if price is not None else None,
         location_id=location_id,
     )
+    return logs[0]
 
 
 async def inventory_consume(
@@ -75,13 +76,14 @@ async def inventory_consume(
     spoiled: bool = False,
     location_id: int | None = None,
 ) -> dict[str, Any]:
-    return await StockService(session).consume(
+    logs = await StockService(session).consume(
         actor,
         product_id,
         Decimal(str(amount)),
         spoiled=spoiled,
         location_id=location_id,
     )
+    return logs[0]
 
 
 async def shopping_list_get(session: AsyncSession, shopping_list_id: int = 1) -> dict[str, Any]:

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Request, Response
 
-from grocy.compatibility.files import NativeFiles
 from grocy.core.auth import CurrentActor
-from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
+from grocy.core.errors import NotFoundError
+from grocy.domains.files.service import FilesService
 
 router = APIRouter(tags=["files"])
 
@@ -15,7 +15,23 @@ router = APIRouter(tags=["files"])
 async def file_request(
     group: str, file_name: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    # File streams do not need the authentication transaction's SQLite write lock.
     await session.rollback()
-    runtime: NativeFiles = request.app.state.native_files
-    return await runtime.response(request, get_settings().files_root, group, file_name)
+    raw_path = request.scope.get("raw_path") or request.url.path.encode()
+    raw_group, _, raw_name = raw_path.partition(b"/api/files/")[2].partition(b"/")
+    if not raw_group or not raw_name or b"/" in raw_name:
+        raise NotFoundError("Not found.", code=None)
+    service = FilesService(compatibility=True)
+    if request.method == "PUT":
+        await service.put(request, group, file_name)
+        return Response(status_code=204)
+    if request.method == "DELETE":
+        await service.delete(group, file_name)
+        return Response(status_code=204)
+    query = request.query_params
+    return await service.get(
+        group,
+        file_name,
+        width=query.get("best_fit_width"),
+        height=query.get("best_fit_height"),
+        picture=query.get("force_serve_as") == "picture",
+    )

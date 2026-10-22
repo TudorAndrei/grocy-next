@@ -5,6 +5,11 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+
+requires_native_php = pytest.mark.skipif(
+    os.getenv("GROCY_USE_NATIVE_PHP", "false").lower() not in ("1", "true", "yes"),
+    reason="requires GROCY_USE_NATIVE_PHP",
+)
 from fastapi.testclient import TestClient
 
 from grocy.core.config import clear_settings_cache, get_settings
@@ -12,6 +17,7 @@ from grocy.main import create_app
 
 
 @pytest.mark.skipif(os.name != "posix", reason="The worker executable fixture uses a POSIX script")
+@requires_native_php
 def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkeypatch, api_headers):
     from concurrent.futures import ThreadPoolExecutor
     from time import monotonic, sleep
@@ -101,6 +107,7 @@ def test_worker_failure_keeps_input_filtered_and_recovers(tmp_path: Path, monkey
             os.kill(pid, 0)
 
 
+@requires_native_php
 def test_missing_php_prevents_server_startup(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("GROCY_PHP_EXECUTABLE", str(tmp_path / "missing-php"))
     clear_settings_cache()

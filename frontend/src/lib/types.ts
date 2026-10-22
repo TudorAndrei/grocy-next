@@ -90,6 +90,38 @@ export type StockProductDetails = ProductSummary & {
   location_id?: number;
 };
 
+export type SystemInfo = {
+  grocy_version: { Version: string; ReleaseDate: string };
+  php_version: string;
+  sqlite_version: string;
+  db_version: number;
+  os: string;
+  client: string;
+};
+
+export type UserSettings = Record<string, string | number | boolean | null>;
+
+export type CurrentUser = {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+};
+
+export type StockLogRow = {
+  id: number;
+  product_id: number;
+  amount: number;
+  transaction_type: string;
+  undone: number;
+  row_created_timestamp?: string;
+};
+
+export type BarcodeProduct = {
+  product_id: number;
+  product: ProductSummary;
+};
+
 export type StockOverviewItem = {
   product_id: number;
   amount: number;
@@ -160,8 +192,9 @@ export type RecipeFulfillment = {
 
 export type Chore = {
   id: number;
-  name: string;
-  period_type: string;
+  name?: string;
+  chore_name?: string;
+  period_type?: string;
   next_estimated_execution_time?: string | null;
 };
 
@@ -175,7 +208,8 @@ export type Task = {
 
 export type Battery = {
   id: number;
-  name: string;
+  name?: string;
+  battery?: { name: string; id?: number };
   description?: string | null;
   charge_interval_days?: number | null;
   next_estimated_charge_time?: string | null;

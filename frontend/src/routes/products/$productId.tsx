@@ -5,8 +5,11 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { NutritionPanel } from "@/components/NutritionPanel";
 import { ProposalForm } from "@/components/ProposalForm";
+import { PageHeader } from "@/components/PageHeader";
 import { RevisionHistory } from "@/components/RevisionHistory";
+import { ProductMerge } from "@/components/ProductMerge";
 import { StockActions } from "@/components/StockActions";
+import { openApiDocument } from "@/lib/open-document";
 
 export const Route = createFileRoute("/products/$productId")({
   component: ProductDetailPage,
@@ -44,16 +47,25 @@ function ProductDetailPage() {
       <Link to="/products" className="back-link">
         ← Products
       </Link>
-      <header className="page-header">
-        <div className="page-header-copy">
-          <h1 className="page-title">{title}</h1>
-          <p className="page-lead">
-            {product?.barcode
-              ? `Barcode ${product.barcode}`
-              : "Stock moves, nutrition, and staged updates for this item."}
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title={title}
+        lead={
+          product?.barcode
+            ? `Barcode ${product.barcode}`
+            : "Stock moves, nutrition, and staged updates for this item."
+        }
+        actions={
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() =>
+              openApiDocument(`/api/stock/products/${id}/printlabel`)
+            }
+          >
+            Print label
+          </button>
+        }
+      />
 
       <div className="stack">
         <StockActions productId={id} />
@@ -78,6 +90,7 @@ function ProductDetailPage() {
           <NutritionPanel data={nutritionQuery.data} />
         ) : null}
 
+        <ProductMerge productId={id} />
         <div className="split">
           <ProposalForm
             key={`${id}-${nutritionQuery.data?.revision ?? 0}`}

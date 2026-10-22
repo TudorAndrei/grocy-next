@@ -7,6 +7,7 @@ from decimal import ROUND_FLOOR, Decimal
 from typing import Any, Literal
 
 from sqlalchemy import case, func, select, text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
@@ -112,8 +113,12 @@ class StockService:
             raise GrocyError("Price must be non-negative")
         if not product.active or product.no_own_stock:
             raise GrocyError("Product cannot have its own stock")
+        try:
+            stock_label_type = int(stock_label_type)
+        except (TypeError, ValueError):
+            stock_label_type = 0
         if stock_label_type not in {0, 1, 2}:
-            raise GrocyError("Invalid stock label type")
+            stock_label_type = 0
         label_details = (
             await self.product_details(product_id, compatibility=True)
             if stock_label_type > 0 and automatic_stock_labels_enabled()
@@ -179,14 +184,7 @@ class StockService:
             await self.session.commit()
         else:
             await self.session.flush()
-        return {
-            "id": last_log_id,
-            "product_id": product.id,
-            "amount": float(amount),
-            "stock_id": stock_id,
-            "transaction_type": transaction_type,
-            "transaction_id": transaction_id,
-        }
+        return await self.get_transaction(transaction_id)
 
     async def consume(
         self,
@@ -287,13 +285,7 @@ class StockService:
             await self.session.commit()
         else:
             await self.session.flush()
-        return {
-            "id": last_log_id,
-            "product_id": product_id,
-            "amount": float(amount),
-            "transaction_type": transaction_type,
-            "transaction_id": transaction_id,
-        }
+        return await self.get_transaction(transaction_id)
 
     async def open(
         self,
@@ -428,13 +420,7 @@ class StockService:
         await self.session.flush()
         await ShoppingService(self.session).auto_add_missing()
         await self.session.commit()
-        return {
-            "id": last_log_id,
-            "product_id": product_id,
-            "amount": float(amount),
-            "transaction_type": "product-opened",
-            "transaction_id": transaction_id,
-        }
+        return await self.get_transaction(transaction_id)
 
     async def transfer(
         self,
@@ -575,13 +561,7 @@ class StockService:
             await self.session.commit()
         else:
             await self.session.flush()
-        return {
-            "id": last_log_id,
-            "product_id": product_id,
-            "amount": float(amount),
-            "transaction_type": "transfer_to",
-            "transaction_id": transaction_id,
-        }
+        return await self.get_transaction(transaction_id)
 
     async def inventory(
         self,
@@ -616,7 +596,7 @@ class StockService:
                 price = Decimal(str(details["last_price"]))
             if shopping_location_id is None:
                 shopping_location_id = details["last_shopping_location_id"]
-            result = await self.purchase(
+            return await self.purchase(
                 actor,
                 product_id,
                 delta,
@@ -630,11 +610,6 @@ class StockService:
                 transaction_type="inventory-correction",
                 stock_label_type=stock_label_type,
             )
-            return {
-                **result,
-                "amount": float(new_amount),
-                "delta": float(delta),
-            }
 
         remaining = abs(delta)
         entries = await self._ordered_entries(product_id)
@@ -671,14 +646,7 @@ class StockService:
             if entry.amount == 0:
                 await self.session.delete(entry)
         await self.session.commit()
-        return {
-            "id": last_log_id,
-            "product_id": product_id,
-            "amount": float(new_amount),
-            "transaction_type": "inventory-correction",
-            "transaction_id": transaction_id,
-            "delta": float(delta),
-        }
+        return await self.get_transaction(transaction_id)
 
     async def undo_booking(self, actor: Actor, booking_id: int) -> dict:
         log = await self.session.get(StockLog, booking_id)
@@ -1127,8 +1095,15 @@ class StockService:
             await self.session.execute(
                 update(model).where(model.product_id == remove.id).values(**values)
             )
-        await self.session.delete(remove)
-        await self.session.commit()
+        try:
+            await self.session.delete(remove)
+            await self.session.commit()
+        except IntegrityError as error:
+            await self.session.rollback()
+            message = str(error.orig) if error.orig else str(error)
+            if "Blocked merge" in message or "ABORT" in message.upper():
+                raise GrocyError(message.split(":", 1)[-1].strip(), status_code=400, code=None)
+            raise
 
     async def product_by_barcode(self, barcode: str) -> dict:
         product = await self.products.get_by_barcode(barcode)

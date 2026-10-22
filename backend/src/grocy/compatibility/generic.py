@@ -1,39 +1,24 @@
 """Execute native SQL with PDO statement and explicit transaction boundaries."""
 
-import asyncio
 from typing import Any
 
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from grocy.compatibility.purifier import InputPurifier
+from grocy.compatibility.sqlite_functions import register_sqlite_functions
 from grocy.compatibility.values import encode_value
 from grocy.db.compatibility_views import configure_compatibility_queries
 
 
 class NativeStatements:
-    def __init__(self, session: AsyncSession, runtime: InputPurifier) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
-        self.runtime = runtime
-        self.function_errors: list[dict[str, Any]] = []
         self.transaction = False
 
-    def _register_functions(self, connection: Connection, loop: asyncio.AbstractEventLoop) -> None:
-        runtime, errors = self.runtime, self.function_errors
+    def _register_functions(self, connection: Connection) -> None:
         database: Any = connection.connection.dbapi_connection
-
-        def invoke(name: str, arguments: tuple) -> Any:
-            result = asyncio.run_coroutine_threadsafe(
-                runtime.sqlite_function(name, arguments), loop
-            ).result()
-            if "error" in result:
-                errors.append(result)
-                raise ValueError(result["error"])
-            return result["value"]
-
-        database.create_function("regexp", 2, lambda *values: invoke("regexp", values))
-        database.create_function("ceil", 1, lambda value: invoke("ceil", (value,)))
+        register_sqlite_functions(database)
 
     async def execute(self, step: dict[str, Any]) -> dict[str, Any]:
         context = step["context"]
@@ -43,13 +28,10 @@ class NativeStatements:
                 return await self._change_transaction(action)
             await configure_compatibility_queries(self.session)
             connection = await self.session.connection()
-            self.function_errors.clear()
-            await connection.run_sync(self._register_functions, asyncio.get_running_loop())
+            await connection.run_sync(self._register_functions)
             if table == "products" and action == "delete":
                 before = (
-                    (await connection.exec_driver_sql(context["before_query"]))
-                    .mappings()
-                    .all()
+                    (await connection.exec_driver_sql(context["before_query"])).mappings().all()
                 )
                 for row in before:
                     await self._delete_nutrition(row["id"])
@@ -84,16 +66,13 @@ class NativeStatements:
                     self.transaction = False
             if not self.transaction:
                 await self.session.rollback()
-            if self.function_errors:
-                failure: dict[str, Any] = dict(self.function_errors[0])
-            else:
-                number = getattr(error.orig, "sqlite_errorcode", 1) & 255
-                state = (
-                    "23000]: Integrity constraint violation"
-                    if number == 19
-                    else "HY000]: General error"
-                )
-                failure = {"error": f"SQLSTATE[{state}: {number} {error.orig}"}
+            number = getattr(error.orig, "sqlite_errorcode", 1) & 255
+            state = (
+                "23000]: Integrity constraint violation"
+                if number == 19
+                else "HY000]: General error"
+            )
+            failure: dict[str, Any] = {"error": f"SQLSTATE[{state}: {number} {error.orig}"}
             if aborted:
                 failure["transaction_aborted"] = True
             return failure

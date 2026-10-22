@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { api, queryKeys } from "@/lib/api";
+import { api } from "@/lib/api";
+import { stockOverviewQuery, stockVolatileQuery } from "@/hooks/queries";
 import { dueLabel, dueTone, formatAmount } from "@/lib/format";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
@@ -19,14 +20,8 @@ function StockPage() {
   const [filter, setFilter] = useState<StockFilter>("all");
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  const stockQuery = useQuery({
-    queryKey: queryKeys.stockOverview,
-    queryFn: () => api.listStock(),
-  });
-  const volatileQuery = useQuery({
-    queryKey: queryKeys.stockVolatile,
-    queryFn: () => api.getStockVolatile(),
-  });
+  const stockQuery = useQuery(stockOverviewQuery());
+  const volatileQuery = useQuery(stockVolatileQuery());
 
   const invalidateStock = async () => {
     await queryClient.invalidateQueries({ queryKey: ["stock"] });
@@ -91,6 +86,12 @@ function StockPage() {
       <PageHeader
         title="Stock overview"
         lead="What is on hand right now — purchase, consume, and catch items before they expire."
+        actions={
+          <>
+            <Link to="/journal" className="btn btn-ghost btn-sm">Journal</Link>
+            <Link to="/barcode" className="btn btn-ghost btn-sm">Barcode</Link>
+          </>
+        }
       />
 
       <div className="stat-strip">
