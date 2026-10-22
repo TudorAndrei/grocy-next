@@ -25,12 +25,27 @@ const iconProps = {
 
 const groups: NavGroup[] = [
   {
+    label: "Overview",
+    links: [
+      {
+        to: "/dashboard",
+        label: "Dashboard",
+        match: (p) => p === "/dashboard" || p === "/",
+        icon: (
+          <svg {...iconProps}>
+            <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 13h7v7H4z" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
     label: "Kitchen",
     links: [
       {
         to: "/stock",
         label: "Stock",
-        match: (p) => p === "/stock" || p === "/",
+        match: (p) => p === "/stock",
         icon: (
           <svg {...iconProps}>
             <path d="M4 7h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
@@ -114,7 +129,26 @@ const groups: NavGroup[] = [
   },
 ];
 
-groups.splice(1, 0, {
+groups.splice(2, 0, {
+  label: "Tools",
+  links: [
+    ["/locations", "Locations", "M4 9h7v11H4zm9 0h7v11h-7zM4 4h16v3H4z"],
+    ["/journal", "Journal", "M4 6h16v12H4zM8 10h8M8 14h5"],
+    ["/barcode", "Barcode", "M4 6h2v12H4zm14 0h2v12h-2zM8 6h8v12H8z"],
+    ["/labels", "Labels", "M6 4h12v6H6zM6 14h8v6H6z"],
+  ].map(([to, label, path]) => ({
+    to,
+    label,
+    match: (pathname: string) => pathname.startsWith(to),
+    icon: (
+      <svg {...iconProps}>
+        <path d={path} />
+      </svg>
+    ),
+  })),
+});
+
+groups.splice(3, 0, {
   label: "Planning and records",
   links: [
     ["/meal-plan", "Meals", "M4 5h16v16H4zM8 3v4m8-4v4M4 11h16"],

@@ -135,14 +135,15 @@ class GenericObjectsService:
             raise NotFoundError("Object not found", code=None)
         return rows[0]
 
-    def _payload(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]:
-        columns = set(SCHEMA["tables"][entity])
+    def _payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        values = {}
         for name, value in payload.items():
-            if name not in columns:
-                raise GrocyError(f"Invalid field {name}", code=None)
             if isinstance(value, (dict, list)):
                 raise GrocyError(f"Invalid value for field {name}", code=None)
-        return payload
+            if isinstance(value, int) and not -(2**63) <= value < 2**63:
+                value = float(value)
+            values[name] = value
+        return values
 
     async def _after_write(self, entity: str) -> None:
         if entity == "products":
@@ -152,16 +153,15 @@ class GenericObjectsService:
 
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, str]:
         self._require_writable(entity)
-        payload = self._payload(entity, payload)
+        payload = self._payload(payload)
         if payload:
-            columns = ",".join(f'"{name}"' for name in payload)
-            bindings = ",".join(f":value_{index}" for index in range(len(payload)))
+            columns = ",".join(_identifier(name) for name in payload)
+            bindings = ",".join("?" for _ in payload)
             statement = f'INSERT INTO "{entity}" ({columns}) VALUES ({bindings})'
         else:
             statement = f'INSERT INTO "{entity}" DEFAULT VALUES'
-        parameters = {f"value_{index}": value for index, value in enumerate(payload.values())}
         connection = await self.session.connection()
-        result = await connection.execute(text(statement), parameters)
+        result = await connection.exec_driver_sql(statement, tuple(payload.values()))
         object_id = str(result.lastrowid)
         await self._after_write(entity)
         return {"created_object_id": object_id}
@@ -170,15 +170,15 @@ class GenericObjectsService:
         self, entity: str, object_id: int | str, payload: dict[str, Any]
     ) -> None:
         self._require_writable(entity)
-        payload = self._payload(entity, payload)
         if not await self._read(entity, object_id):
             raise GrocyError("Object not found", code=None)
+        payload = self._payload(payload)
         if payload:
-            assignments = ",".join(f'"{name}"=:value_{index}' for index, name in enumerate(payload))
-            parameters = {f"value_{index}": value for index, value in enumerate(payload.values())}
-            parameters["object_id"] = str(object_id)
-            await self.session.execute(
-                text(f'UPDATE "{entity}" SET {assignments} WHERE id=:object_id'), parameters
+            assignments = ",".join(f"{_identifier(name)}=?" for name in payload)
+            connection = await self.session.connection()
+            await connection.exec_driver_sql(
+                f'UPDATE "{entity}" SET {assignments} WHERE id=?',
+                (*payload.values(), str(object_id)),
             )
         await self._after_write(entity)
 
@@ -285,6 +285,10 @@ class GenericObjectsService:
         for name, value in result:
             values.setdefault(name, value)
         return {name: values.get(name) for _, name in fields}
+
+
+def _identifier(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
 
 
 def field_response(values: dict[str, Any]) -> dict[str, Any] | list[Any]:

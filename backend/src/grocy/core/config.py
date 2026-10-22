@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GROCY_", env_file=".env", extra="ignore")
 
     app_name: str = "grocy-next"
+    use_native_php: bool = False
     php_executable: str = "php"
     mode: str = "production"
     currency: str = "USD"

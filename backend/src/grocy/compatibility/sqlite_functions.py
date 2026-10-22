@@ -7,7 +7,7 @@ import regex
 
 @lru_cache(maxsize=256)
 def _compile(pattern: str) -> regex.Pattern:
-    return regex.compile(pattern, regex.VERSION1)
+    return regex.compile(pattern, regex.VERSION1 | regex.DOTALL)
 
 
 def regexp(pattern: Any, value: Any) -> int:

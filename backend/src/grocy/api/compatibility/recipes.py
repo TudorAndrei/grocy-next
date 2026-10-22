@@ -1,13 +1,12 @@
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
 
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
-from grocy.api.compatibility.responses import native_action_response, native_list_response
-from grocy.core.auth import AuthenticatedActor, CurrentActor
-from grocy.core.deps import DbSession, RecipesSvc
+from grocy.core.auth import CurrentActor
+from grocy.core.deps import RecipesSvc
 
 router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
@@ -24,46 +23,51 @@ class RecipeCreateBody(BaseModel):
 
 
 @router.get("/api/recipes/fulfillment")
-async def recipes_fulfillment(
-    request: Request,
-    _actor: CurrentActor,
-    session: DbSession,
-) -> Response:
-    return await native_list_response(request, session, "recipes")
+async def recipes_fulfillment(_actor: CurrentActor, recipes: RecipesSvc) -> list[dict[str, Any]]:
+    return [recipes.serialize(recipe) for recipe in await recipes.list_recipes()]
 
 
 @router.get("/api/recipes/{recipe_id}/fulfillment")
 async def recipe_fulfillment(
-    recipe_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(
-        request, session, "recipe_fulfillment", recipe_id, actor.user_id
-    )
+    recipe_id: int,
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+    servings: Annotated[Decimal | None, Query()] = None,
+) -> dict[str, Any]:
+    return await recipes.fulfillment(recipe_id, servings=servings)
 
 
 @router.post("/api/recipes/{recipe_id}/consume", status_code=204)
 async def recipe_consume(
-    recipe_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    recipe_id: int,
+    actor: CurrentActor,
+    recipes: RecipesSvc,
+    servings: Annotated[Decimal | None, Query()] = None,
 ) -> Response:
-    return await native_action_response(
-        request, session, "recipe_consume", recipe_id, actor.user_id
-    )
+    await recipes.consume(actor, recipe_id, servings=servings)
+    return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist", status_code=204)
 async def recipe_add_missing(
-    recipe_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+    recipe_id: int,
+    _actor: CurrentActor,
+    recipes: RecipesSvc,
+    servings: Annotated[Decimal | None, Query()] = None,
 ) -> Response:
-    return await native_action_response(
-        request, session, "recipe_shopping", recipe_id, actor.user_id
-    )
+    await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+    return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/copy")
-async def recipe_copy(
-    recipe_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
-) -> Response:
-    return await native_action_response(request, session, "recipe_copy", recipe_id, actor.user_id)
+async def recipe_copy(recipe_id: int, _actor: CurrentActor, recipes: RecipesSvc) -> dict[str, Any]:
+    recipe = await recipes.get(recipe_id)
+    copy = await recipes.create(
+        f"{recipe.name} (copy)",
+        description=recipe.description,
+        base_servings=recipe.base_servings,
+    )
+    return {"created_object_id": str(copy.id)}
 
 
 @router.get("/api/v2/recipes/{recipe_id}/fulfillment")

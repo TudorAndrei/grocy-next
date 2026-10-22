@@ -22,6 +22,13 @@ All 86 contract operations use the original Grocy 4.5.0 routes and controllers. 
 Install PHP 8.1 through 8.4 and the extensions in [the backend setup](backend/README.md). Each compatibility request runs Grocy's original API code in a PHP HTTP process.
 
 ```bash
+mise run setup   # first time (or after dependency changes)
+mise run dev
+```
+
+Or install dependencies yourself, then start:
+
+```bash
 cd backend
 uv sync --frozen
 cd ../frontend

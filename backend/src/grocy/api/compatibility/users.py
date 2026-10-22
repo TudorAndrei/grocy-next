@@ -5,7 +5,6 @@ from fastapi import APIRouter, Request, Response
 from grocy.compatibility.input import json_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
-from grocy.core.errors import GrocyError
 from grocy.domains.users.service import UsersService
 
 router = APIRouter(tags=["users"])
@@ -33,9 +32,10 @@ async def put_user_setting(
     setting_key: str, request: Request, actor: CurrentActor, session: DbSession
 ) -> Response:
     payload = await json_body(request)
-    if "value" not in payload:
-        raise GrocyError("Missing setting value", code=None)
-    await UsersService(session).set_setting(actor.user_id, setting_key, payload["value"])
+    value = payload.get("value")
+    if value is None and "value" in payload:
+        value = ""
+    await UsersService(session).set_setting(actor.user_id, setting_key, value)
     return Response(status_code=204)
 
 
@@ -95,7 +95,5 @@ async def set_user_permissions(
     user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
     payload = await json_body(request)
-    await UsersService(session).set_permissions(
-        user_id, payload.get("permissions", payload.get("permission_ids"))
-    )
+    await UsersService(session).set_permissions(user_id, payload.get("permissions"))
     return Response(status_code=204)

@@ -97,6 +97,7 @@ class SystemService:
         version = await self.session.scalar(text("SELECT MAX(migration) FROM migrations"))
         return {
             "grocy_version": client_defaults()["grocy_version"],
+            "php_version": "",
             "python_version": platform.python_version(),
             "sqlite_version": sqlite3.sqlite_version,
             "db_version": version,

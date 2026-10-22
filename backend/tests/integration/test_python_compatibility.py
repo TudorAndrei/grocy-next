@@ -83,10 +83,14 @@ def test_python_runtime_persists_objects_users_settings_and_files(tmp_path, monk
         ({"query[]": "name~AB_C"}, [1001]),
         ({"query[]": "name!~AB_C"}, [900, 1010]),
         ({"query[]": "description=null"}, [900, 1010]),
-        ({"query[]": "description§^B[ä]r"}, [1001]),
+        ({"query[]": "description§^Bä.$"}, [1001]),
         ({"query[]": "description§["}, []),
+        ({"query[]": "name~ABC]"}, [1010]),
+        ({"query[]": "id!<1001"}, [900, 1001, 1010]),
         ({"order": "id:desc", "limit": "1", "offset": "1"}, [1001]),
         ({"order": "id", "offset": "1"}, [1001, 1010]),
+        ({"order": "id:desc:ignored"}, [1010, 1001, 900]),
+        ({"limit": "none"}, []),
     ],
 )
 def test_object_filters_use_sqlite_comparisons(client, api_headers, parameters, expected):
@@ -128,11 +132,20 @@ async def test_python_sqlite_callbacks_execute_with_native_statements(client):
                 "context": {"action": "select", "table": ""},
                 "query": "SELECT regexp('^B[ä]r', 'Bär') AS matched, "
                 "regexp('[', 'Bär') AS invalid, regexp('^$', NULL) AS empty, "
+                "regexp('^B.r$', 'B' || char(10) || 'r') AS newline, "
                 "ceil(1.2) AS positive, ceil(-1.2) AS negative, ceil(NULL) AS zero",
             }
         )
     assert result["rows"] == [
-        {"matched": 1, "invalid": 0, "empty": 1, "positive": 2.0, "negative": -1.0, "zero": 0.0}
+        {
+            "matched": 1,
+            "invalid": 0,
+            "empty": 1,
+            "newline": 1,
+            "positive": 2.0,
+            "negative": -1.0,
+            "zero": 0.0,
+        }
     ]
 
 
@@ -158,6 +171,56 @@ def test_python_picture_response_preserves_original_and_upload_limit(
     other = "/api/files/userfiles/" + base64.b64encode(b"limited.txt").decode()
     assert client.put(other, content=b"too large").status_code == 413
     assert list((tmp_path / "files" / "userfiles").iterdir()) == []
+
+
+def test_python_file_names_and_picture_cache_follow_grocy_storage(
+    client, api_headers, tmp_path, monkeypatch
+):
+    from grocy.core.config import get_settings
+
+    client.headers.update(api_headers)
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path / "files")
+    for name in (b"manual", b"manual:1.txt"):
+        invalid = "/api/files/userfiles/" + base64.b64encode(name).decode()
+        assert client.put(invalid, content=b"manual").status_code == 400
+    output = BytesIO()
+    Image.new("RGB", (100, 50), "red").save(output, "PNG")
+    path = "/api/files/productpictures/" + base64.b64encode(b"photo.png").decode()
+    assert client.put(path, content=output.getvalue()).status_code == 204
+    for width in ("wide", "20"):
+        response = client.get(path, params={"force_serve_as": "picture", "best_fit_width": width})
+        assert response.status_code == 200
+    folder = tmp_path / "files" / "productpictures"
+    assert sorted(entry.name for entry in folder.iterdir()) == [
+        "photo.png",
+        "photo__downscaledtoautox20.png",
+        "photo__downscaledtoautoxauto.png",
+    ]
+    assert client.delete(path).status_code == 204
+    assert list(folder.iterdir()) == []
+
+
+def test_python_user_requests_use_grocy_controller_fields(client, api_headers):
+    client.headers.update(api_headers)
+    created = client.post(
+        "/api/users",
+        json={"username": "Form user", "password": "secret", "password_confirm": "secret"},
+    )
+    assert created.status_code == 204, created.text
+    assert client.post("/api/users", json={"username": "No password"}).status_code == 400
+    users = {row["username"]: row["id"] for row in client.get("/api/users").json()}
+    assert "No password" not in users
+    path = f"/api/users/{users['Form user']}"
+    profile = {"username": "Form user", "first_name": "Form", "last_name": "User"}
+    assert client.put(path, json={"username": "Form user"}).status_code == 400
+    assert client.put(path, json={**profile, "picture_file_name": "face.png"}).status_code == 204
+    assert client.put(path, json=profile).status_code == 204
+    user = client.get("/api/users", params={"query[]": "username=Form user"}).json()[0]
+    assert (user["first_name"], user["picture_file_name"]) == ("Form", None)
+    assert client.put(f"{path}/permissions", json={"permission_ids": [1]}).status_code == 204
+    assert client.get(f"{path}/permissions").json() == []
+    assert client.put("/api/user/settings/locale", json={}).status_code == 204
+    assert client.get("/api/user/settings/locale").json() == {"value": None}
 
 
 def test_python_system_responses_use_settings_and_full_specification(client, api_headers):

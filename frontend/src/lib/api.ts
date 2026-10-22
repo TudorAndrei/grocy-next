@@ -1,8 +1,10 @@
 import { readApiConfig } from "./config";
 import type {
+  BarcodeProduct,
   Battery,
   Chore,
   CreateProposalPayload,
+  CurrentUser,
   NutritionProposalList,
   NutritionRecord,
   NutritionRevisionList,
@@ -13,7 +15,9 @@ import type {
   StockOverviewItem,
   StockProductDetails,
   StockVolatile,
+  SystemInfo,
   Task,
+  UserSettings,
 } from "./types";
 
 export class ApiError extends Error {
@@ -27,7 +31,7 @@ export class ApiError extends Error {
   }
 }
 
-function resolveUrl(path: string): string {
+export function resolveUrl(path: string): string {
   const { baseUrl } = readApiConfig();
   const normalized = path.startsWith("/") ? path : `/${path}`;
   if (!baseUrl) {
@@ -244,6 +248,62 @@ export const api = {
 
   chargeBattery: (batteryId: number) =>
     request<unknown>(`/api/batteries/${batteryId}/charge`, { method: "POST" }),
+
+  getSystemInfo: () => request<SystemInfo>("/api/system/info"),
+
+  getCurrentUser: () => request<CurrentUser[]>("/api/user").then((rows) => rows[0]),
+
+  getUserSettings: () => request<UserSettings>("/api/user/settings"),
+
+  putUserSetting: (key: string, value: unknown) =>
+    request<void>(`/api/user/settings/${encodeURIComponent(key)}`, {
+      method: "PUT",
+      body: JSON.stringify({ value }),
+    }),
+
+  putUserSettings: (body: Record<string, unknown>) =>
+    request<UserSettings>("/api/v2/user/settings", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  getProductByBarcode: (barcode: string) =>
+    request<BarcodeProduct>(
+      `/api/stock/products/by-barcode/${encodeURIComponent(barcode)}`,
+    ),
+
+  externalBarcodeLookup: (barcode: string) =>
+    request<unknown>(
+      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}`,
+    ),
+
+  stockActionByBarcode: (
+    barcode: string,
+    action: "add" | "consume" | "open" | "transfer" | "inventory",
+    body: Record<string, unknown>,
+  ) =>
+    request<unknown>(
+      `/api/stock/products/by-barcode/${encodeURIComponent(barcode)}/${action}`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+
+  mergeProducts: (keepId: number, removeId: number) =>
+    request<void>(
+      `/api/stock/products/${keepId}/merge/${removeId}`,
+      { method: "POST" },
+    ),
+
+  addOverdueToShoppingList: (listId = 1) =>
+    request<void>("/api/stock/shoppinglist/add-overdue-products", {
+      method: "POST",
+      body: JSON.stringify({ list_id: listId }),
+    }),
+
+  addExpiredToShoppingList: (listId = 1) =>
+    request<void>("/api/stock/shoppinglist/add-expired-products", {
+      method: "POST",
+      body: JSON.stringify({ list_id: listId }),
+    }),
 };
 
 export const queryKeys = {
@@ -254,12 +314,18 @@ export const queryKeys = {
   stock: (id: number) => ["stock", id] as const,
   stockOverview: ["stock", "overview"] as const,
   stockVolatile: ["stock", "volatile"] as const,
+  stockJournal: (limit: number) => ["stock", "journal", limit] as const,
   shopping: (id = 1) => ["shopping", id] as const,
   recipes: ["recipes"] as const,
   recipeFulfillment: (id: number) => ["recipe-fulfillment", id] as const,
   chores: ["chores"] as const,
   tasks: ["tasks"] as const,
   batteries: ["batteries"] as const,
+  systemInfo: ["system", "info"] as const,
+  userSettings: ["user", "settings"] as const,
+  currentUser: ["user", "current"] as const,
+  objects: (entity: string) => ["objects", entity] as const,
+  calendarAgenda: ["calendar", "agenda"] as const,
 };
 
 export function filePath(group: string, name: string): string {

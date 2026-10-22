@@ -10,9 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BarcodeRouteImport } from './routes/barcode'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as HouseholdRouteImport } from './routes/household'
+import { Route as JournalRouteImport } from './routes/journal'
+import { Route as LabelsRouteImport } from './routes/labels'
+import { Route as LocationsRouteImport } from './routes/locations'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as MealPlanRouteImport } from './routes/meal-plan'
 import { Route as ReviewsRouteImport } from './routes/reviews'
@@ -29,9 +34,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BarcodeRoute = BarcodeRouteImport.update({
+  id: '/barcode',
+  path: '/barcode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EquipmentRoute = EquipmentRouteImport.update({
@@ -42,6 +57,21 @@ const EquipmentRoute = EquipmentRouteImport.update({
 const HouseholdRoute = HouseholdRouteImport.update({
   id: '/household',
   path: '/household',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JournalRoute = JournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LabelsRoute = LabelsRouteImport.update({
+  id: '/labels',
+  path: '/labels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationsRoute = LocationsRouteImport.update({
+  id: '/locations',
+  path: '/locations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManageRoute = ManageRouteImport.update({
@@ -97,9 +127,14 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/barcode': typeof BarcodeRoute
   '/calendar': typeof CalendarRoute
+  '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/journal': typeof JournalRoute
+  '/labels': typeof LabelsRoute
+  '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
   '/reviews': typeof ReviewsRoute
@@ -113,9 +148,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/barcode': typeof BarcodeRoute
   '/calendar': typeof CalendarRoute
+  '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/journal': typeof JournalRoute
+  '/labels': typeof LabelsRoute
+  '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
   '/reviews': typeof ReviewsRoute
@@ -130,9 +170,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/barcode': typeof BarcodeRoute
   '/calendar': typeof CalendarRoute
+  '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/journal': typeof JournalRoute
+  '/labels': typeof LabelsRoute
+  '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
   '/reviews': typeof ReviewsRoute
@@ -148,9 +193,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/barcode'
     | '/calendar'
+    | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/journal'
+    | '/labels'
+    | '/locations'
     | '/manage'
     | '/meal-plan'
     | '/reviews'
@@ -164,9 +214,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/barcode'
     | '/calendar'
+    | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/journal'
+    | '/labels'
+    | '/locations'
     | '/manage'
     | '/meal-plan'
     | '/reviews'
@@ -180,9 +235,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/barcode'
     | '/calendar'
+    | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/journal'
+    | '/labels'
+    | '/locations'
     | '/manage'
     | '/meal-plan'
     | '/reviews'
@@ -197,9 +257,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BarcodeRoute: typeof BarcodeRoute
   CalendarRoute: typeof CalendarRoute
+  DashboardRoute: typeof DashboardRoute
   EquipmentRoute: typeof EquipmentRoute
   HouseholdRoute: typeof HouseholdRoute
+  JournalRoute: typeof JournalRoute
+  LabelsRoute: typeof LabelsRoute
+  LocationsRoute: typeof LocationsRoute
   ManageRoute: typeof ManageRoute
   MealPlanRoute: typeof MealPlanRoute
   ReviewsRoute: typeof ReviewsRoute
@@ -221,11 +286,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/barcode': {
+      id: '/barcode'
+      path: '/barcode'
+      fullPath: '/barcode'
+      preLoaderRoute: typeof BarcodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calendar': {
       id: '/calendar'
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/equipment': {
@@ -240,6 +319,27 @@ declare module '@tanstack/react-router' {
       path: '/household'
       fullPath: '/household'
       preLoaderRoute: typeof HouseholdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journal': {
+      id: '/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof JournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/labels': {
+      id: '/labels'
+      path: '/labels'
+      fullPath: '/labels'
+      preLoaderRoute: typeof LabelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/locations': {
+      id: '/locations'
+      path: '/locations'
+      fullPath: '/locations'
+      preLoaderRoute: typeof LocationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manage': {
@@ -317,9 +417,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BarcodeRoute: BarcodeRoute,
   CalendarRoute: CalendarRoute,
+  DashboardRoute: DashboardRoute,
   EquipmentRoute: EquipmentRoute,
   HouseholdRoute: HouseholdRoute,
+  JournalRoute: JournalRoute,
+  LabelsRoute: LabelsRoute,
+  LocationsRoute: LocationsRoute,
   ManageRoute: ManageRoute,
   MealPlanRoute: MealPlanRoute,
   ReviewsRoute: ReviewsRoute,

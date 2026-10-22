@@ -48,6 +48,13 @@ export function StockActions({ productId }: { productId: number }) {
         `/api/objects/stock_log?query[]=product_id=${productId}&order=id:desc&limit=12`,
       ),
   });
+  const prices = useQuery({
+    queryKey: ["stock-prices", productId],
+    queryFn: () =>
+      request<Array<{ price: number; row_created_timestamp?: string }>>(
+        `/api/stock/products/${productId}/price-history`,
+      ),
+  });
   const action = useMutation({
     mutationFn: (fn: () => Promise<unknown>) => fn(),
     onSuccess: async () => {
@@ -77,6 +84,7 @@ export function StockActions({ productId }: { productId: number }) {
     locations.error ||
     entries.error ||
     logs.error ||
+    prices.error ||
     action.error;
   const names = (id: number) =>
     locations.data?.find((l) => l.id === id)?.name ?? `Location #${id}`;
@@ -272,6 +280,22 @@ export function StockActions({ productId }: { productId: number }) {
           </div>
         </form>
       )}
+      <h3>Price history</h3>
+      <ul className="product-list">
+        {prices.data?.slice(0, 8).map((row, index) => (
+          <li className="product-row" key={index}>
+            <span>
+              {row.price}
+              {row.row_created_timestamp
+                ? ` · ${row.row_created_timestamp}`
+                : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {prices.isSuccess && !prices.data?.length ? (
+        <p className="muted">No purchase prices recorded yet.</p>
+      ) : null}
       <h3>Recent stock bookings</h3>
       <ul className="product-list">
         {logs.data?.map((log) => (

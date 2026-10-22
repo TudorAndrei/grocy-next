@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { api, request } from "@/lib/api";
+import { openApiDocument } from "@/lib/open-document";
+import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 export const Route = createFileRoute("/shopping")({ component: ShoppingPage });
@@ -54,10 +57,15 @@ function ShoppingPage() {
   const error = query.error || lists.error || products.error || change.error;
   return (
     <>
-      <h1 className="page-title">Shopping list</h1>
-      <p className="page-lead">
-        Add products or notes. Mark each item when you buy it.
-      </p>
+      <PageHeader
+        title="Shopping list"
+        lead="Add products or notes. Mark each item when you buy it."
+        actions={
+          <Link to="/labels" className="btn btn-ghost btn-sm">
+            Labels
+          </Link>
+        }
+      />
       <div className="field">
         <label htmlFor="shopping-list">List</label>
         <select
@@ -126,14 +134,35 @@ function ShoppingPage() {
           className="btn btn-ghost"
           disabled={change.isPending}
           onClick={() =>
-            change.mutate(() =>
-              api.action("/api/stock/shoppinglist/add-missing-products", {
-                list_id: listId,
-              }),
-            )
+            change.mutate(() => api.addMissingToShoppingList(listId))
           }
         >
           Add low stock products
+        </button>
+        <button
+          className="btn btn-ghost"
+          disabled={change.isPending}
+          onClick={() =>
+            change.mutate(() => api.addOverdueToShoppingList(listId))
+          }
+        >
+          Add overdue products
+        </button>
+        <button
+          className="btn btn-ghost"
+          disabled={change.isPending}
+          onClick={() =>
+            change.mutate(() => api.addExpiredToShoppingList(listId))
+          }
+        >
+          Add expired products
+        </button>
+        <button
+          className="btn btn-ghost"
+          type="button"
+          onClick={() => openApiDocument("/api/print/shoppinglist/thermal")}
+        >
+          Thermal print
         </button>
         <button
           className="btn btn-ghost"

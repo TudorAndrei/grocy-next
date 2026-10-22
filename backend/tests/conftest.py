@@ -12,6 +12,7 @@ os.environ["GROCY_AUTO_CREATE_SCHEMA"] = "true"
 os.environ["GROCY_DEV_OPEN_API_KEY"] = "dev-key"
 os.environ["GROCY_DATABASE_WAL"] = "false"
 os.environ["GROCY_LABEL_PRINTER_RUN_SERVER"] = "false"
+os.environ.setdefault("GROCY_USE_NATIVE_PHP", "false")
 
 from grocy.core.config import clear_settings_cache
 from grocy.db.session import reset_engine

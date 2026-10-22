@@ -83,10 +83,14 @@ class CompatibilityRoute(APIRoute):
                 try:
                     if request.headers.get("content-type") != "application/json":
                         raise GrocyError("Bad Content-Type")
-                    purifier: InputPurifier = getattr(
+                    purifier = getattr(
                         request.state, "native_runtime", request.app.state.input_purifier
                     )
-                    body = await purifier.purify(await request.body())
+                    raw = await request.body()
+                    if getattr(request.app.state, "use_native_php", False):
+                        body = await purifier.purify(raw)
+                    else:
+                        body = json.loads(raw) if raw else {}
                     if not rule.permission_before_filter:
                         require_request_permission(request, actor)
                     if body is None:

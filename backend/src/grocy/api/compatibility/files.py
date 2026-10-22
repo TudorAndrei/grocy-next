@@ -16,6 +16,10 @@ async def file_request(
     group: str, file_name: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
     await session.rollback()
+    raw_path = request.scope.get("raw_path") or request.url.path.encode()
+    raw_group, _, raw_name = raw_path.partition(b"/api/files/")[2].partition(b"/")
+    if not raw_group or not raw_name or b"/" in raw_name:
+        raise NotFoundError("Not found.", code=None)
     service = FilesService(compatibility=True)
     if request.method == "PUT":
         await service.put(request, group, file_name)
@@ -23,17 +27,11 @@ async def file_request(
     if request.method == "DELETE":
         await service.delete(group, file_name)
         return Response(status_code=204)
-    dimensions = []
-    for name in ("best_fit_width", "best_fit_height"):
-        value = request.query_params.get(name)
-        try:
-            dimensions.append(int(value) if value else None)
-        except ValueError as error:
-            raise NotFoundError("Invalid image dimensions", code=None) from error
+    query = request.query_params
     return await service.get(
         group,
         file_name,
-        width=dimensions[0],
-        height=dimensions[1],
-        picture=request.query_params.get("force_serve_as") == "picture",
+        width=query.get("best_fit_width"),
+        height=query.get("best_fit_height"),
+        picture=query.get("force_serve_as") == "picture",
     )

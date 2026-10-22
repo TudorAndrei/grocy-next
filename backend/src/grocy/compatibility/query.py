@@ -1,15 +1,46 @@
+import math
 import re
 from typing import Any
 from urllib.parse import parse_qsl
 
+import regex
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.errors import GrocyError
 
-_FILTER = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)(!=|!~|>=|<=|=|~|>|<|§)(.+)")
+_FILTER = regex.compile(
+    r"(?P<field>[A-Za-z_][A-Za-z0-9_]+)(?P<operator>!?(?:>=|<=|=|~|<|>|§))"
+    r"(?P<value>[A-Za-z\p{L}\p{M}0-9*_.$#^| -\\]+)"
+)
+_INTEGER = re.compile(r"[ \t\n\r\v\f]*([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)")
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-_OPERATORS = {"=": "=", "!=": "!=", "~": "LIKE", "!~": "NOT LIKE", "§": "REGEXP"}
+_OPERATORS = {
+    "=": "=",
+    "!=": "!=",
+    "~": "LIKE",
+    "!~": "NOT LIKE",
+    "<": "<",
+    ">": ">",
+    ">=": ">=",
+    "<=": "<=",
+    "§": "REGEXP",
+}
+
+
+def _integer(value: str) -> int:
+    match = _INTEGER.match(value)
+    if match is None:
+        return 0
+    number = match.group(1)
+    if number.lstrip("+-").isdigit():
+        result = int(number)
+    else:
+        decimal = float(number)
+        if not math.isfinite(decimal):
+            return 0
+        result = int(decimal)
+    return max(-(2**63), min(2**63 - 1, result))
 
 
 def parse_list_query(
@@ -18,20 +49,17 @@ def parse_list_query(
     filters = []
     options = {}
     for key, value in parse_qsl(query_string.decode(), keep_blank_values=True):
-        if key == "query[]" or re.fullmatch(r"query\[\d+\]", key):
-            match = _FILTER.fullmatch(value)
+        if key == "query":
+            raise GrocyError("Invalid query", code=None)
+        if re.fullmatch(r"query\[[^\]]*\]", key):
+            match = _FILTER.search(value)
             if match is None:
                 raise GrocyError("Invalid query", code=None)
-            filters.append(match.groups())
+            filters.append((match["field"], match["operator"], match["value"]))
         elif key in {"order", "limit", "offset"}:
             options[key] = value
-    try:
-        limit = int(options["limit"]) if "limit" in options else None
-        offset = int(options["offset"]) if "offset" in options else None
-        if any(value is not None and not -(2**63) <= value < 2**63 for value in (limit, offset)):
-            raise ValueError
-    except ValueError as error:
-        raise GrocyError("Invalid limit or offset", code=None) from error
+    limit = _integer(options["limit"]) if "limit" in options else None
+    offset = _integer(options["offset"]) if "offset" in options else None
     return filters, options.get("order"), limit, offset
 
 
@@ -53,10 +81,12 @@ async def query_rows(
     predicates = []
     parameters: dict[str, Any] = {}
     for index, (field, operator, value) in enumerate(filters):
+        operation = _OPERATORS.get(operator)
+        if operation is None:
+            continue
         if field not in allowed:
             raise GrocyError(f"Invalid query field {field}", code=None)
         parameter = f"filter_{index}"
-        operation = _OPERATORS.get(operator, operator)
         predicate = f'"{field}" {operation} :{parameter}'
         if operator in {"=", "!="} and value.lower() == "null":
             predicate = f'({predicate} OR "{field}" IS NULL)'
@@ -65,9 +95,9 @@ async def query_rows(
     if predicates:
         query += " WHERE " + " AND ".join(predicates)
     if order is not None:
-        parts = order.split(":")
-        field, direction = parts[0], parts[1] if len(parts) == 2 else "asc"
-        if len(parts) > 2 or direction not in {"asc", "desc"}:
+        field, *rest = order.split(":")
+        direction = rest[0] if rest else "asc"
+        if direction not in {"asc", "desc"}:
             raise GrocyError(f"Invalid sort order {direction}", code=None)
         if field not in allowed:
             raise GrocyError(f"Invalid sort field {field}", code=None)

@@ -16,6 +16,32 @@ from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.permissions import PERMISSIONS
 from grocy.core.time import server_timezone
+from grocy.db.native_schema import SCHEMA
+
+
+def _text(payload: dict[str, Any], name: str) -> str | None:
+    value = payload.get(name)
+    if value is None or isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "1" if value else ""
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return str(int(value)) if value.is_integer() and abs(value) < 1e15 else repr(value)
+    raise GrocyError(f"Invalid value for field {name}", code=None)
+
+
+def _required(values: dict[str, str | None], *names: str) -> None:
+    for name in names:
+        if values[name] is None:
+            raise GrocyError(f"Invalid value for field {name}", code=None)
+
+
+def _permission(value: Any) -> Any:
+    if isinstance(value, (dict, list)):
+        raise GrocyError("Invalid permission", code=None)
+    return int(value) if isinstance(value, bool) else value
 
 
 class UsersService:
@@ -41,34 +67,28 @@ class UsersService:
     async def list_users(self, query_string: bytes = b"") -> list[dict[str, Any]]:
         return await query_rows(self.session, "users_dto", query_string)
 
-    async def _password(self, value: Any) -> str:
-        if not isinstance(value, str) or "\x00" in value or len(value.encode()) > 72:
-            raise GrocyError("Invalid password", code=None)
-        hashed = await run_in_threadpool(bcrypt.hashpw, value.encode(), bcrypt.gensalt())
+    async def _password(self, value: str | None) -> str:
+        if value is None or "\x00" in value:
+            raise GrocyError("Invalid value for field password", code=None)
+        hashed = await run_in_threadpool(bcrypt.hashpw, value.encode()[:72], bcrypt.gensalt())
         return hashed.decode().replace("$2b$", "$2y$", 1)
 
-    def _profile(self, payload: dict[str, Any]) -> dict[str, Any]:
-        allowed = {"username", "first_name", "last_name", "picture_file_name", "password"}
-        if payload.keys() - allowed:
-            raise GrocyError("Invalid user field", code=None)
-        values = {key: value for key, value in payload.items() if key != "password"}
-        if any(value is not None and not isinstance(value, str) for value in values.values()):
-            raise GrocyError("Invalid user field value", code=None)
-        if "username" in values and values["username"] is None:
-            raise GrocyError("Invalid username", code=None)
-        return values
+    def _profile(self, payload: dict[str, Any]) -> dict[str, str | None]:
+        names = ("username", "first_name", "last_name", "picture_file_name", "password")
+        return {name: _text(payload, name) for name in names}
 
     async def create_user(self, payload: dict[str, Any]) -> None:
         values = self._profile(payload)
-        if "username" not in values:
-            raise GrocyError("Missing username", code=None)
-        values["password"] = await self._password(payload.get("password", ""))
-        columns = ",".join(f'"{key}"' for key in values)
-        bindings = ",".join(f":{key}" for key in values)
+        _required(values, "username")
+        values["password"] = await self._password(values["password"])
         async with self._write():
             connection = await self.session.connection()
             result = await connection.execute(
-                text(f"INSERT INTO users ({columns}) VALUES ({bindings})"), values
+                text(
+                    "INSERT INTO users(username,first_name,last_name,password,picture_file_name) "
+                    "VALUES (:username,:first_name,:last_name,:password,:picture_file_name)"
+                ),
+                values,
             )
             user_id = result.lastrowid
             for permission_id, (name, _) in PERMISSIONS.items():
@@ -83,20 +103,21 @@ class UsersService:
 
     async def update_user(self, user_id: str, payload: dict[str, Any]) -> None:
         values = self._profile(payload)
-        if payload.get("password") not in (None, "", "0"):
-            values["password"] = await self._password(payload["password"])
+        _required(values, "username", "first_name", "last_name")
+        password = values.pop("password")
+        if password not in (None, "", "0"):
+            values["password"] = await self._password(password)
         exists = await self.session.scalar(
             text("SELECT 1 FROM users WHERE id=:user_id"), {"user_id": user_id}
         )
         if not exists:
             raise GrocyError("User does not exist", code=None)
+        assignments = ",".join(f'"{key}"=:{key}' for key in values)
         async with self._write():
-            if values:
-                assignments = ",".join(f'"{key}"=:{key}' for key in values)
-                await self.session.execute(
-                    text(f"UPDATE users SET {assignments} WHERE id=:user_id"),
-                    {**values, "user_id": user_id},
-                )
+            await self.session.execute(
+                text(f"UPDATE users SET {assignments} WHERE id=:user_id"),
+                {**values, "user_id": user_id},
+            )
 
     async def delete_user(self, user_id: str) -> None:
         async with self._write():
@@ -137,7 +158,7 @@ class UsersService:
                     "id": existing,
                     "user_id": user_id,
                     "key": key,
-                    "value": "" if value is None else value,
+                    "value": value,
                     "updated": datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S"),
                 },
             )
@@ -150,25 +171,15 @@ class UsersService:
             )
 
     async def permissions(self, user_id: str) -> list[dict[str, Any]]:
+        projection = ",".join(f'"{name}"' for name in SCHEMA["tables"]["user_permissions"])
         result = await self.session.execute(
-            text("SELECT id,user_id,permission_id FROM user_permissions WHERE user_id=:user_id"),
+            text(f"SELECT {projection} FROM user_permissions WHERE user_id=:user_id"),
             {"user_id": user_id},
         )
         return [dict(row) for row in result.mappings()]
 
-    def _permission_id(self, value: Any) -> int:
-        if isinstance(value, bool):
-            raise GrocyError("Invalid permission", code=None)
-        try:
-            permission_id = int(value)
-        except (TypeError, ValueError, OverflowError) as error:
-            raise GrocyError("Invalid permission", code=None) from error
-        if str(permission_id) != str(value) or permission_id not in PERMISSIONS:
-            raise GrocyError("Invalid permission", code=None)
-        return permission_id
-
     async def add_permission(self, user_id: str, value: Any) -> None:
-        permission_id = self._permission_id(value)
+        permission_id = _permission(value)
         async with self._write():
             await self.session.execute(
                 text(
@@ -179,16 +190,19 @@ class UsersService:
             )
 
     async def set_permissions(self, user_id: str, values: Any) -> None:
-        if not isinstance(values, list):
-            raise GrocyError("Invalid permissions", code=None)
-        permissions = [self._permission_id(value) for value in values]
         if get_settings().mode in {"demo", "prerelease"}:
             permissions = [1]
+        elif isinstance(values, dict):
+            permissions = [_permission(value) for value in values.values()]
+        elif isinstance(values, list):
+            permissions = [_permission(value) for value in values]
+        else:
+            permissions = []
         async with self._write():
             await self.session.execute(
                 text("DELETE FROM user_permissions WHERE user_id=:user_id"), {"user_id": user_id}
             )
-            for permission_id in dict.fromkeys(permissions):
+            for permission_id in permissions:
                 await self.session.execute(
                     text(
                         "INSERT INTO user_permissions(user_id,permission_id) "

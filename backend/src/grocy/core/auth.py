@@ -1,10 +1,13 @@
 import base64
+import os
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
-from sqlalchemy import or_, select, text
+from sqlalchemy import or_, select, text, update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
@@ -12,7 +15,7 @@ from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
 from grocy.core.permissions import resolve_permissions
 from grocy.core.time import server_timezone
-from grocy.db.models.users import ApiKey, User, UserPermission
+from grocy.db.models.users import ApiKey, ImportedApiKey, User, UserPermission
 from grocy.db.session import get_session_factory
 
 
@@ -61,7 +64,11 @@ async def authenticate_request(
     if actor := getattr(request.state, "grocy_actor", None):
         return actor
     settings = get_settings()
-    if not request.url.path.startswith("/api/v2/") and request.url.path != "/api/health":
+    if (
+        settings.use_native_php
+        and not request.url.path.startswith("/api/v2/")
+        and request.url.path != "/api/health"
+    ):
         return await authenticate_native_request(request, session)
     key = grocy_api_key or request.headers.get(settings.api_key_header)
     calendar_secret = (
@@ -193,7 +200,7 @@ async def authenticate_key(
         now = datetime.now(UTC).replace(tzinfo=None)
         valid = or_(ApiKey.expires.is_(None), ApiKey.expires >= now)
     stmt = (
-        select(ApiKey.user_id, User.id, valid)
+        select(ApiKey.id, ApiKey.user_id, User.id, valid)
         .select_from(ApiKey)
         .outerjoin(User, ApiKey.user_id == User.id)
         .where(
@@ -206,9 +213,33 @@ async def authenticate_key(
     identity = (await session.execute(stmt)).first()
     if identity is None:
         raise UnauthorizedError("Invalid API key")
-    user_id, existing_user_id, is_valid = identity
+    api_key_id, user_id, existing_user_id, is_valid = identity
+    if key_type not in {"special-purpose-calendar-ical", "calendar"}:
+        try:
+            imported = await session.scalar(
+                select(ImportedApiKey.api_key_id).where(ImportedApiKey.api_key_id == api_key_id)
+            )
+        except OperationalError:
+            imported = None
+        if imported is not None:
+            expires = await session.scalar(select(ApiKey.expires).where(ApiKey.id == api_key_id))
+            if expires is None:
+                raise UnauthorizedError("Invalid API key")
     if not is_valid:
         raise UnauthorizedError("API key expired")
+    stamp = datetime.now(server_timezone()).replace(tzinfo=None)
+    database = session.get_bind().engine.url.database
+    preserve_mtime = None
+    if database and database != ":memory:":
+        path = Path(database)
+        if path.exists():
+            preserve_mtime = path.stat()
+    await session.execute(
+        update(ApiKey).where(ApiKey.api_key == key).values(last_used=stamp)
+    )
+    await session.commit()
+    if preserve_mtime is not None:
+        os.utime(path, (preserve_mtime.st_atime, preserve_mtime.st_mtime))
     if existing_user_id is None:
         raise _MissingKeyUser("Invalid API key")
     return await actor_for_user(session, user_id, key=key)
