@@ -47,7 +47,7 @@ async def native_list_response(
         route=route,
         object_id=object_id,
         query_string=request.scope["query_string"],
-        execute=NativeStatements(session, runtime).execute,
+        execute=NativeStatements(session).execute,
     )
     return native_response(result)
 
@@ -110,6 +110,6 @@ async def native_action_response(
         datapath=settings.datapath.resolve(),
         configuration=configuration,
         arguments=arguments,
-        execute=NativeStatements(session, runtime).execute,
+        execute=NativeStatements(session).execute,
     )
     return native_response(result)
