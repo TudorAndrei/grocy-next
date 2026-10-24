@@ -5,7 +5,57 @@ export type ProductSummary = {
   description?: string | null;
   barcodes?: string[];
   min_stock_amount?: number;
+  location_id?: number | null;
+  qu_id_stock?: number | null;
+  qu_id_purchase?: number | null;
+  default_best_before_days?: number | null;
+  product_group_id?: number | null;
 };
+
+export type Location = {
+  id: number;
+  name: string;
+  description?: string | null;
+  is_freezer?: number;
+};
+
+export type QuantityUnit = {
+  id: number;
+  name: string;
+  name_plural?: string | null;
+  description?: string | null;
+};
+
+export type Booking = {
+  id: number;
+  product_id: number;
+  amount: number;
+  transaction_type: string;
+  transaction_id: string;
+};
+
+export type StockLogEntry = {
+  id: number;
+  product_id: number;
+  amount: number;
+  best_before_date?: string | null;
+  transaction_type: string;
+  transaction_id: string;
+  undone: number;
+  spoiled?: number;
+  location_id?: number | null;
+  user_id?: number | null;
+  note?: string | null;
+  row_created_timestamp: string;
+};
+
+export type CurrentUser = {
+  id: number;
+  username: string;
+  display_name?: string | null;
+};
+
+export type TrackedId = { id: number };
 
 export type ProductListResponse = ProductSummary[];
 
@@ -157,7 +207,10 @@ export type RecipeFulfillment = {
 export type Chore = {
   id: number;
   name: string;
+  description?: string | null;
   period_type: string;
+  period_days?: number | null;
+  last_tracked_time?: string | null;
   next_estimated_execution_time?: string | null;
 };
 
@@ -173,6 +226,8 @@ export type Battery = {
   id: number;
   name: string;
   description?: string | null;
+  used_in?: string | null;
   charge_interval_days?: number | null;
+  last_tracked_time?: string | null;
   next_estimated_charge_time?: string | null;
 };

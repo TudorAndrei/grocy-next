@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { PageHeader } from "@/components/PageHeader";
+import { useNotify } from "@/components/Toaster";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -10,64 +11,49 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const notify = useNotify();
   const initial = readApiConfig();
   const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
   const [apiKey, setApiKey] = useState(initial.apiKey);
-  const [saved, setSaved] = useState(false);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     writeApiConfig({ baseUrl, apiKey });
-    setSaved(true);
     void queryClient.invalidateQueries();
+    notify({ message: "Connection saved. Data is reloading." });
   }
 
   return (
     <>
-      <PageHeader
-        title="Settings"
-        lead="Point the UI at your Grocy Next API. Local demo key is dev-key; leave the base empty to use the Vite proxy."
-      />
-      <section className="panel" style={{ maxWidth: "32rem" }}>
-        <div className="panel-inner">
-          <form onSubmit={onSubmit}>
-            <div className="field">
-              <label htmlFor="api-base">API base URL</label>
-              <input
-                id="api-base"
-                type="text"
-                placeholder="https://your-grocy.example (optional locally)"
-                value={baseUrl}
-                onChange={(e) => {
-                  setSaved(false);
-                  setBaseUrl(e.target.value);
-                }}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="api-key">GROCY-API-KEY</label>
-              <input
-                id="api-key"
-                type="password"
-                autoComplete="off"
-                placeholder="dev-key"
-                value={apiKey}
-                onChange={(e) => {
-                  setSaved(false);
-                  setApiKey(e.target.value);
-                }}
-              />
-            </div>
-            <button type="submit" className="btn btn-primary">
-              Save connection
-            </button>
-            {saved ? (
-              <p className="muted" style={{ marginTop: "1rem" }} role="status">
-                Saved. Cached queries will refresh.
-              </p>
-            ) : null}
-          </form>
-        </div>
+      <PageHeader title="Settings" lead="Where this UI finds your Grocy Next server." />
+      <section className="panel narrow">
+        <h2 className="panel-head">Connection</h2>
+        <form className="panel-body" onSubmit={onSubmit}>
+          <label className="field">
+            <span>API base URL</span>
+            <input
+              type="url"
+              placeholder="https://grocy.example.home"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+            />
+            <small className="field-hint">Leave empty to use the dev proxy on this host.</small>
+          </label>
+          <label className="field">
+            <span>GROCY-API-KEY</span>
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="dev-key"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+            />
+            <small className="field-hint">The local demo key is dev-key.</small>
+          </label>
+          <button type="submit" className="btn btn-primary">
+            Save connection
+          </button>
+        </form>
       </section>
     </>
   );

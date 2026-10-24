@@ -10,76 +10,115 @@ export const Route = createFileRoute("/recipes/")({
   component: RecipesPage,
 });
 
+type ReadyFilter = "all" | "ready" | "missing";
+
 function RecipesPage() {
   const [search, setSearch] = useState("");
-  const query = useQuery({
-    queryKey: queryKeys.recipes,
-    queryFn: () => api.listRecipes(),
+  const [filter, setFilter] = useState<ReadyFilter>("all");
+  const recipes = useQuery({ queryKey: queryKeys.recipes, queryFn: api.listRecipes });
+  const fulfillment = useQuery({
+    queryKey: queryKeys.recipesFulfillment,
+    queryFn: api.listRecipeFulfillment,
   });
 
-  const recipes = useMemo(() => {
-    const items = query.data ?? [];
+  const status = useMemo(
+    () => new Map((fulfillment.data ?? []).map((f) => [f.recipe_id, f])),
+    [fulfillment.data],
+  );
+
+  const visible = (recipes.data ?? []).filter((recipe) => {
+    const f = status.get(recipe.id);
+    if (filter === "ready" && !f?.need_fulfilled) return false;
+    if (filter === "missing" && (f?.need_fulfilled ?? true)) return false;
     const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (recipe) =>
-        recipe.name.toLowerCase().includes(q) ||
-        (recipe.description ?? "").toLowerCase().includes(q),
+    return (
+      !q ||
+      recipe.name.toLowerCase().includes(q) ||
+      (recipe.description ?? "").toLowerCase().includes(q)
     );
-  }, [query.data, search]);
+  });
+
+  const counts = {
+    all: recipes.data?.length ?? 0,
+    ready: (recipes.data ?? []).filter((r) => status.get(r.id)?.need_fulfilled).length,
+    missing: (recipes.data ?? []).filter((r) => status.get(r.id)?.need_fulfilled === false).length,
+  };
 
   return (
     <>
       <PageHeader
         title="Recipes"
-        lead="Check fulfillment against current stock, then cook and consume ingredients."
+        lead="Checked against live stock. Cook a ready recipe to consume its ingredients."
       />
       <div className="toolbar">
-        <div className="search-field">
-          <label className="sr-only" htmlFor="recipe-search">
-            Search recipes
-          </label>
+        <label className="search-field">
+          <span className="sr-only">Search recipes</span>
           <input
-            id="recipe-search"
             type="search"
             placeholder="Search recipes"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </label>
+        <div className="chips" role="group" aria-label="Recipe filter">
+          {(
+            [
+              ["all", "All"],
+              ["ready", "Ready to cook"],
+              ["missing", "Missing items"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className="chip"
+              aria-pressed={filter === id}
+              onClick={() => setFilter(id)}
+            >
+              {label}
+              <span className="chip-count">{counts[id]}</span>
+            </button>
+          ))}
         </div>
       </div>
-      {query.isLoading ? <LoadingBlock label="Fetching recipes…" /> : null}
-      {query.isError ? (
-        <ErrorBlock
-          message={
-            query.error instanceof Error ? query.error.message : "Could not load recipes."
-          }
-        />
+      {recipes.isLoading ? <LoadingBlock label="Loading recipes…" /> : null}
+      {recipes.isError ? <ErrorBlock message={(recipes.error as Error).message} /> : null}
+      {recipes.isSuccess && visible.length === 0 ? (
+        <p className="empty-state">
+          {recipes.data.length === 0 ? "No recipes yet." : "No recipe matches this filter."}
+        </p>
       ) : null}
-      {query.isSuccess ? (
-        recipes.length === 0 ? (
-          <p className="empty-state">
-            {search ? "No recipes match that search." : "No recipes yet."}
-          </p>
-        ) : (
-          <ul className="product-list">
-            {recipes.map((recipe) => (
+      {visible.length > 0 ? (
+        <ul className="panel recipe-list">
+          {visible.map((recipe) => {
+            const f = status.get(recipe.id);
+            return (
               <li key={recipe.id}>
                 <Link
                   to="/recipes/$recipeId"
                   params={{ recipeId: String(recipe.id) }}
-                  className="product-row"
+                  className="recipe-row"
                 >
-                  <div>
-                    <h2>{recipe.name}</h2>
-                    {recipe.description ? <p>{recipe.description}</p> : null}
-                  </div>
-                  <span className="meta">{recipe.positions.length} ingredients</span>
+                  <span className="recipe-name">
+                    {recipe.name}
+                    {recipe.description ? <small>{recipe.description}</small> : null}
+                  </span>
+                  <span className="recipe-meta">
+                    {recipe.positions.length} ingredients · {recipe.desired_servings} serving
+                    {recipe.desired_servings === 1 ? "" : "s"}
+                  </span>
+                  {f ? (
+                    <span className="badge" data-tone={f.need_fulfilled ? "ok" : "warn"}>
+                      {f.need_fulfilled ? "Ready to cook" : `${f.missing_products_count} missing`}
+                    </span>
+                  ) : (
+                    <span className="faint">—</span>
+                  )}
                 </Link>
               </li>
-            ))}
-          </ul>
-        )
+            );
+          })}
+        </ul>
       ) : null}
     </>
   );

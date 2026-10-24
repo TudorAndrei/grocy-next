@@ -8,15 +8,15 @@ from grocy.db.models.household import (
     Task,
     TaskCategory,
 )
+from grocy.db.models.mealplan import MealPlanEntry, MealPlanSection
 from grocy.db.models.nutrition import (
     NutritionEvidence,
     NutritionProposal,
     NutritionRevision,
     ProductNutrition,
 )
-from grocy.db.models.mealplan import MealPlanEntry, MealPlanSection
 from grocy.db.models.recipes import Recipe, RecipeNesting, RecipePosition
-from grocy.db.models.settings import UserSetting, UserfieldValue
+from grocy.db.models.settings import UserfieldValue, UserSetting
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.db.models.stock import StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion

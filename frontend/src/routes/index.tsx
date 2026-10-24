@@ -1,7 +1,374 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { api, queryKeys } from "@/lib/api";
+import { useCatalog } from "@/lib/catalog";
+import { daysUntil, relativeTime, todayLine } from "@/lib/format";
+import { useStockMove } from "@/lib/stockActions";
+import { useChoreActions } from "@/lib/householdActions";
+import { useCommandBar } from "@/components/CommandBar";
+import { DueBar, DUE_WINDOW_DAYS } from "@/components/DueBar";
+import { ErrorBlock } from "@/components/ErrorBlock";
+import { ActorTag, bookingVerb } from "@/components/ActorTag";
+import { Gauge } from "@/components/Gauge";
+import { LoadingBlock } from "@/components/LoadingBlock";
+import { PageHeader } from "@/components/PageHeader";
+import { QuickMoves } from "@/components/QuickMoves";
+import { useNotify } from "@/components/Toaster";
+import type { Domain } from "@/components/SiteNav";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/stock" });
-  },
+  component: TodayPage,
 });
+
+type DueItem = {
+  key: string;
+  domain: Domain;
+  name: string;
+  detail: string;
+  days: number;
+  action: { label: string; run: () => void; busy: boolean } | null;
+  link?: { to: "/products/$productId"; productId: number };
+};
+
+function TodayPage() {
+  const catalog = useCatalog();
+  const command = useCommandBar();
+  const notify = useNotify();
+  const queryClient = useQueryClient();
+
+  const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
+  const volatile = useQuery({
+    queryKey: queryKeys.stockVolatile,
+    queryFn: () => api.getStockVolatile(),
+  });
+  const chores = useQuery({ queryKey: queryKeys.chores, queryFn: api.listChores });
+  const tasks = useQuery({ queryKey: queryKeys.tasks, queryFn: () => api.listTasks(false) });
+  const proposals = useQuery({
+    queryKey: queryKeys.proposalsPending,
+    queryFn: api.listPendingProposals,
+  });
+  const log = useQuery({ queryKey: queryKeys.stockLog, queryFn: api.listStockLog });
+  const shopping = useQuery({
+    queryKey: queryKeys.shopping(1),
+    queryFn: () => api.getShoppingList(1),
+  });
+  const me = useQuery({ queryKey: queryKeys.currentUser, queryFn: api.getCurrentUser });
+  const toBuy = (shopping.data?.items ?? []).filter((item) => !item.done);
+
+  const consume = useStockMove("consume");
+  const { execute: executeChore, complete: completeTask } = useChoreActions();
+
+  const addMissing = useMutation({
+    mutationFn: () => api.addMissingToShoppingList(1),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["shopping"] });
+      notify({ message: "Added every product below its minimum to the shopping list" });
+    },
+    onError: (err: Error) => notify({ message: err.message, tone: "error" }),
+  });
+
+  const amounts = useMemo(
+    () => new Map((stock.data ?? []).map((item) => [item.product_id, item.amount])),
+    [stock.data],
+  );
+
+  const low = useMemo(() => {
+    return (volatile.data?.missing_products ?? []).map((missing) => {
+      const product = catalog.product(missing.id);
+      return {
+        id: missing.id,
+        name: missing.name,
+        min: product?.min_stock_amount ?? 0,
+        amount: amounts.get(missing.id) ?? 0,
+        location: catalog.location(product?.location_id)?.name,
+      };
+    });
+  }, [volatile.data, catalog, amounts]);
+
+  const due = useMemo<DueItem[]>(() => {
+    const items: DueItem[] = [];
+    for (const entry of stock.data ?? []) {
+      const days = daysUntil(entry.best_before_date);
+      if (days === null || days > DUE_WINDOW_DAYS || entry.amount <= 0) continue;
+      items.push({
+        key: `s${entry.product_id}`,
+        domain: "stock",
+        name: entry.product.name,
+        detail: `${catalog.amountText(entry.product_id, entry.amount)} · ${days < 0 ? "expired" : "best before"}`,
+        days,
+        link: { to: "/products/$productId", productId: entry.product_id },
+        action: {
+          label: "Consume",
+          busy: consume.isPending && consume.variables?.productId === entry.product_id,
+          run: () => consume.mutate({ productId: entry.product_id, amount: 1 }),
+        },
+      });
+    }
+    for (const chore of chores.data ?? []) {
+      const days = daysUntil(chore.next_estimated_execution_time);
+      if (days === null || days > DUE_WINDOW_DAYS) continue;
+      items.push({
+        key: `c${chore.id}`,
+        domain: "home",
+        name: chore.name,
+        detail: `Chore · ${chore.period_type}`,
+        days,
+        action: {
+          label: "Done",
+          busy: executeChore.isPending && executeChore.variables === chore.id,
+          run: () => executeChore.mutate(chore.id),
+        },
+      });
+    }
+    for (const task of tasks.data ?? []) {
+      const days = daysUntil(task.due_date);
+      if (days === null || days > DUE_WINDOW_DAYS) continue;
+      items.push({
+        key: `t${task.id}`,
+        domain: "home",
+        name: task.name,
+        detail: "Task",
+        days,
+        action: {
+          label: "Complete",
+          busy: completeTask.isPending && completeTask.variables === task.id,
+          run: () => completeTask.mutate(task.id),
+        },
+      });
+    }
+    return items.sort((a, b) => a.days - b.days);
+  }, [stock.data, chores.data, tasks.data, catalog, consume, executeChore, completeTask]);
+
+  const recent = useMemo(
+    () =>
+      (log.data ?? [])
+        .filter((entry) => !entry.undone)
+        .sort((a, b) => b.id - a.id)
+        .filter(
+          (entry, i, all) => all.findIndex((e) => e.transaction_id === entry.transaction_id) === i,
+        )
+        .slice(0, 4),
+    [log.data],
+  );
+
+  const undo = useMutation({
+    mutationFn: (transactionId: string) => api.undoTransaction(transactionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["stock"] });
+      notify({ message: "Booking undone" });
+    },
+    onError: (err: Error) => notify({ message: err.message, tone: "error" }),
+  });
+
+  const pendingCount = proposals.data?.length ?? 0;
+  const needsYou = low.length + due.filter((d) => d.days <= 5).length + pendingCount;
+  const loading = stock.isLoading || volatile.isLoading;
+
+  return (
+    <>
+      <PageHeader
+        title="Today"
+        lead={
+          <>
+            {todayLine()}
+            {loading
+              ? null
+              : needsYou === 0
+                ? " · nothing needs you"
+                : ` · ${needsYou} things need you`}
+          </>
+        }
+        actions={
+          <>
+            <button
+              type="button"
+              className="btn"
+              disabled={addMissing.isPending || low.length === 0}
+              onClick={() => addMissing.mutate()}
+            >
+              Add missing to list
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => command.open("purchase")}
+            >
+              Purchase
+            </button>
+          </>
+        }
+      />
+
+      {stock.isError ? <ErrorBlock message={(stock.error as Error).message} /> : null}
+
+      <div className="today">
+        <div className="today-main">
+          <section className="panel today-low" aria-labelledby="low-heading">
+            <h2 className="panel-head" id="low-heading">
+              Running low
+              <span>{low.length === 0 ? "all above minimum" : `${low.length} below minimum`}</span>
+            </h2>
+            {loading ? <LoadingBlock label="Checking stock…" /> : null}
+            {!loading && low.length === 0 ? (
+              <p className="panel-empty">Every product with a minimum has enough on hand.</p>
+            ) : null}
+            <ul className="stock-rows">
+              {low.map((item) => (
+                <li key={item.id} className="stock-row">
+                  <Link
+                    to="/products/$productId"
+                    params={{ productId: String(item.id) }}
+                    className="stock-name"
+                  >
+                    {item.name}
+                    <small>
+                      {item.location ?? "No location"} · min {catalog.amountText(item.id, item.min)}
+                    </small>
+                  </Link>
+                  <Gauge amount={item.amount} min={item.min} label={item.name} />
+                  <span className="amount">{catalog.amountText(item.id, item.amount)}</span>
+                  <span className="row-actions">
+                    <QuickMoves productId={item.id} name={item.name} amount={item.amount} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="panel" aria-labelledby="due-heading">
+            <h2 className="panel-head" id="due-heading">
+              Use first
+              <span>next {DUE_WINDOW_DAYS} days</span>
+            </h2>
+            {!loading && due.length === 0 ? (
+              <p className="panel-empty">Nothing expires or falls due in the next two weeks.</p>
+            ) : null}
+            <ul className="due-rows">
+              {due.map((item) => (
+                <li key={item.key} className="due-row" data-domain={item.domain}>
+                  <span className="due-name">
+                    {item.link ? (
+                      <Link to={item.link.to} params={{ productId: String(item.link.productId) }}>
+                        {item.name}
+                      </Link>
+                    ) : (
+                      item.name
+                    )}
+                    <small>{item.detail}</small>
+                  </span>
+                  <DueBar days={item.days} />
+                  {item.action ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={item.action.busy}
+                      onClick={item.action.run}
+                    >
+                      {item.action.label}
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        <div className="today-side">
+          <section className="panel" aria-labelledby="list-heading" data-domain="shopping">
+            <h2 className="panel-head" id="list-heading">
+              Shopping list
+              <span>{toBuy.length === 0 ? "empty" : `${toBuy.length} to buy`}</span>
+            </h2>
+            {toBuy.length > 0 ? (
+              <ul className="list-preview">
+                {toBuy.slice(0, 8).map((item) => (
+                  <li key={item.id}>
+                    <b>{catalog.amountText(item.product_id, item.amount)}</b>{" "}
+                    {catalog.productName(item.product_id)}
+                  </li>
+                ))}
+                {toBuy.length > 8 ? <li>+{toBuy.length - 8} more</li> : null}
+              </ul>
+            ) : (
+              <p className="panel-empty">
+                Nothing on the list. Add missing pulls in everything below its minimum.
+              </p>
+            )}
+            <div className="panel-actions">
+              <Link to="/shopping" className="btn btn-sm btn-primary">
+                Go shopping
+              </Link>
+              <button type="button" className="btn btn-sm" onClick={() => command.open("list")}>
+                Add to list
+              </button>
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="review-heading">
+            <h2 className="panel-head" id="review-heading">
+              Review and undo
+              <span>{pendingCount === 0 ? "no proposals waiting" : `${pendingCount} waiting`}</span>
+            </h2>
+            {pendingCount > 0 ? (
+              <ul className="review-rows">
+                {(proposals.data ?? []).slice(0, 3).map((proposal) => {
+                  const fromAgent = proposal.payload.origin !== "web";
+                  return (
+                    <li key={proposal.id}>
+                      <span className="tag" data-domain={fromAgent ? "agent" : undefined}>
+                        {fromAgent ? "Agent" : "Web"}
+                      </span>
+                      <span className="review-what">
+                        <b>{catalog.productName(proposal.product_id)}</b> nutrition
+                        {proposal.payload.nutrients.energy_kcal != null
+                          ? ` · ${proposal.payload.nutrients.energy_kcal} kcal / ${proposal.payload.basis.quantity} ${proposal.payload.basis.unit}`
+                          : ""}
+                      </span>
+                      <Link to="/reviews" className="btn btn-sm btn-primary">
+                        Review
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+            {recent.length > 0 ? (
+              <>
+                <h3 className="panel-sub">Recent bookings</h3>
+                <ul className="review-rows">
+                  {recent.map((entry) => (
+                    <li key={entry.id}>
+                      <ActorTag userId={entry.user_id} currentUserId={me.data?.id} />
+                      <span className="review-what">
+                        {bookingVerb(entry.transaction_type)}{" "}
+                        <b>{catalog.amountText(entry.product_id, Math.abs(entry.amount))}</b>{" "}
+                        {catalog.productName(entry.product_id)}
+                        <small>{relativeTime(entry.row_created_timestamp)}</small>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        disabled={undo.isPending}
+                        onClick={() => undo.mutate(entry.transaction_id)}
+                      >
+                        Undo
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {pendingCount === 0 && recent.length === 0 ? (
+              <p className="panel-empty">No proposals and no bookings yet.</p>
+            ) : (
+              <Link to="/activity" className="panel-more">
+                All activity
+              </Link>
+            )}
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}

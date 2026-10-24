@@ -6,8 +6,8 @@ from sqlalchemy import select
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import NotFoundError
-from grocy.db.models.users import ApiKey, User
 from grocy.db.models.settings import UserSetting
+from grocy.db.models.users import ApiKey, User
 
 router = APIRouter(tags=["users"])
 
@@ -244,9 +244,6 @@ async def set_user_permissions(
     _actor: CurrentActor,
 ) -> list[dict[str, int]]:
     raw = body.get("permissions") or body.get("permission_ids") or ALL_PERMISSION_IDS
-    if isinstance(raw, list):
-        ids = [int(item) for item in raw]
-    else:
-        ids = list(ALL_PERMISSION_IDS)
+    ids = [int(item) for item in raw] if isinstance(raw, list) else list(ALL_PERMISSION_IDS)
     _user_permissions[user_id] = ids
     return _permission_rows(user_id, ids)

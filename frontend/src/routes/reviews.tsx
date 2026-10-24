@@ -10,8 +10,8 @@ function ReviewsPage() {
   return (
     <>
       <PageHeader
-        title="Review queue"
-        lead="Approve pending nutrition proposals before they become the canonical record."
+        title="Review"
+        lead="Proposed changes wait here. Nothing becomes the record until you approve it."
       />
       <PendingProposals />
     </>

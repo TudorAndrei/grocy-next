@@ -1,276 +1,244 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { dueLabel, dueTone, formatAmount } from "@/lib/format";
+import { useCatalog } from "@/lib/catalog";
+import { daysUntil, dueLabel, dueTone, formatAmount } from "@/lib/format";
+import { useCommandBar } from "@/components/CommandBar";
 import { ErrorBlock } from "@/components/ErrorBlock";
+import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
+import { QuickMoves } from "@/components/QuickMoves";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
 });
 
-type StockFilter = "all" | "due" | "overdue" | "missing";
+type StockFilter = "all" | "due" | "expired" | "low";
+
+type Row = {
+  productId: number;
+  name: string;
+  amount: number;
+  opened: number;
+  min: number;
+  bestBefore: string | null;
+  locationId: number | null;
+};
 
 function StockPage() {
-  const queryClient = useQueryClient();
+  const catalog = useCatalog();
+  const command = useCommandBar();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StockFilter>("all");
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [locationId, setLocationId] = useState("");
 
-  const stockQuery = useQuery({
-    queryKey: queryKeys.stockOverview,
-    queryFn: () => api.listStock(),
-  });
-  const volatileQuery = useQuery({
+  const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
+  const volatile = useQuery({
     queryKey: queryKeys.stockVolatile,
     queryFn: () => api.getStockVolatile(),
   });
 
-  const invalidateStock = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["stock"] });
+  // Products below minimum and out of stock are not in /api/stock; add them as empty rows.
+  const rows = useMemo<Row[]>(() => {
+    const out: Row[] = (stock.data ?? []).map((item) => ({
+      productId: item.product_id,
+      name: item.product.name,
+      amount: item.amount,
+      opened: item.amount_opened,
+      min: item.product.min_stock_amount ?? 0,
+      bestBefore: item.best_before_date ?? null,
+      locationId: item.product.location_id ?? null,
+    }));
+    const present = new Set(out.map((row) => row.productId));
+    for (const missing of volatile.data?.missing_products ?? []) {
+      if (present.has(missing.id)) continue;
+      const product = catalog.product(missing.id);
+      out.push({
+        productId: missing.id,
+        name: missing.name,
+        amount: 0,
+        opened: 0,
+        min: product?.min_stock_amount ?? missing.amount_missing,
+        bestBefore: null,
+        locationId: product?.location_id ?? null,
+      });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  }, [stock.data, volatile.data, catalog]);
+
+  const isDue = (row: Row) => {
+    const days = daysUntil(row.bestBefore);
+    return days !== null && days >= 0 && days <= 5;
+  };
+  const isExpired = (row: Row) => {
+    const days = daysUntil(row.bestBefore);
+    return days !== null && days < 0;
+  };
+  const isLow = (row: Row) => row.min > 0 && row.amount < row.min;
+
+  const anyOpened = rows.some((row) => row.opened > 0);
+
+  const counts = {
+    all: rows.length,
+    due: rows.filter(isDue).length,
+    expired: rows.filter(isExpired).length,
+    low: rows.filter(isLow).length,
   };
 
-  const consume = useMutation({
-    mutationFn: (productId: number) => api.consumeStock(productId, 1),
-    onMutate: (productId) => setBusyId(productId),
-    onSettled: async () => {
-      setBusyId(null);
-      await invalidateStock();
-    },
+  const visible = rows.filter((row) => {
+    if (filter === "due" && !isDue(row)) return false;
+    if (filter === "expired" && !isExpired(row)) return false;
+    if (filter === "low" && !isLow(row)) return false;
+    if (locationId && String(row.locationId) !== locationId) return false;
+    const q = search.trim().toLowerCase();
+    return !q || row.name.toLowerCase().includes(q);
   });
 
-  const purchase = useMutation({
-    mutationFn: (productId: number) => api.purchaseStock(productId, 1),
-    onMutate: (productId) => setBusyId(productId),
-    onSettled: async () => {
-      setBusyId(null);
-      await invalidateStock();
-    },
-  });
-
-  const dueIds = useMemo(
-    () => new Set((volatileQuery.data?.due_products ?? []).map((i) => i.product_id)),
-    [volatileQuery.data],
-  );
-  const overdueIds = useMemo(
-    () => new Set((volatileQuery.data?.overdue_products ?? []).map((i) => i.product_id)),
-    [volatileQuery.data],
-  );
-  const missing = volatileQuery.data?.missing_products ?? [];
-
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let items = stockQuery.data ?? [];
-    if (filter === "due") {
-      items = items.filter((item) => dueIds.has(item.product_id));
-    } else if (filter === "overdue") {
-      items = items.filter((item) => overdueIds.has(item.product_id));
-    } else if (filter === "missing") {
-      return [];
-    }
-    if (!q) return items;
-    return items.filter((item) => item.product.name.toLowerCase().includes(q));
-  }, [stockQuery.data, search, filter, dueIds, overdueIds]);
-
-  const filteredMissing = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return missing;
-    return missing.filter((item) => item.name.toLowerCase().includes(q));
-  }, [missing, search]);
+  const filters: Array<[StockFilter, string]> = [
+    ["all", "All"],
+    ["due", "Due soon"],
+    ["expired", "Expired"],
+    ["low", "Below min"],
+  ];
 
   return (
     <>
       <PageHeader
-        title="Stock overview"
-        lead="What is on hand right now — purchase, consume, and catch items before they expire."
+        title="Stock"
+        lead="What is on hand, how full each product is against its minimum, and what to use first."
+        actions={
+          <>
+            <button type="button" className="btn" onClick={() => command.open("consume")}>
+              Consume
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => command.open("purchase")}
+            >
+              Purchase
+            </button>
+          </>
+        }
       />
 
-      <div className="stat-strip">
-        <div className="stat-card" data-tone="accent">
-          <span className="label">In stock</span>
-          <span className="value">{stockQuery.data?.length ?? "—"}</span>
-        </div>
-        <div className="stat-card" data-tone="warn">
-          <span className="label">Due soon</span>
-          <span className="value">{volatileQuery.data?.due_products.length ?? "—"}</span>
-        </div>
-        <div className="stat-card" data-tone="danger">
-          <span className="label">Overdue</span>
-          <span className="value">{volatileQuery.data?.overdue_products.length ?? "—"}</span>
-        </div>
-        <div className="stat-card" data-tone="ok">
-          <span className="label">Below minimum</span>
-          <span className="value">{missing.length || "0"}</span>
-        </div>
-      </div>
-
       <div className="toolbar">
-        <div className="search-field">
-          <label className="sr-only" htmlFor="stock-search">
-            Search stock
-          </label>
+        <label className="search-field">
+          <span className="sr-only">Search stock</span>
           <input
-            id="stock-search"
             type="search"
             placeholder="Search products"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-        <div className="filter-chips" role="group" aria-label="Stock filters">
-          {(
-            [
-              ["all", "All"],
-              ["due", "Due soon"],
-              ["overdue", "Overdue"],
-              ["missing", "Below min"],
-            ] as const
-          ).map(([id, label]) => (
+        </label>
+        <div className="chips" role="group" aria-label="Stock filter">
+          {filters.map(([id, label]) => (
             <button
               key={id}
               type="button"
               className="chip"
-              data-active={filter === id ? "true" : "false"}
+              data-tone={id}
+              aria-pressed={filter === id}
               onClick={() => setFilter(id)}
             >
               {label}
+              <span className="chip-count">{counts[id]}</span>
             </button>
           ))}
         </div>
+        <label className="select-field">
+          <span className="sr-only">Location</span>
+          <select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+            <option value="">All locations</option>
+            {catalog.locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      {stockQuery.isLoading || volatileQuery.isLoading ? (
-        <LoadingBlock label="Loading stock…" />
-      ) : null}
-      {stockQuery.isError ? (
-        <ErrorBlock
-          message={
-            stockQuery.error instanceof Error
-              ? stockQuery.error.message
-              : "Could not load stock."
-          }
-        />
+      {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
+      {stock.isError ? <ErrorBlock message={(stock.error as Error).message} /> : null}
+
+      {stock.isSuccess && visible.length === 0 ? (
+        <p className="empty-state">
+          {rows.length === 0
+            ? "Stock is empty. Press Purchase or ⌘K to book what you bought."
+            : "No product matches this filter."}
+        </p>
       ) : null}
 
-      {filter === "missing" ? (
-        filteredMissing.length === 0 ? (
-          <p className="empty-state">Nothing is below its minimum stock level.</p>
-        ) : (
-          <section className="panel">
-            <div className="panel-inner" style={{ padding: 0 }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Missing</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMissing.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <Link
-                          to="/products/$productId"
-                          params={{ productId: String(item.id) }}
-                          className="row-link"
-                        >
-                          {item.name}
-                        </Link>
-                      </td>
-                      <td className="amount-cell">{formatAmount(item.amount_missing)}</td>
-                      <td>
-                        <div className="actions">
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            disabled={busyId === item.id}
-                            onClick={() => purchase.mutate(item.id)}
-                          >
-                            Purchase
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )
-      ) : stockQuery.isSuccess && rows.length === 0 ? (
-        <p className="empty-state">
-          {search || filter !== "all"
-            ? "No stock matches this filter."
-            : "Stock is empty. Open a product and purchase to get started."}
-        </p>
-      ) : stockQuery.isSuccess ? (
-        <section className="panel">
-          <div className="panel-inner" style={{ padding: 0 }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Amount</th>
-                  <th>Opened</th>
-                  <th>Best before</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((item) => {
-                  const tone = dueTone(item.best_before_date);
-                  return (
-                    <tr key={item.product_id}>
-                      <td>
-                        <Link
-                          to="/products/$productId"
-                          params={{ productId: String(item.product_id) }}
-                          className="row-link"
-                        >
-                          {item.product.name}
-                        </Link>
-                      </td>
-                      <td className="amount-cell">{formatAmount(item.amount)}</td>
-                      <td className="muted">{formatAmount(item.amount_opened)}</td>
-                      <td>
-                        {tone ? (
-                          <span className={`badge badge-${tone}`}>
-                            {dueLabel(item.best_before_date)}
-                          </span>
+      {visible.length > 0 ? (
+        <div className="panel">
+          <table className="stock-table">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Level</th>
+                <th scope="col" className="num">
+                  Amount
+                </th>
+                {anyOpened ? (
+                  <th scope="col" className="num">
+                    Opened
+                  </th>
+                ) : null}
+                <th scope="col">Best before</th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((row) => {
+                const tone = dueTone(row.bestBefore);
+                return (
+                  <tr key={row.productId} data-low={isLow(row) ? "true" : undefined}>
+                    <td className="stock-name">
+                      <Link to="/products/$productId" params={{ productId: String(row.productId) }}>
+                        {row.name}
+                      </Link>
+                      <small>
+                        {catalog.location(row.locationId)?.name ?? "No location"}
+                        {row.min > 0 ? ` · min ${catalog.amountText(row.productId, row.min)}` : ""}
+                      </small>
+                    </td>
+                    <td className="level">
+                      <Gauge amount={row.amount} min={row.min} label={row.name} />
+                    </td>
+                    <td className="num amount">{catalog.amountText(row.productId, row.amount)}</td>
+                    {anyOpened ? (
+                      <td className="num opened">
+                        {row.opened > 0 ? (
+                          formatAmount(row.opened)
                         ) : (
-                          <span className="muted">—</span>
+                          <span className="faint">—</span>
                         )}
                       </td>
-                      <td>
-                        <div className="actions">
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            disabled={busyId === item.product_id}
-                            onClick={() => purchase.mutate(item.product_id)}
-                          >
-                            +1
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            disabled={busyId === item.product_id || item.amount <= 0}
-                            onClick={() => consume.mutate(item.product_id)}
-                          >
-                            Consume
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                    ) : null}
+                    <td className="date">
+                      {tone ? (
+                        <span className="badge" data-tone={tone}>
+                          {dueLabel(row.bestBefore)}
+                        </span>
+                      ) : (
+                        <span className="faint">—</span>
+                      )}
+                    </td>
+                    <td className="row-actions">
+                      <QuickMoves productId={row.productId} name={row.name} amount={row.amount} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : null}
     </>
   );

@@ -2,8 +2,9 @@ import { Link } from "@tanstack/react-router";
 
 export function Wordmark() {
   return (
-    <Link to="/stock" className="wordmark" aria-label="Grocy Next home">
-      Grocy <span>Next</span>
+    <Link to="/" className="wordmark" aria-label="Grocy Next, Today">
+      <span className="wordmark-name">Grocy Next</span>
+      <span className="wordmark-sub">Household</span>
     </Link>
   );
 }
