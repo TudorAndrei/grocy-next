@@ -12,10 +12,10 @@ from grocy.db.models.units import QuantityUnitConversion
 from grocy.db.models.users import ApiKey, User, UserPermission
 
 
-async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> None:
+async def has_ever_had_users(session: AsyncSession) -> bool:
     user_count = await session.scalar(select(func.count()).select_from(User))
     if user_count and user_count > 0:
-        return
+        return True
     if session.bind is not None and session.bind.dialect.name == "sqlite":
         has_sequence = await session.scalar(
             text("SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'")
@@ -24,7 +24,13 @@ async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> N
             text("SELECT seq FROM sqlite_sequence WHERE name='users' AND seq > 0")
         ):
             # Deletion of the last user must not create a replacement on restart.
-            return
+            return True
+    return False
+
+
+async def seed_if_empty(session: AsyncSession, *, api_key: str = "dev-key") -> None:
+    if await has_ever_had_users(session):
+        return
 
     admin = User(username="admin", first_name="Admin", last_name="User", password="")
     session.add(admin)
