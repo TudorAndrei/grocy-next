@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 CONTRACT = Path(__file__).resolve().parents[3] / "contracts" / "grocy.openapi.json"
@@ -25,7 +26,9 @@ def _spec_operations() -> set[tuple[str, str]]:
 
 
 def _app_operations(client: TestClient) -> set[tuple[str, str]]:
-    paths = client.app.openapi()["paths"]
+    app = client.app
+    assert isinstance(app, FastAPI)
+    paths = app.openapi()["paths"]
     ops: set[tuple[str, str]] = set()
     for path, methods in paths.items():
         if not path.startswith("/api/") or path.startswith("/api/v2") or path == "/api/health":
