@@ -75,7 +75,11 @@ export async function request<T>(
         : "application/json",
     );
   }
-  const response = await fetch(resolveUrl(path), { ...init, headers });
+  const response = await fetch(resolveUrl(path), {
+    ...init,
+    headers,
+    cache: init.cache ?? "no-store",
+  });
   const text = await response.text();
   let body: unknown = null;
   if (text) {
@@ -91,6 +95,14 @@ export async function request<T>(
         ? "Unauthorized — set GROCY-API-KEY to dev-key under Settings."
         : response.statusText || "Request failed";
     throw new ApiError(response.status, errorMessage(body, fallback), body);
+  }
+  const contentType = response.headers.get("content-type") ?? "";
+  if (text && !contentType.includes("json") && typeof body === "string") {
+    throw new ApiError(
+      response.status,
+      "API returned non-JSON (stale cache or wrong server on this port).",
+      body,
+    );
   }
   return body as T;
 }

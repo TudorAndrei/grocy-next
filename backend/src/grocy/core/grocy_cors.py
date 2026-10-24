@@ -4,6 +4,7 @@ _GROCY_CORS = (
     (b"access-control-allow-origin", b"*"),
     (b"access-control-allow-headers", b"*"),
     (b"access-control-allow-methods", b"GET, POST, PUT, DELETE, OPTIONS"),
+    (b"cache-control", b"no-store"),
 )
 
 
