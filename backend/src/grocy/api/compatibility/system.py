@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +21,7 @@ def _database_path() -> Path | None:
 async def db_changed_time(_actor: CurrentActor) -> dict[str, str]:
     path = _database_path()
     if path is not None and path.exists():
-        changed = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).replace(tzinfo=None)
+        changed = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC).replace(tzinfo=None)
         return {"changed_time": changed.isoformat()}
     return {"changed_time": datetime.now().isoformat()}
 
@@ -33,7 +33,7 @@ async def system_config(_actor: CurrentActor) -> dict[str, Any]:
 
 @router.get("/api/system/time")
 async def system_time(_actor: CurrentActor) -> dict[str, str]:
-    return {"timezone": "UTC", "time": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}
+    return {"timezone": "UTC", "time": datetime.now(UTC).replace(tzinfo=None).isoformat()}
 
 
 @router.get("/api/system/localization-strings")
