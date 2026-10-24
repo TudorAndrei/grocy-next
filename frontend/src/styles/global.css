@@ -1194,3 +1194,8 @@ html[data-theme="dark"] .link-list a {
 .setup-panel .wordmark {
   margin: 0 0 1rem;
 }
+
+.sign-out {
+  margin-top: auto;
+  align-self: flex-start;
+}

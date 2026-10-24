@@ -20,6 +20,12 @@ import type {
   UserSettings,
 } from "./types";
 
+export type AuthResult = {
+  user_id: number;
+  username: string;
+  api_key: string;
+};
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -263,11 +269,21 @@ export const api = {
 
   getSystemInfo: () => request<SystemInfo>("/api/system/info"),
   setupStatus: () => request<{ needs_setup: boolean }>("/api/v2/setup"),
-  runSetup: (body: { username: string; password: string }) =>
-    request<{ user_id: number; username: string; api_key: string }>(
-      "/api/v2/setup",
-      { method: "POST", body: JSON.stringify(body) },
-    ),
+  runSetup: (body: {
+    setup_token: string;
+    username: string;
+    password: string;
+  }) =>
+    request<AuthResult>("/api/v2/setup", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  login: (body: { username: string; password: string }) =>
+    request<AuthResult>("/api/v2/login", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  logout: () => request<void>("/api/v2/logout", { method: "POST" }),
 
   getCurrentUser: () => request<CurrentUser[]>("/api/user").then((rows) => rows[0]),
 
