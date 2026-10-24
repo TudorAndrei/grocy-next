@@ -10,6 +10,7 @@ services:
       GROCY_FILES_ROOT: "/data/files"
       GROCY_SEED_DEMO_DATA: "${GROCY_SEED_DEMO_DATA:-true}"
       GROCY_DEV_OPEN_API_KEY: "${GROCY_DEV_OPEN_API_KEY:-dev-key}"
+      GROCY_SETUP_TOKEN: "${GROCY_SETUP_TOKEN:-}"
     volumes:
       - grocy-data:/data
     healthcheck:

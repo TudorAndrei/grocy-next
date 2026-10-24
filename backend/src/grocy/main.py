@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from grocy import __version__
 from grocy.api.compatibility import router as compatibility_router
 from grocy.api.v2 import router as v2_router
+from grocy.api.v2.setup import setup_token
 from grocy.compatibility.files import NativeFiles
 from grocy.compatibility.http_request import NativeHttpRequests
 from grocy.compatibility.protocol import NativeProtocol
@@ -19,7 +21,7 @@ from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
 from grocy.core.grocy_cors import GrocyCorsHeadersMiddleware
 from grocy.db.models.catalog import Location
-from grocy.db.seed import seed_if_empty
+from grocy.db.seed import has_ever_had_users, seed_if_empty
 from grocy.db.session import configure_sqlite, get_engine, get_session_factory, upgrade_schema
 
 
@@ -37,6 +39,11 @@ async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
         factory = get_session_factory(settings)
         async with factory() as session:
             await seed_if_empty(session, api_key=settings.dev_open_api_key)
+    async with get_session_factory(settings)() as session:
+        if not await has_ever_had_users(session):
+            logging.getLogger("grocy.setup").warning(
+                "No users exist. Open the web UI and enter setup token: %s", setup_token()
+            )
     if not settings.feature_enabled("STOCK_LOCATION_TRACKING"):
         async with get_session_factory(settings)() as session:
             if await session.get(Location, 1) is None:

@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     auto_create_schema: bool = True
     seed_demo_data: bool = True
     dev_open_api_key: str = "dev-key"
+    setup_token: str = ""
     grocy_baseline: str = "v4.5.0"
     mcp_enabled: bool = True
     mcp_api_key: str = ""
