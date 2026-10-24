@@ -1178,3 +1178,19 @@ html[data-theme="dark"] .link-list a {
 .tab-panel[hidden] {
   display: none;
 }
+
+.setup-page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 1rem;
+}
+
+.setup-panel {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.setup-panel .wordmark {
+  margin: 0 0 1rem;
+}

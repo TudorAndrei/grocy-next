@@ -262,6 +262,12 @@ export const api = {
     request<unknown>(`/api/batteries/${batteryId}/charge`, { method: "POST" }),
 
   getSystemInfo: () => request<SystemInfo>("/api/system/info"),
+  setupStatus: () => request<{ needs_setup: boolean }>("/api/v2/setup"),
+  runSetup: (body: { username: string; password: string }) =>
+    request<{ user_id: number; username: string; api_key: string }>(
+      "/api/v2/setup",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
 
   getCurrentUser: () => request<CurrentUser[]>("/api/user").then((rows) => rows[0]),
 
@@ -334,6 +340,7 @@ export const queryKeys = {
   tasks: ["tasks"] as const,
   batteries: ["batteries"] as const,
   systemInfo: ["system", "info"] as const,
+  setup: ["setup"] as const,
   userSettings: ["user", "settings"] as const,
   currentUser: ["user", "current"] as const,
   objects: (entity: string) => ["objects", entity] as const,
