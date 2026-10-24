@@ -1,20 +1,44 @@
 import { readApiConfig } from "./config";
 import type {
   Battery,
+  Booking,
+  CurrentUser,
   Chore,
   CreateProposalPayload,
   NutritionProposalList,
   NutritionRecord,
   NutritionRevisionList,
   ProductListResponse,
+  Location,
+  QuantityUnit,
   Recipe,
   RecipeFulfillment,
   ShoppingList,
+  StockLogEntry,
   StockOverviewItem,
   StockProductDetails,
   StockVolatile,
   Task,
+  TrackedId,
 } from "./types";
+
+export type PurchaseOptions = {
+  best_before_date?: string | null;
+  location_id?: number | null;
+  price?: number | null;
+};
+
+export type ConsumeOptions = {
+  spoiled?: boolean;
+  location_id?: number | null;
+};
+
+function post<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "POST",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
 
 export class ApiError extends Error {
   status: number;
@@ -38,7 +62,10 @@ function resolveUrl(path: string): string {
 
 function errorMessage(body: unknown, fallback: string): string {
   if (typeof body === "object" && body !== null) {
-    if ("error_message" in body && typeof (body as { error_message: unknown }).error_message === "string") {
+    if (
+      "error_message" in body &&
+      typeof (body as { error_message: unknown }).error_message === "string"
+    ) {
       return (body as { error_message: string }).error_message;
     }
     if ("detail" in body && typeof (body as { detail: unknown }).detail === "string") {
@@ -80,6 +107,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const api = {
   listProducts: () => request<ProductListResponse>("/api/objects/products"),
 
+  listLocations: () => request<Location[]>("/api/objects/locations"),
+
+  listQuantityUnits: () => request<QuantityUnit[]>("/api/objects/quantity_units"),
+
+  getCurrentUser: () => request<CurrentUser>("/api/user"),
+
+  listStockLog: () => request<StockLogEntry[]>("/api/objects/stock_log"),
+
   getProductNutrition: (productId: number) =>
     request<NutritionRecord>(`/api/v2/products/${productId}/nutrition`),
 
@@ -87,15 +122,13 @@ export const api = {
     request<NutritionProposalList>("/api/v2/nutrition/proposals?status=pending"),
 
   approveProposal: (proposalId: number) =>
-    request<NutritionRecord>(`/api/v2/nutrition/proposals/${proposalId}/approve`, {
-      method: "POST",
-    }),
+    post<NutritionRecord>(`/api/v2/nutrition/proposals/${proposalId}/approve`),
+
+  rejectProposal: (proposalId: number) =>
+    post<unknown>(`/api/v2/nutrition/proposals/${proposalId}/reject`),
 
   createProposal: (payload: CreateProposalPayload) =>
-    request<unknown>("/api/v2/nutrition/proposals", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    post<unknown>("/api/v2/nutrition/proposals", payload),
 
   listNutritionRevisions: (productId: number) =>
     request<NutritionRevisionList>(`/api/v2/products/${productId}/nutrition/revisions`),
@@ -108,95 +141,87 @@ export const api = {
   getStockProduct: (productId: number) =>
     request<StockProductDetails>(`/api/stock/products/${productId}`),
 
-  purchaseStock: (productId: number, amount: number) =>
-    request<unknown>(`/api/stock/products/${productId}/add`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
+  purchaseStock: (productId: number, amount: number, options: PurchaseOptions = {}) =>
+    post<Booking>(`/api/stock/products/${productId}/add`, { amount, ...options }),
 
-  consumeStock: (productId: number, amount: number) =>
-    request<unknown>(`/api/stock/products/${productId}/consume`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
+  consumeStock: (productId: number, amount: number, options: ConsumeOptions = {}) =>
+    post<Booking>(`/api/stock/products/${productId}/consume`, { amount, ...options }),
 
   openStock: (productId: number, amount: number) =>
-    request<unknown>(`/api/stock/products/${productId}/open`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
+    post<Booking>(`/api/stock/products/${productId}/open`, { amount }),
 
-  getShoppingList: (listId = 1) =>
-    request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
+  undoTransaction: (transactionId: string) =>
+    post<unknown>(`/api/stock/transactions/${transactionId}/undo`),
 
-  addShoppingProduct: (productId: number, amount: number, listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/add-product", {
-      method: "POST",
-      body: JSON.stringify({
-        product_id: productId,
-        product_amount: amount,
-        list_id: listId,
-      }),
+  getShoppingList: (listId = 1) => request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
+
+  addShoppingProduct: (productId: number, amount: number, note?: string | null, listId = 1) =>
+    post<unknown>("/api/stock/shoppinglist/add-product", {
+      product_id: productId,
+      product_amount: amount,
+      list_id: listId,
+      note: note || null,
     }),
 
   removeShoppingProduct: (productId: number, amount: number, listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/remove-product", {
-      method: "POST",
-      body: JSON.stringify({
-        product_id: productId,
-        product_amount: amount,
-        list_id: listId,
-      }),
+    post<unknown>("/api/stock/shoppinglist/remove-product", {
+      product_id: productId,
+      product_amount: amount,
+      list_id: listId,
     }),
 
-  clearShoppingList: (listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/clear", {
-      method: "POST",
-      body: JSON.stringify({ list_id: listId }),
+  setShoppingItemDone: (itemId: number, done: boolean) =>
+    request<unknown>(`/api/objects/shopping_list/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify({ done: done ? 1 : 0 }),
     }),
+
+  clearShoppingList: (listId = 1, doneOnly = false) =>
+    post<unknown>("/api/stock/shoppinglist/clear", { list_id: listId, done_only: doneOnly }),
 
   addMissingToShoppingList: (listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/add-missing-products", {
-      method: "POST",
-      body: JSON.stringify({ list_id: listId }),
-    }),
+    post<unknown>("/api/stock/shoppinglist/add-missing-products", { list_id: listId }),
 
   listRecipes: () => request<Recipe[]>("/api/objects/recipes"),
+
+  listRecipeFulfillment: () => request<RecipeFulfillment[]>("/api/recipes/fulfillment"),
 
   getRecipeFulfillment: (recipeId: number) =>
     request<RecipeFulfillment>(`/api/recipes/${recipeId}/fulfillment`),
 
-  consumeRecipe: (recipeId: number) =>
-    request<unknown>(`/api/recipes/${recipeId}/consume`, { method: "POST" }),
+  consumeRecipe: (recipeId: number) => post<unknown>(`/api/recipes/${recipeId}/consume`),
 
   addRecipeMissingToShopping: (recipeId: number) =>
-    request<unknown>(
-      `/api/recipes/${recipeId}/add-not-fulfilled-products-to-shoppinglist`,
-      { method: "POST" },
-    ),
+    post<unknown>(`/api/recipes/${recipeId}/add-not-fulfilled-products-to-shoppinglist`),
 
   listChores: () => request<Chore[]>("/api/chores"),
 
-  executeChore: (choreId: number) =>
-    request<unknown>(`/api/chores/${choreId}/execute`, { method: "POST" }),
+  executeChore: (choreId: number) => post<TrackedId>(`/api/chores/${choreId}/execute`),
+
+  undoChoreExecution: (executionId: number) =>
+    post<unknown>(`/api/chores/executions/${executionId}/undo`),
 
   listTasks: (includeDone = false) =>
     request<Task[]>(`/api/tasks?include_done=${includeDone ? "true" : "false"}`),
 
-  completeTask: (taskId: number) =>
-    request<unknown>(`/api/tasks/${taskId}/complete`, { method: "POST" }),
+  completeTask: (taskId: number) => post<unknown>(`/api/tasks/${taskId}/complete`),
 
-  undoTask: (taskId: number) =>
-    request<unknown>(`/api/tasks/${taskId}/undo`, { method: "POST" }),
+  undoTask: (taskId: number) => post<unknown>(`/api/tasks/${taskId}/undo`),
 
   listBatteries: () => request<Battery[]>("/api/batteries"),
 
-  chargeBattery: (batteryId: number) =>
-    request<unknown>(`/api/batteries/${batteryId}/charge`, { method: "POST" }),
+  chargeBattery: (batteryId: number) => post<TrackedId>(`/api/batteries/${batteryId}/charge`),
+
+  undoBatteryCharge: (chargeCycleId: number) =>
+    post<unknown>(`/api/batteries/charge-cycles/${chargeCycleId}/undo`),
 };
 
 export const queryKeys = {
   products: ["products"] as const,
+  locations: ["locations"] as const,
+  quantityUnits: ["quantity-units"] as const,
+  stockLog: ["stock", "log"] as const,
+  currentUser: ["user"] as const,
   nutrition: (id: number) => ["nutrition", id] as const,
   proposalsPending: ["proposals", "pending"] as const,
   revisions: (id: number) => ["revisions", id] as const,
@@ -205,6 +230,7 @@ export const queryKeys = {
   stockVolatile: ["stock", "volatile"] as const,
   shopping: (id = 1) => ["shopping", id] as const,
   recipes: ["recipes"] as const,
+  recipesFulfillment: ["recipe-fulfillment"] as const,
   recipeFulfillment: (id: number) => ["recipe-fulfillment", id] as const,
   chores: ["chores"] as const,
   tasks: ["tasks"] as const,
