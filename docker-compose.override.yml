@@ -1,0 +1,9 @@
+# Local host port bindings. Docker Compose loads this file automatically;
+# Coolify deploys docker-compose.yml only and routes through its proxy.
+services:
+  api:
+    ports:
+      - "127.0.0.1:8000:8000"
+  web:
+    ports:
+      - "127.0.0.1:8080:80"
