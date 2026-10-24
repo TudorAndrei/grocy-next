@@ -1,5 +1,7 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { CommandProvider } from "@/components/CommandBar";
+import { Toaster } from "@/components/Toaster";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -7,8 +9,12 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <Toaster>
+      <CommandProvider>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </CommandProvider>
+    </Toaster>
   );
 }

@@ -1,3 +1,7 @@
 export function LoadingBlock({ label = "Loading…" }: { label?: string }) {
-  return <p className="muted">{label}</p>;
+  return (
+    <p className="loading" role="status">
+      {label}
+    </p>
+  );
 }
