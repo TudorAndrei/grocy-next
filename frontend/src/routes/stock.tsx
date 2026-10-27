@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { daysUntil, dueLabel, dueTone, formatAmount } from "@/lib/format";
+import { daysUntil, dueLabel, dueTone } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
+import { stockVolatileQuery } from "@/hooks/queries";
 import { useCommandBar } from "@/components/CommandBar";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
@@ -28,6 +30,7 @@ type Row = {
 };
 
 function StockPage() {
+  const { dueSoonDays, formatAmount } = usePreferences();
   const catalog = useCatalog();
   const command = useCommandBar();
   const [search, setSearch] = useState("");
@@ -36,10 +39,7 @@ function StockPage() {
 
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
 
-  const volatile = useQuery({
-    queryKey: queryKeys.stockVolatile,
-    queryFn: () => api.getStockVolatile(),
-  });
+  const volatile = useQuery(stockVolatileQuery(dueSoonDays));
 
   // Products below minimum and out of stock are not in /api/stock; add them as empty rows.
   const rows = useMemo<Row[]>(() => {
@@ -75,7 +75,7 @@ function StockPage() {
   const isDue = (row: Row) => {
     const days = daysUntil(row.bestBefore);
 
-    return days !== null && days >= 0 && days <= 5;
+    return days !== null && days >= 0 && days <= dueSoonDays;
   };
 
   const isExpired = (row: Row) => {
@@ -214,7 +214,7 @@ function StockPage() {
             </thead>
             <tbody>
               {visible.map((row) => {
-                const tone = dueTone(row.bestBefore);
+                const tone = dueTone(row.bestBefore, dueSoonDays);
 
                 return (
                   <tr key={row.productId} data-low={isLow(row) ? "true" : undefined}>
@@ -243,7 +243,7 @@ function StockPage() {
                     <td className="date">
                       {tone ? (
                         <span className="badge" data-tone={tone}>
-                          {dueLabel(row.bestBefore)}
+                          {dueLabel(row.bestBefore, dueSoonDays)}
                         </span>
                       ) : (
                         <span className="faint">—</span>

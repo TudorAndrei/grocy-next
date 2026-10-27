@@ -45,6 +45,9 @@ export type PurchaseOptions = {
   best_before_date?: string | null;
   location_id?: number | null;
   price?: number | null;
+  shopping_location_id?: number | null;
+  purchased_date?: string | null;
+  note?: string | null;
 };
 
 export type ConsumeOptions = {

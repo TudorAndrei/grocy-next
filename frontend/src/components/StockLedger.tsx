@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, request } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { formatAmount } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
+import { objectsQuery } from "@/hooks/queries";
 import { ErrorBlock } from "./ErrorBlock";
 
 type Entry = {
@@ -13,6 +14,9 @@ type Entry = {
   best_before_date: string | null;
   price: number | null;
   open: number;
+  purchased_date?: string | null;
+  shopping_location_id?: number | null;
+  note?: string | null;
 };
 
 type Booking = {
@@ -28,6 +32,7 @@ type Adjust = "transfer" | "inventory";
 
 /** Entry-level stock work: transfer, count, entry edits, prices and booking undo. */
 export function StockLedger({ productId }: { productId: number }) {
+  const { formatAmount } = usePreferences();
   const client = useQueryClient();
   const catalog = useCatalog();
   const [adjust, setAdjust] = useState<Adjust>("transfer");
@@ -38,14 +43,21 @@ export function StockLedger({ productId }: { productId: number }) {
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
   const [entryAmount, setEntryAmount] = useState("");
   const [entryExpiry, setEntryExpiry] = useState("");
+  const [entryPrice, setEntryPrice] = useState("");
+  const [entryPurchased, setEntryPurchased] = useState("");
+  const [entryLocation, setEntryLocation] = useState("");
+  const [entryStore, setEntryStore] = useState("");
+  const [entryNote, setEntryNote] = useState("");
+  const [entryOpen, setEntryOpen] = useState(false);
+  const stores = useQuery(objectsQuery("shopping_locations"));
 
   const entries = useQuery({
-    queryKey: ["stock-entries", productId],
+    queryKey: ["stock", "entries", productId],
     queryFn: () => request<Entry[]>(`/api/stock/products/${productId}/entries`),
   });
 
   const bookings = useQuery({
-    queryKey: ["stock-log", productId],
+    queryKey: ["stock", "log", productId],
     queryFn: () =>
       request<Booking[]>(
         `/api/objects/stock_log?query[]=product_id=${productId}&order=id:desc&limit=12`,
@@ -53,7 +65,7 @@ export function StockLedger({ productId }: { productId: number }) {
   });
 
   const prices = useQuery({
-    queryKey: ["stock-prices", productId],
+    queryKey: ["stock", "prices", productId],
     queryFn: () => request<PriceRow[]>(`/api/stock/products/${productId}/price-history`),
   });
 
@@ -100,6 +112,12 @@ export function StockLedger({ productId }: { productId: number }) {
         body: JSON.stringify({
           amount: Number(entryAmount),
           best_before_date: entryExpiry || null,
+          purchased_date: entryPurchased || null,
+          price: entryPrice === "" ? null : Number(entryPrice),
+          location_id: Number(entryLocation),
+          shopping_location_id: entryStore ? Number(entryStore) : null,
+          note: entryNote || null,
+          open: entryOpen,
         }),
       }),
     );
@@ -203,6 +221,14 @@ export function StockLedger({ productId }: { productId: number }) {
                 setEditEntry(entry);
                 setEntryAmount(String(entry.amount));
                 setEntryExpiry(entry.best_before_date ?? "");
+                setEntryPrice(entry.price == null ? "" : String(entry.price));
+                setEntryPurchased(entry.purchased_date ?? "");
+                setEntryLocation(String(entry.location_id));
+                setEntryStore(
+                  entry.shopping_location_id == null ? "" : String(entry.shopping_location_id),
+                );
+                setEntryNote(entry.note ?? "");
+                setEntryOpen(Boolean(entry.open));
               }}
             >
               Edit
@@ -212,7 +238,7 @@ export function StockLedger({ productId }: { productId: number }) {
       </ol>
       {editEntry ? (
         <form className="panel-body move-form" onSubmit={submitEntry}>
-          <div className="field-row">
+          <div className="form-grid">
             <label className="field">
               <span>Entry amount</span>
               <input
@@ -231,6 +257,57 @@ export function StockLedger({ productId }: { productId: number }) {
                 value={entryExpiry}
                 onChange={(e) => setEntryExpiry(e.target.value)}
               />
+            </label>
+            <label className="field">
+              <span>Purchase date</span>
+              <input
+                type="date"
+                value={entryPurchased}
+                onChange={(e) => setEntryPurchased(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Price per stock unit</span>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={entryPrice}
+                onChange={(e) => setEntryPrice(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Location</span>
+              <select
+                required
+                value={entryLocation}
+                onChange={(e) => setEntryLocation(e.target.value)}
+              >
+                {locationOptions}
+              </select>
+            </label>
+            <label className="field">
+              <span>Store</span>
+              <select value={entryStore} onChange={(e) => setEntryStore(e.target.value)}>
+                <option value="">No store</option>
+                {(stores.data ?? []).map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Note</span>
+              <textarea value={entryNote} onChange={(e) => setEntryNote(e.target.value)} />
+            </label>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={entryOpen}
+                onChange={(e) => setEntryOpen(e.target.checked)}
+              />
+              <span>Opened</span>
             </label>
           </div>
           <div className="actions">

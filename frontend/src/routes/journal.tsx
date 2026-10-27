@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { api } from "@/lib/api";
-import { formatAmount } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
 import { productsQuery, stockJournalQuery } from "@/hooks/queries";
 
 export const Route = createFileRoute("/journal")({
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/journal")({
 });
 
 function JournalPage() {
+  const { formatAmount } = usePreferences();
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(150);

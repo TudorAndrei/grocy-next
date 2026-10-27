@@ -1,4 +1,4 @@
-export function formatAmount(value: number | string | null | undefined): string {
+export function formatAmount(value: number | string | null | undefined, decimalPlaces = 4): string {
   if (value === null || value === undefined) {
     return "0";
   }
@@ -9,7 +9,9 @@ export function formatAmount(value: number | string | null | undefined): string 
     return String(value);
   }
 
-  return Number.isInteger(num) ? String(num) : num.toFixed(2).replace(/\.?0+$/, "");
+  const rounded = num.toFixed(decimalPlaces);
+
+  return rounded.includes(".") ? rounded.replace(/\.?0+$/, "") : rounded;
 }
 
 export function formatDate(value: string | null | undefined): string | null {

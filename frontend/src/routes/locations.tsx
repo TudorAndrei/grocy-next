@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { objectsQuery } from "@/hooks/queries";
-import { formatAmount } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
 import { request } from "@/lib/api";
 
 export const Route = createFileRoute("/locations")({
@@ -20,6 +20,7 @@ type LocationEntry = {
 };
 
 function LocationsPage() {
+  const { formatAmount } = usePreferences();
   const [locationId, setLocationId] = useState<number>(0);
   const locations = useQuery(objectsQuery("locations"));
   const products = useQuery(objectsQuery("products"));

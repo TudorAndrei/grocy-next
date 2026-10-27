@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { api, queryKeys } from "./api";
 import { formatAmount, unitLabel } from "./format";
 import type { Location, ProductSummary, QuantityUnit } from "./types";
+import { usePreferences } from "./preferences";
 
 const MEASURED_UNITS = new Set([
   "gram",
@@ -30,6 +31,7 @@ export type Catalog = {
 
 /** Products, locations and quantity units, joined for display. */
 export function useCatalog(): Catalog {
+  const { amountPrecision } = usePreferences();
   const products = useQuery({ queryKey: queryKeys.products, queryFn: api.listProducts });
   const locations = useQuery({ queryKey: queryKeys.locations, queryFn: api.listLocations });
   const units = useQuery({ queryKey: queryKeys.quantityUnits, queryFn: api.listQuantityUnits });
@@ -56,9 +58,9 @@ export function useCatalog(): Catalog {
         return !unit || !MEASURED_UNITS.has(unit.name.toLowerCase());
       },
       amountText: (productId, amount) =>
-        `${formatAmount(amount)} ${stockUnitText(productId, amount)}`.trim(),
+        `${formatAmount(amount, amountPrecision)} ${stockUnitText(productId, amount)}`.trim(),
     };
-  }, [products.data, locations.data, units.data]);
+  }, [products.data, locations.data, units.data, amountPrecision]);
 }
 
 /** Refresh everything a stock movement can change. */

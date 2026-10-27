@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
-import { formatAmount, unitLabel } from "@/lib/format";
+import { unitLabel } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
 import { openApiDocument } from "@/lib/open-document";
 import type { ShoppingList, ShoppingListItem } from "@/lib/types";
 import { ErrorBlock } from "@/components/ErrorBlock";
@@ -25,6 +26,7 @@ function initialMode(): Mode {
 }
 
 function ShoppingPage() {
+  const { formatAmount } = usePreferences();
   const queryClient = useQueryClient();
   const catalog = useCatalog();
   const notify = useNotify();

@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { formatAmount, isoDay } from "@/lib/format";
+import { isoDay } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
+import { objectsQuery } from "@/hooks/queries";
 import { useStockMove } from "@/lib/stockActions";
 import { ErrorBlock } from "./ErrorBlock";
 import { Gauge } from "./Gauge";
@@ -18,6 +20,9 @@ type StockActionsProps = {
 export function StockActions({ productId, initialMove = "purchase" }: StockActionsProps) {
   const catalog = useCatalog();
   const product = catalog.product(productId);
+  const preferences = usePreferences();
+  const { formatAmount } = preferences;
+  const stores = useQuery(objectsQuery("shopping_locations"));
 
   const stock = useQuery({
     queryKey: queryKeys.stock(productId),
@@ -25,24 +30,47 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
   });
 
   const [move, setMove] = useState<Move>(initialMove);
-  // Weighed products have no sensible default amount; counted ones start at 1.
   const [amount, setAmount] = useState<string | null>(null);
   const [bestBefore, setBestBefore] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [spoiled, setSpoiled] = useState(false);
+  const [price, setPrice] = useState("");
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [purchasedDate, setPurchasedDate] = useState(isoDay);
+  const [note, setNote] = useState("");
 
   const purchase = useStockMove("purchase");
   const consume = useStockMove("consume");
   const open = useStockMove("open");
   const pending = purchase.isPending || consume.isPending || open.isPending;
 
-  const defaultDays = product?.default_best_before_days ?? 0;
-  const bestBeforeValue = bestBefore ?? (defaultDays > 0 ? isoDay(defaultDays) : "");
-  const locationValue = locationId ?? String(product?.location_id ?? "");
+  const locationValue =
+    locationId ??
+    String(
+      (move === "purchase" ? product?.location_id : product?.default_consume_location_id) ?? "",
+    );
+
+  const location = catalog.location(Number(locationValue));
+  const freezerDays = product?.default_best_before_days_after_freezing;
+
+  const defaultDays =
+    location?.is_freezer && freezerDays != null && freezerDays >= -1
+      ? freezerDays
+      : (product?.default_best_before_days ?? 0);
+
+  const bestBeforeValue = bestBefore ?? (defaultDays === -1 ? "2999-12-31" : isoDay(defaultDays));
   const onHand = stock.data?.stock_amount ?? 0;
   const opened = stock.data?.stock_amount_opened ?? 0;
   const min = product?.min_stock_amount ?? 0;
-  const amountValue = amount ?? (catalog.countsItems(productId) ? "1" : "");
+
+  const defaultAmount =
+    move === "purchase"
+      ? preferences.purchaseAmount
+      : preferences.useQuickConsumeAmount
+        ? (product?.quick_consume_amount ?? 1)
+        : preferences.consumeAmount;
+
+  const amountValue = amount ?? (defaultAmount > 0 ? String(defaultAmount) : "");
   const value = Number(amountValue);
 
   function onSubmit(e: FormEvent) {
@@ -55,10 +83,17 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
       purchase.mutate({
         productId,
         amount: value,
-        purchase: { best_before_date: bestBeforeValue || null, location_id: location },
+        purchase: {
+          best_before_date: bestBefore || null,
+          location_id: location,
+          price: price === "" ? null : Number(price),
+          shopping_location_id: Number(storeId ?? product?.shopping_location_id) || null,
+          purchased_date: purchasedDate || null,
+          note: note || null,
+        },
       });
     } else if (move === "consume") {
-      consume.mutate({ productId, amount: value, consume: { spoiled } });
+      consume.mutate({ productId, amount: value, consume: { spoiled, location_id: location } });
     } else {
       open.mutate({ productId, amount: value });
     }
@@ -92,7 +127,11 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
               type="button"
               className="seg"
               aria-pressed={move === id}
-              onClick={() => setMove(id)}
+              onClick={() => {
+                setMove(id);
+                setAmount(null);
+                setLocationId(null);
+              }}
             >
               {{ purchase: "Purchase", consume: "Consume", open: "Open" }[id]}
             </button>
@@ -147,6 +186,49 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
             </label>
           ) : null}
         </div>
+        {move === "purchase" ? (
+          <details>
+            <summary>Purchase details</summary>
+            <div className="form-grid">
+              <label className="field">
+                <span>Price per stock unit</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Store</span>
+                <select
+                  value={storeId ?? String(product?.shopping_location_id ?? "")}
+                  onChange={(e) => setStoreId(e.target.value)}
+                >
+                  <option value="">No store</option>
+                  {(stores.data ?? []).map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Purchase date</span>
+                <input
+                  type="date"
+                  value={purchasedDate}
+                  onChange={(e) => setPurchasedDate(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Note</span>
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} />
+              </label>
+            </div>
+          </details>
+        ) : null}
         <button
           type="submit"
           className="btn btn-primary"

@@ -5,6 +5,8 @@ import { api, queryKeys } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { daysUntil, relativeTime, todayLine } from "@/lib/format";
 import { useStockMove } from "@/lib/stockActions";
+import { usePreferences } from "@/lib/preferences";
+import { stockVolatileQuery } from "@/hooks/queries";
 import { useChoreActions } from "@/lib/householdActions";
 import { useCommandBar } from "@/components/CommandBar";
 import { DueBar, DUE_WINDOW_DAYS } from "@/components/DueBar";
@@ -32,6 +34,7 @@ type DueItem = {
 };
 
 function TodayPage() {
+  const { dueSoonDays } = usePreferences();
   const catalog = useCatalog();
   const command = useCommandBar();
   const notify = useNotify();
@@ -39,10 +42,7 @@ function TodayPage() {
 
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
 
-  const volatile = useQuery({
-    queryKey: queryKeys.stockVolatile,
-    queryFn: () => api.getStockVolatile(),
-  });
+  const volatile = useQuery(stockVolatileQuery(dueSoonDays));
 
   const chores = useQuery({ queryKey: queryKeys.chores, queryFn: api.listChores });
   const tasks = useQuery({ queryKey: queryKeys.tasks, queryFn: () => api.listTasks(false) });

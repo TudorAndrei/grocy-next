@@ -9,6 +9,10 @@ export type ProductSummary = {
   qu_id_stock?: number | null;
   qu_id_purchase?: number | null;
   default_best_before_days?: number | null;
+  default_best_before_days_after_freezing?: number | null;
+  default_consume_location_id?: number | null;
+  shopping_location_id?: number | null;
+  quick_consume_amount?: number | null;
   product_group_id?: number | null;
 };
 

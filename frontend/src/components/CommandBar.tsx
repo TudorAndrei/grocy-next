@@ -13,7 +13,7 @@ import {
 } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { formatAmount } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
 import { useStockMove } from "@/lib/stockActions";
 import { Icon, type IconName } from "./Icon";
 import { useNotify } from "./Toaster";
@@ -127,6 +127,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
 }
 
 function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: () => void }) {
+  const { formatAmount } = usePreferences();
   const navigate = useNavigate();
   const notify = useNotify();
   const queryClient = useQueryClient();

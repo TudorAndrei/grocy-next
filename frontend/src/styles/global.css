@@ -1884,7 +1884,7 @@ a.btn[aria-disabled="true"] {
   padding: 8px 8px 8px 16px;
   border-radius: 12px;
   background: var(--ink);
-  color: #fff;
+  color: var(--surface);
   font-size: 14px;
   box-shadow: 0 12px 30px rgb(16 19 24 / 0.28);
   pointer-events: auto;
@@ -1898,16 +1898,16 @@ a.btn[aria-disabled="true"] {
 .toast-undo {
   padding: 5px 12px;
   border-radius: 999px;
-  border: 1.5px solid #ffffff66;
+  border: 1.5px solid currentColor;
   background: none;
-  color: #fff;
+  color: inherit;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
 }
 
 .toast-undo:hover {
-  background: #ffffff1f;
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .toast-close {
@@ -1918,7 +1918,7 @@ a.btn[aria-disabled="true"] {
   border: 0;
   border-radius: 50%;
   background: none;
-  color: #ffffffb3;
+  color: inherit;
   cursor: pointer;
 }
 

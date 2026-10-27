@@ -8,6 +8,7 @@ import { currentUserQuery } from "@/hooks/queries";
 import { api, ApiError, queryKeys } from "@/lib/api";
 import { CommandProvider } from "@/components/CommandBar";
 import { Toaster } from "@/components/Toaster";
+import { DatabaseRefresh } from "@/components/DatabaseRefresh";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -46,6 +47,7 @@ function RootLayout() {
 
   return (
     <Toaster>
+      <DatabaseRefresh />
       <CommandProvider>
         <AppShell>
           <Outlet />
