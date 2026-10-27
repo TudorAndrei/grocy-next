@@ -37,6 +37,7 @@ The current repair work covers these confirmed differences:
 - A configured API base path supports the checked route, authentication, error page, and encoded file rules. Python extension routes keep their JSON errors and CORS rules under the prefix.
 - Demo and prerelease modes use their own database files. The tests check reads, writes, missing schemas, return to production data, and initialization at startup.
 - The API specification includes current custom entities and uses the configured URL rules for server and key management links.
+- Locale selection uses the saved locale, request language preferences, and configured default. Translation output preserves empty entries and plural forms. Recipe copies use the selected translation.
 - User profile errors and self-edit ID checks follow the checked legacy rules. The web profile form retains the saved photo.
 - `GROCY_DEFAULT_USER_SETTINGS` supplies Python configuration defaults. Saved values have priority, and recipe views use the same defaults.
 - Python authentication modes support API keys, sessions, and reverse proxy identities. Session mode also works with web login and logout.

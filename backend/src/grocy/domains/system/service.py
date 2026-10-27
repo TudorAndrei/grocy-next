@@ -1,5 +1,6 @@
 import ast
 import json
+import os
 import platform
 import re
 import sqlite3
@@ -15,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy import __version__
 from grocy.compatibility import client_defaults
-from grocy.compatibility.php import INT_MAX, INT_MIN, php_error, php_string
+from grocy.compatibility.php import INT_MAX, INT_MIN, empty, numeric_value, php_error, php_string
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
@@ -29,8 +30,8 @@ def openapi_specification() -> dict[str, Any]:
     return json.loads((_CORE / "grocy.openapi.json").read_text())
 
 
-def _po_messages(path: Path) -> tuple[dict[str, list[str]], str | None]:
-    messages = {}
+def _po_messages(path: Path) -> tuple[dict[str, dict[str, list[str]]], str | None]:
+    messages: dict[str, dict[str, list[str]]] = {}
     plural_forms = None
     entry: dict[str, str] = {}
     active = ""
@@ -44,9 +45,13 @@ def _po_messages(path: Path) -> tuple[dict[str, list[str]], str | None]:
             if match:
                 plural_forms = match[1]
         elif key is not None:
-            translations = [value for name, value in entry.items() if name.startswith("msgstr")]
-            if translations and any(translations):
-                messages[key] = translations
+            singular = entry.get("msgstr", entry.get("msgstr[0]", ""))
+            plurals = [
+                entry[name] for name in entry if name.startswith("msgstr[") and name != "msgstr[0]"
+            ]
+            messages.setdefault(entry.get("msgctxt", ""), {})[key] = (
+                [singular, *plurals] if any(plurals) else [singular]
+            )
         entry.clear()
 
     for line in [*path.read_text().splitlines(), ""]:
@@ -70,8 +75,8 @@ def localization(locale: str, mode: str) -> dict[str, Any]:
     folder = _CORE / "localization" / locale
     if re.fullmatch(r"[A-Za-z0-9_@-]+", locale) is None or not folder.is_dir():
         return defaults
-    messages = dict(defaults["messages"][""])
-    plural_forms = defaults["plural-forms"]
+    messages: dict[str, dict[str, list[str]]] = {}
+    plural_forms = None
     files = [
         "strings",
         "chore_assignment_types",
@@ -88,14 +93,40 @@ def localization(locale: str, mode: str) -> dict[str, Any]:
         path = folder / f"{name}.po"
         if path.is_file():
             translated, forms = _po_messages(path)
-            messages.update(translated)
+            for context, values in translated.items():
+                messages.setdefault(context, {}).update(values)
             plural_forms = forms or plural_forms
-    return {"domain": defaults["domain"], "plural-forms": plural_forms, "messages": {"": messages}}
+    count = re.search(r"nplurals\s*=\s*([0-9]+)", plural_forms or "")
+    if count:
+        size = int(count[1])
+        for values in messages.values():
+            for key, translations in values.items():
+                if len(translations) > 1:
+                    values[key] = [*translations, *([""] * size)][:size]
+    return {"domain": defaults["domain"], "plural-forms": plural_forms, "messages": messages}
 
 
 class SystemService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def locale(self, user_id: int, accept_language: str) -> str:
+        available = {".", "..", *os.listdir(_CORE / "localization")}
+        setting = await self.session.scalar(
+            text("SELECT value FROM user_settings WHERE user_id=:user AND key='locale'"),
+            {"user": user_id},
+        )
+        if not empty(setting) and php_string(setting) in available:
+            return php_string(setting)
+        preferences: dict[str, float] = {}
+        for element in accept_language.split(","):
+            parts = element.split(";q=")
+            preferences[parts[0]] = float(numeric_value(parts[1])) if len(parts) > 1 else 1.0
+        for name, _quality in sorted(preferences.items(), key=lambda item: -item[1]):
+            for candidate in (name, name[:5], name[:2]):
+                if candidate in available:
+                    return candidate
+        return get_settings().default_locale
 
     async def specification(self, base: str) -> dict[str, Any]:
         spec = deepcopy(openapi_specification())

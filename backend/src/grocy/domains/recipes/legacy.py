@@ -9,7 +9,14 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.input import database_error
-from grocy.compatibility.php import empty, loose_equals, numeric_value, php_error, type_name
+from grocy.compatibility.php import (
+    empty,
+    loose_equals,
+    numeric_value,
+    php_error,
+    php_string,
+    type_name,
+)
 from grocy.compatibility.rows import save_rows
 from grocy.core.actor import Actor
 from grocy.core.errors import GrocyError
@@ -60,14 +67,14 @@ class LegacyRecipesService:
                 raise php_error(database_error(error).message) from error
             raise database_error(error) from error
 
-    async def copy(self, recipe_id: str) -> str:
+    async def copy(self, recipe_id: str, name_format: str = "Copy of %s") -> str:
         recipe = await self._recipe(recipe_id)
         identity = await self._write(
             "INSERT INTO recipes (name,description,picture_file_name,base_servings,"
             "desired_servings,not_check_shoppinglist,type,product_id) "
             "SELECT :name,description,picture_file_name,base_servings,"
             "desired_servings,not_check_shoppinglist,type,product_id FROM recipes WHERE id=:id",
-            name="Copy of " + str(recipe["name"] or ""),
+            name=name_format.replace("%s", php_string(recipe["name"]), 1),
             id=recipe_id,
         )
         await self._write(

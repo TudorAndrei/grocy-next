@@ -1,11 +1,9 @@
 """Calendar events and subscription links from the Grocy 4.5.0 calendar services."""
 
-import os
 import secrets
 import string
 from collections.abc import Callable
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import String, insert, type_coerce
@@ -26,9 +24,8 @@ from grocy.core.urls import construct_url
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.users import ApiKey
 from grocy.domains.calendar.ical import calendar
-from grocy.domains.system.service import localization
+from grocy.domains.system.service import SystemService, localization
 
-_LOCALIZATION = Path(__file__).parents[2] / "_vendor" / "grocy-core" / "localization"
 _KEY_CHARACTERS = string.digits + string.ascii_lowercase + string.ascii_uppercase
 _KEY_TYPE = "special-purpose-calendar-ical"
 
@@ -67,22 +64,7 @@ class CalendarService:
         return [dict(row) for row in result.mappings()]
 
     async def locale(self, user_id: int, accept_language: str) -> str:
-        available = {".", "..", *os.listdir(_LOCALIZATION)}
-        settings = await self._rows(
-            "SELECT value FROM `user_settings` WHERE user_id = ? AND `key` = 'locale'", user_id
-        )
-        setting = settings[0]["value"] if settings else None
-        if not empty(setting) and php_string(setting) in available:
-            return php_string(setting)
-        preferences: dict[str, float] = {}
-        for element in accept_language.split(","):
-            parts = element.split(";q=")
-            preferences[parts[0]] = float(numeric_value(parts[1])) if len(parts) > 1 else 1.0
-        for name, _quality in sorted(preferences.items(), key=lambda item: -item[1]):
-            for candidate in (name, name[:5], name[:2]):
-                if candidate in available:
-                    return candidate
-        return get_settings().default_locale
+        return await SystemService(self.session).locale(user_id, accept_language)
 
     async def _current_stock(self) -> list[dict[str, Any]]:
         entries: dict[Any, dict[str, Any]] = {}

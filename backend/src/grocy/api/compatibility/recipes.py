@@ -8,10 +8,12 @@ from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute,
 from grocy.compatibility.lessql import query_parameters, query_rows
 from grocy.compatibility.php import PhpJSONResponse, request_body
 from grocy.core.auth import CurrentActor
+from grocy.core.config import get_settings
 from grocy.core.deps import DbSession, RecipesSvc
 from grocy.core.errors import GrocyError
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.domains.recipes.legacy import LegacyRecipesService
+from grocy.domains.system.service import SystemService, localization
 
 router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
@@ -81,8 +83,19 @@ async def recipe_add_missing(
 
 
 @router.post("/api/recipes/{recipe_id}/copy")
-async def recipe_copy(recipe_id: str, _actor: CurrentActor, session: DbSession) -> dict[str, Any]:
-    return {"created_object_id": await LegacyRecipesService(session).copy(recipe_id)}
+async def recipe_copy(
+    recipe_id: str, request: Request, actor: CurrentActor, session: DbSession
+) -> dict[str, Any]:
+    locale = await SystemService(session).locale(
+        actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
+    messages = localization(locale, get_settings().mode)["messages"].get("", {})
+    translated = messages.get("Copy of %s", [""])[0]
+    return {
+        "created_object_id": await LegacyRecipesService(session).copy(
+            recipe_id, translated or "Copy of %s"
+        )
+    }
 
 
 @router.get("/api/v2/recipes/{recipe_id}/fulfillment")
