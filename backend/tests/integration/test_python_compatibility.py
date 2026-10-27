@@ -120,7 +120,7 @@ def test_object_filters_use_sqlite_comparisons(client, api_headers, parameters, 
 def test_object_query_validation_keeps_saved_data(client, api_headers, parameters):
     client.headers.update(api_headers)
     before = client.get("/api/objects/locations").json()
-    assert client.get("/api/objects/locations", params=parameters).status_code == 400
+    assert client.get("/api/objects/locations", params=parameters).status_code == 500
     assert client.get("/api/objects/locations").json() == before
     assert client.get("/api/user").json()[0]["username"] == "admin"
 

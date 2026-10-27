@@ -1,12 +1,16 @@
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
+from grocy.compatibility.lessql import query_parameters, query_rows
+from grocy.compatibility.php import PhpJSONResponse, body_array, php_error, request_body
 from grocy.core.auth import CurrentActor
-from grocy.core.deps import RecipesSvc
+from grocy.core.deps import DbSession, RecipesSvc
+from grocy.core.errors import GrocyError
+from grocy.db.compatibility_views import configure_compatibility_queries
 
 router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
@@ -23,18 +27,33 @@ class RecipeCreateBody(BaseModel):
 
 
 @router.get("/api/recipes/fulfillment")
-async def recipes_fulfillment(_actor: CurrentActor, recipes: RecipesSvc) -> list[dict[str, Any]]:
-    return [recipes.serialize(recipe) for recipe in await recipes.list_recipes()]
+async def recipes_fulfillment(
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    await configure_compatibility_queries(session)
+    return PhpJSONResponse(
+        await query_rows(
+            session,
+            "recipes_resolved",
+            query_parameters(request.scope["query_string"]),
+            caught=True,
+        )
+    )
 
 
 @router.get("/api/recipes/{recipe_id}/fulfillment")
 async def recipe_fulfillment(
-    recipe_id: int,
+    recipe_id: str,
     _actor: CurrentActor,
-    recipes: RecipesSvc,
-    servings: Annotated[Decimal | None, Query()] = None,
-) -> dict[str, Any]:
-    return await recipes.fulfillment(recipe_id, servings=servings)
+    session: DbSession,
+) -> Response:
+    await configure_compatibility_queries(session)
+    rows = await query_rows(
+        session, "recipes_resolved", {}, where="recipe_id = ?", bindings=(recipe_id,), caught=True
+    )
+    if not rows:
+        raise GrocyError("Recipe does not exist", code=None)
+    return PhpJSONResponse(rows[0])
 
 
 @router.post("/api/recipes/{recipe_id}/consume", status_code=204)
@@ -42,20 +61,29 @@ async def recipe_consume(
     recipe_id: int,
     actor: CurrentActor,
     recipes: RecipesSvc,
-    servings: Annotated[Decimal | None, Query()] = None,
 ) -> Response:
-    await recipes.consume(actor, recipe_id, servings=servings)
+    await recipes.consume(actor, recipe_id)
     return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist", status_code=204)
 async def recipe_add_missing(
     recipe_id: int,
+    request: Request,
     _actor: CurrentActor,
     recipes: RecipesSvc,
-    servings: Annotated[Decimal | None, Query()] = None,
 ) -> Response:
-    await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+    values = body_array(await request_body(request))
+    excluded = values.get("excludedProductIds")
+    if excluded is not None and not isinstance(excluded, (dict, list)):
+        if excluded:
+            raise php_error(
+                "in_array(): Argument #2 ($haystack) must be of type array, string given"
+            )
+        excluded = None
+    if isinstance(excluded, dict):
+        excluded = list(excluded.values())
+    await recipes.add_missing_to_shopping_list(recipe_id, excluded_product_ids=excluded)
     return Response(status_code=204)
 
 

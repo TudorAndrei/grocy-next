@@ -65,7 +65,7 @@ class UsersService:
         return [dict(row) for row in result.mappings()]
 
     async def list_users(self, query_string: bytes = b"") -> list[dict[str, Any]]:
-        return await query_rows(self.session, "users_dto", query_string)
+        return await query_rows(self.session, "users_dto", query_string, caught=True)
 
     async def _password(self, value: str | None) -> str:
         if value is None or "\x00" in value:

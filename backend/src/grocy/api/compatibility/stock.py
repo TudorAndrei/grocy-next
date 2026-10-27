@@ -2,13 +2,18 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from grocy.compatibility.php import PhpJSONResponse, argument_error, int_argument
+from grocy.compatibility.lessql import query_parameters, query_rows
+from grocy.compatibility.php import PhpJSONResponse, argument_error, filter_bool, int_argument
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
 from grocy.core.errors import GrocyError
+from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.db.native_schema import SCHEMA
 from grocy.domains.printing import product_label, stock_entry, stock_label
 from grocy.domains.stock.service import StockService
 
@@ -85,11 +90,16 @@ async def stock_volatile(
 
 
 @router.get("/api/stock/entry/{entry_id}")
-async def stock_get_entry(entry_id: int, _actor: CurrentActor, stock: StockSvc) -> dict[str, Any]:
-    row = await stock.get_entry(entry_id)
-    if row is None:
-        raise GrocyError("Stock entry does not exist", status_code=404, code=None)
-    return row
+async def stock_get_entry(entry_id: str, _actor: CurrentActor, session: DbSession) -> Response:
+    rows = await query_rows(
+        session,
+        "stock",
+        {},
+        where="id = ?",
+        bindings=(entry_id,),
+        columns=SCHEMA["tables"]["stock"],
+    )
+    return PhpJSONResponse(rows[0] if rows else None)
 
 
 @router.put("/api/stock/entry/{entry_id}")
@@ -144,27 +154,41 @@ async def stock_product(product_id: int, _actor: CurrentActor, stock: StockSvc) 
 
 @router.get("/api/stock/products/{product_id}/locations")
 async def stock_product_locations(
-    product_id: int, _actor: CurrentActor, stock: StockSvc
-) -> list[dict[str, Any]]:
-    entries = await stock.list_inventory(product_id=product_id)
-    locations: dict[int, dict[str, Any]] = {}
-    for entry in entries:
-        location_id = entry["location_id"]
-        if location_id not in locations:
-            locations[location_id] = {
-                "location_id": location_id,
-                "amount": 0,
-                "amount_opened": 0,
-            }
-        locations[location_id]["amount"] += entry["amount"]
-        if entry.get("open"):
-            locations[location_id]["amount_opened"] += entry["amount"]
-    return list(locations.values())
+    product_id: str, request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return await _product_stock_rows(
+        product_id, request, session, "stock_current_locations", "GetProductStockLocations"
+    )
 
 
 @router.get("/api/stock/products/{product_id}/entries")
-async def stock_entries(product_id: int, _actor: CurrentActor, stock: StockSvc) -> list[dict]:
-    return await stock.list_inventory(product_id=product_id)
+async def stock_entries(
+    product_id: str, request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return await _product_stock_rows(
+        product_id, request, session, "stock_next_use", "GetProductStockEntries"
+    )
+
+
+async def _product_stock_rows(
+    product_id: str, request: Request, session: AsyncSession, table: str, method: str
+) -> Response:
+    identity = int_argument(product_id, "Grocy\\Services\\StockService::" + method, "productId")
+    parameters = query_parameters(request.scope["query_string"])
+    where = "product_id = ?"
+    bindings = (identity,)
+    if filter_bool(parameters.get("include_sub_products")):
+        where = (
+            "product_id = ? OR product_id IN "
+            "(SELECT sub_product_id FROM products_resolved WHERE parent_product_id = ?)"
+        )
+        bindings = (identity, identity)
+    if table == "stock_next_use":
+        where = f"({where}) AND open IN (0, 1)"
+    await configure_compatibility_queries(session)
+    return PhpJSONResponse(
+        await query_rows(session, table, parameters, where=where, bindings=bindings)
+    )
 
 
 @router.get("/api/stock/products/{product_id}/price-history")
@@ -334,9 +358,23 @@ async def stock_inventory_by_barcode(
 
 @router.get("/api/stock/locations/{location_id}/entries")
 async def stock_location_entries(
-    location_id: int, _actor: CurrentActor, stock: StockSvc
-) -> list[dict]:
-    return await stock.list_inventory(location_id=location_id)
+    location_id: str, request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    exists = await session.scalar(
+        text("SELECT 1 FROM locations WHERE id=:location AND active=1"), {"location": location_id}
+    )
+    if not exists:
+        raise GrocyError("Location does not exist", status_code=500, code=None)
+    return PhpJSONResponse(
+        await query_rows(
+            session,
+            "stock",
+            query_parameters(request.scope["query_string"]),
+            where="location_id = ?",
+            bindings=(location_id,),
+            columns=SCHEMA["tables"]["stock"],
+        )
+    )
 
 
 @router.post("/api/stock/shoppinglist/add-missing-products", status_code=204)
