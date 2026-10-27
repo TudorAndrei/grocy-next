@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     disable_url_rewriting: bool | str = False
     default_permissions: list[str] = ["ADMIN"]
     default_user_settings: dict[str, Any] = {}
+    auth_mode: Literal["default", "api-key", "session", "ldap", "reverse-proxy"] = "default"
+    disable_auth: bool | str = False
+    reverse_proxy_auth_header: str = "Remote-User"
+    reverse_proxy_auth_use_env: bool = False
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
     database_busy_timeout_ms: int = 5000
@@ -86,6 +90,7 @@ class Settings(BaseSettings):
                     or name
                     in {
                         "disable_url_rewriting",
+                        "disable_auth",
                         "label_printer_run_server",
                         "label_printer_hook_json",
                         "tprinter_is_network_printer",
@@ -99,6 +104,16 @@ class Settings(BaseSettings):
 
     def user_defaults(self) -> dict[str, Any]:
         return {**client_defaults()["user_settings"], **self.default_user_settings}
+
+    def auth_class_name(self) -> str:
+        names = {
+            "default": "Default",
+            "api-key": "ApiKey",
+            "session": "Session",
+            "ldap": "Ldap",
+            "reverse-proxy": "ReverseProxy",
+        }
+        return "Grocy\\Middleware\\" + names[self.auth_mode] + "AuthMiddleware"
 
     def feature_flags(self) -> dict[str, bool | str]:
         flags = {

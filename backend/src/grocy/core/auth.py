@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.auth import select_key, select_session
 from grocy.compatibility.lessql import cookie_parameters, query_parameters
-from grocy.compatibility.php import loose_equals, php_error
+from grocy.compatibility.php import loose_equals, php_error, truthy
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
@@ -88,6 +88,8 @@ async def authenticate_request(
         (calendar_secret, "calendar"),
     ]
     if not any(candidate for candidate, _ in candidates):
+        if not settings.use_native_php:
+            return await authenticate_release_request(request, session)
         raise UnauthorizedError("Missing API key")
     for candidate, key_type in candidates:
         if not candidate:
@@ -99,22 +101,73 @@ async def authenticate_request(
         except UnauthorizedError:
             continue
         return actor
+    if not settings.use_native_php:
+        return await authenticate_release_request(request, session)
     raise UnauthorizedError("Invalid API key")
 
 
 async def authenticate_release_request(request: Request, session: AsyncSession) -> Actor:
-    try:
-        return await authenticate_release_key(request, session)
-    except UnauthorizedError:
-        header = b"; ".join(
-            value for name, value in request.scope["headers"] if name.lower() == b"cookie"
+    settings = get_settings()
+    if settings.mode in {"dev", "demo", "prerelease"} or truthy(settings.disable_auth):
+        user_id = await session.scalar(select(User.id).order_by(User.id).limit(1))
+        if user_id is None:
+            raise UnauthorizedError("No default user exists")
+        return await actor_for_user(session, user_id)
+    if settings.auth_mode != "session":
+        try:
+            return await authenticate_release_key(request, session)
+        except UnauthorizedError:
+            if settings.auth_mode == "api-key":
+                raise
+    if settings.auth_mode == "reverse-proxy":
+        return await authenticate_proxy_user(request, session)
+    header = b"; ".join(
+        value for name, value in request.scope["headers"] if name.lower() == b"cookie"
+    )
+    selected, user_id = await select_session(
+        session, cookie_parameters(header).get("grocy_session")
+    )
+    if selected and user_id is not None:
+        return await actor_for_user(session, user_id)
+    raise UnauthorizedError("Invalid API key")
+
+
+async def authenticate_proxy_user(request: Request, session: AsyncSession) -> Actor:
+    from grocy.domains.users.service import UsersService
+
+    settings = get_settings()
+    name = settings.reverse_proxy_auth_header
+    if settings.reverse_proxy_auth_use_env and not name.startswith("HTTP_"):
+        username = os.environ.get(name)
+        if username is None:
+            raise php_error(
+                f"ReverseProxyAuthMiddleware: {name} env variable is missing "
+                "(could not be found in $_SERVER array)"
+            )
+        if not username:
+            raise php_error(f"ReverseProxyAuthMiddleware: {name} env variable is invalid")
+    else:
+        header_name = name.removeprefix("HTTP_").replace("_", "-").lower().encode()
+        values = [value for key, value in request.scope["headers"] if key.lower() == header_name]
+        if not values:
+            if settings.reverse_proxy_auth_use_env:
+                raise php_error(
+                    f"ReverseProxyAuthMiddleware: {name} env variable is missing "
+                    "(could not be found in $_SERVER array)"
+                )
+            raise php_error(f"ReverseProxyAuthMiddleware: {name} header is missing or invalid")
+        username = b", ".join(values).decode("utf-8", "surrogateescape")
+        if settings.reverse_proxy_auth_use_env and not username:
+            raise php_error(f"ReverseProxyAuthMiddleware: {name} env variable is invalid")
+    user_id = await session.scalar(select(User.id).where(User.username == username).limit(1))
+    if user_id is None:
+        await UsersService(session).create_user(
+            {"username": username, "first_name": "", "last_name": "", "password": ""}
         )
-        selected, user_id = await select_session(
-            session, cookie_parameters(header).get("grocy_session")
-        )
-        if selected and user_id is not None:
-            return await actor_for_user(session, user_id)
-        raise
+        user_id = await session.scalar(select(User.id).where(User.username == username).limit(1))
+    if user_id is None:
+        raise UnauthorizedError("Invalid proxy user")
+    return await actor_for_user(session, user_id)
 
 
 async def authenticate_release_key(request: Request, session: AsyncSession) -> Actor:

@@ -5341,6 +5341,17 @@ def configuration_values(api, runtime_configuration, monkeypatch):
     def configure(*, settings=None, user_defaults=None):
         settings, user_defaults = settings or {}, user_defaults or {}
         if reference:
+            settings = dict(settings)
+            if "AUTH_MODE" in settings:
+                mode = settings.pop("AUTH_MODE")
+                names = {
+                    "default": "Default",
+                    "api-key": "ApiKey",
+                    "session": "Session",
+                    "ldap": "Ldap",
+                    "reverse-proxy": "ReverseProxy",
+                }
+                settings["AUTH_CLASS"] = "Grocy\\Middleware\\" + names[mode] + "AuthMiddleware"
             runtime_configuration(
                 "".join(
                     f"Setting({php_value(key)}, {php_value(value)});"
@@ -5897,17 +5908,15 @@ def test_native_session_cookie_authentication_and_use_time(
 
 @pytest.mark.parametrize("case", ["new", "missing", "duplicate", "env"])
 def test_native_reverse_proxy_identity_and_default_permissions(
-    api, execute_sql, runtime_configuration, case
+    api, execute_sql, configuration_values, case
 ):
-    runtime_configuration(
-        "Setting('AUTH_CLASS', 'Grocy\\\\Middleware\\\\ReverseProxyAuthMiddleware');"
-        "Setting('DEFAULT_PERMISSIONS', ['TASKS_MARK_COMPLETED']);"
-        + (
-            "Setting('REVERSE_PROXY_AUTH_USE_ENV', true);"
-            "Setting('REVERSE_PROXY_AUTH_HEADER', 'HTTP_REMOTE_USER');"
-            if case == "env"
-            else "Setting('REVERSE_PROXY_AUTH_HEADER', 'Remote-User');"
-        )
+    configuration_values(
+        settings={
+            "AUTH_MODE": "reverse-proxy",
+            "DEFAULT_PERMISSIONS": ["TASKS_MARK_COMPLETED"],
+            "REVERSE_PROXY_AUTH_USE_ENV": case == "env",
+            "REVERSE_PROXY_AUTH_HEADER": "HTTP_REMOTE_USER" if case == "env" else "Remote-User",
+        }
     )
     username = "proxy-" + uuid4().hex
     headers = [("GROCY-API-KEY", "")]
@@ -5927,6 +5936,12 @@ def test_native_reverse_proxy_identity_and_default_permissions(
     user = response.json()[0]
     assert user["username"] == username
     assert api.get("/api/user", headers=headers).json()[0]["id"] == user["id"]
+    if hasattr(api, "portal"):
+        saved = api.put("/api/v2/user/settings", json={"proxy_test": "saved"}, headers=headers)
+        assert saved.status_code == 200, saved.text
+        assert api.get("/api/user/settings/proxy_test", headers=headers).json() == {
+            "value": "saved"
+        }
     assert api.get("/api/objects/tasks", headers=headers).status_code == 200
     task = create(api, "tasks", name=uuid4().hex)
     assert api.post(f"/api/tasks/{task}/complete", headers=headers, json={}).status_code == 204
@@ -5940,13 +5955,11 @@ def test_native_reverse_proxy_identity_and_default_permissions(
     ) == [(1,)]
 
 
-@pytest.mark.parametrize(
-    "auth_class", ["ApiKeyAuthMiddleware", "SessionAuthMiddleware", "LdapAuthMiddleware"]
-)
+@pytest.mark.parametrize("auth_mode", ["api-key", "session", "ldap"])
 def test_native_configured_authentication_class_selects_credentials(
-    api, execute_sql, runtime_configuration, auth_class
+    api, execute_sql, configuration_values, auth_mode
 ):
-    runtime_configuration(f"Setting('AUTH_CLASS', 'Grocy\\\\Middleware\\\\{auth_class}');")
+    configuration_values(settings={"AUTH_MODE": auth_mode})
     key, cookie = uuid4().hex, uuid4().hex
     execute_sql(
         f"INSERT INTO api_keys(api_key,user_id,expires) VALUES ('{key}',1,'2999-12-31 23:59:59')"
@@ -5957,15 +5970,11 @@ def test_native_configured_authentication_class_selects_credentials(
     )
     try:
         by_key = api.get("/api/user", headers={"GROCY-API-KEY": key, "Cookie": ""})
-        assert by_key.status_code == (401 if auth_class == "SessionAuthMiddleware" else 200), (
-            by_key.text
-        )
+        assert by_key.status_code == (401 if auth_mode == "session" else 200), by_key.text
         by_cookie = api.get(
             "/api/user", headers={"GROCY-API-KEY": "", "Cookie": "grocy_session=" + cookie}
         )
-        assert by_cookie.status_code == (401 if auth_class == "ApiKeyAuthMiddleware" else 200), (
-            by_cookie.text
-        )
+        assert by_cookie.status_code == (401 if auth_mode == "api-key" else 200), by_cookie.text
     finally:
         execute_sql(f"DELETE FROM api_keys WHERE api_key='{key}'")
         execute_sql(f"DELETE FROM sessions WHERE session_key='{cookie}'")

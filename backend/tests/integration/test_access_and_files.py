@@ -1,6 +1,20 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+
+
+@pytest.mark.parametrize("configuration", [{"mode": "dev"}, {"disable_auth": True}])
+def test_configured_authentication_bypass_uses_the_first_user(client, monkeypatch, configuration):
+    from grocy.core.config import get_settings
+
+    for name, value in configuration.items():
+        monkeypatch.setattr(get_settings(), name, value)
+    for headers in ({}, {"GROCY-API-KEY": "invalid"}):
+        user = client.get("/api/user", headers=headers)
+        assert user.status_code == 200, user.text
+        assert user.json()[0]["id"] == 1
+        assert client.get("/api/v2/api-keys", headers=headers).status_code == 200
 
 
 def test_permissions_keys_and_mcp_use_stored_identity(

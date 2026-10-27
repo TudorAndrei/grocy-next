@@ -19,6 +19,12 @@ Use [Python barcode plugins](../docs/python-barcode-plugins.md) for custom looku
 
 Set `GROCY_DEFAULT_USER_SETTINGS` to a JSON object to change the user defaults. For example, `GROCY_DEFAULT_USER_SETTINGS='{"stock_due_soon_days":14}'` sets the default due window to 14 days. Saved user values have priority. Delete a saved value to use the configured default again. These defaults also apply to recipe stock checks.
 
+Use `GROCY_AUTH_MODE=default` for API keys with a session cookie fallback. Use `api-key` for API keys only, or `session` for session cookies. In session mode, web setup and login issue a cookie. Logout removes that session.
+
+Use `GROCY_AUTH_MODE=reverse-proxy` to use an identity header. The default header is `Remote-User`. The proxy must replace this header. New proxy users receive `GROCY_DEFAULT_PERMISSIONS`. Use `GROCY_REVERSE_PROXY_AUTH_HEADER` to change the name. With `GROCY_REVERSE_PROXY_AUTH_USE_ENV=true`, an `HTTP_` name reads the corresponding request header; other names read the process environment.
+
+LDAP password login is not yet implemented. The `ldap` mode checks API keys and existing sessions. It does not use local passwords as a fallback. `GROCY_DISABLE_AUTH=true` and development modes use the first user in the database.
+
 File type detection uses libmagic. The release image includes this data library. On macOS, the application can also use the system `file` tool.
 
 The package uses pinned Grocy assets for database definitions, the OpenAPI contract, translations, and printer tables. PHP source remains available as a test reference.

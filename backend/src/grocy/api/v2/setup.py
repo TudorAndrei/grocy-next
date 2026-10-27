@@ -1,18 +1,21 @@
 """First-run setup and password login for the web UI."""
 
 import secrets
+import string
+from datetime import datetime, timedelta
 from functools import cache
 
 import bcrypt
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from starlette.concurrency import run_in_threadpool
 
 from grocy.core.auth import AuthenticatedActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import ConflictError, GrocyError, UnauthorizedError
+from grocy.core.time import server_timezone
 from grocy.db.models.users import ApiKey, User, UserPermission
 from grocy.db.seed import has_ever_had_users
 
@@ -54,13 +57,36 @@ async def _issue_key(session: DbSession, user_id: int, description: str) -> str:
     return key
 
 
+async def _issue_cookie(
+    session: DbSession, user_id: int, request: Request, response: Response
+) -> None:
+    if get_settings().auth_mode != "session":
+        return
+    token = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(50))
+    expires = datetime.now(server_timezone()) + timedelta(days=30)
+    await session.execute(
+        text("INSERT INTO sessions(session_key,user_id,expires) VALUES (:key,:user,:expires)"),
+        {"key": token, "user": user_id, "expires": expires.strftime("%Y-%m-%d %H:%M:%S")},
+    )
+    response.set_cookie(
+        "grocy_session",
+        token,
+        max_age=30 * 86400,
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax",
+    )
+
+
 @router.get("/setup")
 async def setup_status(session: DbSession) -> dict[str, bool]:
     return {"needs_setup": not await has_ever_had_users(session)}
 
 
 @router.post("/setup", status_code=201)
-async def run_setup(body: SetupBody, session: DbSession) -> dict:
+async def run_setup(
+    body: SetupBody, session: DbSession, request: Request, response: Response
+) -> dict:
     # POST sessions hold the SQLite write lock, so two first-run requests cannot both pass.
     if await has_ever_had_users(session):
         raise ConflictError("Setup is already complete")
@@ -77,12 +103,19 @@ async def run_setup(body: SetupBody, session: DbSession) -> dict:
     await session.flush()
     session.add(UserPermission(user_id=user.id, permission_id=ADMIN_PERMISSION_ID))
     key = await _issue_key(session, user.id, "Setup wizard")
+    await _issue_cookie(session, user.id, request, response)
     await session.commit()
     return {"user_id": user.id, "username": user.username, "api_key": key}
 
 
 @router.post("/login")
-async def login(body: LoginBody, session: DbSession) -> dict:
+async def login(body: LoginBody, session: DbSession, request: Request, response: Response) -> dict:
+    if get_settings().auth_mode in {"ldap", "reverse-proxy"}:
+        raise GrocyError(
+            "Password login is managed by the configured authentication provider",
+            status_code=403,
+            code="externally_managed_authentication",
+        )
     user = await session.scalar(select(User).where(User.username == body.username.strip()))
     stored = user.password.replace("$2y$", "$2b$", 1).encode() if user and user.password else None
     try:
@@ -94,15 +127,23 @@ async def login(body: LoginBody, session: DbSession) -> dict:
     if user is None or stored is None or not valid:
         raise UnauthorizedError("Invalid username or password")
     key = await _issue_key(session, user.id, "Web login")
+    await _issue_cookie(session, user.id, request, response)
     await session.commit()
     return {"user_id": user.id, "username": user.username, "api_key": key}
 
 
 @router.post("/logout", status_code=204)
-async def logout(actor: AuthenticatedActor, session: DbSession) -> Response:
+async def logout(actor: AuthenticatedActor, session: DbSession, request: Request) -> Response:
     if actor.api_key:
         await session.execute(
             delete(ApiKey).where(ApiKey.api_key == actor.api_key, ApiKey.key_type == "grocy-next")
         )
-        await session.commit()
-    return Response(status_code=204)
+    if cookie := request.cookies.get("grocy_session"):
+        await session.execute(
+            text("DELETE FROM sessions WHERE session_key=:key AND user_id=:user"),
+            {"key": cookie, "user": actor.user_id},
+        )
+    await session.commit()
+    response = Response(status_code=204)
+    response.delete_cookie("grocy_session", httponly=True, samesite="lax")
+    return response

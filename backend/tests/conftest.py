@@ -63,8 +63,22 @@ async def session() -> AsyncIterator[AsyncSession]:
     await engine.dispose()
 
 
+@pytest.fixture
+def php_http_settings(request):
+    from grocy.core.config import get_settings
+
+    target = getattr(request.node, "callspec", None)
+    if (
+        target is not None
+        and target.params.get("api") == "local"
+        and not get_settings().use_native_php
+    ):
+        pytest.skip("PHP interpreter output is checked only on the reference runtime")
+    return request.getfixturevalue("_php_reference_http_settings")
+
+
 @pytest.fixture(scope="session")
-def php_http_settings(tmp_path_factory):
+def _php_reference_http_settings(tmp_path_factory):
     from grocy.core.config import get_settings
     from php_runtime import read_http_settings
 
