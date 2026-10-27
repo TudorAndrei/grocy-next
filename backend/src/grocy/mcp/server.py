@@ -115,7 +115,7 @@ def create_mcp_server():
         invoke.__doc__ = fn.__doc__ or name.replace("_", " ").capitalize() + "."
         invoke.__annotations__ = {p.name: p.annotation for p in parameters}
         invoke.__annotations__["return"] = signature.return_annotation
-        invoke.__signature__ = signature
+        invoke.__dict__["__signature__"] = signature
         mcp.tool(invoke)
 
     for name in TOOL_CATALOG:

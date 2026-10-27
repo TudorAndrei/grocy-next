@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from grocy.compatibility.query import query_rows
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.db.models.base import Base
 from grocy.db.models.catalog import (
     Location,
     Product,
@@ -38,7 +39,7 @@ from grocy.domains.recipes.service import RecipesService
 
 READ_ONLY_ENTITIES = VIEW_ENTITIES | {"stock_log", "stock", "chores_log", "battery_charge_cycles"}
 
-ENTITY_MODELS: dict[str, type] = {
+ENTITY_MODELS: dict[str, type[Base]] = {
     "products": Product,
     "shopping_locations": ShoppingLocation,
     "userfields": UserfieldDefinition,
@@ -77,7 +78,7 @@ class GenericObjectsService:
     def supported_entities(self) -> list[str]:
         return sorted(set(ENTITY_MODELS) | VIEW_ENTITIES)
 
-    def _require_writable(self, entity: str, *, deleting: bool = False) -> type:
+    def _require_writable(self, entity: str, *, deleting: bool = False) -> type[Base]:
         model = ENTITY_MODELS.get(entity)
         if model is None or entity in READ_ONLY_ENTITIES or (entity == "api_keys" and not deleting):
             message = "Invalid entity" if deleting else "Entity does not exist or is not exposed"

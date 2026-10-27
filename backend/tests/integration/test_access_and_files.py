@@ -315,9 +315,7 @@ def test_native_key_use_preserves_file_time_and_credential_priority(tmp_path, mo
                     "SELECT last_used FROM api_keys WHERE api_key=?", (key,)
                 ).fetchone()[0]
             assert isinstance(last_used, str) and len(last_used) == 19
-        changed = api.get(
-            "/api/system/db-changed-time", headers={"GROCY-API-KEY": "native-valid"}
-        )
+        changed = api.get("/api/system/db-changed-time", headers={"GROCY-API-KEY": "native-valid"})
         assert changed.status_code == 200
         assert changed.json()["changed_time"] == datetime.fromtimestamp(
             old_time, server_timezone()

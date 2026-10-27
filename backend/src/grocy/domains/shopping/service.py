@@ -156,10 +156,11 @@ class ShoppingService:
         settings = {**client_defaults()["user_settings"], **{row.key: row.value for row in stored}}
         enabled = settings.get("shopping_list_auto_add_below_min_stock_amount")
         if enabled and enabled != "0":
+            list_id = settings["shopping_list_auto_add_below_min_stock_amount_list_id"]
+            if list_id is None:
+                raise GrocyError("Missing shopping list ID", code=None)
             await self.add_missing_products(
-                shopping_list_id=int(
-                    settings["shopping_list_auto_add_below_min_stock_amount_list_id"]
-                ),
+                shopping_list_id=int(list_id),
                 commit=False,
             )
 

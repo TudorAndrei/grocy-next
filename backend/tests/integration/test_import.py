@@ -500,9 +500,7 @@ def test_imported_and_application_keys_keep_distinct_expiry_rules(
         with sqlite3.connect(target) as db:
             db.execute("DROP TABLE IF EXISTS grocy_imported_api_keys")
     with sqlite3.connect(target) as db:
-        db.execute(
-            "INSERT INTO api_keys(api_key,user_id,expires) VALUES ('saved-app-key',1,NULL)"
-        )
+        db.execute("INSERT INTO api_keys(api_key,user_id,expires) VALUES ('saved-app-key',1,NULL)")
     monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
     monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
     clear_settings_cache()

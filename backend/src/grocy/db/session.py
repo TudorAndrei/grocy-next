@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -88,7 +88,7 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
 
 
 @asynccontextmanager
-async def migration_connection(engine: AsyncEngine) -> AsyncIterator[AsyncConnection]:
+async def migration_connection(engine: AsyncEngine) -> AsyncGenerator[AsyncConnection]:
     async with engine.connect() as connection:
         sqlite = engine.dialect.name == "sqlite"
         if sqlite:

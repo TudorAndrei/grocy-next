@@ -85,8 +85,8 @@ def test_cli_initialization_supports_native_writes_without_startup_migrations(
         ).fetchone() == (3, 3)
     clear_settings_cache()
     with TestClient(create_app(), headers={"GROCY-API-KEY": key}) as api:
-
         api.options("/api/system/info")
+
         def create(entity, **body):
             response = api.post(f"/api/objects/{entity}", json=body)
             assert response.status_code == 200, response.text

@@ -1,5 +1,5 @@
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -26,7 +26,7 @@ from grocy.db.session import configure_sqlite, get_engine, get_session_factory, 
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI | None) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI | None) -> AsyncGenerator[None]:
     settings = get_settings()
     if settings.database_url.startswith("sqlite"):
         db_path = settings.database_url.split("///")[-1]

@@ -82,11 +82,7 @@ async def lookup_open_food_facts(
     image_url = product.get("image_url") or ""
 
     locations = list(
-        (
-            await session.execute(
-                select(Location).where(Location.active == 1).order_by(Location.id)
-            )
-        )
+        (await session.execute(select(Location).where(Location.active == 1).order_by(Location.id)))
         .scalars()
         .all()
     )
@@ -205,16 +201,12 @@ async def create_product_from_lookup(
 ) -> dict[str, Any]:
     name = plugin_output["name"]
     existing = (
-        await session.execute(select(Product).where(Product.name == name))
-    ).scalars().first()
+        (await session.execute(select(Product).where(Product.name == name))).scalars().first()
+    )
     if existing is not None:
         raise GrocyError(f'Product "{name}" already exists', code=None)
 
-    product_data = {
-        key: value
-        for key, value in plugin_output.items()
-        if not key.startswith("__")
-    }
+    product_data = {key: value for key, value in plugin_output.items() if not key.startswith("__")}
     picture = await _download_image(
         str(plugin_output.get("__image_url") or ""),
         str(plugin_output["__barcode"]),
@@ -226,9 +218,7 @@ async def create_product_from_lookup(
     session.add(product)
     await session.flush()
 
-    session.add(
-        ProductBarcode(product_id=product.id, barcode=str(plugin_output["__barcode"]))
-    )
+    session.add(ProductBarcode(product_id=product.id, barcode=str(plugin_output["__barcode"])))
     if plugin_output["qu_id_stock"] != plugin_output["qu_id_purchase"]:
         session.add(
             QuantityUnitConversion(
@@ -263,17 +253,13 @@ async def external_barcode_lookup(
 
     locations = {
         row.id
-        for row in (
-            await session.execute(select(Location).where(Location.active == 1))
-        )
+        for row in (await session.execute(select(Location).where(Location.active == 1)))
         .scalars()
         .all()
     }
     units = {
         row.id
-        for row in (
-            await session.execute(select(QuantityUnit).where(QuantityUnit.active == 1))
-        )
+        for row in (await session.execute(select(QuantityUnit).where(QuantityUnit.active == 1)))
         .scalars()
         .all()
     }

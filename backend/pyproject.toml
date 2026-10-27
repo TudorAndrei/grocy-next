@@ -38,7 +38,8 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "hypothesis>=6.170.5",
     "ruff>=0.17.1",
-    "basedpyright>=1.40.2",
+    "ty>=0.0.92",
+    "types-regex>=2026.9.29.20261017",
 ]
 
 [tool.uv]
@@ -54,13 +55,13 @@ pythonpath = ["src"]
 target-version = "py313"
 line-length = 100
 src = ["src", "tests"]
+extend-exclude = ["src/grocy/_vendor"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
-[tool.basedpyright]
-pythonVersion = "3.13"
-typeCheckingMode = "standard"
-include = ["src", "tests"]
-venvPath = "."
-venv = ".venv"
+[tool.ruff.lint.isort]
+known-first-party = ["grocy"]
+
+[tool.ty.src]
+exclude = ["src/grocy/_vendor"]

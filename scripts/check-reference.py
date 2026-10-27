@@ -76,9 +76,7 @@ def download_release(path: Path) -> Path:
             return checked_release(path)
         except (OSError, ValueError) as error:
             if url == ASSET_URL:
-                raise ValueError(
-                    f"The pinned release download failed: {error}"
-                ) from error
+                raise ValueError(f"The pinned release download failed: {error}") from error
     raise ValueError("The pinned release download failed.")
 
 
@@ -92,19 +90,13 @@ def run_reference(
 ) -> int:
     with tempfile.TemporaryDirectory(prefix="grocy-reference-") as temporary:
         folder = Path(temporary)
-        archive = (
-            checked_release(release)
-            if release
-            else download_release(folder / "release.zip")
-        )
+        archive = checked_release(release) if release else download_release(folder / "release.zip")
         reference = (folder / "grocy").resolve()
         with zipfile.ZipFile(archive) as bundle:
             for item in bundle.infolist():
                 target = (reference / item.filename).resolve()
                 if not target.is_relative_to(reference):
-                    raise ValueError(
-                        "The archive contains a path outside the reference directory."
-                    )
+                    raise ValueError("The archive contains a path outside the reference directory.")
             bundle.extractall(reference)
         version = json.loads((reference / "version.json").read_text())
         if version["Version"] != RELEASE.lstrip("v"):
@@ -147,25 +139,20 @@ def run_reference(
                 deadline = time.monotonic() + 20
                 while True:
                     try:
-                        with urllib.request.urlopen(
-                            base_url + "/", timeout=2
-                        ) as response:
+                        with urllib.request.urlopen(base_url + "/", timeout=2) as response:
                             response.read()
                         with urllib.request.urlopen(
                             base_url + "/api/system/info", timeout=2
                         ) as response:
                             info = json.load(response)
                         if info["grocy_version"]["Version"] != RELEASE.lstrip("v"):
-                            raise ValueError(
-                                "The server returned a different Grocy version."
-                            )
+                            raise ValueError("The server returned a different Grocy version.")
                         break
                     except (OSError, ValueError):
                         if server.poll() is not None or time.monotonic() >= deadline:
                             log.seek(0)
                             raise ValueError(
-                                "The reference server did not start. "
-                                + log.read()[-4000:]
+                                "The reference server did not start. " + log.read()[-4000:]
                             ) from None
                         time.sleep(0.1)
                 environment.update(
@@ -177,14 +164,13 @@ def run_reference(
                 )
                 with sqlite3.connect(data / "grocy.db") as database:
                     database.execute(
-                        "INSERT INTO api_keys (api_key, user_id, expires) VALUES (?, 1, '2999-12-31 23:59:59')",
+                        "INSERT INTO api_keys (api_key, user_id, expires) "
+                        "VALUES (?, 1, '2999-12-31 23:59:59')",
                         (environment["GROCY_REFERENCE_API_KEY"],),
                     )
                 config = data / "config.php"
                 config.write_text(
-                    config.read_text().replace(
-                        "'DISABLE_AUTH', true", "'DISABLE_AUTH', false"
-                    )
+                    config.read_text().replace("'DISABLE_AUTH', true", "'DISABLE_AUTH', false")
                 )
                 return subprocess.run(
                     [
@@ -211,9 +197,7 @@ def run_reference(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--php", default="php", help="PHP executable with Grocy's required modules"
-    )
+    parser.add_argument("--php", default="php", help="PHP executable with Grocy's required modules")
     parser.add_argument(
         "--release", type=Path, help="Existing release ZIP with the pinned checksum"
     )
@@ -238,10 +222,7 @@ def main() -> int:
     try:
         ZoneInfo(args.timezone)
         defaults = json.loads(
-            (
-                ROOT
-                / "backend/src/grocy/compatibility/grocy_4_5_0_client_defaults.json"
-            ).read_text()
+            (ROOT / "backend/src/grocy/compatibility/grocy_4_5_0_client_defaults.json").read_text()
         )["config"]
         feature_flags: dict[str, str] = {}
         for item in args.feature_flag:
@@ -256,15 +237,11 @@ def main() -> int:
         modules = subprocess.run(
             [php, "-m"], check=True, text=True, capture_output=True, timeout=10
         )
-        missing = REQUIRED_MODULES - {
-            line.strip().lower() for line in modules.stdout.splitlines()
-        }
+        missing = REQUIRED_MODULES - {line.strip().lower() for line in modules.stdout.splitlines()}
         if missing:
             raise ValueError("PHP modules are missing: " + ", ".join(sorted(missing)))
         if importlib.util.find_spec("pytest") is None:
-            raise ValueError(
-                "Use the backend Python environment, which includes pytest."
-            )
+            raise ValueError("Use the backend Python environment, which includes pytest.")
         release = checked_release(args.release.resolve()) if args.release else None
         if args.dry_run:
             result.update(
