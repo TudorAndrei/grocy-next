@@ -4693,11 +4693,16 @@ def barcode_plugin(api, catalog, monkeypatch, tmp_path):
         pytest.skip("User plugin checks need access to the disposable data directory")
     plugins = root / "plugins"
     plugins.mkdir(parents=True, exist_ok=True)
-    path = plugins / "OpenFoodFactsBarcodeLookupPlugin.php"
+    path = plugins / (
+        "OpenFoodFactsBarcodeLookupPlugin.php"
+        if reference
+        else "OpenFoodFactsBarcodeLookupPlugin.py"
+    )
     output = plugins / "lookup.json"
     previous = path.read_bytes() if path.exists() else None
     # This real user plugin replaces the bundled plugin and exposes its constructor data.
-    path.write_text("""<?php
+    if reference:
+        path.write_text("""<?php
 class OpenFoodFactsBarcodeLookupPlugin extends Grocy\\Helpers\\BaseBarcodeLookupPlugin {
     public const PLUGIN_NAME = 'User plugin';
     protected function ExecuteLookup($barcode) {
@@ -4714,6 +4719,24 @@ class OpenFoodFactsBarcodeLookupPlugin extends Grocy\\Helpers\\BaseBarcodeLookup
         return $value;
     }
 }
+""")
+    else:
+        path.write_text("""import json
+from pathlib import Path
+from grocy.plugins import BaseBarcodeLookupPlugin
+
+class OpenFoodFactsBarcodeLookupPlugin(BaseBarcodeLookupPlugin):
+    plugin_name = "User plugin"
+
+    def execute_lookup(self, barcode):
+        value = json.loads(Path(__file__).with_name("lookup.json").read_text())
+        if isinstance(value, dict) and "product" in value:
+            value = value["product"]
+            value["__barcode"] = barcode
+            value.setdefault("location_id", self.locations[0]["id"])
+            value.setdefault("qu_id_purchase", self.quantity_units[0]["id"])
+            value.setdefault("qu_id_stock", self.quantity_units[0]["id"])
+        return value
 """)
 
     class Plugin:

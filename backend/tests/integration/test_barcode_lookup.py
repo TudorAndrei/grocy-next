@@ -129,3 +129,45 @@ def test_external_barcode_lookup_unknown_plugin(
     )
     assert response.status_code == 400
     assert response.json()["error_message"] == "Plugin MissingPlugin was not found"
+
+
+def test_async_user_plugin_receives_active_records_and_saved_settings(
+    client: TestClient, api_headers: dict[str, str], monkeypatch, tmp_path
+) -> None:
+    from grocy.core.config import get_settings
+
+    plugins = tmp_path / "plugins"
+    plugins.mkdir()
+    (plugins / "AsyncLookup.py").write_text("""from grocy.plugins import BaseBarcodeLookupPlugin
+
+class AsyncLookup(BaseBarcodeLookupPlugin):
+    plugin_name = "Async example"
+
+    async def execute_lookup(self, barcode):
+        return {
+            "name": self.user_settings["lookup_test_name"],
+            "location_id": self.locations[0]["id"],
+            "qu_id_purchase": self.quantity_units[0]["id"],
+            "qu_id_stock": self.quantity_units[0]["id"],
+            "__qu_factor_purchase_to_stock": 1,
+            "__barcode": barcode,
+            "description": str(all(row["active"] == 1 for row in self.locations)),
+        }
+""")
+    monkeypatch.setattr(get_settings(), "datapath", tmp_path)
+    monkeypatch.setattr(get_settings(), "stock_barcode_lookup_plugin", "AsyncLookup")
+    inactive = client.post(
+        "/api/objects/locations",
+        json={"name": "Inactive lookup location", "active": 0},
+        headers=api_headers,
+    )
+    assert inactive.status_code == 200
+    saved = client.put(
+        "/api/user/settings/lookup_test_name", json={"value": "Async result"}, headers=api_headers
+    )
+    assert saved.status_code == 204
+    response = client.get("/api/stock/barcodes/external-lookup/async-code", headers=api_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "Async result"
+    assert response.json()["__barcode"] == "async-code"
+    assert response.json()["description"] == "True"

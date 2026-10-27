@@ -15,6 +15,8 @@ uv run ty check . ../scripts --error-on-warning
 
 Use `GROCY_` environment variables or `.env` for configuration. See [.env.example](.env.example). The Python release does not execute `config.php` or PHP plugins. Missing legacy features must be implemented in Python.
 
+Use [Python barcode plugins](../docs/python-barcode-plugins.md) for custom lookup services.
+
 File type detection uses libmagic. The release image includes this data library. On macOS, the application can also use the system `file` tool.
 
 The package uses pinned Grocy assets for database definitions, the OpenAPI contract, translations, and printer tables. PHP source remains available as a test reference.
