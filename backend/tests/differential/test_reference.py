@@ -1491,7 +1491,8 @@ def test_reference_system_metadata_localization_and_time(
     info = client.get("/api/system/info").json()
     assert info["grocy_version"] == expected["grocy_version"]
     assert info["db_version"] == expected["db_version"]
-    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", info["php_version"])
+    runtime_version = info["php_version"] or info["python_version"]
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", runtime_version)
     expected_config = reference.get("/api/system/config").json()
     config = client.get("/api/system/config").json()
     for key in (

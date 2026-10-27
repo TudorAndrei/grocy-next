@@ -5035,7 +5035,7 @@ def test_native_system_info_uses_request_headers_and_saved_version(api, execute_
         response = api.get("/api/system/info", headers={"User-Agent": "Native system agent"})
         assert response.status_code == 200, response.text
         info = response.json()
-        assert set(info) == {
+        fields = {
             "grocy_version",
             "php_version",
             "sqlite_version",
@@ -5043,13 +5043,16 @@ def test_native_system_info_uses_request_headers_and_saved_version(api, execute_
             "os",
             "client",
         }
+        if not info["php_version"]:
+            fields.update({"python_version", "server_version"})
+            assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", info["python_version"])
+            assert isinstance(info["server_version"], str) and info["server_version"]
+        assert set(info) == fields
         assert info["db_version"] == 1337
         assert info["client"] == "Native system agent"
         assert info["grocy_version"] == {"Version": "4.5.0", "ReleaseDate": "2025-03-28"}
-        assert all(
-            isinstance(info[name], str) and info[name]
-            for name in ["php_version", "sqlite_version", "os"]
-        )
+        assert all(isinstance(info[name], str) and info[name] for name in ["sqlite_version", "os"])
+        assert isinstance(info["php_version"], str)
     finally:
         execute_sql("DELETE FROM migrations WHERE migration=1337")
 

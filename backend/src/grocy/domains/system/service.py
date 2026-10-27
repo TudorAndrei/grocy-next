@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy import __version__
 from grocy.compatibility import client_defaults
+from grocy.compatibility.php import INT_MAX, INT_MIN, php_error
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
@@ -139,12 +140,21 @@ class SystemService:
             "LABEL_PRINTER_PARAMS": settings.label_printer_params,
         }
 
-    async def time(self, offset: str = "0") -> dict[str, Any]:
+    async def time(self, offset: Any = "0") -> dict[str, Any]:
         try:
-            if re.fullmatch(r"[+-]?(?:0|[1-9][0-9]*)", offset.strip()) is None:
+            if (
+                not isinstance(offset, str)
+                or re.fullmatch(r"[+-]?(?:0|[1-9][0-9]*)", offset.strip()) is None
+            ):
                 raise ValueError
             seconds = int(offset)
+            if not INT_MIN <= seconds <= INT_MAX:
+                raise ValueError
             timestamp = int(datetime.now(UTC).timestamp()) + seconds
+            if not INT_MIN <= timestamp <= INT_MAX:
+                raise php_error(
+                    "date(): Argument #2 ($timestamp) must be of type ?int, float given"
+                )
             local = datetime.fromtimestamp(timestamp, server_timezone())
         except (ValueError, OverflowError, OSError) as error:
             raise GrocyError(
