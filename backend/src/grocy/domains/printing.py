@@ -18,6 +18,7 @@ from grocy.compatibility.php import (
     loose_equals,
     numeric_value,
     pdo_parameter,
+    php_error,
     php_round,
     php_string,
     truthy,
@@ -25,6 +26,7 @@ from grocy.compatibility.php import (
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
+from grocy.db.native_schema import SCHEMA
 
 _ESCPOS_CHARACTERS = (
     Path(__file__).parents[1]
@@ -198,7 +200,8 @@ async def _rows(session: AsyncSession, statement: str, *parameters: Any) -> list
 
 
 async def recipe_label(session: AsyncSession, recipe_id: str) -> dict[str, Any]:
-    recipes = await _rows(session, "SELECT * FROM `recipes` WHERE `id` = ?", recipe_id)
+    fields = ", ".join(f"`{field}`" for field in SCHEMA["tables"]["recipes"])
+    recipes = await _rows(session, f"SELECT {fields} FROM `recipes` WHERE `id` = ?", recipe_id)
     if not recipes:
         return await _object_label("recipe", "r", recipe_id, None, None)
     recipe = recipes[0]
@@ -385,6 +388,8 @@ def _connection_error(error: OSError) -> str:
 
 
 def _write_device(path: str, data: bytes) -> None:
+    if path == "":
+        raise php_error("Path must not be empty")
     try:
         with Path(path).open("wb+") as device:
             device.write(data)
