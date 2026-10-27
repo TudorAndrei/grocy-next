@@ -8,6 +8,7 @@ type User = {
   username: string;
   first_name: string;
   last_name: string;
+  picture_file_name?: string | null;
 };
 
 type Key = {
@@ -110,6 +111,8 @@ export function AccessManager() {
           username,
           first_name: firstName,
           last_name: lastName,
+          picture_file_name:
+            users.data?.find((user) => user.id === selected)?.picture_file_name ?? null,
           password,
         }),
       }),

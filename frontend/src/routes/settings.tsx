@@ -6,18 +6,19 @@ import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
+import { OwnProfile } from "@/components/OwnProfile";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/useTheme";
 import { currentUserQuery, systemInfoQuery, userSettingsQuery } from "@/hooks/queries";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { api } from "@/lib/api";
 
-type SettingsTab = "connection" | "appearance" | "preferences" | "about";
+type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "about";
 
 type SettingsSearch = { tab: SettingsTab };
 
 const settingsSearchSchema = z.object({
-  tab: z.enum(["connection", "appearance", "preferences", "about"]).catch("connection"),
+  tab: z.enum(["connection", "profile", "appearance", "preferences", "about"]).catch("connection"),
 });
 
 const themePreferenceSchema = z.enum(["light", "dark", "system"]);
@@ -33,7 +34,11 @@ const preferenceFields: Array<{
   type: "number" | "checkbox" | "select";
   options?: string[];
 }> = [
-  { key: "stock_due_soon_days", label: "Due soon window (days)", type: "number" },
+  {
+    key: "stock_due_soon_days",
+    label: "Due soon window (days)",
+    type: "number",
+  },
   {
     key: "stock_decimal_places_amounts",
     label: "Decimal places for amounts",
@@ -151,6 +156,7 @@ function SettingsPage() {
         onChange={setTab}
         tabs={[
           { id: "connection", label: "Connection" },
+          { id: "profile", label: "Profile" },
           { id: "appearance", label: "Appearance" },
           { id: "preferences", label: "Preferences" },
           { id: "about", label: "About" },
@@ -200,6 +206,9 @@ function SettingsPage() {
             </form>
           </div>
         </section>
+      </TabPanel>
+      <TabPanel id="settings-profile" labelledBy="tab-profile" hidden={tab !== "profile"}>
+        {tab === "profile" ? <OwnProfile /> : null}
       </TabPanel>
       <TabPanel id="settings-appearance" labelledBy="tab-appearance" hidden={tab !== "appearance"}>
         <section className="panel" style={{ maxWidth: "32rem" }}>

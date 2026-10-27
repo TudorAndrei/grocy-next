@@ -154,6 +154,7 @@ export type CurrentUser = {
   username: string;
   first_name: string;
   last_name: string;
+  picture_file_name?: string | null;
 };
 
 export type StockLogRow = {
