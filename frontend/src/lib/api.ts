@@ -2,6 +2,7 @@ import { readApiConfig } from "./config";
 import type {
   BarcodeProduct,
   Battery,
+  Booking,
   Chore,
   CreateProposalPayload,
   CurrentUser,
@@ -9,14 +10,18 @@ import type {
   NutritionRecord,
   NutritionRevisionList,
   ProductListResponse,
+  Location,
+  QuantityUnit,
   Recipe,
   RecipeFulfillment,
   ShoppingList,
+  StockLogEntry,
   StockOverviewItem,
   StockProductDetails,
   StockVolatile,
   SystemInfo,
   Task,
+  TrackedId,
   UserSettings,
 } from "./types";
 
@@ -25,6 +30,24 @@ export type AuthResult = {
   username: string;
   api_key: string;
 };
+
+export type PurchaseOptions = {
+  best_before_date?: string | null;
+  location_id?: number | null;
+  price?: number | null;
+};
+
+export type ConsumeOptions = {
+  spoiled?: boolean;
+  location_id?: number | null;
+};
+
+function post<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "POST",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
 
 export class ApiError extends Error {
   status: number;
@@ -144,6 +167,12 @@ export const api = {
     ),
   listProducts: () => request<ProductListResponse>("/api/objects/products"),
 
+  listLocations: () => request<Location[]>("/api/objects/locations"),
+
+  listQuantityUnits: () => request<QuantityUnit[]>("/api/objects/quantity_units"),
+
+  listStockLog: () => request<StockLogEntry[]>("/api/objects/stock_log"),
+
   getProductNutrition: (productId: number) =>
     request<NutritionRecord>(`/api/v2/products/${productId}/nutrition`),
 
@@ -161,10 +190,7 @@ export const api = {
     ),
 
   createProposal: (payload: CreateProposalPayload) =>
-    request<unknown>("/api/v2/nutrition/proposals", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    post<unknown>("/api/v2/nutrition/proposals", payload),
 
   listNutritionRevisions: (productId: number) =>
     request<NutritionRevisionList>(
@@ -179,66 +205,63 @@ export const api = {
   getStockProduct: (productId: number) =>
     request<StockProductDetails>(`/api/stock/products/${productId}`),
 
-  purchaseStock: (productId: number, amount: number) =>
-    request<unknown>(`/api/stock/products/${productId}/add`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
+  purchaseStock: (productId: number, amount: number, options: PurchaseOptions = {}) =>
+    post<Booking>(`/api/stock/products/${productId}/add`, { amount, ...options }),
 
-  consumeStock: (productId: number, amount: number) =>
-    request<unknown>(`/api/stock/products/${productId}/consume`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
+  consumeStock: (productId: number, amount: number, options: ConsumeOptions = {}) =>
+    post<Booking>(`/api/stock/products/${productId}/consume`, { amount, ...options }),
 
   openStock: (productId: number, amount: number) =>
-    request<unknown>(`/api/stock/products/${productId}/open`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
+    post<Booking>(`/api/stock/products/${productId}/open`, { amount }),
 
-  getShoppingList: (listId = 1) =>
-    request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
+  undoTransaction: (transactionId: string) =>
+    post<unknown>(`/api/stock/transactions/${transactionId}/undo`),
 
-  addShoppingProduct: (productId: number, amount: number, listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/add-product", {
-      method: "POST",
-      body: JSON.stringify({
-        product_id: productId,
-        product_amount: amount,
-        list_id: listId,
-      }),
+  getShoppingList: (listId = 1) => request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
+
+  addShoppingProduct: (productId: number, amount: number, note?: string | null, listId = 1) =>
+    post<unknown>("/api/stock/shoppinglist/add-product", {
+      product_id: productId,
+      product_amount: amount,
+      list_id: listId,
+      note: note || null,
     }),
 
   removeShoppingProduct: (productId: number, amount: number, listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/remove-product", {
-      method: "POST",
-      body: JSON.stringify({
-        product_id: productId,
-        product_amount: amount,
-        list_id: listId,
-      }),
+    post<unknown>("/api/stock/shoppinglist/remove-product", {
+      product_id: productId,
+      product_amount: amount,
+      list_id: listId,
     }),
 
-  clearShoppingList: (listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/clear", {
-      method: "POST",
-      body: JSON.stringify({ list_id: listId }),
+  setShoppingItemDone: (itemId: number, done: boolean) =>
+    request<unknown>(`/api/objects/shopping_list/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify({ done: done ? 1 : 0 }),
     }),
+
+  clearShoppingList: (listId = 1, doneOnly = false) =>
+    post<unknown>("/api/stock/shoppinglist/clear", { list_id: listId, done_only: doneOnly }),
 
   addMissingToShoppingList: (listId = 1) =>
-    request<unknown>("/api/stock/shoppinglist/add-missing-products", {
-      method: "POST",
-      body: JSON.stringify({ list_id: listId }),
-    }),
+    post<unknown>("/api/stock/shoppinglist/add-missing-products", { list_id: listId }),
 
   listRecipes: () => request<Recipe[]>("/api/objects/recipes"),
+
+  // The Grocy list route returns recipe rows, so ask the v2 route per recipe.
+  listRecipeFulfillment: async () => {
+    const recipes = await request<Recipe[]>("/api/objects/recipes");
+    return Promise.all(
+      recipes.map((recipe) =>
+        request<RecipeFulfillment>(`/api/v2/recipes/${recipe.id}/fulfillment`),
+      ),
+    );
+  },
 
   getRecipeFulfillment: (recipeId: number) =>
     request<RecipeFulfillment>(`/api/v2/recipes/${recipeId}/fulfillment`),
 
-  consumeRecipe: (recipeId: number) =>
-    request<unknown>(`/api/recipes/${recipeId}/consume`, { method: "POST" }),
+  consumeRecipe: (recipeId: number) => post<unknown>(`/api/recipes/${recipeId}/consume`),
 
   addRecipeMissingToShopping: (recipeId: number) =>
     request<unknown>(
@@ -246,26 +269,37 @@ export const api = {
       { method: "POST", body: JSON.stringify({}) },
     ),
 
-  listChores: () => request<Chore[]>("/api/chores"),
+  // /api/chores returns the Grocy chores_current view; expose a plain name.
+  listChores: () =>
+    request<Chore[]>("/api/chores").then((rows) =>
+      rows.map((row) => ({ ...row, name: row.chore_name ?? row.name ?? `Chore ${row.id}` })),
+    ),
 
-  executeChore: (choreId: number) =>
-    request<unknown>(`/api/chores/${choreId}/execute`, { method: "POST" }),
+  executeChore: (choreId: number) => post<TrackedId>(`/api/chores/${choreId}/execute`),
+
+  undoChoreExecution: (executionId: number) =>
+    post<unknown>(`/api/chores/executions/${executionId}/undo`),
 
   listTasks: (includeDone = false) =>
     request<Task[]>(
       `/api/tasks?include_done=${includeDone ? "true" : "false"}`,
     ),
 
-  completeTask: (taskId: number) =>
-    request<unknown>(`/api/tasks/${taskId}/complete`, { method: "POST" }),
+  completeTask: (taskId: number) => post<unknown>(`/api/tasks/${taskId}/complete`),
 
-  undoTask: (taskId: number) =>
-    request<unknown>(`/api/tasks/${taskId}/undo`, { method: "POST" }),
+  undoTask: (taskId: number) => post<unknown>(`/api/tasks/${taskId}/undo`),
 
-  listBatteries: () => request<Battery[]>("/api/batteries"),
-
-  chargeBattery: (batteryId: number) =>
-    request<unknown>(`/api/batteries/${batteryId}/charge`, { method: "POST" }),
+  // /api/batteries nests the battery record; lift its fields beside the charge state.
+  listBatteries: () =>
+    request<Battery[]>("/api/batteries").then((rows) =>
+      rows.map((row) => ({
+        ...row,
+        name: row.battery?.name ?? row.name ?? `Battery ${row.id}`,
+        description: row.battery?.description ?? row.description,
+        used_in: row.battery?.used_in ?? row.used_in,
+        charge_interval_days: row.battery?.charge_interval_days ?? row.charge_interval_days,
+      })),
+    ),
 
   getSystemInfo: () => request<SystemInfo>("/api/system/info"),
   setupStatus: () => request<{ needs_setup: boolean }>("/api/v2/setup"),
@@ -338,10 +372,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ list_id: listId }),
     }),
+  chargeBattery: (batteryId: number) => post<TrackedId>(`/api/batteries/${batteryId}/charge`),
+
+  undoBatteryCharge: (chargeCycleId: number) =>
+    post<unknown>(`/api/batteries/charge-cycles/${chargeCycleId}/undo`),
 };
 
 export const queryKeys = {
   products: ["products"] as const,
+  locations: ["locations"] as const,
+  quantityUnits: ["quantity-units"] as const,
+  stockLog: ["stock", "log"] as const,
   nutrition: (id: number) => ["nutrition", id] as const,
   proposalsPending: ["proposals", "pending"] as const,
   revisions: (id: number) => ["revisions", id] as const,
@@ -351,6 +392,7 @@ export const queryKeys = {
   stockJournal: (limit: number) => ["stock", "journal", limit] as const,
   shopping: (id = 1) => ["shopping", id] as const,
   recipes: ["recipes"] as const,
+  recipesFulfillment: ["recipe-fulfillment"] as const,
   recipeFulfillment: (id: number) => ["recipe-fulfillment", id] as const,
   chores: ["chores"] as const,
   tasks: ["tasks"] as const,

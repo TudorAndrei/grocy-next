@@ -1,104 +1,103 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, queryKeys } from "@/lib/api";
+import { useCatalog } from "@/lib/catalog";
 import { ErrorBlock } from "@/components/ErrorBlock";
+import { Icon } from "@/components/Icon";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { NutritionPanel } from "@/components/NutritionPanel";
-import { ProposalForm } from "@/components/ProposalForm";
 import { PageHeader } from "@/components/PageHeader";
+import { ProposalForm } from "@/components/ProposalForm";
 import { RevisionHistory } from "@/components/RevisionHistory";
 import { ProductMerge } from "@/components/ProductMerge";
 import { StockActions } from "@/components/StockActions";
+import { StockLedger } from "@/components/StockLedger";
 import { openApiDocument } from "@/lib/open-document";
+
+type ProductSearch = { move?: "purchase" | "consume" | "open" };
 
 export const Route = createFileRoute("/products/$productId")({
   component: ProductDetailPage,
+  validateSearch: (search: Record<string, unknown>): ProductSearch => {
+    const move = search.move;
+    return move === "purchase" || move === "consume" || move === "open" ? { move } : {};
+  },
 });
 
 function ProductDetailPage() {
   const { productId } = Route.useParams();
+  const { move } = Route.useSearch();
   const id = Number(productId);
+  const catalog = useCatalog();
 
-  const productsQuery = useQuery({
-    queryKey: queryKeys.products,
-    queryFn: () => api.listProducts(),
-  });
-
-  const nutritionQuery = useQuery({
+  const nutrition = useQuery({
     queryKey: queryKeys.nutrition(id),
     queryFn: () => api.getProductNutrition(id),
     enabled: Number.isFinite(id),
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && error.status === 404) {
-        return false;
-      }
-      return failureCount < 2;
-    },
+    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
   });
 
-  const product = productsQuery.data?.find((p) => p.id === id);
-  const title = product?.name ?? `Product #${productId}`;
-  const nutritionMissing =
-    nutritionQuery.error instanceof ApiError &&
-    nutritionQuery.error.status === 404;
+  const product = catalog.product(id);
+  const nutritionMissing = nutrition.error instanceof ApiError && nutrition.error.status === 404;
+  const facts = [
+    catalog.location(product?.location_id)?.name,
+    product ? `Stock unit ${catalog.unit(product.qu_id_stock)?.name ?? "—"}` : null,
+    product?.barcode ? `Barcode ${product.barcode}` : null,
+  ].filter(Boolean);
 
   return (
     <>
-      <Link to="/products" className="back-link">
-        ← Products
-      </Link>
       <PageHeader
-        title={title}
-        lead={
-          product?.barcode
-            ? `Barcode ${product.barcode}`
-            : "Stock moves, nutrition, and staged updates for this item."
+        back={
+          <Link to="/products" className="back-link">
+            <Icon name="back" />
+            Products
+          </Link>
         }
+        title={product?.name ?? `Product #${productId}`}
+        lead={facts.length ? facts.join(" · ") : product?.description}
         actions={
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={() =>
-              openApiDocument(`/api/stock/products/${id}/printlabel`)
-            }
+            onClick={() => openApiDocument(`/api/stock/products/${id}/printlabel`)}
           >
             Print label
           </button>
         }
       />
 
-      <div className="stack">
-        <StockActions productId={id} />
-        {nutritionQuery.isLoading ? (
-          <LoadingBlock label="Loading nutrition…" />
-        ) : null}
-        {nutritionQuery.isError && !nutritionMissing ? (
-          <ErrorBlock
-            message={
-              nutritionQuery.error instanceof Error
-                ? nutritionQuery.error.message
-                : "Could not load nutrition."
-            }
-          />
-        ) : null}
-        {nutritionMissing ? (
-          <p className="empty-state">
-            No nutrition saved yet for this product.
-          </p>
-        ) : null}
-        {nutritionQuery.isSuccess ? (
-          <NutritionPanel data={nutritionQuery.data} />
-        ) : null}
-
-        <ProductMerge productId={id} />
-        <div className="split">
-          <ProposalForm
-            key={`${id}-${nutritionQuery.data?.revision ?? 0}`}
-            productId={id}
-            nutrition={nutritionQuery.data ?? null}
-          />
-          <RevisionHistory productId={id} />
+      <div className="detail">
+        <StockActions key={move ?? "purchase"} productId={id} initialMove={move} />
+        <div className="detail-side">
+          {nutrition.isLoading ? <LoadingBlock label="Loading nutrition…" /> : null}
+          {nutrition.isError && !nutritionMissing ? (
+            <ErrorBlock message={(nutrition.error as Error).message} />
+          ) : null}
+          {nutritionMissing ? (
+            <section className="panel">
+              <h2 className="panel-head">Nutrition</h2>
+              <p className="panel-empty">
+                No nutrition saved yet. Propose values below, or ask your agent to read the label.
+              </p>
+            </section>
+          ) : null}
+          {nutrition.isSuccess ? <NutritionPanel data={nutrition.data} /> : null}
         </div>
+      </div>
+
+      <div className="split">
+        <ProposalForm
+          key={nutrition.data?.revision ?? "none"}
+          productId={id}
+          nutrition={nutrition.data ?? null}
+        />
+        <RevisionHistory productId={id} />
+      </div>
+
+      <div className="split">
+        <StockLedger productId={id} />
+        <ProductMerge productId={id} />
       </div>
     </>
   );

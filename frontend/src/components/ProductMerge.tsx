@@ -29,10 +29,12 @@ export function ProductMerge({ productId }: Props) {
   const choices = (products.data ?? []).filter((p) => p.id !== productId);
 
   return (
-    <section className="panel">
-      <div className="panel-inner">
-        <h2>Merge products</h2>
-        <p className="page-lead">
+    <section className="panel" aria-labelledby="merge-heading">
+      <h2 className="panel-head" id="merge-heading">
+        Merge products
+      </h2>
+      <div className="panel-body">
+        <p className="field-hint">
           Move stock and history from another product into this one, then remove
           the duplicate catalog entry.
         </p>

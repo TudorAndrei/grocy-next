@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as BarcodeRouteImport } from './routes/barcode'
+import { Route as BatteriesRouteImport } from './routes/batteries'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as ChoresRouteImport } from './routes/chores'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as HouseholdRouteImport } from './routes/household'
@@ -24,6 +27,7 @@ import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as StockRouteImport } from './routes/stock'
+import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
@@ -34,14 +38,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BarcodeRoute = BarcodeRouteImport.update({
   id: '/barcode',
   path: '/barcode',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BatteriesRoute = BatteriesRouteImport.update({
+  id: '/batteries',
+  path: '/batteries',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChoresRoute = ChoresRouteImport.update({
+  id: '/chores',
+  path: '/chores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -104,6 +123,11 @@ const StockRoute = StockRouteImport.update({
   path: '/stock',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -127,8 +151,11 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/barcode': typeof BarcodeRoute
+  '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
+  '/chores': typeof ChoresRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
@@ -141,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/stock': typeof StockRoute
+  '/tasks': typeof TasksRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -148,8 +176,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/barcode': typeof BarcodeRoute
+  '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
+  '/chores': typeof ChoresRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
@@ -162,6 +193,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/stock': typeof StockRoute
+  '/tasks': typeof TasksRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products': typeof ProductsIndexRoute
@@ -170,8 +202,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/barcode': typeof BarcodeRoute
+  '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
+  '/chores': typeof ChoresRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
@@ -184,6 +219,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/stock': typeof StockRoute
+  '/tasks': typeof TasksRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -193,8 +229,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activity'
     | '/barcode'
+    | '/batteries'
     | '/calendar'
+    | '/chores'
     | '/dashboard'
     | '/equipment'
     | '/household'
@@ -207,6 +246,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/stock'
+    | '/tasks'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -214,8 +254,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activity'
     | '/barcode'
+    | '/batteries'
     | '/calendar'
+    | '/chores'
     | '/dashboard'
     | '/equipment'
     | '/household'
@@ -228,6 +271,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/stock'
+    | '/tasks'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products'
@@ -235,8 +279,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activity'
     | '/barcode'
+    | '/batteries'
     | '/calendar'
+    | '/chores'
     | '/dashboard'
     | '/equipment'
     | '/household'
@@ -249,6 +296,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/stock'
+    | '/tasks'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -257,8 +305,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
   BarcodeRoute: typeof BarcodeRoute
+  BatteriesRoute: typeof BatteriesRoute
   CalendarRoute: typeof CalendarRoute
+  ChoresRoute: typeof ChoresRoute
   DashboardRoute: typeof DashboardRoute
   EquipmentRoute: typeof EquipmentRoute
   HouseholdRoute: typeof HouseholdRoute
@@ -271,6 +322,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
   StockRoute: typeof StockRoute
+  TasksRoute: typeof TasksRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
@@ -286,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/barcode': {
       id: '/barcode'
       path: '/barcode'
@@ -293,11 +352,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BarcodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/batteries': {
+      id: '/batteries'
+      path: '/batteries'
+      fullPath: '/batteries'
+      preLoaderRoute: typeof BatteriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calendar': {
       id: '/calendar'
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chores': {
+      id: '/chores'
+      path: '/chores'
+      fullPath: '/chores'
+      preLoaderRoute: typeof ChoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -384,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/': {
       id: '/products/'
       path: '/products'
@@ -417,8 +497,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
   BarcodeRoute: BarcodeRoute,
+  BatteriesRoute: BatteriesRoute,
   CalendarRoute: CalendarRoute,
+  ChoresRoute: ChoresRoute,
   DashboardRoute: DashboardRoute,
   EquipmentRoute: EquipmentRoute,
   HouseholdRoute: HouseholdRoute,
@@ -431,6 +514,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
   StockRoute: StockRoute,
+  TasksRoute: TasksRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
   ProductsIndexRoute: ProductsIndexRoute,

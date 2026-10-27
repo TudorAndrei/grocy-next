@@ -1,0 +1,60 @@
+{
+  "title": "Choose the visual world for Grocy Next",
+  "question": "The roll assigned Enamel Canisters. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "kind": "assigned",
+      "label": "Enamel Canisters",
+      "kicker": "THE ROLL",
+      "lineage": "European enamelware kitchen canisters (Zucker, Mehl, Kaffee)",
+      "thesis": "The pantry as a shelf of labelled canisters: every product shows how full it is.",
+      "palette": ["#f3f4ef", "#1d3a8a", "#101318", "#c8371e", "#d9961a", "#2e7d4f"],
+      "materials": ["white enamel ground", "cobalt rim as the shell colour", "bold expanded caps labels"],
+      "viewport": "Cobalt rail left; Today board: Use first / Running low / Due this week / Agent proposals; each stock row carries a canister fill gauge with a minimum tick.",
+      "risk": "Gauges need a sane scale; products with no minimum get an honest amount-only state, not a fake fill.",
+      "raised": [
+        {"from": "notation-diagram-systems-labanotation", "raise": "Length is exact time: due bars on the Today board measure the real days left, on one 14-day scale."},
+        {"from": "vernacular-ephemera-cassette-j-card", "raise": "Amounts set right-aligned in tabular figures, tight to the column edge, unit beside the number."},
+        {"from": "brand-identity-canon-saville-catalog-sleeve", "raise": "Nothing labelled twice: no stat tiles that repeat a table; counts live on the filter that shows them."},
+        {"from": "ikeda-datamatics", "raise": "Data at full contrast; grey only for labels, never for amounts or dates."},
+        {"from": "wayfinding-cartography-signage-midnight-transit-diagram", "raise": "Each domain (Stock, Shopping, Chores, Agent) keeps one fixed marker colour across nav and board."},
+        {"from": "pop-culture-shelf-character-goods-catalog", "raise": "Every product keeps fixed furniture in fixed places: name, amount, gauge, date, actions."}
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html"
+    },
+    {
+      "id": "model-pick",
+      "kind": "pick",
+      "label": "Nutrition Facts Panel",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "the 1990s FDA Nutrition Facts label",
+      "thesis": "The household read like a facts panel: heavy rules, black grotesk, numbers that cannot lie.",
+      "palette": ["#ffffff", "#000000", "#d12b1f"],
+      "materials": ["8pt / 3pt / hairline rule hierarchy", "condensed black grotesk", "tabular figures"],
+      "viewport": "Top bar; Today board set as one 'Household Facts' panel with thick-thin rule sections, stock below as a ruled list.",
+      "risk": "Familiar: the label cliché many food apps reach for; monochrome may feel austere on a phone.",
+      "html": ".impeccable/mocks/decision/model-pick.html"
+    },
+    {"id": "ch-saville", "kind": "challenger", "catalogId": "brand-identity-canon-saville-catalog-sleeve", "label": "Factory Catalog Sleeve", "verdict": "declined", "lineage": "Peter Saville / Factory Records", "thesis": "Every product as a numbered catalog entry.", "palette": ["#0b0b0b", "#ffffff", "#e23b2e", "#2f6fd6"], "materials": ["matte black", "white hairline plots"], "viewport": "Black index of product numbers, colour codes in place of names.", "case": "Fuses poorly: replacing names with codes breaks a kitchen task.", "risk": "Unreadable at a glance on a phone.", "kept": "Nothing labelled twice."},
+    {"id": "ch-jcard", "kind": "challenger", "catalogId": "vernacular-ephemera-cassette-j-card", "label": "Cassette J-Card", "verdict": "declined", "lineage": "mixtape inlay cards", "thesis": "Lists as tracklists with exact running totals.", "palette": ["#fbfbf6", "#2a3f9e", "#c62828"], "materials": ["ballpoint on lined stock"], "viewport": "Shopping list as side A / side B.", "case": "Fuses poorly: handwriting is playful and unlike Grocy.", "risk": "Reads as nostalgia costume.", "kept": "Right-aligned tabular amounts tight to the edge."},
+    {"id": "ch-laban", "kind": "challenger", "catalogId": "notation-diagram-systems-labanotation", "label": "Labanotation Score", "verdict": "declined", "lineage": "dance notation", "thesis": "Time flows upward; length is exact duration.", "palette": ["#ffffff", "#111111", "#d8d8d8"], "materials": ["shaded symbol blocks"], "viewport": "Due items as a vertical score.", "case": "Fuses poorly: notation is foreign to the audience.", "risk": "Needs a legend to read.", "kept": "Bar length equals exact days left."},
+    {"id": "ch-goods", "kind": "challenger", "catalogId": "pop-culture-shelf-character-goods-catalog", "label": "Character Goods Catalog", "verdict": "declined", "lineage": "mascot merchandise catalogs", "thesis": "Products as a ranked mascot roster.", "palette": ["#fde7ef", "#e6f4ff", "#ff5a8a"], "materials": ["pastel flat fills"], "viewport": "Pastel product grid with name plates.", "case": "Fuses poorly: the user ruled out playful.", "risk": "Directly conflicts with the brief.", "kept": "Fixed furniture per product."},
+    {"id": "ch-transit", "kind": "challenger", "catalogId": "wayfinding-cartography-signage-midnight-transit-diagram", "label": "Midnight Transit Diagram", "verdict": "declined", "lineage": "enamel metro maps", "thesis": "Household domains as coloured lines.", "palette": ["#0f1a3a", "#f4f1e8", "#e0362c", "#2f6ad8", "#f0a524"], "materials": ["midnight enamel", "45° line routing"], "viewport": "Dark map of chores and stock as routes.", "case": "Fuses poorly: a pantry is not a network; clarity drops.", "risk": "Map metaphor hides the list task.", "kept": "One fixed colour per domain."},
+    {"id": "ch-ikeda", "kind": "challenger", "catalogId": "ikeda-datamatics", "label": "Datamatics", "verdict": "declined", "lineage": "Ryoji Ikeda", "thesis": "The household as a pure black-and-white data field.", "palette": ["#000000", "#ffffff"], "materials": ["barcode bars", "monospace numerals"], "viewport": "Barcode field of stock levels.", "case": "Fuses poorly: strobing art is not a kitchen tool.", "risk": "Hostile in daily use.", "kept": "Data at full contrast."}
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code"},
+  "canon": true,
+  "canonCard": {
+    "kind": "canon",
+    "label": "The category standard (Grocy-style)",
+    "thesis": "Grocy's own layout, executed impeccably: dark sidebar, dense tables, blue primary.",
+    "palette": ["#ffffff", "#212529", "#0d6efd"],
+    "materials": ["Bootstrap-like admin grid", "dense data tables"],
+    "viewport": "Dark left sidebar, stock overview table with due badges, toolbar on top.",
+    "risk": "Indistinguishable from every self-hosted admin panel by design.",
+    "html": ".impeccable/mocks/decision/canon.html"
+  },
+  "steer": true
+}

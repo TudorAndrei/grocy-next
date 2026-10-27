@@ -1,55 +1,43 @@
-import { nutrientLabels } from "./ProposalForm";
-import type { Nutrients, NutritionRecord } from "@/lib/types";
+import type { NutritionRecord } from "@/lib/types";
+import { NUTRIENTS, formatNutrient } from "@/lib/nutrients";
 
-type NutritionPanelProps = {
-  data: NutritionRecord;
-};
-
-function formatNutrientValue(
-  value: number | string | null | undefined,
-): string {
-  if (value === null || value === undefined) {
-    return "—";
-  }
-  const num = typeof value === "string" ? Number(value) : value;
-  if (!Number.isFinite(num)) {
-    return String(value);
-  }
-  return Number.isInteger(num) ? String(num) : num.toFixed(2);
-}
-
-export function NutritionPanel({ data }: NutritionPanelProps) {
-  const entries = Object.entries(data.nutrients ?? {}).sort(([a], [b]) =>
-    a.localeCompare(b),
-  );
+export function NutritionPanel({ data }: { data: NutritionRecord }) {
+  const nutrients = data.nutrients ?? {};
+  const known = NUTRIENTS.filter((n) => n.key in nutrients);
+  const extra = Object.keys(nutrients).filter((key) => !NUTRIENTS.some((n) => n.key === key));
 
   return (
     <section className="panel" aria-labelledby="nutrition-heading">
-      <div className="panel-inner">
-        <h2 id="nutrition-heading" className="panel-title">
-          Nutrition
-        </h2>
-        <p
-          className="muted"
-          style={{ marginTop: "-0.35rem", marginBottom: "1rem" }}
-        >
-          Per {data.basis_quantity} {data.basis_unit} · revision {data.revision}
+      <h2 className="panel-head" id="nutrition-heading">
+        Nutrition
+        <span>
+          per {data.basis_quantity} {data.basis_unit} · revision {data.revision}
+        </span>
+      </h2>
+      {known.length + extra.length === 0 ? (
+        <p className="panel-empty">No nutrient values recorded yet.</p>
+      ) : (
+        <dl className="facts">
+          {known.map((n) => (
+            <div key={n.key} data-indent={n.indent ? "true" : undefined}>
+              <dt>{n.label}</dt>
+              <dd>{formatNutrient(nutrients[n.key], n.unit)}</dd>
+            </div>
+          ))}
+          {extra.map((key) => (
+            <div key={key}>
+              <dt>{key.replace(/_/g, " ")}</dt>
+              <dd>{formatNutrient((nutrients as Record<string, number | null>)[key], "")}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {data.source?.type ? (
+        <p className="panel-foot">
+          Source: {data.source.type.replace(/_/g, " ")}
+          {data.source.note ? ` · ${data.source.note}` : ""}
         </p>
-        {entries.length === 0 ? (
-          <p className="empty-state" style={{ padding: 0 }}>
-            No nutrient fields recorded yet.
-          </p>
-        ) : (
-          <dl className="nutrient-grid">
-            {entries.map(([key, value]) => (
-              <div key={key}>
-                <dt>{nutrientLabels[key as keyof Nutrients] ?? key}</dt>
-                <dd>{formatNutrientValue(value)}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </div>
+      ) : null}
     </section>
   );
 }

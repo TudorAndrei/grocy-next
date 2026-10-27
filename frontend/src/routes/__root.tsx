@@ -6,6 +6,8 @@ import { LoginPage } from "@/components/LoginPage";
 import { SetupWizard } from "@/components/SetupWizard";
 import { currentUserQuery } from "@/hooks/queries";
 import { api, ApiError, queryKeys } from "@/lib/api";
+import { CommandProvider } from "@/components/CommandBar";
+import { Toaster } from "@/components/Toaster";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -38,8 +40,12 @@ function RootLayout() {
     );
   }
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <Toaster>
+      <CommandProvider>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </CommandProvider>
+    </Toaster>
   );
 }

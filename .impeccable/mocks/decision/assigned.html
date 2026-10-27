@@ -1,0 +1,101 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Archivo,sans-serif;background:#f3f4ef;color:#101318;display:grid;grid-template-columns:232px 1fr;font-size:14px}
+.rail{background:#1d3a8a;color:#e9edf8;padding:22px 14px;display:flex;flex-direction:column;gap:22px}
+.mark{font-stretch:125%;font-weight:800;font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:0 10px}
+.mark span{display:block;font-size:10px;letter-spacing:.24em;opacity:.7;font-weight:600}
+.cmd{background:#16306f;border:1px solid #3a56a8;border-radius:8px;padding:9px 10px;color:#b9c4e6;display:flex;justify-content:space-between;font-size:13px}
+.cmd kbd{font-family:inherit;font-size:11px;border:1px solid #4c67b5;border-radius:4px;padding:0 5px}
+nav{display:flex;flex-direction:column;gap:2px}
+nav b{font-stretch:125%;font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.6;padding:12px 10px 6px}
+nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;color:#dbe2f5}
+nav a i{width:8px;height:8px;border-radius:50%}
+nav a.on{background:#f3f4ef;color:#1d3a8a;font-weight:700}
+nav a em{margin-left:auto;font-style:normal;font-size:12px;font-variant-numeric:tabular-nums;background:#ffffff22;border-radius:9px;padding:0 7px}
+nav a.on em{background:#1d3a8a;color:#fff}
+main{padding:26px 34px;display:grid;grid-template-rows:auto 1fr;gap:20px}
+header{display:flex;align-items:end;justify-content:space-between;border-bottom:3px solid #1d3a8a;padding-bottom:14px}
+h1{font-stretch:125%;font-weight:800;font-size:30px;text-transform:uppercase;letter-spacing:.04em;color:#1d3a8a}
+header p{color:#5b6170;margin-top:4px}
+.btns{display:flex;gap:8px}
+.btn{border:1.5px solid #1d3a8a;border-radius:999px;padding:8px 16px;font-weight:700;color:#1d3a8a;background:#fff}
+.btn.p{background:#1d3a8a;color:#fff}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;min-height:0}
+.panel{background:#fff;border:1.5px solid #d5d9e3;border-radius:14px;overflow:hidden}
+.panel h2{font-stretch:125%;font-weight:800;font-size:12px;letter-spacing:.18em;text-transform:uppercase;padding:14px 18px;border-bottom:1.5px solid #e4e7ee;display:flex;justify-content:space-between}
+.panel h2 span{color:#5b6170;letter-spacing:.04em;font-stretch:100%;font-weight:600}
+.row{display:grid;grid-template-columns:1fr 150px 74px 120px;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid #eef0f4}
+.name{font-weight:700;font-size:15px}
+.name small{display:block;font-weight:400;color:#5b6170;font-size:12px}
+.gauge{height:14px;border:1.5px solid #1d3a8a;border-radius:7px;position:relative;overflow:hidden;background:#f3f4ef}
+.gauge b{position:absolute;inset:0 auto 0 0;background:#1d3a8a}
+.gauge i{position:absolute;top:-2px;bottom:-2px;width:2px;background:#101318}
+.gauge.low{border-color:#c8371e}.gauge.low b{background:#c8371e}
+.amt{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:15px}
+.amt u{text-decoration:none;font-weight:400;color:#5b6170;font-size:12px;margin-left:3px}
+.acts{display:flex;gap:6px;justify-content:end}
+.acts span{border:1.5px solid #c9cfdd;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:#1d3a8a}
+.due{display:grid;grid-template-columns:150px 1fr 70px;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid #eef0f4}
+.track{height:10px;position:relative;background:repeating-linear-gradient(90deg,#e4e7ee 0 1px,transparent 1px calc(100%/14))}
+.track b{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.d{font-variant-numeric:tabular-nums;text-align:right;font-weight:700}
+.prop{padding:12px 18px;border-bottom:1px solid #eef0f4;display:flex;justify-content:space-between;align-items:center}
+.tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:2px 6px;background:#efe8fb;color:#5a32a3}
+.col{display:flex;flex-direction:column;gap:20px;min-height:0}
+</style></head><body>
+<aside class="rail">
+  <div class="mark">Grocy Next<span>Household</span></div>
+  <div class="cmd">Purchase, consume, find… <kbd>⌘K</kbd></div>
+  <nav>
+    <a class="on"><i style="background:#1d3a8a"></i>Today<em>9</em></a>
+    <b>Kitchen</b>
+    <a><i style="background:#8fb0ff"></i>Stock</a>
+    <a><i style="background:#f0b43c"></i>Shopping<em>6</em></a>
+    <a><i style="background:#8fb0ff"></i>Products</a>
+    <a><i style="background:#8fb0ff"></i>Recipes</a>
+    <b>Home</b>
+    <a><i style="background:#7fd1a0"></i>Chores<em>2</em></a>
+    <a><i style="background:#7fd1a0"></i>Tasks</a>
+    <a><i style="background:#7fd1a0"></i>Batteries</a>
+    <b>Agent</b>
+    <a><i style="background:#c7a6ff"></i>Review<em>3</em></a>
+    <a><i style="background:#c7a6ff"></i>Activity</a>
+  </nav>
+</aside>
+<main>
+  <header>
+    <div><h1>Today</h1><p>Saturday 24 October · 9 things need you</p></div>
+    <div class="btns"><span class="btn">Add missing to list</span><span class="btn p">Purchase</span></div>
+  </header>
+  <div class="grid">
+    <section class="panel">
+      <h2>Running low <span>4 below minimum</span></h2>
+      <div class="row"><div class="name">Whole milk<small>Fridge · min 2 L</small></div><div class="gauge low"><b style="width:25%"></b><i style="left:50%"></i></div><div class="amt">1<u>L</u></div><div class="acts"><span>+1</span><span>Consume</span></div></div>
+      <div class="row"><div class="name">Eggs<small>Fridge · min 6 pcs</small></div><div class="gauge low"><b style="width:17%"></b><i style="left:50%"></i></div><div class="amt">2<u>pcs</u></div><div class="acts"><span>+1</span><span>Consume</span></div></div>
+      <div class="row"><div class="name">Basmati rice<small>Pantry · min 1 kg</small></div><div class="gauge low"><b style="width:20%"></b><i style="left:50%"></i></div><div class="amt">0.4<u>kg</u></div><div class="acts"><span>+1</span><span>Consume</span></div></div>
+      <div class="row"><div class="name">Coffee beans<small>Pantry · min 500 g</small></div><div class="gauge low"><b style="width:30%"></b><i style="left:50%"></i></div><div class="amt">300<u>g</u></div><div class="acts"><span>+1</span><span>Consume</span></div></div>
+      <div class="row"><div class="name">Rolled oats<small>Pantry · min 500 g</small></div><div class="gauge"><b style="width:72%"></b><i style="left:50%"></i></div><div class="amt">720<u>g</u></div><div class="acts"><span>+1</span><span>Consume</span></div></div>
+      <div class="row"><div class="name">Greek yoghurt<small>Fridge · min 2 pcs</small></div><div class="gauge"><b style="width:75%"></b><i style="left:50%"></i></div><div class="amt">3<u>pcs</u></div><div class="acts"><span>+1</span><span>Consume</span></div></div>
+    </section>
+    <div class="col">
+      <section class="panel">
+        <h2>Use first <span>next 14 days</span></h2>
+        <div class="due"><span class="name">Spinach</span><div class="track"><b style="width:3%;background:#c8371e"></b></div><span class="d" style="color:#c8371e">−1 d</span></div>
+        <div class="due"><span class="name">Chicken thighs</span><div class="track"><b style="width:14%;background:#d9961a"></b></div><span class="d">2 d</span></div>
+        <div class="due"><span class="name">Greek yoghurt</span><div class="track"><b style="width:29%;background:#d9961a"></b></div><span class="d">4 d</span></div>
+        <div class="due"><span class="name">Water filter</span><div class="track"><b style="width:43%;background:#2e7d4f"></b></div><span class="d">6 d</span></div>
+        <div class="due"><span class="name">Clean the oven</span><div class="track"><b style="width:50%;background:#2e7d4f"></b></div><span class="d">7 d</span></div>
+      </section>
+      <section class="panel">
+        <h2>From your agent <span>3 waiting</span></h2>
+        <div class="prop"><div><span class="tag">Nutrition</span> <b>Rolled oats</b> · 379 kcal / 100 g</div><span class="btn p" style="padding:5px 12px;font-size:12px">Review</span></div>
+        <div class="prop"><div><span class="tag">Nutrition</span> <b>Greek yoghurt</b> · 97 kcal / 100 g</div><span class="btn p" style="padding:5px 12px;font-size:12px">Review</span></div>
+        <div class="prop"><div><span class="tag">Stock</span> <b>Purchased 6 eggs</b> · 2 h ago</div><span class="btn" style="padding:5px 12px;font-size:12px">Undo</span></div>
+      </section>
+    </div>
+  </div>
+</main>
+</body></html>

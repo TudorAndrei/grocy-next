@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f4f6f9;color:#212529;display:grid;grid-template-columns:240px 1fr;font-size:14px}
+.side{background:#212529;color:#adb5bd;padding:16px 0}
+.side b{display:block;color:#fff;font-size:18px;padding:0 20px 18px}
+.side a{display:block;padding:9px 20px}
+.side a.on{background:#0d6efd;color:#fff}
+.side small{display:block;padding:14px 20px 4px;text-transform:uppercase;font-size:11px;letter-spacing:.06em;color:#6c757d}
+main{padding:20px 28px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+h1{font-size:24px;font-weight:500}
+.btn{background:#0d6efd;color:#fff;border-radius:4px;padding:7px 14px;margin-left:6px;display:inline-block}
+.btn.o{background:#fff;color:#0d6efd;border:1px solid #0d6efd}
+.alerts{display:flex;gap:10px;margin-bottom:14px}
+.al{flex:1;padding:10px 14px;border-radius:4px;border:1px solid}
+.al.w{background:#fff3cd;border-color:#ffe69c;color:#664d03}
+.al.d{background:#f8d7da;border-color:#f1aeb5;color:#58151c}
+.al.i{background:#cff4fc;border-color:#9eeaf9;color:#055160}
+table{width:100%;background:#fff;border-collapse:collapse;border:1px solid #dee2e6}
+th,td{padding:9px 12px;border-bottom:1px solid #dee2e6;text-align:left}
+th{background:#f8f9fa;font-weight:600}
+.bd{border-radius:4px;padding:2px 7px;font-size:12px;color:#fff}
+.input{border:1px solid #ced4da;border-radius:4px;padding:7px 10px;width:300px;background:#fff;color:#6c757d}
+</style></head><body>
+<aside class="side"><b>Grocy Next</b>
+<a class="on">Stock overview</a><a>Shopping list</a><a>Recipes</a><a>Meal plan</a>
+<small>Household</small><a>Chores</a><a>Tasks</a><a>Batteries</a>
+<small>Master data</small><a>Products</a><a>Locations</a><a>Quantity units</a>
+<small>Agent</small><a>Review queue (3)</a><a>Settings</a></aside>
+<main>
+<div class="bar"><h1>Stock overview</h1><div><span class="btn">Purchase</span><span class="btn">Consume</span><span class="btn o">Inventory</span></div></div>
+<div class="alerts"><div class="al d">1 product is expired</div><div class="al w">2 products are due within 5 days</div><div class="al i">4 products are below min. stock amount</div></div>
+<div class="bar"><span class="input">Search…</span><span style="color:#6c757d">11 products</span></div>
+<table><thead><tr><th>Product</th><th>Amount</th><th>Next due date</th><th>Location</th><th></th></tr></thead><tbody>
+<tr><td>Spinach</td><td>200 g</td><td><span class="bd" style="background:#dc3545">23 Oct</span></td><td>Fridge</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Chicken thighs</td><td>600 g</td><td><span class="bd" style="background:#ffc107;color:#000">26 Oct</span></td><td>Fridge</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Greek yoghurt</td><td>3 pcs</td><td><span class="bd" style="background:#ffc107;color:#000">28 Oct</span></td><td>Fridge</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Whole milk</td><td>1 L</td><td>30 Oct</td><td>Fridge</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Eggs</td><td>2 pcs</td><td>2 Nov</td><td>Fridge</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Cheddar</td><td>250 g</td><td>14 Nov</td><td>Fridge</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Coffee beans</td><td>300 g</td><td>12 Jan</td><td>Pantry</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Canned tomatoes</td><td>4 pcs</td><td>9 Mar</td><td>Pantry</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Olive oil</td><td>750 ml</td><td>3 Jun</td><td>Pantry</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Rolled oats</td><td>720 g</td><td>—</td><td>Pantry</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+<tr><td>Basmati rice</td><td>0.4 kg</td><td>—</td><td>Pantry</td><td><span class="btn" style="padding:3px 9px">Consume</span></td></tr>
+</tbody></table>
+</main></body></html>
