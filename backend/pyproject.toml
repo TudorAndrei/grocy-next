@@ -19,6 +19,7 @@ dependencies = [
   "pillow>=11,<14",
   "pydantic>=2.14.1",
   "pydantic-settings>=2.16.1",
+  "python-magic>=0.4.27",
   "regex>=2024.11.6",
   "sqlalchemy[asyncio]>=2.1.6",
   "uvicorn[standard]>=0.54.0",

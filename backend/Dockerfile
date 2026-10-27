@@ -1,5 +1,9 @@
 FROM python:3.13-slim-trixie
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libmagic1t64 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
 
 WORKDIR /app

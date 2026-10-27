@@ -34,4 +34,5 @@ async def file_request(
         width=query.get("best_fit_width"),
         height=query.get("best_fit_height"),
         picture=query.get("force_serve_as") == "picture",
+        head=request.method == "HEAD",
     )

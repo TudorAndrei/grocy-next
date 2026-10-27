@@ -10,9 +10,12 @@ from grocy.compatibility.lessql import query_parameters, query_rows
 from grocy.compatibility.php import (
     PhpJSONResponse,
     argument_error,
+    empty,
     filter_bool,
     filter_int,
     int_argument,
+    intval,
+    is_numeric,
 )
 from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
@@ -32,11 +35,13 @@ async def stock_overview(_actor: CurrentActor, stock: StockSvc) -> list[dict[str
 
 @router.get("/api/stock/volatile")
 async def stock_volatile(
+    request: Request,
     _actor: CurrentActor,
     stock: StockSvc,
-    due_soon_days: Annotated[int, Query(alias="due_soon_days")] = 5,
 ) -> dict[str, Any]:
-    return await stock.volatile(due_soon_days=due_soon_days)
+    value = query_parameters(request.scope["query_string"]).get("due_soon_days")
+    days = intval(value) if not empty(value) and is_numeric(value) else 5
+    return await stock.volatile(due_soon_days=days)
 
 
 @router.get("/api/stock/entry/{entry_id}")
