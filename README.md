@@ -74,10 +74,15 @@ Save the returned key and enter it in Connection. `init` refuses a database that
 ```bash
 cd backend
 uv run pytest
-uv run ruff check src tests
-uv run basedpyright
+uv run ruff check --config pyproject.toml . ../scripts
+uv run ruff format --config pyproject.toml --check . ../scripts
+uv run ty check . ../scripts --error-on-warning
 cd ../frontend
+npm run check
 npm run build
 ```
+
+Run `mise run check` from the repository root for lint, format, and type checks.
+Run `mise run fix` to apply safe lint fixes and format the files. Run tests separately.
 
 The optional PHP reference comparison suite is skipped unless a reference server is configured. See [compatibility](docs/compatibility.md) for the command and for enabling `GROCY_USE_NATIVE_PHP`. See [migration](docs/migration.md) for database import and recovery, and [MCP tools](docs/mcp-tools.md) for assistant access.
