@@ -8,6 +8,64 @@ import { Toaster } from "@/components/Toaster";
 import { isoDay } from "@/lib/format";
 import { fireEvent, waitFor } from "@testing-library/react";
 
+test("a parent product can consume the available child stock", async () => {
+  let consumed = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async (input, init) => {
+      const path = String(input);
+
+      if (path === "/api/system/config" || path === "/api/user/settings") return Response.json({});
+
+      if (path === "/api/objects/products")
+        return Response.json([
+          {
+            id: 1,
+            name: "Family",
+            qu_id_stock: 1,
+            min_stock_amount: 1,
+            treat_opened_as_out_of_stock: 1,
+          },
+        ]);
+
+      if (path === "/api/objects/quantity_units")
+        return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);
+
+      if (path === "/api/stock/products/1")
+        return Response.json({
+          stock_amount: 0,
+          stock_amount_opened: 0,
+          stock_amount_aggregated: 3,
+          stock_amount_opened_aggregated: 1,
+        });
+
+      if (path === "/api/stock/products/1/consume") {
+        consumed = JSON.parse(String(init?.body)).amount;
+
+        return Response.json([]);
+      }
+
+      return Response.json([]);
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <Toaster>
+        <StockActions productId={1} initialMove="consume" />
+      </Toaster>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("img", { name: "Family, 200% of minimum" });
+  const user = userEvent.setup();
+  const amount = screen.getByRole("textbox", { name: /Amount/ });
+  await user.clear(amount);
+  await user.type(amount, "3");
+  await user.click(screen.getByRole("button", { name: "Consume 3 pcs" }));
+  await waitFor(() => expect(consumed).toBe(3));
+});
+
 test.each([true, false])(
   "a purchase follows price tracking (%s) and can be undone",
   async (tracking) => {

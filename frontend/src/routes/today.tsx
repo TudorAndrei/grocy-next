@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { useCatalog } from "@/lib/catalog";
+import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
 import { daysUntil, relativeTime, todayLine } from "@/lib/format";
 import { useStockMove } from "@/lib/stockActions";
 import { usePreferences } from "@/lib/preferences";
@@ -101,7 +101,7 @@ function TodayPage() {
   });
 
   const amounts = useMemo(
-    () => new Map((stock.data ?? []).map((item) => [item.product_id, item.amount])),
+    () => new Map((stock.data ?? []).map((item) => [item.product_id, item])),
     [stock.data],
   );
 
@@ -110,12 +110,15 @@ function TodayPage() {
 
     return (volatile.data?.missing_products ?? []).map((missing) => {
       const product = catalog.product(missing.id);
+      const entry = amounts.get(missing.id);
 
       return {
         id: missing.id,
         name: missing.name,
-        min: product?.min_stock_amount ?? 0,
-        amount: amounts.get(missing.id) ?? 0,
+        min: (entry ? stockMinimumAmount(entry) : 0) + missing.amount_missing,
+        amount: entry ? stockAmount(entry) : 0,
+        minimumAmount: entry ? stockMinimumAmount(entry) : 0,
+        missing: missing.amount_missing,
         location: catalog.location(product?.location_id)?.name,
       };
     });
@@ -286,10 +289,11 @@ function TodayPage() {
                         {features.enabled("STOCK_LOCATION_TRACKING")
                           ? `${item.location ?? "No location"} · `
                           : ""}
-                        min {catalog.amountText(item.id, item.min)}
+                        min {catalog.amountText(item.id, item.min)} · missing{" "}
+                        {catalog.amountText(item.id, item.missing)}
                       </small>
                     </Link>
-                    <Gauge amount={item.amount} min={item.min} label={item.name} />
+                    <Gauge amount={item.minimumAmount} min={item.min} label={item.name} />
                     <span className="amount">{catalog.amountText(item.id, item.amount)}</span>
                     <span className="row-actions">
                       <QuickMoves productId={item.id} name={item.name} amount={item.amount} />

@@ -1,6 +1,7 @@
 export type ProductSummary = {
   picture_file_name?: string | null;
   disable_open?: number;
+  treat_opened_as_out_of_stock?: number | boolean;
   id: number;
   name: string;
   barcode?: string | null;
@@ -135,6 +136,8 @@ export type CreateProposalPayload = {
 };
 
 export type StockProductDetails = ProductSummary & {
+  stock_amount_aggregated?: number;
+  stock_amount_opened_aggregated?: number;
   stock_amount?: number;
   stock_amount_opened?: number;
   location_id?: number;

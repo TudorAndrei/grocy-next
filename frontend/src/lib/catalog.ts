@@ -2,8 +2,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, queryKeys } from "./api";
 import { formatAmount, unitLabel } from "./format";
-import type { Location, ProductSummary, QuantityUnit } from "./types";
-import { usePreferences } from "./preferences";
+import type { Location, ProductSummary, QuantityUnit, StockOverviewItem } from "./types";
+import { preferenceEnabled, usePreferences } from "./preferences";
+
+export function stockAmount(stock: StockOverviewItem): number {
+  return stock.is_aggregated_amount ? stock.amount_aggregated : stock.amount;
+}
+
+export function openedStockAmount(stock: StockOverviewItem): number {
+  return stock.is_aggregated_amount ? stock.amount_opened_aggregated : stock.amount_opened;
+}
+
+export function stockMinimumAmount(stock: StockOverviewItem): number {
+  return (
+    stockAmount(stock) -
+    (preferenceEnabled(stock.product.treat_opened_as_out_of_stock) ? openedStockAmount(stock) : 0)
+  );
+}
 
 const MEASURED_UNITS = new Set([
   "gram",

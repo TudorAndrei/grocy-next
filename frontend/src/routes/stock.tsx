@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { useCatalog } from "@/lib/catalog";
+import { openedStockAmount, stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
 import { daysUntil, dueLabel, dueTone } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
 import { stockVolatileQuery } from "@/hooks/queries";
@@ -24,6 +24,7 @@ type Row = {
   productId: number;
   name: string;
   amount: number;
+  minimumAmount: number;
   opened: number;
   min: number;
   bestBefore: string | null;
@@ -51,15 +52,28 @@ function StockPage() {
 
   // Products below minimum and out of stock are not in /api/stock; add them as empty rows.
   const rows = useMemo<Row[]>(() => {
-    const out: Row[] = (stock.data ?? []).map((item) => ({
-      productId: item.product_id,
-      name: item.product.name,
-      amount: item.amount,
-      opened: item.amount_opened,
-      min: item.product.min_stock_amount ?? 0,
-      bestBefore: item.best_before_date ?? null,
-      locationId: item.product.location_id ?? null,
-    }));
+    const shortages = new Map(
+      (volatile.data?.missing_products ?? []).map((item) => [item.id, item.amount_missing]),
+    );
+
+    const out: Row[] = (stock.data ?? []).map((item) => {
+      const amountForMinimum = stockMinimumAmount(item);
+      const shortage = shortages.get(item.product_id);
+
+      return {
+        productId: item.product_id,
+        name: item.product.name,
+        amount: stockAmount(item),
+        minimumAmount: amountForMinimum,
+        opened: openedStockAmount(item),
+        min:
+          shortage === undefined
+            ? (item.product.min_stock_amount ?? 0)
+            : amountForMinimum + shortage,
+        bestBefore: item.best_before_date ?? null,
+        locationId: item.product.location_id ?? null,
+      };
+    });
 
     const present = new Set(out.map((row) => row.productId));
 
@@ -70,8 +84,9 @@ function StockPage() {
         productId: missing.id,
         name: missing.name,
         amount: 0,
+        minimumAmount: 0,
         opened: 0,
-        min: product?.min_stock_amount ?? missing.amount_missing,
+        min: missing.amount_missing,
         bestBefore: null,
         locationId: product?.location_id ?? null,
       });
@@ -92,7 +107,8 @@ function StockPage() {
     return days !== null && days < 0;
   };
 
-  const isLow = (row: Row) => row.min > 0 && row.amount < row.min;
+  const missingIds = new Set((volatile.data?.missing_products ?? []).map((item) => item.id));
+  const isLow = (row: Row) => missingIds.has(row.productId);
 
   const anyOpened =
     features.enabled("STOCK_PRODUCT_OPENED_TRACKING") && rows.some((row) => row.opened > 0);
@@ -241,11 +257,13 @@ function StockPage() {
                         {locationsEnabled
                           ? (catalog.location(row.locationId)?.name ?? "No location")
                           : null}
-                        {row.min > 0 ? ` · min ${catalog.amountText(row.productId, row.min)}` : ""}
+                        {row.min > 0
+                          ? `${locationsEnabled ? " · " : ""}min ${catalog.amountText(row.productId, row.min)}`
+                          : ""}
                       </small>
                     </td>
                     <td className="level">
-                      <Gauge amount={row.amount} min={row.min} label={row.name} />
+                      <Gauge amount={row.minimumAmount} min={row.min} label={row.name} />
                     </td>
                     <td className="num amount">{catalog.amountText(row.productId, row.amount)}</td>
                     {anyOpened ? (

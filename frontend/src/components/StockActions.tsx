@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, queryKeys, type ConsumeOptions, type PurchaseOptions } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { isoDay } from "@/lib/format";
-import { usePreferences } from "@/lib/preferences";
+import { preferenceEnabled, usePreferences } from "@/lib/preferences";
 import { objectsQuery } from "@/hooks/queries";
 import { useStockMove } from "@/lib/stockActions";
 import { useFeatures } from "@/lib/features";
@@ -72,9 +72,12 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
       : (product?.default_best_before_days ?? 0);
 
   const bestBeforeValue = bestBefore ?? (defaultDays === -1 ? "2999-12-31" : isoDay(defaultDays));
-  const onHand = stock.data?.stock_amount ?? 0;
-  const opened = stock.data?.stock_amount_opened ?? 0;
+  const onHand = stock.data?.stock_amount_aggregated ?? stock.data?.stock_amount ?? 0;
+  const opened = stock.data?.stock_amount_opened_aggregated ?? stock.data?.stock_amount_opened ?? 0;
   const min = product?.min_stock_amount ?? 0;
+
+  const minimumAmount =
+    onHand - (preferenceEnabled(product?.treat_opened_as_out_of_stock) ? opened : 0);
 
   const defaultAmount =
     move === "purchase"
@@ -143,7 +146,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
             <span className="stock-opened">{formatAmount(opened)} opened</span>
           ) : null}
         </div>
-        <Gauge amount={onHand} min={min} label={product?.name ?? "Product"} />
+        <Gauge amount={minimumAmount} min={min} label={product?.name ?? "Product"} />
       </div>
 
       <form className="move-form" onSubmit={onSubmit}>

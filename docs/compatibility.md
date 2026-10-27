@@ -52,6 +52,7 @@ The current repair work covers these confirmed differences:
 - Python configuration exposes the configured energy unit, code type, and calendar week-number setting. The product energy field uses the configured unit without a value conversion.
 - Barcode forms apply opening, location, and price tracking flags. Scan defaults accept numeric values and the legacy browser boolean forms, including `"on"`.
 - Opening the web root uses the configured `ENTRY_PAGE`. Native page names map to the related web routes. Today remains available at `/today`.
+- Stock shortages use the server result. Minimum gauges exclude opened stock when required, and parent product displays and consumption forms use the aggregated stock amounts.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 

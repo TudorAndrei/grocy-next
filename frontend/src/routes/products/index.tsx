@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { useCatalog } from "@/lib/catalog";
+import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
 import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
@@ -23,7 +23,7 @@ function ProductsPage() {
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
 
   const amounts = useMemo(
-    () => new Map((stock.data ?? []).map((item) => [item.product_id, item.amount])),
+    () => new Map((stock.data ?? []).map((item) => [item.product_id, item])),
     [stock.data],
   );
 
@@ -99,7 +99,8 @@ function ProductsPage() {
             </thead>
             <tbody>
               {visible.map((product) => {
-                const amount = amounts.get(product.id) ?? 0;
+                const entry = amounts.get(product.id);
+                const amount = entry ? stockAmount(entry) : 0;
                 const min = product.min_stock_amount ?? 0;
 
                 return (
@@ -120,7 +121,11 @@ function ProductsPage() {
                       </small>
                     </td>
                     <td className="level">
-                      <Gauge amount={amount} min={min} label={product.name} />
+                      <Gauge
+                        amount={entry ? stockMinimumAmount(entry) : 0}
+                        min={min}
+                        label={product.name}
+                      />
                     </td>
                     <td className="num amount">{catalog.amountText(product.id, amount)}</td>
                     <td className="num">{min > 0 ? catalog.amountText(product.id, min) : "—"}</td>

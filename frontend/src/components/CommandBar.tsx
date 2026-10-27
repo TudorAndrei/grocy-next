@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { useCatalog } from "@/lib/catalog";
+import { stockAmount, useCatalog } from "@/lib/catalog";
 import { usePreferences } from "@/lib/preferences";
 import { useStockMove } from "@/lib/stockActions";
 import { useFeatures } from "@/lib/features";
@@ -177,7 +177,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
   });
 
   const onHand = useMemo(
-    () => new Map((stock.data ?? []).map((item) => [item.product_id, item.amount])),
+    () => new Map((stock.data ?? []).map((item) => [item.product_id, stockAmount(item)])),
     [stock.data],
   );
 
