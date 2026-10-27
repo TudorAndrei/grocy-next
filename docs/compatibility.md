@@ -46,6 +46,7 @@ The current repair work covers these confirmed differences:
 - Recipe printer labels expose the native fields. Empty printer paths return the checked legacy error.
 - The web app applies server feature flags to navigation, direct routes, quick actions, Today requests, household choices, and data management choices. String values retain PHP truth rules: `"0"` disables a feature, but `"off"` enables it.
 - Stock forms, stock tables, shopping tools, and label choices use the related tracking and printer flags. Disabled entry fields retain the legacy submission rules, including price `0`, location `1`, and a closed entry.
+- The product editor includes freezing warnings, opened-stock treatment, stock label defaults, automatic label reprinting, and purchase price type. Product fields use the checked legacy hidden defaults when tracking is disabled.
 
 Full Python parity is not complete. Open work includes further configuration options, web base paths, and form options. Test results must identify the runtime and selected cases.
 

@@ -34,6 +34,8 @@ export type EntityField = {
   choiceLabels?: Record<string, string>;
   min?: number;
   value?: string;
+  features?: string[];
+  disabledValue?: string;
 };
 
 export type EntitySpec = {
@@ -89,6 +91,12 @@ const amount: EntityField = {
   value: "1",
 };
 
+const tracked = (field: EntityField, features: string[], disabledValue?: string): EntityField => ({
+  ...field,
+  features,
+  disabledValue,
+});
+
 export const entities = new Map<string, EntitySpec>(
   Object.entries({
     products: {
@@ -96,7 +104,11 @@ export const entities = new Map<string, EntitySpec>(
       singular: "product",
       fields: [
         ...named,
-        ref("location_id", "Default location", "locations"),
+        tracked(
+          ref("location_id", "Default location", "locations"),
+          ["STOCK_LOCATION_TRACKING"],
+          "1",
+        ),
         ref("qu_id_purchase", "Purchase unit", "quantity_units"),
         ref("qu_id_stock", "Stock unit", "quantity_units"),
         {
@@ -119,31 +131,88 @@ export const entities = new Map<string, EntitySpec>(
           type: "number",
           value: "0",
           min: -1,
+          features: ["STOCK_BEST_BEFORE_DATE_TRACKING"],
+          disabledValue: "1",
         },
         ref("product_group_id", "Group", "product_groups", false),
         active,
         ref("parent_product_id", "Parent product", "products", false),
-        ref("default_consume_location_id", "Default consume location", "locations", false),
-        ref("shopping_location_id", "Default store", "shopping_locations", false),
+        tracked(
+          ref("default_consume_location_id", "Default consume location", "locations", false),
+          ["STOCK_LOCATION_TRACKING"],
+          "1",
+        ),
+        tracked(
+          ref("shopping_location_id", "Default store", "shopping_locations", false),
+          ["STOCK_PRICE_TRACKING"],
+          "1",
+        ),
         ref("qu_id_consume", "Consume unit", "quantity_units", false),
         ref("qu_id_price", "Price unit", "quantity_units", false),
-        numeric("default_best_before_days_after_open", "Days after opening"),
-        numeric("default_best_before_days_after_freezing", "Days after freezing", "0", -1),
-        numeric("default_best_before_days_after_thawing", "Days after thawing"),
+        tracked(numeric("default_best_before_days_after_open", "Days after opening"), [
+          "STOCK_BEST_BEFORE_DATE_TRACKING",
+          "STOCK_PRODUCT_OPENED_TRACKING",
+        ]),
+        tracked(
+          numeric("default_best_before_days_after_freezing", "Days after freezing", "0", -1),
+          ["STOCK_PRODUCT_FREEZING"],
+          "0",
+        ),
+        tracked(
+          numeric("default_best_before_days_after_thawing", "Days after thawing"),
+          ["STOCK_PRODUCT_FREEZING"],
+          "0",
+        ),
+        tracked(
+          flag("should_not_be_frozen", "Should not be frozen"),
+          ["STOCK_PRODUCT_FREEZING"],
+          "0",
+        ),
         {
           key: "due_type",
           label: "Due date type",
           choices: ["1", "2"],
           choiceLabels: { "1": "Best before date", "2": "Use by date" },
           value: "1",
+          features: ["STOCK_BEST_BEFORE_DATE_TRACKING"],
+          disabledValue: "1",
         },
         numeric("quick_consume_amount", "Quick consume amount", "1"),
         numeric("quick_open_amount", "Quick open amount", "1"),
         numeric("calories", "Calories per stock unit"),
         numeric("tare_weight", "Container weight"),
         flag("enable_tare_weight_handling", "Use container weight"),
-        flag("move_on_open", "Move opened stock to the consume location"),
-        flag("disable_open", "Disable opening"),
+        tracked(flag("move_on_open", "Move opened stock to the consume location"), [
+          "STOCK_LOCATION_TRACKING",
+          "STOCK_PRODUCT_OPENED_TRACKING",
+        ]),
+        tracked(flag("disable_open", "Disable opening"), ["STOCK_PRODUCT_OPENED_TRACKING"]),
+        tracked(flag("treat_opened_as_out_of_stock", "Treat opened stock as missing"), [
+          "STOCK_PRODUCT_OPENED_TRACKING",
+        ]),
+        tracked(
+          {
+            key: "default_stock_label_type",
+            label: "Default stock label",
+            choices: ["0", "1", "2"],
+            choiceLabels: { "0": "No label", "1": "Single label", "2": "Label per unit" },
+            value: "0",
+          },
+          ["LABEL_PRINTER"],
+        ),
+        tracked(flag("auto_reprint_stock_label", "Reprint labels when the due date changes"), [
+          "LABEL_PRINTER",
+        ]),
+        tracked(
+          {
+            key: "default_purchase_price_type",
+            label: "Default purchase price type",
+            choices: ["1", "2", "3"],
+            choiceLabels: { "1": "Unspecified", "2": "Unit price", "3": "Total price" },
+            value: "1",
+          },
+          ["STOCK_PRICE_TRACKING"],
+        ),
         flag("no_own_stock", "Use child product stock only"),
         flag("cumulate_min_stock_amount_of_sub_products", "Sum child product minimum stock"),
         flag("not_check_stock_fulfillment_for_recipes", "Skip recipe stock checks"),
@@ -233,7 +302,11 @@ export const entities = new Map<string, EntitySpec>(
     locations: {
       label: "Locations",
       singular: "location",
-      fields: [...named, { key: "is_freezer", label: "Freezer", type: "checkbox" }, active],
+      fields: [
+        ...named,
+        tracked(flag("is_freezer", "Freezer"), ["STOCK_PRODUCT_FREEZING"]),
+        active,
+      ],
     },
     quantity_units: {
       label: "Units",

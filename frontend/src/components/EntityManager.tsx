@@ -11,6 +11,7 @@ import {
 } from "@/lib/entities";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
+import { useFeatures } from "@/lib/features";
 
 type Props = {
   entity: string;
@@ -50,7 +51,12 @@ function customField(row: EntityRow): EntityField {
 }
 
 export function EntityManager({ entity, detail, actions, fixed, title }: Props) {
+  const features = useFeatures();
   const baseSpec = getEntitySpec(entity);
+
+  const fieldEnabled = (field: EntityField) =>
+    !field.features || field.features.every(features.enabled);
+
   const [values, setValues] = useState<Record<string, string>>({});
 
   const recordTypes = useQuery({
@@ -76,7 +82,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
   const spec: EntitySpec = {
     ...baseSpec,
     fields: [
-      ...baseSpec.fields.map((field) =>
+      ...baseSpec.fields.filter(fieldEnabled).map((field) =>
         entity === "userfields" && field.key === "entity"
           ? {
               ...field,
@@ -274,6 +280,21 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
     event.preventDefault();
     const body: JsonObject = {};
     Object.assign(body, fixed);
+
+    for (const field of baseSpec.fields) {
+      if (!fieldEnabled(field) && field.disabledValue !== undefined) {
+        body[field.key] = Number(field.disabledValue);
+      }
+    }
+
+    if (
+      entity === "products" &&
+      features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") &&
+      !features.enabled("STOCK_PRODUCT_OPENED_TRACKING")
+    ) {
+      body.default_best_before_days_after_open = 1;
+    }
+
     const fields: Record<string, Record<string, string>> = {};
 
     for (const field of spec.fields) {
