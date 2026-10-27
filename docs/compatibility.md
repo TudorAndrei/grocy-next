@@ -71,3 +71,5 @@ For an existing reference server, set `GROCY_REFERENCE_URL`, `GROCY_REFERENCE_AP
 The compatibility API must retain observed Grocy 4.5.0 behavior, including partial writes and known defects. The v2 API keeps its documented application rules. For example, the shopping purchase extension uses an atomic write for each item.
 
 PHP version text, PHP interpreter warnings, and execution of arbitrary PHP code are properties of the reference runtime. They must not make PHP a release dependency. Equivalent product features belong in Python.
+
+Python checks environment configuration at process startup. It rejects the checked invalid settings before it starts the HTTP server. PHP reloads `config.php` for each request and can return an HTML configuration error. The tests check the same value rules at each runtime's configuration boundary.

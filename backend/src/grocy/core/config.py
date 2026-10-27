@@ -1,11 +1,29 @@
+import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from grocy.compatibility import client_defaults
+
+
+def _valid_weekday(value: Any, minimum: int) -> bool:
+    if value is None or value is False or value == "":
+        return True
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return False
+    if (
+        isinstance(value, str)
+        and re.fullmatch(
+            r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?",
+            value.strip(" \t\r\n\v\f"),
+        )
+        is None
+    ):
+        return False
+    return minimum <= float(value) <= 6
 
 
 class Settings(BaseSettings):
@@ -17,6 +35,9 @@ class Settings(BaseSettings):
     mode: str = "production"
     currency: str = "USD"
     default_locale: str = "en"
+    calendar_first_day_of_week: Any = ""
+    meal_plan_first_day_of_week: Any = ""
+    entry_page: str = "stock"
     base_url: str = "/"
     disable_url_rewriting: bool | str = False
     default_permissions: list[str] = ["ADMIN"]
@@ -111,6 +132,51 @@ class Settings(BaseSettings):
                     value = value.rstrip("\r\n")
                     values[name] = {"true": True, "false": False}.get(value.lower(), value)
         return values
+
+    @model_validator(mode="after")
+    def validate_configuration(self) -> Self:
+        modes = ["production", "dev", "demo", "prerelease"]
+        if self.mode not in modes:
+            raise ValueError(f'Invalid mode "{self.mode}" set, only {", ".join(modes)} allowed')
+        locales = Path(__file__).parents[1] / "_vendor/grocy-core/localization"
+        if (
+            re.fullmatch(r"[A-Za-z0-9_@-]+", self.default_locale) is None
+            or not (locales / self.default_locale).is_dir()
+        ):
+            raise ValueError(
+                f'Invalid locale "{self.default_locale}" set, '
+                "locale needs to exist in folder localization"
+            )
+        if re.fullmatch(r"[A-z]{3}", self.currency) is None:
+            raise ValueError("CURRENCY is not in ISO 4217 format (three letter code)")
+        if not _valid_weekday(self.calendar_first_day_of_week, 0):
+            raise ValueError("Invalid value for CALENDAR_FIRST_DAY_OF_WEEK")
+        pages = [
+            "stock",
+            "shoppinglist",
+            "recipes",
+            "chores",
+            "tasks",
+            "batteries",
+            "equipment",
+            "calendar",
+            "mealplan",
+        ]
+        if self.entry_page not in pages:
+            raise ValueError(
+                f'Invalid entry page "{self.entry_page}" set, only {", ".join(pages)} allowed'
+            )
+        if not _valid_weekday(self.meal_plan_first_day_of_week, -1):
+            raise ValueError("Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK")
+        defaults = self.user_defaults()
+        for name in ["auto_night_mode_time_range_from", "auto_night_mode_time_range_to"]:
+            value = defaults[name]
+            if (
+                not isinstance(value, str)
+                or re.fullmatch(r"(?:2[0-3]|[01][0-9]):[0-5][0-9]", value) is None
+            ):
+                raise ValueError(f"{name} is not in HH:mm format ({value})")
+        return self
 
     def user_defaults(self) -> dict[str, Any]:
         return {**client_defaults()["user_settings"], **self.default_user_settings}

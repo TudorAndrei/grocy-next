@@ -15,6 +15,8 @@ uv run ty check . ../scripts --error-on-warning
 
 Use `GROCY_` environment variables or `.env` for configuration. See [.env.example](.env.example). The Python release does not execute `config.php` or PHP plugins. Missing legacy features must be implemented in Python.
 
+Configuration is checked at process startup. Invalid modes, locales, currency codes, week starts, entry pages, and default night mode times stop startup. Restart the process after a configuration change.
+
 Use [Python barcode plugins](../docs/python-barcode-plugins.md) for custom lookup services.
 
 Set `GROCY_DEFAULT_USER_SETTINGS` to a JSON object to change the user defaults. For example, `GROCY_DEFAULT_USER_SETTINGS='{"stock_due_soon_days":14}'` sets the default due window to 14 days. Saved user values have priority. Delete a saved value to use the configured default again. These defaults also apply to recipe stock checks.

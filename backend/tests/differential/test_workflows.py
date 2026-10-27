@@ -5571,41 +5571,81 @@ def test_native_configured_due_days_reach_recipe_sql(api, catalog, configuration
 
 
 @pytest.mark.parametrize(
-    ("code", "message"),
+    "settings,user_defaults,message",
     [
         (
-            "Setting('MODE', 'wrong');",
+            {"MODE": "wrong"},
+            {},
             'Invalid mode "wrong" set, only production, dev, demo, prerelease allowed',
         ),
         (
-            "Setting('DEFAULT_LOCALE', 'wrong');",
+            {"DEFAULT_LOCALE": "wrong"},
+            {},
             'Invalid locale "wrong" set, locale needs to exist in folder localization',
         ),
-        ("Setting('CURRENCY', 'EURO');", "CURRENCY is not in ISO 4217 format (three letter code)"),
+        ({"CURRENCY": "EURO"}, {}, "CURRENCY is not in ISO 4217 format (three letter code)"),
+        ({"CALENDAR_FIRST_DAY_OF_WEEK": 7}, {}, "Invalid value for CALENDAR_FIRST_DAY_OF_WEEK"),
+        ({"MEAL_PLAN_FIRST_DAY_OF_WEEK": -2}, {}, "Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK"),
         (
-            "Setting('CALENDAR_FIRST_DAY_OF_WEEK', 7);",
-            "Invalid value for CALENDAR_FIRST_DAY_OF_WEEK",
+            {"ENTRY_PAGE": "missing"},
+            {},
+            'Invalid entry page "missing" set, only stock, shoppinglist, recipes, '
+            "chores, tasks, batteries, equipment, calendar, mealplan allowed",
         ),
         (
-            "Setting('MEAL_PLAN_FIRST_DAY_OF_WEEK', -2);",
-            "Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK",
-        ),
-        (
-            "DefaultUserSetting('auto_night_mode_time_range_from', '25:00');",
+            {},
+            {"auto_night_mode_time_range_from": "25:00"},
             "auto_night_mode_time_range_from is not in HH:mm format (25:00)",
+        ),
+        (
+            {},
+            {"auto_night_mode_time_range_to": "12:61"},
+            "auto_night_mode_time_range_to is not in HH:mm format (12:61)",
         ),
     ],
 )
-def test_native_configuration_errors_precede_http_and_authentication(
-    api, runtime_configuration, code, message
+def test_configuration_validation_precedes_startup_and_authentication(
+    api, configuration_values, settings, user_defaults, message
 ):
-    runtime_configuration(code)
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if not reference:
+        from pydantic import ValidationError
+
+        from grocy.core.config import Settings, get_settings
+
+        # Environment configuration is loaded at Python process startup. PHP
+        # reloads config.php for each request. Both must reject these values.
+        values = {
+            **get_settings().model_dump(),
+            **{name.lower(): value for name, value in settings.items()},
+            "default_user_settings": user_defaults,
+        }
+        with pytest.raises(ValidationError, match=re.escape(message)):
+            Settings(**values)
+        return
+    configuration_values(settings=settings, user_defaults=user_defaults)
     for method in ("GET", "OPTIONS"):
         response = api.request(method, "/api/user", headers={"GROCY-API-KEY": "invalid"})
         assert response.status_code == 200, response.text
         assert response.text == "Invalid setting in config.php: " + message
         assert response.headers["content-type"] == "text/html; charset=UTF-8"
         assert "access-control-allow-origin" not in response.headers
+
+
+def test_configuration_preserves_sunday_and_relative_meal_plan_start(api, configuration_values):
+    values = {
+        "CALENDAR_FIRST_DAY_OF_WEEK": 0,
+        "MEAL_PLAN_FIRST_DAY_OF_WEEK": -1,
+        "ENTRY_PAGE": "tasks",
+    }
+    configuration_values(settings=values)
+    if hasattr(api, "portal"):
+        from grocy.core.config import Settings, get_settings
+
+        Settings(**get_settings().model_dump())
+    response = api.get("/api/system/config")
+    assert response.status_code == 200, response.text
+    assert {name: response.json()[name] for name in values} == values
 
 
 def test_native_bootstrap_output_retains_http_header_state(
