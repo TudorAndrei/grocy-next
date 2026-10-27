@@ -3866,7 +3866,9 @@ def test_native_chore_assignment_error_keeps_earlier_execution_writes(api):
             f"/api/chores/{chore}/execute", json={"tracked_time": "2027-01-04 12:00:00"}
         )
         assert response.status_code == 500, response.text
-        version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
+        # Python retains the PHP 8.4 diagnostic wording without a PHP runtime.
+        php_version = api.get("/api/system/info").json()["php_version"] or "8.4"
+        version = tuple(map(int, php_version.split(".")[:2]))
         description = "must not" if version >= (8, 4) else "cannot"
         assert (
             response.json()["error_message"]
@@ -3892,7 +3894,9 @@ def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure
         )
         response = api.post(f"/api/chores/{keep}/merge/{remove}")
         assert response.status_code == 400, response.text
-        version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
+        # Python retains the PHP 8.4 diagnostic wording without a PHP runtime.
+        php_version = api.get("/api/system/info").json()["php_version"] or "8.4"
+        version = tuple(map(int, php_version.split(".")[:2]))
         assert response.json() == {
             "error_message": (
                 (

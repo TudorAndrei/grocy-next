@@ -1,4 +1,5 @@
 import os
+import shutil
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
@@ -67,6 +68,7 @@ def php_http_settings(tmp_path_factory):
     from grocy.core.config import get_settings
     from php_runtime import read_http_settings
 
-    return read_http_settings(
-        get_settings().php_executable, tmp_path_factory.mktemp("php-http-settings")
-    )
+    executable = get_settings().php_executable
+    if shutil.which(executable) is None:
+        pytest.skip("The optional PHP reference runtime is not installed")
+    return read_http_settings(executable, tmp_path_factory.mktemp("php-http-settings"))
