@@ -3,6 +3,8 @@ import json
 import platform
 import re
 import sqlite3
+from collections.abc import Iterable
+from copy import deepcopy
 from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
@@ -13,10 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy import __version__
 from grocy.compatibility import client_defaults
-from grocy.compatibility.php import INT_MAX, INT_MIN, php_error
+from grocy.compatibility.php import INT_MAX, INT_MIN, php_error, php_string
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
+from grocy.core.urls import construct_url
 
 _CORE = Path(__file__).parents[2] / "_vendor" / "grocy-core"
 
@@ -93,6 +96,46 @@ def localization(locale: str, mode: str) -> dict[str, Any]:
 class SystemService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def specification(self, base: str) -> dict[str, Any]:
+        spec = deepcopy(openapi_specification())
+        spec["info"]["version"] = client_defaults()["grocy_version"]["Version"]
+        spec["info"]["description"] = spec["info"]["description"].replace(
+            "PlaceHolderManageApiKeysUrl", construct_url(base, "/manageapikeys")
+        )
+        spec["servers"][0]["url"] = construct_url(base, "/api")
+        schemas = spec["components"]["schemas"]
+        exposed = schemas["ExposedEntity"]["enum"]
+        names = await self.session.scalars(
+            text("SELECT name FROM userentities ORDER BY name COLLATE NOCASE")
+        )
+
+        def enum(name: str, values: Iterable[str]) -> list[str]:
+            result = deepcopy(schemas["StringEnumTemplate"])
+            result["enum"] = sorted([*result["enum"], *values])
+            schemas[name] = result
+            return result["enum"]
+
+        including = enum(
+            "ExposedEntity_IncludingUserEntities",
+            [*exposed, *("userentity-" + php_string(name) for name in names), "users"],
+        )
+        no_edit = schemas["ExposedEntityNoEdit"]["enum"]
+        enum(
+            "ExposedEntity_NotIncludingNotEditable",
+            (name for name in exposed if name not in no_edit),
+        )
+        enum(
+            "ExposedEntity_IncludingUserEntities_NotIncludingNotEditable",
+            [*(name for name in including if name not in no_edit), "stock"],
+        )
+        for suffix, restriction in [("NotDeletable", "NoDelete"), ("NotListable", "NoListing")]:
+            excluded = schemas["ExposedEntity" + restriction]["enum"]
+            enum(
+                "ExposedEntity_NotIncluding" + suffix,
+                (name for name in exposed if name not in excluded),
+            )
+        return spec
 
     async def info(self, client: str = "unknown") -> dict[str, Any]:
         version = await self.session.scalar(text("SELECT MAX(migration) FROM migrations"))

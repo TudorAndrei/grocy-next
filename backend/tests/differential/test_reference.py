@@ -2038,6 +2038,10 @@ def test_reference_native_system_config_exposes_current_printer_and_url_settings
         response = app.get("/api/system/config")
         assert response.status_code == 200, response.text
         assert {key: response.json()[key] for key in values} == values
+        specification = app.get("/api/openapi/specification")
+        assert specification.status_code == 200, specification.text
+        assert specification.json()["servers"][0]["url"] == "/native-prefix/api"
+        assert "/native-prefix/manageapikeys" in specification.json()["info"]["description"]
         link = app.get("/api/calendar/ical/sharing-link")
         assert link.status_code == 200, link.text
         assert link.json()["url"].startswith("/native-prefix/api/calendar/ical?secret=")

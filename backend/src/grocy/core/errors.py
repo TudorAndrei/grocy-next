@@ -40,12 +40,12 @@ async def grocy_error_handler(_request: Request, exc: Exception) -> Response:
     assert isinstance(exc, GrocyError)
     if _request.scope.get("grocy_legacy_base_path"):
         if isinstance(exc, UnauthorizedError):
-            from grocy.core.config import get_settings
+            from grocy.core.urls import construct_url, request_base
 
             return Response(
                 status_code=302,
                 headers={
-                    "Location": get_settings().base_url.rstrip("/") + "/login",
+                    "Location": construct_url(request_base(_request), "/login"),
                     "Content-Type": "text/html; charset=UTF-8",
                 },
             )

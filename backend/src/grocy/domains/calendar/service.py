@@ -22,6 +22,7 @@ from grocy.compatibility.php import (
 )
 from grocy.core.config import get_settings
 from grocy.core.time import server_timezone
+from grocy.core.urls import construct_url
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.users import ApiKey
 from grocy.domains.calendar.ical import calendar
@@ -30,13 +31,6 @@ from grocy.domains.system.service import localization
 _LOCALIZATION = Path(__file__).parents[2] / "_vendor" / "grocy-core" / "localization"
 _KEY_CHARACTERS = string.digits + string.ascii_lowercase + string.ascii_uppercase
 _KEY_TYPE = "special-purpose-calendar-ical"
-
-
-def construct_url(base: str, path: str) -> str:
-    settings = get_settings()
-    root = base if settings.base_url == "/" else settings.base_url
-    rewriting = "" if settings.disable_url_rewriting is False else "/index.php"
-    return root.rstrip("/") + rewriting + path
 
 
 def _translator(locale: str) -> Callable[[str], str]:

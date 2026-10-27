@@ -5,12 +5,12 @@ from fastapi.responses import JSONResponse
 
 from grocy.compatibility.input import json_body
 from grocy.compatibility.lessql import query_parameters
-from grocy.compatibility.php import php_error
+from grocy.compatibility.php import PhpJSONResponse, php_error
 from grocy.core.auth import CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
+from grocy.core.urls import request_base
 from grocy.domains.system.service import SystemService, localization
-from grocy.domains.system.service import openapi_specification as specification
 from grocy.domains.users.service import UsersService
 
 router = APIRouter(tags=["system"])
@@ -62,5 +62,7 @@ async def log_missing_localization(
 
 
 @router.get("/api/openapi/specification")
-async def openapi_specification(_actor: CurrentActor) -> dict[str, Any]:
-    return specification()
+async def openapi_specification(
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return PhpJSONResponse(await SystemService(session).specification(request_base(request)))
