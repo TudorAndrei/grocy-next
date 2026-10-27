@@ -28,6 +28,10 @@ jobs:
           enable-cache: true
       - name: Sync
         run: uv sync --frozen
+      - name: Install image and file libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgd3 libmagic1t64
       - name: Ruff
         run: uv run ruff check --config pyproject.toml . ../scripts
       - name: Format

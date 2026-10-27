@@ -1576,9 +1576,29 @@ def test_reference_user_setting_defaults_values_and_reset(
     assert snapshots[0] == snapshots[1]
 
 
-@pytest.mark.parametrize("image_format", ["PNG", "JPEG", "GIF", "WEBP"])
+@pytest.mark.parametrize(
+    ("image_format", "mode", "orientation"),
+    [
+        ("PNG", "RGBA", 1),
+        ("PNG", "P", 1),
+        ("PNG", "L", 1),
+        ("JPEG", "RGB", 1),
+        ("JPEG", "RGB", 6),
+        ("JPEG", "RGB", 5),
+        ("GIF", "RGBA", 1),
+        ("WEBP", "RGBA", 1),
+        ("BMP", "RGB", 1),
+    ],
+)
 def test_reference_native_picture_bytes(
-    client: TestClient, api_headers: dict, reference, tmp_path, monkeypatch, image_format
+    client: TestClient,
+    api_headers: dict,
+    reference,
+    tmp_path,
+    monkeypatch,
+    image_format,
+    mode,
+    orientation,
 ):
     import base64
     from io import BytesIO
@@ -1596,10 +1616,15 @@ def test_reference_native_picture_bytes(
             for x in range(32)
         ]
     )
-    if image_format == "JPEG":
-        image = image.convert("RGB")
+    if mode != "RGBA":
+        image = image.convert(mode)
     source = BytesIO()
-    image.save(source, image_format)
+    save_options = {}
+    if image_format == "JPEG":
+        exif = image.getexif()
+        exif[274] = orientation
+        save_options["exif"] = exif
+    image.save(source, image_format, **save_options)
     name = uuid4().hex + "." + image_format.lower()
     path = "/api/files/productpictures/" + base64.b64encode(name.encode()).decode()
     snapshots = []
@@ -1612,6 +1637,8 @@ def test_reference_native_picture_bytes(
                 {"force_serve_as": "picture"},
                 {"force_serve_as": "picture", "best_fit_width": "17"},
                 {"force_serve_as": "picture", "best_fit_width": "17", "best_fit_height": "13"},
+                {"force_serve_as": "picture", "best_fit_width": "17.8"},
+                {"force_serve_as": "picture", "best_fit_width": "17", "best_fit_height": "5"},
             ]:
                 response = app.get(path, params=parameters, headers=headers)
                 assert response.status_code == 200, response.text

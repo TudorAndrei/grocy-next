@@ -33,6 +33,8 @@ Use `GROCY_AUTH_MODE=ldap` for [LDAP login](../docs/python-ldap.md). This mode a
 
 File type detection uses libmagic. The release image includes this data library. On macOS, the application can also use the system `file` tool.
 
+Legacy picture responses use libgd through Python. The release image includes libgd3. Install libgd for identical image encoding in a local installation. If libgd is absent, local installations use Pillow; the image bytes can differ.
+
 The package uses pinned Grocy assets for database definitions, the OpenAPI contract, translations, and printer tables. PHP source remains available as a test reference.
 
 ## Legacy comparison tests

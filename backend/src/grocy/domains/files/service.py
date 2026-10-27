@@ -16,6 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from grocy.compatibility.php import php_error
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.domains.files.gd import picture_bytes
 from grocy.domains.files.mime import content_type
 
 FILE_GROUPS = {"equipmentmanuals", "recipepictures", "productpictures", "userfiles", "userpictures"}
@@ -159,6 +160,17 @@ class FilesService:
                     if picture.width * picture.height > 25_000_000:
                         raise GrocyError("Image exceeds the pixel limit", status_code=413)
                     image_format = picture.format or "PNG"
+                    rendered = (
+                        picture_bytes(
+                            path,
+                            image_format,
+                            picture.getexif().get(274, 1),
+                            width[0] if width else None,
+                            height[0] if height else None,
+                        )
+                        if compatibility
+                        else None
+                    )
                     picture.thumbnail(
                         (
                             width[1] if width else picture.width,
@@ -168,7 +180,10 @@ class FilesService:
                     descriptor, temporary = tempfile.mkstemp(dir=path.parent)
                     try:
                         with os.fdopen(descriptor, "wb") as stream:
-                            picture.save(stream, image_format)
+                            if rendered is None:
+                                picture.save(stream, image_format)
+                            else:
+                                stream.write(rendered)
                         os.replace(temporary, cached)
                     finally:
                         Path(temporary).unlink(missing_ok=True)
