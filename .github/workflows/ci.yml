@@ -23,10 +23,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Install PHP input processor
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y php-cli php-bcmath php-gd php-intl php-mbstring php-sqlite3 php-xml
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
@@ -83,9 +79,12 @@ jobs:
       - name: Sync backend
         run: uv sync --project backend --frozen
       - name: Compare with Grocy 4.5.0
+        env:
+          GROCY_USE_NATIVE_PHP: "false"
         run: uv run --project backend python scripts/check-reference.py --timezone "${{ matrix.timezone }}"
       - name: Compare disabled feature flags
         env:
+          GROCY_USE_NATIVE_PHP: "false"
           PYTEST_ADDOPTS: -k disabled_feature_flags
         run: >-
           uv run --project backend python scripts/check-reference.py

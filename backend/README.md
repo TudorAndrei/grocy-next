@@ -1,15 +1,11 @@
-# grocy backend
+# Grocy backend
 
-Python package for the Grocy Next API and MCP adapters.
+The release uses Python 3.13, FastAPI, SQLAlchemy, Alembic, and SQLite. PHP is not required. Keep `GROCY_USE_NATIVE_PHP=false`.
 
-## Default runtime (Python)
-
-Compatibility and `/api/v2` routes run in FastAPI with SQLAlchemy, Alembic, and SQLite. `GROCY_USE_NATIVE_PHP` defaults to `false`. Local `uv run grocy`, `mise run dev`, and `docker compose up` use this path. PHP is not required.
-
-Bundled assets under `_vendor/grocy-core` (OpenAPI, locales, ESC/POS tables, and related release files) remain available to the Python path. See `.env.example` for `GROCY_` settings.
+## Run and check
 
 ```bash
-uv sync
+uv sync --frozen
 uv run grocy
 uv run pytest
 uv run ruff check --config pyproject.toml . ../scripts
@@ -17,12 +13,18 @@ uv run ruff format --config pyproject.toml --check . ../scripts
 uv run ty check . ../scripts --error-on-warning
 ```
 
-## Optional native PHP parity
+Use `GROCY_` environment variables or `.env` for configuration. See [.env.example](.env.example). The Python release does not execute `config.php` or PHP plugins. Missing legacy features must be implemented in Python.
 
-Set `GROCY_USE_NATIVE_PHP=true` to run pinned Grocy controllers for differential parity against Grocy 4.5.0. That mode needs PHP 8.1 through 8.4 with `bcmath`, `ctype`, `dom`, `fileinfo`, `gd`, `iconv`, `intl`, `libxml`, `mbstring`, `pdo_sqlite`, and `simplexml`. Set `GROCY_PHP_EXECUTABLE` if PHP is not available as `php` on `PATH`. The Docker image includes this runtime for CI and parity jobs; Compose does not enable native PHP.
+The package uses pinned Grocy assets for database definitions, the OpenAPI contract, translations, and printer tables. PHP source remains available as a test reference.
 
-In native PHP mode, each compatibility request uses a PHP HTTP process with the pinned HTMLPurifier, Slim, LessQL, Gumlet, and related packages from `_vendor/grocy-core`. A private Unix socket carries SQL to the application database. Responses keep PHP JSON encoding, native column order, status, and headers. Configuration loads `$GROCY_DATAPATH/config.php` and native setting overrides. Set `TZ` when comparing Python and PHP workers in the same time zone.
+## Legacy comparison tests
 
-User PHP plugins for barcode lookup go in `$GROCY_DATAPATH/plugins` (`GROCY_DATAPATH` defaults to `data`; Docker uses `/data`). `GROCY_STOCK_BARCODE_LOOKUP_PLUGIN` selects a plugin. Thermal printer and label settings (`GROCY_TPRINTER_*`, `GROCY_LABEL_PRINTER_*`, and their aliases) apply in both runtimes where those features are configured.
+Run the Python API against a separate Grocy 4.5.0 test server:
 
-Environment variables use the `GROCY_` prefix (see `.env.example`).
+```bash
+GROCY_USE_NATIVE_PHP=false uv run python ../scripts/check-reference.py
+```
+
+This test command requires PHP with the modules listed in [compatibility](../docs/compatibility.md). The release image does not install PHP. The separate reference CI job installs it.
+
+The old `GROCY_USE_NATIVE_PHP=true` test mode runs original Grocy controllers. Its results do not prove that a Python feature is complete. Do not use this mode for a release.
