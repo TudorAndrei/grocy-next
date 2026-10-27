@@ -222,13 +222,25 @@ export const api = {
 
   getShoppingList: (listId = 1) => request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
 
-  addShoppingProduct: (productId: number, amount: number, note?: string | null, listId = 1) =>
-    post<void>("/api/stock/shoppinglist/add-product", {
+  addShoppingProduct: (
+    productId: number,
+    amount: number,
+    note?: string | null,
+    listId = 1,
+    quId?: number | null,
+  ) =>
+    post<void>("/api/v2/shopping-lists/items", {
       product_id: productId,
-      product_amount: amount,
-      list_id: listId,
+      amount,
+      shopping_list_id: listId,
+      qu_id: quId ?? null,
       note: note || null,
     }),
+
+  purchaseShoppingItem: (listId: number, itemId: number) =>
+    post<{ purchased: boolean; bookings: Booking[] }>(
+      `/api/v2/shopping-lists/${listId}/items/${itemId}/purchase`,
+    ),
 
   removeShoppingProduct: (productId: number, amount: number, listId = 1) =>
     post<void>("/api/stock/shoppinglist/remove-product", {

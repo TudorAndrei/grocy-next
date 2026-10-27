@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
-import { formatAmount } from "@/lib/format";
+import { formatAmount, unitLabel } from "@/lib/format";
 import { openApiDocument } from "@/lib/open-document";
 import type { ShoppingList, ShoppingListItem } from "@/lib/types";
 import { ErrorBlock } from "@/components/ErrorBlock";
@@ -74,10 +74,7 @@ function ShoppingPage() {
   });
 
   const remove = useMutation({
-    mutationFn: (item: ShoppingListItem) =>
-      item.product_id != null
-        ? api.removeShoppingProduct(item.product_id, item.amount, listId)
-        : api.deleteObject("shopping_list", item.id),
+    mutationFn: (item: ShoppingListItem) => api.deleteObject("shopping_list", item.id),
     onSuccess: async (_data, item) => {
       await refresh();
       const productId = item.product_id;
@@ -86,7 +83,7 @@ function ShoppingPage() {
         undo:
           productId != null
             ? async () => {
-                await api.addShoppingProduct(productId, item.amount, item.note, listId);
+                await api.addShoppingProduct(productId, item.amount, item.note, listId, item.qu_id);
                 await refresh();
               }
             : undefined,
@@ -128,14 +125,15 @@ function ShoppingPage() {
   // Checked items become purchases; then the checked rows leave the list.
   const putAway = useMutation({
     mutationFn: async (done: ShoppingListItem[]) => {
+      let count = 0;
+
       for (const item of done) {
-        // Note-only rows have nothing to put in stock.
-        if (item.product_id != null) await api.purchaseStock(item.product_id, item.amount);
+        const result = await api.purchaseShoppingItem(listId, item.id);
+
+        if (result.purchased) count += 1;
       }
 
-      await api.clearShoppingList(listId, true);
-
-      return done.length;
+      return count;
     },
     onSuccess: async (count) => {
       await Promise.all([refresh(), invalidateStock()]);
@@ -284,7 +282,7 @@ function ShoppingPage() {
                   </span>
                   <span className="amount">
                     {item.product_id != null
-                      ? catalog.amountText(item.product_id, item.amount)
+                      ? `${formatAmount(item.amount)} ${unitLabel(catalog.unit(item.qu_id ?? product?.qu_id_stock), item.amount)}`
                       : formatAmount(item.amount)}
                   </span>
                 </button>
@@ -344,7 +342,13 @@ function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promi
   const add = useMutation({
     mutationFn: async () => {
       if (productId) {
-        await api.addShoppingProduct(Number(productId), Number(amount), note.trim(), listId);
+        await api.addShoppingProduct(
+          Number(productId),
+          Number(amount),
+          note.trim(),
+          listId,
+          catalog.product(Number(productId))?.qu_id_stock,
+        );
       } else {
         await api.createObject("shopping_list", {
           shopping_list_id: listId,

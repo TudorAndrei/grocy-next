@@ -5,6 +5,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.core.actor import Actor
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.domains.products.service import ProductsService
@@ -48,10 +49,17 @@ class ShoppingService:
         *,
         shopping_list_id: int = 1,
         note: str | None = None,
+        qu_id: int | None = None,
     ) -> dict:
+        from grocy.domains.units.service import UnitsService
+
         if not amount.is_finite() or amount <= 0:
             raise GrocyError("Amount must be positive", code="invalid_amount")
-        await self.products.get(product_id)
+        product = await self.products.get(product_id)
+        unit_id = qu_id or product.qu_id_purchase
+        await UnitsService(self.session).convert(
+            amount, unit_id, product.qu_id_stock, product_id=product_id
+        )
         shopping_list = await self.session.get(ShoppingList, shopping_list_id)
         if shopping_list is None:
             raise NotFoundError(f"Shopping list {shopping_list_id} not found")
@@ -60,6 +68,7 @@ class ShoppingService:
             amount=amount,
             shopping_list_id=shopping_list_id,
             note=note,
+            qu_id=unit_id,
         )
         self.session.add(item)
         await self.session.commit()
@@ -70,7 +79,37 @@ class ShoppingService:
             "amount": float(item.amount),
             "note": item.note,
             "done": bool(item.done),
+            "qu_id": item.qu_id,
         }
+
+    async def purchase_item(self, actor: Actor, shopping_list_id: int, item_id: int) -> dict:
+        from grocy.domains.stock.service import StockService
+        from grocy.domains.units.service import UnitsService
+
+        await self._ensure_list(shopping_list_id)
+        item = await self.session.get(ShoppingListItem, item_id)
+        if item is None:
+            return {"purchased": False, "bookings": []}
+        if item.shopping_list_id != shopping_list_id:
+            raise NotFoundError("Shopping item not found in this list")
+        if not item.done:
+            raise GrocyError("Check the shopping item before recording its purchase")
+        bookings = []
+        purchased = item.product_id is not None
+        if item.product_id is not None:
+            product = await self.products.get(item.product_id)
+            amount = await UnitsService(self.session).convert(
+                item.amount,
+                item.qu_id or product.qu_id_stock,
+                product.qu_id_stock,
+                product_id=product.id,
+            )
+            bookings = await StockService(self.session).purchase(
+                actor, product.id, amount, note=item.note, commit=False
+            )
+        await self.session.delete(item)
+        await self.session.commit()
+        return {"purchased": purchased, "bookings": bookings}
 
     async def ensure_item(
         self,
