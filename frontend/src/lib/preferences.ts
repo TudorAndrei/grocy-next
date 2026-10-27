@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { userSettingsQuery } from "@/hooks/queries";
 import { formatAmount } from "./format";
+import type { UserSettings } from "./types";
+
+export function preferenceEnabled(value: UserSettings[string] | undefined): boolean {
+  const text = String(value ?? "").toLowerCase();
+
+  return text === "true" || text === "1" || text === "on";
+}
 
 export function usePreferences() {
   const settings = useQuery(userSettingsQuery());
@@ -15,7 +22,7 @@ export function usePreferences() {
   const enabled = (key: string) => {
     const value = settings.data?.[key];
 
-    return value === true || value === 1 || value === "1";
+    return preferenceEnabled(value);
   };
 
   const amountPrecision = Math.max(
@@ -29,6 +36,8 @@ export function usePreferences() {
     purchaseAmount: number("stock_default_purchase_amount", 0),
     consumeAmount: number("stock_default_consume_amount", 1),
     useQuickConsumeAmount: enabled("stock_default_consume_amount_use_quick_consume_amount"),
+    scanPurchase: enabled("scan_mode_purchase_enabled"),
+    scanConsume: enabled("scan_mode_consume_enabled"),
     autoReload: enabled("auto_reload_on_db_change"),
     formatAmount: (value: number | string | null | undefined) =>
       formatAmount(value, amountPrecision),

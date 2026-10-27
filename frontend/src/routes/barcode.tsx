@@ -6,7 +6,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { api, ApiError, type ExternalBarcodeProduct } from "@/lib/api";
-import { objectsQuery, userSettingsQuery } from "@/hooks/queries";
+import { objectsQuery } from "@/hooks/queries";
+import { useFeatures } from "@/lib/features";
+import { usePreferences } from "@/lib/preferences";
 
 export const Route = createFileRoute("/barcode")({
   component: BarcodePage,
@@ -17,22 +19,25 @@ const scanModeSchema = z.enum(["lookup", "purchase", "consume", "open", "transfe
 type ScanMode = z.infer<typeof scanModeSchema>;
 
 function BarcodePage() {
+  const features = useFeatures();
+  const preferences = usePreferences();
+  const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
+  const openingEnabled = features.enabled("STOCK_PRODUCT_OPENED_TRACKING");
   const inputRef = useRef<HTMLInputElement>(null);
   const client = useQueryClient();
-  const settings = useQuery(userSettingsQuery());
-  const locations = useQuery(objectsQuery("locations"));
+  const locations = useQuery({ ...objectsQuery("locations"), enabled: locationsEnabled });
   const [barcode, setBarcode] = useState("");
   const [amount, setAmount] = useState("1");
   const [selectedMode, setMode] = useState<ScanMode | null>(null);
-  const s = settings.data;
+
+  const chosenMode =
+    selectedMode ??
+    (preferences.scanPurchase ? "purchase" : preferences.scanConsume ? "consume" : "lookup");
 
   const mode =
-    selectedMode ??
-    (s?.scan_mode_purchase_enabled === true || s?.scan_mode_purchase_enabled === "1"
-      ? "purchase"
-      : s?.scan_mode_consume_enabled === true || s?.scan_mode_consume_enabled === "1"
-        ? "consume"
-        : "lookup");
+    (chosenMode === "open" && !openingEnabled) || (chosenMode === "transfer" && !locationsEnabled)
+      ? "lookup"
+      : chosenMode;
 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -101,6 +106,8 @@ function BarcodePage() {
 
       const body: JsonObject = mode === "inventory" ? { new_amount: qty } : { amount: qty };
 
+      if (mode === "purchase" && !features.enabled("STOCK_PRICE_TRACKING")) body.price = 0;
+
       if (mode === "transfer") {
         if (!from || !to) {
           throw new Error("Choose from and to locations.");
@@ -108,7 +115,7 @@ function BarcodePage() {
 
         body.location_id_from = Number(from);
         body.location_id_to = Number(to);
-      } else if (from && (mode === "purchase" || mode === "inventory")) {
+      } else if (locationsEnabled && from && (mode === "purchase" || mode === "inventory")) {
         body.location_id = Number(from);
       }
 
@@ -169,7 +176,8 @@ function BarcodePage() {
     run.mutate();
   };
 
-  const needsLocation = mode === "transfer" || mode === "inventory" || mode === "purchase";
+  const needsLocation =
+    locationsEnabled && (mode === "transfer" || mode === "inventory" || mode === "purchase");
 
   const showAmount = mode !== "lookup";
 
@@ -207,8 +215,8 @@ function BarcodePage() {
               <option value="lookup">Look up</option>
               <option value="purchase">Purchase</option>
               <option value="consume">Consume</option>
-              <option value="open">Open</option>
-              <option value="transfer">Transfer</option>
+              {openingEnabled ? <option value="open">Open</option> : null}
+              {locationsEnabled ? <option value="transfer">Transfer</option> : null}
               <option value="inventory">Count stock</option>
             </select>
           </div>

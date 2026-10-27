@@ -92,3 +92,51 @@ test("a missing legacy barcode can create the product from external lookup", asy
   ).toContain("/products/42");
   expect(created).toBe(true);
 });
+
+test.each([true, false])("barcode purchase follows tracking flags (%s)", async (tracking) => {
+  let saved: Record<string, number> | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async (input, init) => {
+      const path = String(input);
+
+      if (path === "/api/system/config")
+        return Response.json({
+          FEATURE_FLAG_STOCK_PRICE_TRACKING: tracking,
+          FEATURE_FLAG_STOCK_LOCATION_TRACKING: tracking,
+          FEATURE_FLAG_STOCK_PRODUCT_OPENED_TRACKING: tracking,
+        });
+
+      if (path === "/api/user/settings")
+        return Response.json({ scan_mode_purchase_enabled: tracking ? "on" : 1 });
+
+      if (path === "/api/objects/locations") return Response.json([{ id: 1, name: "Shelf" }]);
+
+      if (path === "/api/stock/products/by-barcode/123/add") {
+        saved = JSON.parse(String(init?.body));
+
+        return new Response(null, { status: 204 });
+      }
+
+      return Response.json([]);
+    }),
+  );
+  mount();
+  const user = userEvent.setup();
+  await waitFor(() => expect(screen.getByLabelText("Action")).toHaveProperty("value", "purchase"));
+
+  if (tracking) {
+    await screen.findByRole("option", { name: "Shelf" });
+    await user.selectOptions(screen.getByLabelText("Location"), "1");
+  } else {
+    expect(screen.queryByRole("option", { name: "Open" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Transfer" })).toBeNull();
+    expect(screen.queryByLabelText("Location")).toBeNull();
+  }
+
+  await user.type(screen.getByLabelText("Barcode"), "123");
+  await user.click(screen.getByRole("button", { name: "Submit" }));
+  await waitFor(() =>
+    expect(saved).toEqual(tracking ? { amount: 1, location_id: 1 } : { amount: 1, price: 0 }),
+  );
+});
