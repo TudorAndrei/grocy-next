@@ -55,6 +55,7 @@ The current repair work covers these confirmed differences:
 - Stock shortages use the server result. Minimum gauges exclude opened stock when required, and parent product displays and consumption forms use the aggregated stock amounts.
 - Stock forms select the default purchase or consume unit and use the resolved product conversions. Amounts and prices use the checked legacy rounding rules. The forms support unit prices, total prices, gross tare weights, and exact consumption amounts. Tare success messages show the booked stock change.
 - The barcode page and barcode editor support camera scans with the six legacy formats: EAN-8, EAN-13, Code 39, Code 128, Data Matrix, and QR. Camera selection uses the legacy storage key. The scanner applies camera and torch flags, stops after the first result, and releases the stream on close, camera change, or page change. Browser checks decoded official ZXing images through a virtual video stream. Physical camera and torch checks remain open.
+- Legacy routes decode the URI path before matching, then decode each captured argument. Barcode comparisons check escaped percent values, product selection, and all five stock actions. Real HTTP checks also confirm that these values select the expected product. Directly encoded slashes retain the legacy route rejection.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 

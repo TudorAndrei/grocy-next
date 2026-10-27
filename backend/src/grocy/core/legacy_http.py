@@ -1,6 +1,7 @@
 """HTTP method handling for the legacy API, without an interpreter adapter."""
 
 import re
+from urllib.parse import unquote_to_bytes
 
 from fastapi import Request, Response
 from fastapi.exception_handlers import http_exception_handler
@@ -10,6 +11,13 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from grocy.compatibility.php import php_error
 from grocy.core.config import get_settings
 from grocy.core.errors import grocy_error_handler
+
+
+async def decode_route_arguments(request: Request) -> None:
+    """Slim decodes each captured argument after it decodes the route path."""
+    for name, value in request.path_params.items():
+        if isinstance(value, str):
+            request.path_params[name] = unquote_to_bytes(value).decode("utf-8", "surrogateescape")
 
 
 async def legacy_http_error(request: Request, error: Exception) -> Response:
@@ -71,6 +79,10 @@ class LegacyHttpMiddleware:
         ):
             await self.app(scope, receive, send)
             return
+        if raw := scope.get("raw_path"):
+            # Use the original URI so the ASGI server and TestClient take the same path.
+            path = unquote_to_bytes(raw).decode("utf-8", "surrogateescape")
+            scope = {**scope, "path": path, "grocy_api_path": path}
         if scope["method"] == "OPTIONS":
             response = Response(headers={"Content-Type": "text/html; charset=UTF-8"})
             await response(scope, receive, send)

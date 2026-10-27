@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from grocy.api.compatibility import (
     calendar,
@@ -15,8 +15,9 @@ from grocy.api.compatibility import (
 from grocy.api.compatibility import (
     print as print_api,
 )
+from grocy.core.legacy_http import decode_route_arguments
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(decode_route_arguments)])
 router.include_router(health.router)
 router.include_router(objects.router)
 router.include_router(stock.router)

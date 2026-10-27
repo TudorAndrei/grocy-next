@@ -6,7 +6,7 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, quote
 from uuid import uuid4
 
 import httpx
@@ -1254,6 +1254,89 @@ def test_reference_parent_stock_and_volatile_records(
         )
         assert app.get(f"/api/stock/products/{children[1]}").json()["stock_amount"] == 0
         assert app.get(f"/api/stock/products/{children[0]}").json()["stock_amount"] == 2
+    assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize(
+    "suffix,encodings",
+    [
+        ("box/part/add", 1),
+        ("https://example.test/item?q=1#code", 1),
+        ("literal%2Fcode", 1),
+        ("literal%2Fcode", 2),
+        ("box + café", 1),
+    ],
+)
+def test_reference_encoded_barcode_paths(client, api_headers, reference, suffix, encodings):
+    client.headers.update(api_headers)
+    name = f"Encoded barcode {uuid4().hex[:8]}"
+    barcode = f"{name}:{suffix}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        destination = create(app, "locations", {"name": name + " destination"})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "qu_id_consume": unit,
+            },
+        )
+        create(app, "product_barcodes", {"product_id": product, "barcode": barcode})
+        products = [product]
+        if "%2F" in barcode:
+            decoded_product = create(
+                app,
+                "products",
+                {
+                    "name": name + " decoded",
+                    "location_id": location,
+                    "qu_id_stock": unit,
+                    "qu_id_purchase": unit,
+                    "qu_id_consume": unit,
+                },
+            )
+            products.append(decoded_product)
+            create(
+                app,
+                "product_barcodes",
+                {"product_id": decoded_product, "barcode": barcode.replace("%2F", "/")},
+            )
+        encoded = barcode
+        for _ in range(encodings):
+            encoded = quote(encoded, safe="")
+        path = "/api/stock/products/by-barcode/" + encoded
+        found = app.get(path)
+        results = [
+            (
+                found.status_code,
+                found.json()["product"]["name"] if found.status_code == 200 else None,
+            )
+        ]
+        for action, body in [
+            ("add", {"amount": 3, "price": 1, "best_before_date": "2999-12-31"}),
+            ("open", {"amount": 1}),
+            (
+                "transfer",
+                {"amount": 1, "location_id_from": location, "location_id_to": destination},
+            ),
+            ("consume", {"amount": 1, "location_id": destination}),
+            ("inventory", {"new_amount": 2}),
+        ]:
+            response = app.post(path + "/" + action, json=body)
+            results.append((response.status_code, None))
+        results.append(
+            [
+                app.get(f"/api/stock/products/{identity}").json()["stock_amount"]
+                for identity in products
+            ]
+        )
+        snapshots.append(results)
     assert snapshots[0] == snapshots[1]
 
 
