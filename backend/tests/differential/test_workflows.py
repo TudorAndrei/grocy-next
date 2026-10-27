@@ -4191,6 +4191,42 @@ def test_native_shopping_null_body_keeps_php_type_error(api, action):
     assert set(response.json()) == {"error_message", "error_details"}
 
 
+def test_recipe_shopping_failure_keeps_earlier_items_and_allows_retry(api, catalog, execute_sql):
+    first, unit, _, location = catalog
+    second = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    recipe = create(api, "recipes", name=uuid4().hex)
+    for product in (first, second):
+        create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=1, qu_id=unit)
+    trigger = "shopping_failure_" + uuid4().hex
+    try:
+        execute_sql(
+            f"CREATE TRIGGER {trigger} BEFORE INSERT ON shopping_list "
+            f"WHEN NEW.product_id={second} BEGIN SELECT RAISE(ABORT,'Shopping blocked'); END"
+        )
+        path = f"/api/recipes/{recipe}/add-not-fulfilled-products-to-shoppinglist"
+        response = api.post(path, json={})
+        assert response.status_code == 500, response.text
+        assert response.json()["error_message"] == (
+            "SQLSTATE[23000]: Integrity constraint violation: 19 Shopping blocked"
+        )
+        assert "error_details" in response.json()
+        assert [row["amount"] for row in rows(api, "shopping_list", product_id=first)] == [1]
+        assert rows(api, "shopping_list", product_id=second) == []
+        execute_sql(f"DROP TRIGGER {trigger}")
+        assert api.post(path, json={}).status_code == 204
+        for product in (first, second):
+            assert [row["amount"] for row in rows(api, "shopping_list", product_id=product)] == [1]
+    finally:
+        execute_sql(f"DROP TRIGGER IF EXISTS {trigger}")
+
+
 def test_native_recipe_duplicate_ingredient_failure_restores_stock_and_log(api, catalog):
     product, unit, _, _ = catalog
     recipe = create(api, "recipes", name=uuid4().hex)

@@ -121,7 +121,26 @@ async def send_label(payload: dict[str, Any]) -> None:
         ):
             response = await client.post(settings.label_printer_webhook, **options)
             if 400 <= response.status_code < 600:
-                response.raise_for_status()
+                url = response.request.url
+                if b":" in url.userinfo:
+                    url = url.copy_with(username=url.username, password="***")
+                label = "Client error" if response.status_code < 500 else "Server error"
+                message = (
+                    f"{label}: `{response.request.method} {url}` resulted in a "
+                    f"`{response.status_code} {response.reason_phrase}` response"
+                )
+                try:
+                    summary = response.content[:120].decode()
+                except UnicodeDecodeError:
+                    summary = ""
+                if summary and all(
+                    unicodedata.category(character)[0] in "LMNPSZ" or character in "\n\r\t"
+                    for character in summary
+                ):
+                    if len(response.content) > 120:
+                        summary += " (truncated...)"
+                    message += ":\n" + summary + "\n"
+                raise GrocyError(message, code=None)
     except (httpx.HTTPError, httpx.InvalidURL, TimeoutError) as exc:
         raise GrocyError("Label printer request failed", code=None) from exc
 

@@ -6,11 +6,12 @@ from pydantic import BaseModel, Field
 
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
 from grocy.compatibility.lessql import query_parameters, query_rows
-from grocy.compatibility.php import PhpJSONResponse, body_array, php_error, request_body
+from grocy.compatibility.php import PhpJSONResponse, request_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession, RecipesSvc
 from grocy.core.errors import GrocyError
 from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.domains.recipes.legacy import LegacyRecipesService
 
 router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
@@ -58,39 +59,30 @@ async def recipe_fulfillment(
 
 @router.post("/api/recipes/{recipe_id}/consume", status_code=204)
 async def recipe_consume(
-    recipe_id: int,
+    recipe_id: str,
     actor: CurrentActor,
-    recipes: RecipesSvc,
+    session: DbSession,
 ) -> Response:
-    await recipes.consume(actor, recipe_id)
+    await LegacyRecipesService(session).consume(actor, recipe_id)
     return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist", status_code=204)
 async def recipe_add_missing(
-    recipe_id: int,
+    recipe_id: str,
     request: Request,
     _actor: CurrentActor,
-    recipes: RecipesSvc,
+    session: DbSession,
 ) -> Response:
-    values = body_array(await request_body(request))
-    excluded = values.get("excludedProductIds")
-    if excluded is not None and not isinstance(excluded, (dict, list)):
-        if excluded:
-            raise php_error(
-                "in_array(): Argument #2 ($haystack) must be of type array, string given"
-            )
-        excluded = None
-    if isinstance(excluded, dict):
-        excluded = list(excluded.values())
-    await recipes.add_missing_to_shopping_list(recipe_id, excluded_product_ids=excluded)
+    values = await request_body(request)
+    excluded = values.get("excludedProductIds") if values is not None else None
+    await LegacyRecipesService(session).add_missing(recipe_id, excluded)
     return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/copy")
-async def recipe_copy(recipe_id: int, _actor: CurrentActor, recipes: RecipesSvc) -> dict[str, Any]:
-    copy = await recipes.copy(recipe_id)
-    return {"created_object_id": str(copy.id)}
+async def recipe_copy(recipe_id: str, _actor: CurrentActor, session: DbSession) -> dict[str, Any]:
+    return {"created_object_id": await LegacyRecipesService(session).copy(recipe_id)}
 
 
 @router.get("/api/v2/recipes/{recipe_id}/fulfillment")
