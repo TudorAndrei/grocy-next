@@ -17,6 +17,40 @@ def test_configured_authentication_bypass_uses_the_first_user(client, monkeypatc
         assert client.get("/api/v2/api-keys", headers=headers).status_code == 200
 
 
+@pytest.mark.parametrize("mode,suffix", [("demo", None), ("prerelease", "custom_mode")])
+def test_mode_startup_initializes_its_own_database(tmp_path, monkeypatch, mode, suffix):
+    import sqlite3
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.db.session import reset_engine
+    from grocy.main import create_app
+
+    production = tmp_path / "production.db"
+    data = tmp_path / "mode"
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{production}")
+    monkeypatch.setenv("GROCY_DATAPATH", str(data))
+    monkeypatch.setenv("GROCY_MODE", mode)
+    monkeypatch.setenv("GROCY_DEFAULT_LOCALE", "de")
+    if suffix is None:
+        monkeypatch.delenv("GROCY_DEMO_DB_SUFFIX", raising=False)
+    else:
+        monkeypatch.setenv("GROCY_DEMO_DB_SUFFIX", suffix)
+    clear_settings_cache()
+    reset_engine()
+    with TestClient(create_app()) as api:
+        task = api.post("/api/objects/tasks", json={"name": "Mode startup task"})
+        assert task.status_code == 200, task.text
+        identity = task.json()["created_object_id"]
+        assert api.post(f"/api/tasks/{identity}/complete", json={}).status_code == 204
+    path = data / f"grocy_{suffix or 'de'}.db"
+    assert path.is_file()
+    with sqlite3.connect(path) as database:
+        assert database.execute(
+            "SELECT done FROM tasks WHERE name='Mode startup task'"
+        ).fetchone() == (1,)
+    assert not production.exists()
+
+
 def test_api_base_path_preserves_extension_authentication_and_cors(
     client, api_headers, monkeypatch
 ):

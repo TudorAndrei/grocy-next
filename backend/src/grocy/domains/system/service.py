@@ -127,6 +127,11 @@ class SystemService:
             **settings.feature_flags(),
             **settings.thermal_printer_configuration(),
             "MODE": settings.mode,
+            **(
+                {"DEMO_DB_SUFFIX": settings.demo_db_suffix}
+                if settings.demo_db_suffix is not None
+                else {}
+            ),
             "CURRENCY": settings.currency,
             "DEFAULT_LOCALE": settings.default_locale,
             "CALENDAR_FIRST_DAY_OF_WEEK": settings.calendar_first_day_of_week,

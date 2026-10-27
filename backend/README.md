@@ -19,6 +19,8 @@ Configuration is checked at process startup. Invalid modes, locales, currency co
 
 Set `GROCY_BASE_PATH=/grocy` to serve API routes with that prefix. Set `GROCY_BASE_URL=/grocy/` for generated links. Configure the proxy to forward the prefixed API route to this service.
 
+Demo and prerelease modes use `<GROCY_DATAPATH>/grocy_<GROCY_DEFAULT_LOCALE>.db`. Set `GROCY_DEMO_DB_SUFFIX` to select another suffix. Production and development modes use `GROCY_DATABASE_URL`. Normal startup initializes the selected database. Reads and writes stay in that database.
+
 Use [Python barcode plugins](../docs/python-barcode-plugins.md) for custom lookup services.
 
 Set `GROCY_DEFAULT_USER_SETTINGS` to a JSON object to change the user defaults. For example, `GROCY_DEFAULT_USER_SETTINGS='{"stock_due_soon_days":14}'` sets the default due window to 14 days. Saved user values have priority. Delete a saved value to use the configured default again. These defaults also apply to recipe stock checks.

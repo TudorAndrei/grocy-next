@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     use_native_php: bool = False
     php_executable: str = "php"
     mode: str = "production"
+    demo_db_suffix: str | None = None
     currency: str = "USD"
     default_locale: str = "en"
     calendar_first_day_of_week: Any = ""
@@ -178,6 +179,13 @@ class Settings(BaseSettings):
             ):
                 raise ValueError(f"{name} is not in HH:mm format ({value})")
         return self
+
+    def active_database_url(self) -> str:
+        if self.mode in {"demo", "prerelease"}:
+            suffix = self.default_locale if self.demo_db_suffix is None else self.demo_db_suffix
+            path = (self.datapath / f"grocy_{suffix}.db").resolve()
+            return "sqlite+aiosqlite:///" + str(path)
+        return self.database_url
 
     def user_defaults(self) -> dict[str, Any]:
         return {**client_defaults()["user_settings"], **self.default_user_settings}

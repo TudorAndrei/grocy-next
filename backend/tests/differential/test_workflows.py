@@ -5333,6 +5333,8 @@ def configuration_values(api, runtime_configuration, monkeypatch):
     from grocy.core.config import get_settings
 
     reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    original = {}
+    original_defaults = get_settings().default_user_settings
 
     def php_value(value):
         encoded = base64.b64encode(json.dumps(value).encode()).decode()
@@ -5363,9 +5365,15 @@ def configuration_values(api, runtime_configuration, monkeypatch):
                 )
             )
         else:
+            for name, value in original.items():
+                monkeypatch.setattr(get_settings(), name, value)
             for key, value in settings.items():
-                monkeypatch.setattr(get_settings(), key.lower(), value)
-            monkeypatch.setattr(get_settings(), "default_user_settings", user_defaults)
+                name = key.lower()
+                original.setdefault(name, getattr(get_settings(), name))
+                monkeypatch.setattr(get_settings(), name, value)
+            monkeypatch.setattr(
+                get_settings(), "default_user_settings", {**original_defaults, **user_defaults}
+            )
 
     return configure
 
@@ -5435,12 +5443,10 @@ def test_native_base_path_uses_original_routes_and_error_pages(
 
 @pytest.mark.parametrize("mode", ["demo", "prerelease"])
 def test_native_mode_uses_uninitialized_separate_database(
-    api, runtime_configuration, native_data_directory, mode
+    api, configuration_values, native_data_directory, mode
 ):
     path = native_data_directory / ("grocy_missing_" + uuid4().hex + ".db")
-    runtime_configuration(
-        f"Setting('MODE', '{mode}');Setting('DEMO_DB_SUFFIX', '{path.stem[6:]}');"
-    )
+    configuration_values(settings={"MODE": mode, "DEMO_DB_SUFFIX": path.stem[6:]})
     try:
         response = api.get("/api/user", follow_redirects=False)
         assert response.status_code == 500, response.text
@@ -5491,7 +5497,7 @@ def test_native_base_path_dispatches_encoded_file_routes(api, configuration_valu
 
 @pytest.mark.parametrize(("mode", "suffix"), [("demo", None), ("prerelease", "custom_mode")])
 def test_native_mode_reads_and_writes_its_own_database(
-    api, runtime_configuration, native_data_directory, mode, suffix
+    api, configuration_values, native_data_directory, mode, suffix
 ):
     from grocy.db.native_schema import SCHEMA
 
@@ -5508,10 +5514,10 @@ def test_native_mode_reads_and_writes_its_own_database(
             "INSERT INTO permission_hierarchy(id,name,parent) VALUES (?,?,?)", SCHEMA["permissions"]
         )
         database.execute("INSERT INTO user_permissions(user_id,permission_id) VALUES (1,1)")
-    code = f"Setting('MODE', '{mode}');Setting('DEFAULT_LOCALE', 'de');"
+    settings = {"MODE": mode, "DEFAULT_LOCALE": "de"}
     if suffix:
-        code += f"Setting('DEMO_DB_SUFFIX', '{suffix}');"
-    runtime_configuration(code)
+        settings["DEMO_DB_SUFFIX"] = suffix
+    configuration_values(settings=settings)
     try:
         response = api.get("/api/user")
         assert response.status_code == 200, response.text
@@ -5521,7 +5527,7 @@ def test_native_mode_reads_and_writes_its_own_database(
         assert response.status_code == 204, response.text
         with sqlite3.connect(path) as database:
             assert database.execute("SELECT done FROM tasks WHERE id=?", (task,)).fetchone() == (1,)
-        runtime_configuration("")
+        configuration_values()
         assert all(row["name"] != task_name for row in rows(api, "tasks"))
     finally:
         path.unlink(missing_ok=True)

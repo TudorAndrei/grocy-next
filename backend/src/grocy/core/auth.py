@@ -36,7 +36,7 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
             "GET",
             "HEAD",
             "OPTIONS",
-        } and get_settings().database_url.startswith("sqlite"):
+        } and get_settings().active_database_url().startswith("sqlite"):
             await session.execute(text("BEGIN IMMEDIATE"))
             session.info["write_lock"] = True
         yield session

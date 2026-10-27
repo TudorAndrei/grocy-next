@@ -69,7 +69,7 @@ async def dispatch(session, actor: Actor, name: str, arguments: dict[str, Any]) 
                 "nutrition_upsert",
                 "nutrition_attach_evidence",
             }
-            and get_settings().database_url.startswith("sqlite")
+            and get_settings().active_database_url().startswith("sqlite")
             and not session.info.get("write_lock")
         ):
             from sqlalchemy import text

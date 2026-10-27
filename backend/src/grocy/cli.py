@@ -35,10 +35,11 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     async def initialize():
         settings = get_settings()
-        if settings.database_url.startswith("sqlite") and ":memory:" not in settings.database_url:
+        database_url = settings.active_database_url()
+        if database_url.startswith("sqlite") and ":memory:" not in database_url:
             from sqlalchemy.engine import make_url
 
-            database = make_url(settings.database_url).database
+            database = make_url(database_url).database
             if database:
                 from pathlib import Path
 

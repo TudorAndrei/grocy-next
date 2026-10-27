@@ -15,14 +15,20 @@ from sqlalchemy.pool import StaticPool
 from grocy.compatibility.sqlite_functions import register_sqlite_functions
 from grocy.core.config import Settings, get_settings
 
-_engine: AsyncEngine | None = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+_engines: dict[str, AsyncEngine] = {}
+_session_factories: dict[str, async_sessionmaker[AsyncSession]] = {}
 
 
 def reset_engine() -> None:
-    global _engine, _session_factory
-    _engine = None
-    _session_factory = None
+    _engines.clear()
+    _session_factories.clear()
+
+
+async def close_engines(startup_engine: AsyncEngine) -> None:
+    engines = {*_engines.values(), startup_engine}
+    reset_engine()
+    for engine in engines:
+        await engine.dispose()
 
 
 def _native_text(value: bytes) -> str | bytes | None:
@@ -34,25 +40,26 @@ def _native_text(value: bytes) -> str | bytes | None:
 
 
 def get_engine(settings: Settings | None = None) -> AsyncEngine:
-    global _engine, _session_factory
-    if _engine is None:
-        cfg = settings or get_settings()
+    cfg = settings or get_settings()
+    url = cfg.active_database_url()
+    if url not in _engines:
         connect_args: dict[str, object] = {}
         engine_kwargs: dict[str, object] = {}
-        if cfg.database_url.startswith("sqlite"):
+        if url.startswith("sqlite"):
             connect_args["timeout"] = cfg.database_busy_timeout_ms / 1000
             connect_args["check_same_thread"] = False
-            if ":memory:" in cfg.database_url:
+            if ":memory:" in url:
                 engine_kwargs["poolclass"] = StaticPool
-        _engine = create_async_engine(
-            cfg.database_url,
+        engine = create_async_engine(
+            url,
             connect_args=connect_args,
             **engine_kwargs,
         )
-        _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
-        if cfg.database_url.startswith("sqlite"):
+        _engines[url] = engine
+        _session_factories[url] = async_sessionmaker(engine, expire_on_commit=False)
+        if url.startswith("sqlite"):
 
-            @event.listens_for(_engine.sync_engine, "connect")
+            @event.listens_for(engine.sync_engine, "connect")
             def configure_connection(connection: Any, _record: Any) -> None:
                 register_sqlite_functions(connection)
                 # Grocy uses PDO::NULL_EMPTY_STRING when it reads SQLite text.
@@ -62,21 +69,21 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
                 cursor.execute(f"PRAGMA busy_timeout={cfg.database_busy_timeout_ms}")
                 cursor.close()
 
-    return _engine
+    return _engines[url]
 
 
 def get_session_factory(settings: Settings | None = None) -> async_sessionmaker[AsyncSession]:
-    get_engine(settings)
-    assert _session_factory is not None
-    return _session_factory
+    cfg = settings or get_settings()
+    get_engine(cfg)
+    return _session_factories[cfg.active_database_url()]
 
 
 async def configure_sqlite(engine: AsyncEngine, settings: Settings) -> None:
-    if not settings.database_url.startswith("sqlite"):
+    if not settings.active_database_url().startswith("sqlite"):
         return
     async with engine.begin() as conn:
         await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
-        if settings.database_wal and ":memory:" not in settings.database_url:
+        if settings.database_wal and ":memory:" not in settings.active_database_url():
             await conn.exec_driver_sql("PRAGMA journal_mode=WAL")
         await conn.exec_driver_sql(f"PRAGMA busy_timeout={settings.database_busy_timeout_ms}")
 
