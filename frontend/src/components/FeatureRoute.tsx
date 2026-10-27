@@ -31,7 +31,7 @@ export function FeatureRoute() {
           title="Feature disabled"
           lead="The server configuration has disabled this feature."
         />
-        <Link to="/" className="btn">
+        <Link to="/today" className="btn">
           Go to Today
         </Link>
       </>

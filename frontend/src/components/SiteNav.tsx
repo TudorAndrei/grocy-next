@@ -23,7 +23,15 @@ const starts = (prefix: string) => (p: string) => p === prefix || p.startsWith(`
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: null,
-    links: [{ to: "/", label: "Today", icon: "today", domain: "stock", match: (p) => p === "/" }],
+    links: [
+      {
+        to: "/today",
+        label: "Today",
+        icon: "today",
+        domain: "stock",
+        match: (p) => p === "/today",
+      },
+    ],
   },
   {
     label: "Kitchen",

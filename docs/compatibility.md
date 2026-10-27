@@ -51,6 +51,7 @@ The current repair work covers these confirmed differences:
 - Product and recipe editors support picture upload, preview, replacement, and removal. They save the record and custom fields before upload. An upload retry reuses a new record. File deletion failure does not cancel the record update. Picture requests use authentication headers.
 - Python configuration exposes the configured energy unit, code type, and calendar week-number setting. The product energy field uses the configured unit without a value conversion.
 - Barcode forms apply opening, location, and price tracking flags. Scan defaults accept numeric values and the legacy browser boolean forms, including `"on"`.
+- Opening the web root uses the configured `ENTRY_PAGE`. Native page names map to the related web routes. Today remains available at `/today`.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 

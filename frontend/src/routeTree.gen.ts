@@ -28,6 +28,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as TodayRouteImport } from './routes/today'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
@@ -128,6 +129,11 @@ const TasksRoute = TasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/shopping': typeof ShoppingRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
+  '/today': typeof TodayRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/shopping': typeof ShoppingRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
+  '/today': typeof TodayRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products': typeof ProductsIndexRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/shopping': typeof ShoppingRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
+  '/today': typeof TodayRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/products/': typeof ProductsIndexRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/shopping'
     | '/stock'
     | '/tasks'
+    | '/today'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/shopping'
     | '/stock'
     | '/tasks'
+    | '/today'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/shopping'
     | '/stock'
     | '/tasks'
+    | '/today'
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/products/'
@@ -323,6 +335,7 @@ export interface RootRouteChildren {
   ShoppingRoute: typeof ShoppingRoute
   StockRoute: typeof StockRoute
   TasksRoute: typeof TasksRoute
+  TodayRoute: typeof TodayRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/': {
       id: '/products/'
       path: '/products'
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShoppingRoute: ShoppingRoute,
   StockRoute: StockRoute,
   TasksRoute: TasksRoute,
+  TodayRoute: TodayRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
   ProductsIndexRoute: ProductsIndexRoute,

@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <nav className="tabbar" aria-label="Quick">
-        <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>
+        <Link to="/today" aria-current={pathname === "/today" ? "page" : undefined}>
           <Icon name="today" />
           Today
         </Link>

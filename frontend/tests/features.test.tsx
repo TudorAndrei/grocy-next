@@ -13,7 +13,7 @@ import { AppShell } from "@/components/AppShell";
 import { CommandProvider } from "@/components/CommandBar";
 import { FeatureRoute } from "@/components/FeatureRoute";
 import { Toaster } from "@/components/Toaster";
-import { Route as TodayRoute } from "@/routes/index";
+import { Route as TodayRoute } from "@/routes/today";
 import type { JsonObject } from "@/lib/json";
 
 function mount(path: string, config: JsonObject, today = false) {
