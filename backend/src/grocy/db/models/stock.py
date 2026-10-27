@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from grocy.db.dates import NativeDate
 from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
 
@@ -18,8 +19,8 @@ class StockEntry(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 6), nullable=False)
-    best_before_date: Mapped[date | None] = mapped_column(Date)
-    purchased_date: Mapped[date | None] = mapped_column(Date)
+    best_before_date: Mapped[date | None] = mapped_column(NativeDate)
+    purchased_date: Mapped[date | None] = mapped_column(NativeDate)
     stock_id: Mapped[str] = mapped_column(String(64), nullable=False)
     price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
     open: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -39,9 +40,9 @@ class StockLog(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 6), nullable=False)
-    best_before_date: Mapped[date | None] = mapped_column(Date)
-    purchased_date: Mapped[date | None] = mapped_column(Date)
-    used_date: Mapped[date | None] = mapped_column(Date)
+    best_before_date: Mapped[date | None] = mapped_column(NativeDate)
+    purchased_date: Mapped[date | None] = mapped_column(NativeDate)
+    used_date: Mapped[date | None] = mapped_column(NativeDate)
     spoiled: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     stock_id: Mapped[str] = mapped_column(String(64), nullable=False)
     transaction_type: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -81,8 +82,8 @@ class CachedLastPurchase(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
-    best_before_date: Mapped[date | None] = mapped_column(Date)
-    purchased_date: Mapped[date | None] = mapped_column(Date)
+    best_before_date: Mapped[date | None] = mapped_column(NativeDate)
+    purchased_date: Mapped[date | None] = mapped_column(NativeDate)
     price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
     location_id: Mapped[int | None] = mapped_column(Integer)
     shopping_location_id: Mapped[int | None] = mapped_column(Integer)

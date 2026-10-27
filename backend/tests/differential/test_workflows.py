@@ -4278,6 +4278,14 @@ def test_native_stock_purchase_keeps_year_zero_dates(api, catalog, field):
     assert entries.status_code == 200 and entries.json()[0][field] == "0000-01-04"
     details = api.get(f"/api/stock/products/{product}")
     assert details.status_code == 200, details.text
+    consumed = api.post(f"/api/stock/products/{product}/consume", json={"amount": 0.5})
+    assert consumed.status_code == 200, consumed.text
+    assert consumed.json()[0][field] == "0000-01-04"
+    transaction = consumed.json()[0]["transaction_id"]
+    assert api.post(f"/api/stock/transactions/{transaction}/undo").status_code == 204
+    restored = api.get(f"/api/stock/products/{product}/entries").json()
+    assert all(row[field] == "0000-01-04" for row in restored)
+    assert sum(row["amount"] for row in restored) == 1
 
 
 @pytest.mark.parametrize("action", ["add", "consume", "open", "transfer", "inventory"])

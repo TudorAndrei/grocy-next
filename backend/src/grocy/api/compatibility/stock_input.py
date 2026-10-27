@@ -13,21 +13,27 @@ from grocy.compatibility.php import (
     body_array,
     empty,
     filter_bool,
+    int_argument,
     intval,
     is_iso_date,
     is_numeric,
     php_string,
     request_body,
+    require_permission,
     truthy,
 )
-from grocy.core.auth import CurrentActor
+from grocy.core.auth import AuthenticatedActor, CurrentActor
+from grocy.core.deps import StockSvc
 from grocy.core.errors import GrocyError
+from grocy.db.dates import parse_date
+from grocy.domains.products.barcodes import parse_product_code
 
 
 @dataclass
 class StockBody:
     amount: Decimal
     new_amount: Decimal
+    record_id: int = 0
     best_before_date: date | None = None
     purchased_date: date | None = None
     price: Decimal | None = None
@@ -61,12 +67,32 @@ def _number(values: dict[str, Any], name: str) -> int | None:
 
 def _date(values: dict[str, Any], name: str) -> date | None:
     value = values.get(name)
-    return date.fromisoformat(php_string(value)) if name in values and is_iso_date(value) else None
+    return parse_date(php_string(value)) if name in values and is_iso_date(value) else None
 
 
-async def stock_body(request: Request, _actor: CurrentActor) -> StockBody:
-    values = await json_body(request)
+async def stock_body(request: Request, actor: AuthenticatedActor, stock: StockSvc) -> StockBody:
     action = "edit" if request.method == "PUT" else request.url.path.rsplit("/", 1)[-1]
+    barcode = request.path_params.get("barcode")
+    identity = (
+        await stock.products.id_from_barcode(barcode)
+        if barcode is not None
+        else request.path_params.get("product_id", request.path_params.get("entry_id"))
+    )
+    permission = {
+        "add": "PURCHASE",
+        "consume": "CONSUME",
+        "open": "OPEN",
+        "transfer": "TRANSFER",
+        "inventory": "INVENTORY",
+        "edit": "EDIT",
+    }[action]
+    require_permission(actor, "STOCK_" + permission, caught=barcode is not None)
+    try:
+        values = await json_body(request)
+    except GrocyError as error:
+        if barcode is not None and error.status_code == 400:
+            raise GrocyError(error.message, code=None) from error
+        raise
     method = {
         "add": "AddProduct",
         "consume": "ConsumeProduct",
@@ -84,8 +110,11 @@ async def stock_body(request: Request, _actor: CurrentActor) -> StockBody:
         for key, direction in (("location_id_from", "from"), ("location_id_to", "to")):
             if key not in values:
                 raise GrocyError(f"A transfer {direction} location is required", code=None)
+    record_id = int_argument(
+        str(identity), function, "stockRowId" if action == "edit" else "productId"
+    )
     amount = _decimal(values[name], function, "newAmount" if action == "inventory" else "amount")
-    body = StockBody(amount=amount, new_amount=amount)
+    body = StockBody(amount=amount, new_amount=amount, record_id=record_id)
     if action in {"add", "consume", "transfer"} and amount <= 0:
         raise GrocyError("Amount can't be <= 0", code=None)
     if action in {"add", "inventory", "edit"}:
@@ -114,6 +143,9 @@ async def stock_body(request: Request, _actor: CurrentActor) -> StockBody:
             else "consume"
         )
     if action in {"consume", "open", "transfer"}:
+        code = parse_product_code(barcode) if barcode is not None else None
+        if code and code[1]:
+            values["stock_entry_id"] = code[1]
         value = values.get("stock_entry_id")
         body.stock_entry_id = php_string(value) if not empty(value) else None
         body.allow_subproduct_substitution = truthy(values.get("allow_subproduct_substitution"))

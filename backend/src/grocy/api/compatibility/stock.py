@@ -7,8 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.api.compatibility.stock_input import ShoppingInput, StockInput
 from grocy.compatibility.lessql import query_parameters, query_rows
-from grocy.compatibility.php import PhpJSONResponse, argument_error, filter_bool, int_argument
-from grocy.core.auth import CurrentActor
+from grocy.compatibility.php import (
+    PhpJSONResponse,
+    argument_error,
+    filter_bool,
+    filter_int,
+    int_argument,
+)
+from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.deps import DbSession, ShoppingSvc, StockSvc
 from grocy.core.errors import GrocyError
 from grocy.db.compatibility_views import configure_compatibility_queries
@@ -48,9 +54,9 @@ async def stock_get_entry(entry_id: str, _actor: CurrentActor, session: DbSessio
 
 @router.put("/api/stock/entry/{entry_id}")
 async def stock_edit_entry(
-    entry_id: int,
+    entry_id: str,
     body: StockInput,
-    actor: CurrentActor,
+    actor: AuthenticatedActor,
     stock: StockSvc,
 ) -> list[dict[str, Any]]:
     fields: dict[str, Any] = {
@@ -59,13 +65,11 @@ async def stock_edit_entry(
         "purchased_date": body.purchased_date,
         "location_id": body.location_id,
         "shopping_location_id": body.shopping_location_id,
+        "price": body.price,
         "note": body.note,
+        "open": body.open,
     }
-    if body.price is not None:
-        fields["price"] = Decimal(str(body.price))
-    if body.open is not None:
-        fields["open"] = body.open
-    return await stock.edit_entry(entry_id, actor=actor, **fields)
+    return await stock.edit_entry(body.record_id, actor=actor, **fields)
 
 
 async def _label_details(stock: StockService, product_id: int) -> dict[str, Any]:
@@ -92,8 +96,11 @@ async def stock_entry_printlabel(
 
 
 @router.get("/api/stock/products/{product_id}")
-async def stock_product(product_id: int, _actor: CurrentActor, stock: StockSvc) -> dict[str, Any]:
-    return await stock.product_details(product_id, compatibility=True)
+async def stock_product(product_id: str, _actor: CurrentActor, stock: StockSvc) -> dict[str, Any]:
+    identity = int_argument(
+        product_id, "Grocy\\Services\\StockService::GetProductDetails", "productId"
+    )
+    return await stock.product_details(identity, compatibility=True)
 
 
 @router.get("/api/stock/products/{product_id}/locations")
@@ -136,17 +143,20 @@ async def _product_stock_rows(
 
 
 @router.get("/api/stock/products/{product_id}/price-history")
-async def stock_price_history(product_id: int, _actor: CurrentActor, stock: StockSvc) -> list[dict]:
-    return await stock.price_history(product_id)
+async def stock_price_history(product_id: str, _actor: CurrentActor, stock: StockSvc) -> list[dict]:
+    identity = int_argument(
+        product_id, "Grocy\\Services\\StockService::GetProductPriceHistory", "productId"
+    )
+    return await stock.price_history(identity)
 
 
 @router.post("/api/stock/products/{product_id}/add")
 async def stock_add(
-    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
+    product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.purchase(
         actor,
-        product_id,
+        body.record_id,
         body.amount,
         best_before_date=body.best_before_date,
         purchased_date=body.purchased_date,
@@ -162,11 +172,11 @@ async def stock_add(
 
 @router.post("/api/stock/products/{product_id}/consume")
 async def stock_consume(
-    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
+    product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.consume(
         actor,
-        product_id,
+        body.record_id,
         body.amount,
         spoiled=body.spoiled,
         transaction_type=body.transaction_type,
@@ -180,11 +190,11 @@ async def stock_consume(
 
 @router.post("/api/stock/products/{product_id}/open")
 async def stock_open(
-    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
+    product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.open(
         actor,
-        product_id,
+        body.record_id,
         body.amount,
         stock_entry_id=body.stock_entry_id,
         allow_subproduct_substitution=body.allow_subproduct_substitution,
@@ -193,11 +203,11 @@ async def stock_open(
 
 @router.post("/api/stock/products/{product_id}/transfer")
 async def stock_transfer(
-    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
+    product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.transfer(
         actor,
-        product_id,
+        body.record_id,
         body.amount,
         body.location_id_from,
         body.location_id_to,
@@ -207,11 +217,11 @@ async def stock_transfer(
 
 @router.post("/api/stock/products/{product_id}/inventory")
 async def stock_inventory(
-    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
+    product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.inventory(
         actor,
-        product_id,
+        body.record_id,
         body.new_amount,
         best_before_date=body.best_before_date,
         purchased_date=body.purchased_date,
@@ -237,68 +247,61 @@ async def stock_product_printlabel(
     "/api/stock/products/{product_id_to_keep}/merge/{product_id_to_remove}", status_code=204
 )
 async def stock_merge_products(
-    product_id_to_keep: int,
-    product_id_to_remove: int,
+    product_id_to_keep: str,
+    product_id_to_remove: str,
     actor: CurrentActor,
     stock: StockSvc,
 ) -> Response:
-    await stock.merge_products(actor, product_id_to_keep, product_id_to_remove)
+    keep, remove = filter_int(product_id_to_keep), filter_int(product_id_to_remove)
+    if keep is None or remove is None:
+        raise GrocyError(
+            "Provided {productIdToKeep} or {productIdToRemove} is not a valid integer", code=None
+        )
+    if keep == remove:
+        raise GrocyError("$productIdToKeep cannot equal $productIdToRemove", code=None)
+    await stock.merge_products(actor, keep, remove)
     return Response(status_code=204)
 
 
 @router.get("/api/stock/products/by-barcode/{barcode}")
 async def stock_product_by_barcode(barcode: str, _actor: CurrentActor, stock: StockSvc) -> dict:
-    details = await stock.product_by_barcode(barcode)
-    product = details.get("product") or details
-    product_id = product.get("id") if isinstance(product, dict) else details.get("id")
-    return {"product_id": product_id, "product": product}
+    identity = await stock.products.id_from_barcode(barcode)
+    return await stock.product_details(identity, compatibility=True)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/add")
 async def stock_add_by_barcode(
-    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
-    return await stock.purchase_by_barcode(
-        actor,
-        barcode,
-        body.amount,
-        best_before_date=body.best_before_date,
-        location_id=body.location_id,
-    )
+    return await stock_add(str(body.record_id), body, actor, stock)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/consume")
 async def stock_consume_by_barcode(
-    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
-    return await stock.consume_by_barcode(actor, barcode, body.amount, spoiled=body.spoiled)
+    return await stock_consume(str(body.record_id), body, actor, stock)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/open")
 async def stock_open_by_barcode(
-    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
-    return await stock.open_by_barcode(actor, barcode, body.amount)
+    return await stock_open(str(body.record_id), body, actor, stock)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/transfer")
 async def stock_transfer_by_barcode(
-    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
-    return await stock.transfer_by_barcode(
-        actor,
-        barcode,
-        body.amount,
-        body.location_id_from,
-        body.location_id_to,
-    )
+    return await stock_transfer(str(body.record_id), body, actor, stock)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/inventory")
 async def stock_inventory_by_barcode(
-    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
-    return await stock.inventory_by_barcode(actor, barcode, body.new_amount)
+    return await stock_inventory(str(body.record_id), body, actor, stock)
 
 
 @router.get("/api/stock/locations/{location_id}/entries")
@@ -367,13 +370,17 @@ async def stock_shopping_remove_product(body: ShoppingInput, shopping: ShoppingS
 
 
 @router.get("/api/stock/bookings/{booking_id}")
-async def stock_get_booking(booking_id: int, _actor: CurrentActor, stock: StockSvc) -> dict:
-    return await stock.get_booking(booking_id)
+async def stock_get_booking(booking_id: str, _actor: CurrentActor, stock: StockSvc) -> dict:
+    identity = int_argument(
+        booking_id, "Grocy\\Services\\StockService::GetStockBooking", "bookingId"
+    )
+    return await stock.get_booking(identity)
 
 
 @router.post("/api/stock/bookings/{booking_id}/undo", status_code=204)
-async def stock_undo(booking_id: int, actor: CurrentActor, stock: StockSvc) -> Response:
-    await stock.undo_booking(actor, booking_id)
+async def stock_undo(booking_id: str, actor: CurrentActor, stock: StockSvc) -> Response:
+    identity = int_argument(booking_id, "Grocy\\Services\\StockService::UndoBooking", "bookingId")
+    await stock.undo_booking(actor, identity)
     return Response(status_code=204)
 
 

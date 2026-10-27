@@ -23,19 +23,21 @@ class ProductsService:
         return list((await self.session.execute(stmt)).scalars().all())
 
     async def get_by_barcode(self, barcode: str) -> Product:
+        return await self.get_active(await self.id_from_barcode(barcode))
+
+    async def id_from_barcode(self, barcode: str) -> int:
         code = parse_product_code(barcode)
         if code:
-            return await self.get_active(code[0])
+            return code[0]
         stmt = (
-            select(Product)
-            .join(ProductBarcode, ProductBarcode.product_id == Product.id)
-            .options(selectinload(Product.barcodes))
+            select(ProductBarcode.product_id)
             .where(ProductBarcode.barcode.collate("NOCASE") == barcode)
+            .limit(1)
         )
-        product = (await self.session.execute(stmt)).scalars().first()
-        if product is None:
-            raise GrocyError(f"No product with barcode {barcode} found")
-        return await self.get_active(product.id)
+        product_id = await self.session.scalar(stmt)
+        if product_id is None:
+            raise GrocyError(f"No product with barcode {barcode} found", code=None)
+        return product_id
 
     async def get(self, product_id: int) -> Product:
         stmt = (

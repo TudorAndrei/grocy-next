@@ -349,11 +349,13 @@ export const api = {
     }),
 
   getProductByBarcode: (barcode: string) =>
-    request<BarcodeProduct>(`/api/stock/products/by-barcode/${encodeURIComponent(barcode)}`),
+    request<Pick<BarcodeProduct, "product">>(
+      `/api/stock/products/by-barcode/${encodeURIComponent(barcode)}`,
+    ).then(({ product }): BarcodeProduct => ({ product, product_id: product.id })),
 
   externalBarcodeLookup: (barcode: string, add = false) =>
     request<ExternalBarcodeProduct | null>(
-      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}${add ? "?add=1" : ""}`,
+      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}${add ? "?add=true" : ""}`,
     ),
 
   stockActionByBarcode: (

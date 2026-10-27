@@ -72,8 +72,14 @@ function BarcodePage() {
         try {
           const product = await api.getProductByBarcode(code);
           setLookup(product);
+
+          return;
         } catch (error) {
-          if (!(error instanceof ApiError) || error.status !== 404) {
+          if (
+            !(error instanceof ApiError) ||
+            (error.status !== 404 &&
+              !(error.status === 400 && error.message === `No product with barcode ${code} found`))
+          ) {
             throw error;
           }
 

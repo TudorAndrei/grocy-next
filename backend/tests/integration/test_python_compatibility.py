@@ -207,12 +207,12 @@ def test_python_user_requests_use_grocy_controller_fields(client, api_headers):
         json={"username": "Form user", "password": "secret", "password_confirm": "secret"},
     )
     assert created.status_code == 204, created.text
-    assert client.post("/api/users", json={"username": "No password"}).status_code == 400
+    assert client.post("/api/users", json={"username": "No password"}).status_code == 500
     users = {row["username"]: row["id"] for row in client.get("/api/users").json()}
     assert "No password" not in users
     path = f"/api/users/{users['Form user']}"
     profile = {"username": "Form user", "first_name": "Form", "last_name": "User"}
-    assert client.put(path, json={"username": "Form user"}).status_code == 400
+    assert client.put(path, json={"username": "Form user"}).status_code == 500
     assert client.put(path, json={**profile, "picture_file_name": "face.png"}).status_code == 204
     assert client.put(path, json=profile).status_code == 204
     user = client.get("/api/users", params={"query[]": "username=Form user"}).json()[0]

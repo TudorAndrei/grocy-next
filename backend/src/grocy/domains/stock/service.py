@@ -10,9 +10,11 @@ from sqlalchemy import case, func, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.php import argument_error, truthy
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.db.dates import parse_date
 from grocy.db.models.catalog import Location, Product
 from grocy.db.models.household import Chore
 from grocy.db.models.mealplan import MealPlanEntry
@@ -387,7 +389,7 @@ class StockService:
                 transaction_id=transaction_id,
                 undo_data=json.dumps({"before": before, "split_stock_id": split_stock_id}),
                 best_before_date=before["best_before_date"]
-                and date.fromisoformat(before["best_before_date"]),
+                and parse_date(before["best_before_date"]),
                 purchased_date=entry.purchased_date,
                 price=entry.price,
                 shopping_location_id=entry.shopping_location_id,
@@ -888,6 +890,11 @@ class StockService:
             opened_date=entry.opened_date,
             undo_data=json.dumps({"before": before}),
         )
+        await self.session.commit()
+        opened = fields.get("open")
+        if opened is None or isinstance(opened, (dict, list)):
+            raise argument_error("BoolToInt", 1, "bool", "bool", opened)
+        fields["open"] = truthy(opened)
         if amount is not None:
             entry.amount = amount
         for key in (
