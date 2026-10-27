@@ -93,4 +93,4 @@ def test_password_login_uses_the_configured_authentication_provider(
     assert created.status_code == 204
     monkeypatch.setattr(get_settings(), "auth_mode", auth_mode)
     login = client.post("/api/v2/login", json={"username": "cook", "password": "pan-fried"})
-    assert login.status_code == (200 if auth_mode == "default" else 403)
+    assert login.status_code == {"default": 200, "ldap": 401, "reverse-proxy": 403}[auth_mode]

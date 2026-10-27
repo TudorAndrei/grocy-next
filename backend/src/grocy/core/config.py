@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from grocy.compatibility import client_defaults
@@ -25,6 +25,16 @@ class Settings(BaseSettings):
     disable_auth: bool | str = False
     reverse_proxy_auth_header: str = "Remote-User"
     reverse_proxy_auth_use_env: bool = False
+    ldap_address: str = ""
+    ldap_base_dn: str = ""
+    ldap_bind_dn: str = ""
+    ldap_bind_pw: str = Field(default="", repr=False)
+    ldap_user_filter: str = ""
+    ldap_uid_attr: str = ""
+    ldap_start_tls: bool = False
+    ldap_ca_certs_file: Path | None = None
+    ldap_connect_timeout: int = Field(default=5, gt=0)
+    ldap_receive_timeout: int = Field(default=10, gt=0)
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
     database_busy_timeout_ms: int = 5000

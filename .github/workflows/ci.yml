@@ -75,13 +75,17 @@ jobs:
       - name: Install PHP modules
         run: |
           sudo apt-get update
-          sudo apt-get install -y php-cli php-bcmath php-curl php-gd php-intl php-mbstring php-sqlite3 php-xml php-zip
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y php-cli php-bcmath php-curl php-gd php-intl php-ldap php-mbstring php-sqlite3 php-xml php-zip slapd ldap-utils
       - name: Sync backend
         run: uv sync --project backend --frozen
       - name: Compare with Grocy 4.5.0
         env:
           GROCY_USE_NATIVE_PHP: "false"
         run: uv run --project backend python scripts/check-reference.py --timezone "${{ matrix.timezone }}"
+      - name: Check Python LDAP TLS
+        env:
+          GROCY_USE_NATIVE_PHP: "false"
+        run: uv run --project backend pytest -q backend/tests/integration/test_ldap_tls.py
       - name: Compare disabled feature flags
         env:
           GROCY_USE_NATIVE_PHP: "false"

@@ -23,7 +23,7 @@ Use `GROCY_AUTH_MODE=default` for API keys with a session cookie fallback. Use `
 
 Use `GROCY_AUTH_MODE=reverse-proxy` to use an identity header. The default header is `Remote-User`. The proxy must replace this header. New proxy users receive `GROCY_DEFAULT_PERMISSIONS`. Use `GROCY_REVERSE_PROXY_AUTH_HEADER` to change the name. With `GROCY_REVERSE_PROXY_AUTH_USE_ENV=true`, an `HTTP_` name reads the corresponding request header; other names read the process environment.
 
-LDAP password login is not yet implemented. The `ldap` mode checks API keys and existing sessions. It does not use local passwords as a fallback. `GROCY_DISABLE_AUTH=true` and development modes use the first user in the database.
+Use `GROCY_AUTH_MODE=ldap` for [LDAP login](../docs/python-ldap.md). This mode also accepts API keys and existing sessions. It does not use local passwords as a fallback. `GROCY_DISABLE_AUTH=true` and development modes use the first user in the database.
 
 File type detection uses libmagic. The release image includes this data library. On macOS, the application can also use the system `file` tool.
 

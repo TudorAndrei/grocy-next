@@ -37,8 +37,9 @@ The current repair work covers these confirmed differences:
 - User profile errors and self-edit ID checks follow the checked legacy rules. The web profile form retains the saved photo.
 - `GROCY_DEFAULT_USER_SETTINGS` supplies Python configuration defaults. Saved values have priority, and recipe views use the same defaults.
 - Python authentication modes support API keys, sessions, and reverse proxy identities. Session mode also works with web login and logout.
+- Python LDAP login checks the directory password, uses the returned user ID attribute, and creates users with the configured default permissions. Real directory tests compare these rules with legacy login. TLS tests check LDAPS, StartTLS, and rejection of an untrusted certificate.
 
-Full Python parity is not complete. Open work includes exact image output, further printer transport errors, further configuration options, LDAP password login, base paths, mode-specific databases, and web feature flags and form options. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes exact image output, further printer transport errors, further configuration options, base paths, mode-specific databases, and web feature flags and form options. Test results must identify the runtime and selected cases.
 
 ## Verification
 

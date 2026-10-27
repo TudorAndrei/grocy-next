@@ -86,3 +86,19 @@ def _php_reference_http_settings(tmp_path_factory):
     if shutil.which(executable) is None:
         pytest.skip("The optional PHP reference runtime is not installed")
     return read_http_settings(executable, tmp_path_factory.mktemp("php-http-settings"))
+
+
+@pytest.fixture
+def ldap_directory(tmp_path):
+    from ldap_server import directory
+
+    with directory(tmp_path / "ldap") as settings:
+        yield settings
+
+
+@pytest.fixture(params=["ldaps", "starttls"])
+def ldap_encrypted_directory(tmp_path, request):
+    from ldap_server import directory
+
+    with directory(tmp_path / "ldap", request.param) as settings:
+        yield settings

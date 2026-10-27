@@ -5983,3 +5983,63 @@ def test_native_configured_authentication_class_selects_credentials(
     finally:
         execute_sql(f"DELETE FROM api_keys WHERE api_key='{key}'")
         execute_sql(f"DELETE FROM sessions WHERE session_key='{cookie}'")
+
+
+@pytest.mark.parametrize(
+    "username,password,valid,overrides",
+    [
+        ("Alice", "correct horse", True, {}),
+        ("alice", "wrong", False, {}),
+        ("missing", "correct horse", False, {}),
+        ("alice", "", False, {}),
+        ("blocked", "secret", False, {}),
+        ("alice", "correct horse", False, {"LDAP_BIND_PW": "wrong"}),
+    ],
+)
+def test_ldap_login_creates_and_reuses_the_directory_identity(
+    api, configuration_values, ldap_directory, username, password, valid, overrides
+):
+    configuration_values(
+        settings={
+            "AUTH_MODE": "ldap",
+            **ldap_directory,
+            **overrides,
+            "DEFAULT_PERMISSIONS": ["TASKS_MARK_COMPLETED"],
+        }
+    )
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    before = api.get("/api/users").json()
+
+    def login():
+        if reference:
+            return api.post(
+                "/login",
+                data={"username": username, "password": password, "stay_logged_in": ""},
+                follow_redirects=False,
+            )
+        return api.post("/api/v2/login", json={"username": username, "password": password})
+
+    try:
+        result = login()
+        if not valid:
+            assert "grocy_session" not in result.cookies
+            if not reference:
+                assert result.status_code == 401, result.text
+            assert api.get("/api/users").json() == before
+            return
+        assert "grocy_session" in result.cookies, result.text
+        headers = {"GROCY-API-KEY": ""}
+        user_response = api.get("/api/user", headers=headers)
+        assert user_response.status_code == 200, user_response.text
+        user = user_response.json()[0]
+        assert (user["username"], user["first_name"], user["last_name"]) == (
+            "alice",
+            "Alice",
+            "Grocer",
+        )
+        assert login().cookies.get("grocy_session")
+        assert api.get("/api/user", headers=headers).json()[0]["id"] == user["id"]
+        permissions = api.get(f"/api/users/{user['id']}/permissions").json()
+        assert [row["permission_id"] for row in permissions] == [29]
+    finally:
+        api.cookies.clear()

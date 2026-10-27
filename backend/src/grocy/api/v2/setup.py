@@ -18,6 +18,7 @@ from grocy.core.errors import ConflictError, GrocyError, UnauthorizedError
 from grocy.core.time import server_timezone
 from grocy.db.models.users import ApiKey, User, UserPermission
 from grocy.db.seed import has_ever_had_users
+from grocy.domains.users.ldap import authenticate_user as authenticate_directory_user
 
 router = APIRouter(tags=["setup"])
 
@@ -46,7 +47,7 @@ class SetupBody(BaseModel):
 
 class LoginBody(BaseModel):
     username: str
-    password: str = Field(max_length=72)
+    password: str
 
 
 async def _issue_key(session: DbSession, user_id: int, description: str) -> str:
@@ -60,7 +61,7 @@ async def _issue_key(session: DbSession, user_id: int, description: str) -> str:
 async def _issue_cookie(
     session: DbSession, user_id: int, request: Request, response: Response
 ) -> None:
-    if get_settings().auth_mode != "session":
+    if get_settings().auth_mode not in {"session", "ldap"}:
         return
     token = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(50))
     expires = datetime.now(server_timezone()) + timedelta(days=30)
@@ -110,21 +111,28 @@ async def run_setup(
 
 @router.post("/login")
 async def login(body: LoginBody, session: DbSession, request: Request, response: Response) -> dict:
-    if get_settings().auth_mode in {"ldap", "reverse-proxy"}:
+    if get_settings().auth_mode == "reverse-proxy":
         raise GrocyError(
             "Password login is managed by the configured authentication provider",
             status_code=403,
             code="externally_managed_authentication",
         )
-    user = await session.scalar(select(User).where(User.username == body.username.strip()))
-    stored = user.password.replace("$2y$", "$2b$", 1).encode() if user and user.password else None
-    try:
-        valid = await run_in_threadpool(
-            bcrypt.checkpw, body.password.encode(), stored or _DUMMY_HASH
+    if get_settings().auth_mode == "ldap":
+        user = await authenticate_directory_user(session, body.username, body.password)
+        valid = user is not None
+    else:
+        user = await session.scalar(select(User).where(User.username == body.username.strip()))
+        stored = (
+            user.password.replace("$2y$", "$2b$", 1).encode() if user and user.password else None
         )
-    except ValueError:
-        valid = False
-    if user is None or stored is None or not valid:
+        try:
+            checked = await run_in_threadpool(
+                bcrypt.checkpw, body.password.encode(), stored or _DUMMY_HASH
+            )
+            valid = stored is not None and checked
+        except ValueError:
+            valid = False
+    if user is None or not valid:
         raise UnauthorizedError("Invalid username or password")
     key = await _issue_key(session, user.id, "Web login")
     await _issue_cookie(session, user.id, request, response)
