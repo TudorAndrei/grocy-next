@@ -5661,6 +5661,24 @@ def test_configuration_preserves_sunday_and_relative_meal_plan_start(api, config
     assert {name: response.json()[name] for name in values} == values
 
 
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"CALENDAR_SHOW_WEEK_OF_YEAR": False, "ENERGY_UNIT": "kJ", "GROCYCODE_TYPE": "1D"},
+        {
+            "CALENDAR_SHOW_WEEK_OF_YEAR": "off",
+            "ENERGY_UNIT": "custom unit",
+            "GROCYCODE_TYPE": "custom",
+        },
+    ],
+)
+def test_native_configured_display_options(api, configuration_values, values):
+    configuration_values(settings=values)
+    response = api.get("/api/system/config")
+    assert response.status_code == 200, response.text
+    assert {name: response.json()[name] for name in values} == values
+
+
 def test_native_bootstrap_output_retains_http_header_state(
     api, runtime_configuration, php_http_settings
 ):

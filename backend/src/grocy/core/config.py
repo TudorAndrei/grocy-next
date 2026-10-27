@@ -35,8 +35,11 @@ class Settings(BaseSettings):
     mode: str = "production"
     demo_db_suffix: str | None = None
     currency: str = "USD"
+    energy_unit: str = "kcal"
+    grocycode_type: str = "2D"
     default_locale: str = "en"
     calendar_first_day_of_week: Any = ""
+    calendar_show_week_of_year: bool | str = True
     meal_plan_first_day_of_week: Any = ""
     entry_page: str = "stock"
     base_url: str = "/"
@@ -124,6 +127,7 @@ class Settings(BaseSettings):
                     in {
                         "disable_url_rewriting",
                         "disable_auth",
+                        "calendar_show_week_of_year",
                         "label_printer_run_server",
                         "label_printer_hook_json",
                         "tprinter_is_network_printer",

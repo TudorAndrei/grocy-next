@@ -59,6 +59,13 @@ function customField(row: EntityRow): EntityField {
 export function EntityManager({ entity, detail, actions, fixed, title }: Props) {
   const features = useFeatures();
   const baseSpec = getEntitySpec(entity);
+  const energyUnit = String(features.query.data?.ENERGY_UNIT ?? "kcal");
+
+  const labeledFields = baseSpec.fields.map((field) =>
+    entity === "products" && field.key === "calories"
+      ? { ...field, label: `Energy per stock unit (${energyUnit})` }
+      : field,
+  );
 
   const fieldEnabled = (field: EntityField) =>
     !field.features || field.features.every(features.enabled);
@@ -97,7 +104,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
   const spec: EntitySpec = {
     ...baseSpec,
     fields: [
-      ...baseSpec.fields.filter(fieldEnabled).map((field) =>
+      ...labeledFields.filter(fieldEnabled).map((field) =>
         entity === "userfields" && field.key === "entity"
           ? {
               ...field,

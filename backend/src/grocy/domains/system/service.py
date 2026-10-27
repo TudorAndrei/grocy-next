@@ -207,8 +207,11 @@ class SystemService:
                 else {}
             ),
             "CURRENCY": settings.currency,
+            "ENERGY_UNIT": settings.energy_unit,
+            "GROCYCODE_TYPE": settings.grocycode_type,
             "DEFAULT_LOCALE": settings.default_locale,
             "CALENDAR_FIRST_DAY_OF_WEEK": settings.calendar_first_day_of_week,
+            "CALENDAR_SHOW_WEEK_OF_YEAR": settings.calendar_show_week_of_year,
             "MEAL_PLAN_FIRST_DAY_OF_WEEK": settings.meal_plan_first_day_of_week,
             "ENTRY_PAGE": settings.entry_page,
             "LOCALE": locale,

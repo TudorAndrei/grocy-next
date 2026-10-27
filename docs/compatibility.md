@@ -49,6 +49,7 @@ The current repair work covers these confirmed differences:
 - The product editor includes freezing warnings, opened-stock treatment, stock label defaults, automatic label reprinting, and purchase price type. Product fields use the checked legacy hidden defaults when tracking is disabled.
 - Web builds, page links, API requests, and authenticated downloads support a configured path prefix. The release web server and Vite proxy use the same prefix as the Python API.
 - Product and recipe editors support picture upload, preview, replacement, and removal. They save the record and custom fields before upload. An upload retry reuses a new record. File deletion failure does not cancel the record update. Picture requests use authentication headers.
+- Python configuration exposes the configured energy unit, code type, and calendar week-number setting. The product energy field uses the configured unit without a value conversion.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 

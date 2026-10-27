@@ -47,6 +47,7 @@ test.each([
           FEATURE_FLAG_STOCK_PRODUCT_OPENED_TRACKING: opening,
           FEATURE_FLAG_STOCK_PRODUCT_FREEZING: tracking,
           FEATURE_FLAG_LABEL_PRINTER: tracking,
+          ENERGY_UNIT: "kJ",
         });
 
       if (path === "/api/objects/products/1" && init?.method === "PUT") {
@@ -78,6 +79,7 @@ test.each([
   await user.click(await screen.findByRole("button", { name: /Edit.*Milk/ }));
   await user.clear(screen.getByLabelText("Name"));
   await user.type(screen.getByLabelText("Name"), "Fresh milk");
+  expect(screen.getByLabelText("Energy per stock unit (kJ)")).toBeDefined();
 
   if (tracking) await user.selectOptions(screen.getByLabelText("Default stock label"), "1");
   await user.click(screen.getByRole("button", { name: "Save product" }));
