@@ -6,6 +6,7 @@ import { useCatalog } from "@/lib/catalog";
 import { usePreferences } from "@/lib/preferences";
 import { objectsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
+import { isoDay } from "@/lib/format";
 import { ErrorBlock } from "./ErrorBlock";
 
 type Entry = {
@@ -38,7 +39,7 @@ export function StockLedger({ productId }: { productId: number }) {
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const openingEnabled = features.enabled("STOCK_PRODUCT_OPENED_TRACKING");
-  const { formatAmount } = usePreferences();
+  const { formatAmount, formatPrice, showPurchaseDate } = usePreferences();
   const client = useQueryClient();
   const catalog = useCatalog();
   const [selection, setAdjust] = useState<Adjust>("transfer");
@@ -47,6 +48,7 @@ export function StockLedger({ productId }: { productId: number }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [bestBefore, setBestBefore] = useState("");
+  const [purchasedDate, setPurchasedDate] = useState(isoDay);
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
   const [entryAmount, setEntryAmount] = useState("");
   const [entryExpiry, setEntryExpiry] = useState("");
@@ -105,6 +107,8 @@ export function StockLedger({ productId }: { productId: number }) {
       if (locationsEnabled && from) body.location_id = Number(from);
 
       if (datesEnabled && bestBefore) body.best_before_date = bestBefore;
+
+      if (showPurchaseDate) body.purchased_date = purchasedDate || null;
     }
 
     action.mutate(() => api.action(`/api/stock/products/${productId}/${adjust}`, body));
@@ -210,6 +214,16 @@ export function StockLedger({ productId }: { productId: number }) {
                 type="date"
                 value={bestBefore}
                 onChange={(e) => setBestBefore(e.target.value)}
+              />
+            </label>
+          ) : null}
+          {adjust === "inventory" && showPurchaseDate ? (
+            <label className="field">
+              <span>Purchase date</span>
+              <input
+                type="date"
+                value={purchasedDate}
+                onChange={(event) => setPurchasedDate(event.target.value)}
               />
             </label>
           ) : null}
@@ -360,7 +374,7 @@ export function StockLedger({ productId }: { productId: number }) {
           <ol className="ledger">
             {prices.data?.slice(0, 8).map((row, index) => (
               <li key={index}>
-                <span>{row.price}</span>
+                <span>{formatPrice(row.price)}</span>
                 <span className="faint">{row.row_created_timestamp ?? ""}</span>
               </li>
             ))}

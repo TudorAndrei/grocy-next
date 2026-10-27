@@ -197,7 +197,11 @@ test("purchase details keep the selected freezer date and stored amount preferen
       }
 
       if (path === "/api/user/settings") {
-        return Response.json({ stock_default_purchase_amount: 2, stock_decimal_places_amounts: 3 });
+        return Response.json({
+          stock_default_purchase_amount: 2,
+          stock_decimal_places_amounts: 3,
+          show_purchased_date_on_purchase: true,
+        });
       }
 
       if (path === "/api/stock/products/1") {

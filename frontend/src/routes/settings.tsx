@@ -12,6 +12,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { currentUserQuery, systemInfoQuery, userSettingsQuery } from "@/hooks/queries";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { api } from "@/lib/api";
+import { preferenceEnabled } from "@/lib/preferences";
+import { useFeatures } from "@/lib/features";
 
 type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "about";
 
@@ -33,6 +35,9 @@ const preferenceFields: Array<{
   label: string;
   type: "number" | "checkbox" | "select";
   options?: string[];
+  feature?: string;
+  max?: number;
+  step?: string;
 }> = [
   {
     key: "stock_due_soon_days",
@@ -40,19 +45,46 @@ const preferenceFields: Array<{
     type: "number",
   },
   {
+    key: "stock_decimal_places_prices_input",
+    label: "Decimal places for price inputs",
+    type: "number",
+    feature: "STOCK_PRICE_TRACKING",
+    max: 10,
+  },
+  {
+    key: "stock_decimal_places_prices_display",
+    label: "Decimal places for price display",
+    type: "number",
+    feature: "STOCK_PRICE_TRACKING",
+    max: 10,
+  },
+  {
     key: "stock_decimal_places_amounts",
     label: "Decimal places for amounts",
     type: "number",
+    max: 10,
   },
   {
     key: "stock_default_purchase_amount",
     label: "Default purchase amount",
     type: "number",
+    step: "any",
   },
   {
     key: "stock_default_consume_amount",
     label: "Default consume amount",
     type: "number",
+    step: "any",
+  },
+  {
+    key: "stock_default_consume_amount_use_quick_consume_amount",
+    label: "Use the product quick consume amount",
+    type: "checkbox",
+  },
+  {
+    key: "show_purchased_date_on_purchase",
+    label: "Show purchase date",
+    type: "checkbox",
   },
   {
     key: "scan_mode_purchase_enabled",
@@ -78,6 +110,7 @@ const preferenceFields: Array<{
 ];
 
 function SettingsPage() {
+  const features = useFeatures();
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
@@ -246,43 +279,48 @@ function SettingsPage() {
             }}
           >
             <div className="form-grid">
-              {preferenceFields.map((field) => (
-                <div className="field" key={field.key}>
-                  <label htmlFor={`pref-${field.key}`}>{field.label}</label>
-                  {field.type === "checkbox" ? (
-                    <input
-                      id={`pref-${field.key}`}
-                      type="checkbox"
-                      checked={settingsValue(field.key) === "1"}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          [field.key]: e.target.checked ? "1" : "0",
-                        }))
-                      }
-                    />
-                  ) : field.type === "select" ? (
-                    <select
-                      id={`pref-${field.key}`}
-                      value={settingsValue(field.key)}
-                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                    >
-                      {(field.options ?? []).map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      id={`pref-${field.key}`}
-                      type="number"
-                      value={settingsValue(field.key)}
-                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                    />
-                  )}
-                </div>
-              ))}
+              {preferenceFields.map((field) =>
+                field.feature && !features.enabled(field.feature) ? null : (
+                  <div className="field" key={field.key}>
+                    <label htmlFor={`pref-${field.key}`}>{field.label}</label>
+                    {field.type === "checkbox" ? (
+                      <input
+                        id={`pref-${field.key}`}
+                        type="checkbox"
+                        checked={preferenceEnabled(settingsValue(field.key))}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            [field.key]: e.target.checked ? "1" : "0",
+                          }))
+                        }
+                      />
+                    ) : field.type === "select" ? (
+                      <select
+                        id={`pref-${field.key}`}
+                        value={settingsValue(field.key)}
+                        onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                      >
+                        {(field.options ?? []).map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={`pref-${field.key}`}
+                        type="number"
+                        min="0"
+                        max={field.max}
+                        step={field.step}
+                        value={settingsValue(field.key)}
+                        onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                      />
+                    )}
+                  </div>
+                ),
+              )}
             </div>
             <button type="submit" className="btn btn-primary" disabled={savePreferences.isPending}>
               Save preferences

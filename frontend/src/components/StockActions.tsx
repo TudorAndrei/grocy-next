@@ -166,9 +166,10 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
       const purchaseOptions: PurchaseOptions = {
         best_before_date: datesEnabled ? bestBefore || null : null,
         price: priceEnabled ? (priceValue === "" ? null : unitPrice) : 0,
-        purchased_date: purchasedDate || null,
         note: note || null,
       };
+
+      if (preferences.showPurchaseDate) purchaseOptions.purchased_date = purchasedDate || null;
 
       if (locationsEnabled) purchaseOptions.location_id = location;
 
@@ -375,14 +376,16 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
                   </select>
                 </label>
               ) : null}
-              <label className="field">
-                <span>Purchase date</span>
-                <input
-                  type="date"
-                  value={purchasedDate}
-                  onChange={(e) => setPurchasedDate(e.target.value)}
-                />
-              </label>
+              {preferences.showPurchaseDate ? (
+                <label className="field">
+                  <span>Purchase date</span>
+                  <input
+                    type="date"
+                    value={purchasedDate}
+                    onChange={(e) => setPurchasedDate(e.target.value)}
+                  />
+                </label>
+              ) : null}
               <label className="field">
                 <span>Note</span>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} />
