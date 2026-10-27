@@ -1,0 +1,1312 @@
+
+10-MlPS Processing Power 
+
+
+
+
+
+
+Sun-4/200 Senes 10-MlPS Processing Power 
+
+
+T he Sun-4/200 computers are the first members of Sun’s 
+new generation of supercomputing workstations and 
+servers. Their impressive processing power is derived from 
+a new 32-bit RISC (Reduced Instruction Set Computer) 
+microprocessor architecture, the Scalable Processor 
+ARChitecture (SPARC™). 
+
+The Sun-4/200 Series of workstations and servers deliv¬ 
+ers 10-MIPS performance in affordable deskside or cabinet 
+packaging. They are designed to meet the most demanding 
+requirements of engineers and technical professionals in a 
+variety of applications, including mechanical and electronic 
+design and analysis, artificial intelligence, earth resources, 
+image and signal processing, and computational chemistry. 
+
+Standard Sun-41200 Features 
+• 16.67-MHz (60 ns), 32-bit SPARC architecture CPU 
+• CPU contains two high-speed 20K CMOS gate-array 
+VLSI chips based on 1.5 micron technology: 
+
+—the SF9010IU Integer Unit 
+—the SF9010FPC Floating-Point Control Unit 
+• Weitek 1164/1165 floating-point arithmetic units 
+• 128-Kbyte virtual-address, write-back cache memory 
+• 8-Mbyte ECC main memory boards based on 256 Kbit 
+DRAMS or 32-Mbyte ECC main memory boards based 
+on 1Mbit DRAMS 
+
+• MMU support of 16 register-resident processes, each 
+with 1-Gbyte virtual address space 
+• 32-bit VMEbus 
+
+
+SPARC Architecture 
+Features 
+
+Benefits 
+
+Large virtual address 
+architecture 
+
+Facilitates coding, support, 
+execution of large programs 
+
+Single-cycle execution for most 
+89 SPARC instructions 
+
+Simplifies CPU design; speeds 
+overall system performance 
+
+32-bit, word-aligned, fixed- 
+format instructions 
+
+Simplifies instruction 
+decoding logic for simple 
+design and fast throughput 
+
+Load/store, register-register 
+design with 120-register 
+windowed register file 
+
+Reduces references to main 
+memory; ensures fast system 
+throughput 
+
+Delayed control transfer 
+
+Virtually eliminates “wasted” 
+CPU cycles 
+
+Four-staged pipelined 
+implementation 
+
+Delivers fast throughput, 
+efficient design 
+
+Coprocessor support 
+
+Accommodates flexible design 
+implementations 
+
+
+Cover photo: The crisp, clear displays of the Sun-4/200 Series put ECAD and 
+other applications into sharp perspective. 
+
+
+• 12-slot card cage 
+
+• Ethernet controller 
+
+• Two RS-423 ports 
+
+• 19-inch landscape high- 
+resolution monochrome 
+monitor (1600 x 1280 pixels) 
+
+Options 
+
+• Memory expansion to 
+128 Mbytes with 32-Mbyte 
+boards 
+
+• 19-inch landscape color or 
+grayscale monitors (1152 x 
+900 pixels) 
+
+• Graphics Processor and 
+Graphics Buffer boards 
+
+• Second Ethernet controller 
+
+• Double-height VME board 
+adapter 
+
+• SunIPC™board for IBM 
+PC/AT™ applications software 
+
+• 16-Channel Asynchronous 
+Line Multiplexer (ALM) 
+
+• High-speed 280-Mbyte or 
+575-Mbyte ESMD disks 
+
+• 60-Mbyte 1x4-inch tape car¬ 
+tridge, 1600-bpi or 6250/1600- 
+bpi 1/2-inch tape subsystems 
+
+Sun-41200 Implementation 
+The Sun-4 CPU consists of an 
+Integer Unit (lU) chip, a Floating- 
+Point Controller (FPC) chip, two 
+floating-point arithmetic proces¬ 
+sors, and a large high-speed cache, 
+all connected by a high-speed bus. 
+
+Both the lU and FPC chips are implemented in 20K-gate 
+VLSI gate-array chips and are available on the open market. 
+
+The 128 Kbyte virtual-address, write-back data and 
+instruction cache augments the CPU for maximum through¬ 
+put. This high-speed write-back cache feature delivers 
+practically 1007o cache hits. The cache delivers one instruc¬ 
+tion to the processor for every CPU cycle and is completely 
+transparent to programmers. 
+
+Using a parallel addressing path, the CPU accesses 
+the cache, main memory, and Memory Management Unit 
+(MMU) simultaneously. If the data is not resident in the 
+cache, the MMU automatically translates the address 
+to main memory. Sun’s sophisticated MMU facilitates rapid 
+switching between multiple processes and assures fast 
+main memory cycle time whenever data moves in or out 
+of the cache. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The Sun-4 SPARC processor performs four-stage pipeline 
+operations to optimize instruction execution decode, 
+
+execute, and write. As soon as execution control transfers 
+from one stage to the next, a new instruction is delivered. 
+The majority of instructions are executed in a single cycle 
+while the cache performs single-cycle reads. This rapid 
+execution maximizes pipeline efficiency and yields unsur¬ 
+passed workstation performance. 
+
+To enhance reliability, the main memory for the Sun- 
+4/200 Series uses Error Checking and Correction (ECC) 
+codes. With ECC, the system detects and corrects Tbit-per- 
+byte errors and detects and reports 2-bit errors. Two sizes 
+of memory boards are available for Sun-4 systems: 8-Mbyte 
+boards based on 256-Kbit DRAMs and 32-Mbyte boards 
+based on TMbit DRAMs. These boards can be mixed for a 
+maximum capacity of 128 Mbytes. 
+
+An on-board 256-Kbyte frame buffer drives the high- 
+resolution (2-million pixel) monochrome display at Sun’s 
+standard 66-Hz non-interlaced refresh rate. 
+
+
+All Sun-4/200 Series electronics are contained on triple¬ 
+height, quad-depth Eurocard boards. The 32-bit VMEbus 
+offers sustainable I/O access at 8 Mbytes/sec. Mechanical 
+support of additional double-height VME boards is available 
+with an optional card adapter. 
+
+Like all Sun Workstation® systems, the Sun-4/200 Series 
+has an open architecture and uses industry standards. The 
+Sun-4™ architecture employs the industry-leading 32-bit 
+VME bus, which is compatible with a large number of board- 
+level components. For its disk interface, it uses the SCSI 
+and ESMD standards, which are compatible with a wide 
+range of mass-storage devices. For data communication, 
+Sun-4/200 workstations use Ethernet and RS-423 interfaces 
+and protocols that are compatible with international, 
+industry, and de facto standards. At the software level. Sun 
+supplies optimizing C, FORTRAN, and Pascal compilers; 
+the UNIX®operating system; the Network File System 
+(NFS™); the X.II/NeWS (Network-extensible Window 
+System); and other standard software interfaces. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sun-4/200 Series Versatility 
+
+
+T he Sun-4/200 Series can be configured as standalone 
+systems with disk and tape backup, as extremely powerful 
+diskless nodes, or as high-performance servers. 
+
+
+Sun A1200 Configurations 
+
+The Sun-4/200 Series can be configured several ways. 
+
+As a standalone workstation with disk, operating either inde¬ 
+pendently or as part of a network, the Sun-4/260 gives 
+users the ultimate speed and power for even the most demand¬ 
+ing, compute-intensive applications. 
+
+Without a disk subsystem, the same Sun-4/260 operates 
+as a powerful system on a network, shar¬ 
+ing file and printer resources with other 
+network nodes. 
+
+
+Workstations 
+
+
+SunAt200 
+
+
+Servers 
+
+Sun-41200 
+
+Model 
+
+260S 
+
+280S 
+
+Function 
+
+Deskside 
+
+Sun Server™ 
+
+Data Center 
+SunServer 
+
+Card Cage 
+
+12-slot 
+
+12-slot 
+
+Disk Drives 
+
+280 Mbytes to 
+
+1.1 Gbytes 
+
+280 Mbytes to 
+
+2.3 Gbytes 
+
+Serial Ports 
+
+18 max. 
+
+50 max. 
+
+Tape Backup 
+
+60 Mbyte, 
+
+-inch 
+
+60 Mbyte, 
+
+1/4-inch or 
+6250/1600 bpi, 
+
+1 / 2 -inch 
+
+
+As fileservers, Sun-4/260S and 
+Sun-4/280S systems deliver optimal- 
+performance file sharing for diskless 
+nodes. A single Sun-4/200 server can 
+bolster a network with up to 2.3 Gbytes 
+of high-speed mass storage. 
+
+Up to 50 terminals can be connected 
+to a Sun-4/280S acting as a high-speed 
+terminal server. The Sun-4/200 servers 
+can also function as high-speed communi¬ 
+cation gateways to offload communication- 
+related tasks from other systems. 
+
+
+Model 
+
+260HM 
+
+260C 
+
+260G 
+
+
+Function 
+
+Deskside 
+
+Deskside 
+
+Deskside 
+
+
+
+monochrome 
+
+color 
+
+grayscale 
+
+
+
+workstation 
+
+workstation 
+
+workstation 
+
+
+Display 
+
+
+
+
+
+Type 
+
+19-inch high- 
+
+19-inch color 
+
+19-inch 
+
+
+
+resolution 
+
+
+grayscale 
+
+
+
+monochrome 
+
+
+
+
+Resolution 
+
+1600 X 1280 
+
+1152x900 
+
+1152 X 900 
+
+
+Dots per inch 
+
+115 
+
+81 
+
+81 
+
+
+Refresh Rate 
+
+66 Hz 
+
+66 Hz 
+
+66 Hz 
+
+
+Card Cage 
+
+12-slot 
+
+12-slot 
+
+12-slot 
+
+
+Disk Drives 
+
+280 Mbytes 
+
+280 Mbytes 
+
+280 Mbytes 
+
+
+
+to 1.1 Gbytes 
+
+to 1.1 Gbytes 
+
+to 1.1 Gbytes 
+
+
+Tape Backup 
+
+60 Mbyte, 
+
+60 Mbyte, 
+
+60 Mbyte, 
+
+
+
+1/4-inch 
+
+1/4-inch 
+
+1/4-inch 
+
+
+
+High-Performance Display Options 
+
+The Sun-4/260HM 19-inch monochrome monitor 
+displays clear, crisp images with two mega-pixel 
+resolution arranged in 1600 columns by 1280 rows. 
+The display enhances the clarity of images and fonts 
+because of its 115-dpi (dots per inch) pixel density. 
+
+The Sun-4/260C delivers 8-bit color on an 
+1152 X 900 resolution, 19-inch monitor, simulta¬ 
+neously showing 256 colors of the over-16-million- 
+color palette. 
+
+The Sun-4/260G can display 256 shades of gray 
+on an 1152 X 900 resolution, 19-inch grayscale 
+monitor. 
+
+
+Mass Storage Subsystems 
+
+
+
+Disk Drives 
+
+
+Tape Drives 
+
+
+
+lOV^-inch 
+
+8-inch 
+
+i/^-inch 
+
+1/4-inch 
+
+Capacity 
+
+575 Mbytes 
+
+280 Mbytes 
+
+150 Mbytes 
+
+60 Mbytes 
+
+Access Time 
+
+18 msec 
+
+20 msec 
+
+N/A* 
+
+N/A 
+
+Disk Transfer 
+Rate 
+
+2.4 Mbyte/sec 
+
+2.4 Mbyte/sec 
+
+N/A 
+
+N/A 
+
+Interface 
+
+ESMD 
+
+ESMD 
+
+Pertec 
+
+SCSI 
+
+Tape Density 
+
+N/A 
+
+N/A 
+
+6250/1600 bpi 
+
+10,000 bpi 
+
+Tape Speed 
+
+N/A 
+
+N/A 
+
+75 ips 
+
+90 ips 
+
+
+
+
+Streaming 
+
+Streaming 
+
+
+
+
+25 ips 
+
+Start/Stop 
+
+Cartridge 
+
+Sun-4 System 
+
+280S only 
+
+all 260s 
+
+280S only 
+
+all 
+
+*N/A = not applicable 
+
+
+For those applications requiring even higher 
+graphic processing performance, optional graphics 
+processors and buffers are available for state-of-the-art 
+transformations, clipping, scaling, and rendering functions. 
+
+
+Mass-Storage Options 
+
+By adding a high-speed 280-Mbyte disk subsystem with a 
+60-Mbyte, V^-inch streaming cartridge backup tape, you can 
+configure a Sun-4/260 as a standalone workstation. A second 
+280-Mbyte disk puts 560 Mbytes in the companion pedestal. 
+
+The Sun-4/260S network server can accommodate up 
+to four 280-Mbyte disks, while the Sun-4/280S can hold up 
+to four 575-Mbyte disks. For disk backup, you can use a 
+60 Mbyte, 14-inch cartridge tape or up to two 6250/1600 
+bpi y 2 -inch tape drives. 
+
+
+MIL 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The Sun-4 Environment 
+
+
+1 ^ 
+
+
+T he Sun-4 family of computers is based on industry stan¬ 
+dards, making the Sun-4/200 Series compatible with the 
+other members of the Sun-3™and Sun-2™product lines. 
+
+Even though the Sun-4 family is based on a powerful new 
+architecture, Sun has maintained 1007° source-code com¬ 
+patibility with Sun-2 and Sun-3 product families. Most 
+existing software applications require only a recompilation 
+to migrate to and take advantage of the supercomputing 
+performance that the Sun-4/200 Series delivers. 
+
+All of Sun’s software offerings are available on the Sun-4 
+systems. In addition, more than 900 software packages are 
+available through the Sun Catalyst Third Party Program. 
+
+Sun’s Open System Network (OSN™) is the realization 
+of a true heterogeneous, distributed computing environment. 
+OSN includes the Open Network Computing (ONC™) envi¬ 
+ronment, the SunLink™ data communication products, and 
+the merged NeWS™ and X Window System70NC comprises 
+NFS, Yellow Pages, and Remote Execution (REX), for trans¬ 
+parent access to file structures over the network, even to 
+other vendors’ computers with different operating systems 
+or architectures. 
+
+Sun has extensive data communication links over both 
+local and wide areas, and across a variety of vendors’ systems. 
+Sun provides a link to IBM mainframe systems through 
+the SunLink SNA 3270, BSC 3270, X.25, BSC RJE, 
+LU6.2, Channel Adapter, and OSI options. The SunLink 
+DNI and TEIOO products put your system in touch with 
+DEC® and other systems running DECnet™VAX protocols. 
+
+The Sun PC-NFS™and SunIPC products provide a link 
+to IBM PCs. PC-NFS brings NFS capability to IBM PCs on 
+
+
+a local area network. SunIPC puts PC-DOS application 
+software in a window on a Sun workstation. 
+
+All Sun systems use Sun’s implementation of the UNIX 
+operating system, which combines Berkeley 4.2BSD and 
+AT&T System V versions into the powerful Sun Operating 
+System (SunOS). Sun enhanced the UNIX systems for 
+networked workstations and added the SunPro™ software 
+programming environment; the SunView™ window- 
+management and interface development system; the SunCore® 
+SunCGI^and SunGKS™graphics libraries; as well as C, 
+VMS FORTRAN, Pascal, Sun Common Lisp, and 
+Modula-2. 
+
+To ease migration of code to and from Sun-2, Sun-3, and 
+Sun-4 systems, a 68010/68020-to-SPARC and SPARC-to- 
+68010/68020 cross-compiler is optionally available. Sun 
+protects your software investment by ensuring compatibility 
+among existing and future Sun systems and by encouraging 
+the integration of new technologies with existing resources. 
+
+Sun-4 Applications 
+
+The Sun-4/200 Series comprises general-purpose engi¬ 
+neering workstations and servers with especially enhanced 
+performance for integer and floating-point arithmetic, 
+graphics, and I/O-intensive applications. The Sun-4/200 
+Series systems are particularly well suited for ECAD logic 
+simulation, IC and PCB layouts, design and electrical rules 
+check applications, and for MCAD finite element analysis, 
+solids modeling, and thermal and stress analysis applica¬ 
+tions. The Sun-4/200 Series’ unsurpassed power and speed 
+provide the ideal platform for AI software development, 
+signal and image processing, and 
+general education and research 
+environments. 
+
+With expanded mass storage. 
+Sun-4/200 workstations and servers 
+become extremely cost-effective, 
+powerful integrated software 
+development environments. These 
+systems, when networked as file- 
+servers with multiple Sun-3 diskless 
+nodes, can maximize performance 
+for all applications, ultimately 
+reducing the cost-per-seat over the 
+highest-performance distributed 
+network. 
+
+
+Why RISC? 
+
+RISC architecture maximizes performance and 
+speed by performing infrequent functions in 
+software, including in hardware only those fea¬ 
+tures that yield a net performance gain. RISC 
+improves performance by providing the building 
+blocks that can synthesize high-level functions 
+without the overhead of general, yet time- 
+consuming instructions. RISC architectures 
+eliminate complicated instructions requiring 
+excessive microcode support, such as elaborate 
+subroutine calls and text-editing functions. 
+However, RISC architectures retain floating¬ 
+point functions because these compute-intensive 
+procedures are handled more efficiently in hard¬ 
+ware than in software. 
+
+RISC designs begin with a necessary and 
+sufficient instruction set. Typically a few simple 
+instructions account for most computation, so 
+these instructions must execute very fast; most 
+SPARC instructions execute in a single CPU 
+cycle. Currently, RISC architectures are about 
+
+
+three to seven times faster than traditional 
+CPU architectures. 
+
+Because RISC architectures are easy to imple¬ 
+ment, they are more portable than traditional 
+architectures, permitting the rapid integration 
+of new technologies. Users will benefit as archi¬ 
+tectural portability speeds improvements in 
+the cost-performance of computing. With mere 
+recompilation, programs that run on VAX® 
+or 68000-based systems will run much faster 
+on RISC machines. 
+
+With the SPARC architecture. Sun has 
+optimized RISC technology. By using the most 
+advanced computer architecture, chip, memory 
+and cache technologies, the Sun-4 family 
+cost-effectively achieves unsurpassed processing 
+power. The Sun-4 workstations and servers 
+address application areas that previously required 
+special-purpose computer architectures or 
+large, expensive mainframe- or supercomputer- 
+level systems. 
+
+
+
+
+
+
+
+
+Sun-4/200 Senes 
+
+
+^Specifications 
+
+
+
+Central Processor 
+Type 
+
+Floating Point 
+Type 
+
+Precision 
+
+Memory Management 
+Type 
+
+Virtual Memory 
+Contexts 
+I/O Interface 
+Main Memory 
+RAM 
+
+Expansion RAM 
+
+Maximum RAM 
+Memory to Cache 
+Bus Width 
+Cache to Processor 
+Bus Width 
+
+Memory Cache 
+Type 
+
+Size 
+
+Organization 
+Cycle Time 
+Ethernet Interface 
+Media Type 
+Data Rate 
+
+
+System Bus 
+
+Address Bus Width 
+Data Bus Width 
+
+Display Options 
+
+High-Resolution Monochrome 
+Monitor Format 
+Resolution 
+
+
+SF9010IU, 16.67 MHz 
+
+SF9010FPC, 16.67 MHz 
+Weitek 1164/1165 
+IEEE standard 7 54 
+32-bit (single), 
+
+64-bit (double) 
+
+Sun-4 MMU 
+1 Gbyte per process 
+16 in hardware 
+DVMA™ 
+
+8 Mbytes or 32 Mbytes 
+ECC standard 
+8-Mbyte boards (256 Kbit) 
+32-Mbyte boards (1 Mbit) 
+128 Mbytes 
+
+64 bits 
+
+32 bits 
+
+Sun-4 Virtual Address 
+
+Cache 
+
+128 Kbytes 
+
+Direct map, write-back 
+60 ns 
+
+Coaxial cable 
+10 Mbits/sec 
+
+VMEbus 
+32 bits 
+32 bits 
+
+
+Pixel Aspect Ratio 
+Refresh Rate 
+Frame Buffer 
+Bandwidth 
+Controls 
+
+Color and Grayscale 
+Monitor Format 
+Resolution 
+
+Pixel Aspect Ratio 
+Colors Displayed 
+Color Palette 
+Refresh Rate 
+Frame Buffer 
+Bandwidth 
+Controls 
+
+
+19-inch landscape 
+1600 (h) X 1280 (v) pixels 
+(115 pixels/inch) 
+
+1:1 
+
+66-Hz non-interlaced 
+256 Kbytes 
+200 MHz 
+Brightness, on/off 
+
+19-inch landscape 
+1152 (h) X 900 (v) pixels 
+(81 pixels/inch) 
+
+1:1 
+
+256 
+
+16.7 million 
+66-Hz non-interlaced 
+1 Mbyte 
+93 MHz 
+
+Brightness, degauss, 
+on/off (color) 
+
+Brightness, contrast, 
+on/off (grayscale) 
+
+
+Keyboard 
+
+Type 
+
+Mouse 
+
+Type 
+
+Software 
+Operating System 
+
+Languages 
+
+Communications 
+
+Graphics 
+
+User Interfaces 
+SunLink 
+Communication 
+
+Database 
+
+Office Automation 
+
+Serial I/O 
+I/O Ports 
+
+
+94-key, low-profile 
+Optical, 3-button 
+
+
+Converged UNIX 
+(4.2BSD and AT&T 
+System V) 
+
+C, FORTRAN, Pascal, 
+Assembler Modula-2, 
+
+Sun Common Lisp 
+Ethernet, Network File 
+System, TCP/IP 
+SunCore, SunCGI 
+libraries, SunGKS 
+SunView, X.ll/NeWS 
+SNA3270, BSC RJE, 
+
+BSC 3270, Local 3270, 
+SNA Peer-to-Peer, TEIOO, 
+DNI, Internetwork 
+Router, X.25, OSI, DDN 
+SunINGRES™ 
+SunUNIFY,™ 
+SunSimplify™ 
+
+SunAlis* 
+
+
+Two RS-423 serial 
+(RS-232C compatible) 
+standard 
+
+Optional Asynchronous 16-channel for terminals. 
+Controller printers 
+
+Optional Multiprotocol 4-channel for high-speed 
+Communication communications and 
+
+Processor offloading CPU. Used 
+
+(Synchronous) with SunLink software 
+
+Disk Options 
+
+(up to four drives on two controllers) 
+
+Formatted Capacity 280 Mbytes 
+Unformatted Capacity 337 Mbytes 
+Average Access Time 20 msec 
+Data Rate (ESMD) 2.4 Mbytes/sec 
+Formatted Capacity 575 Mbytes 
+Unformatted Capacity 689 Mbytes 
+Average Access Time 18 msec 
+Data ikate (ESMD) 2.4 Mbytes/sec 
+
+Tape Options 
+14-inch Cartridge Tape 
+Drive 
+
+Capacity 60 Mbytes/cartridge 
+
+Format QIC-24 
+
+16-inch Reel Tape Drive 
+Capacity 150 Mbytes/reel 
+
+Format GCR 
+
+Density 6250/1600 bpi 
+
+
+Environment 
+
+Temperature 
+
+Operating 
+
+Nonoperating 
+
+Humidity 
+
+Operating 
+
+Nonoperating 
+
+
+Regulations 
+
+
+0° to 40°C 
+(32° to 104°F) 
+-20°to75°C 
+(-4° to 167°F) 
+
+20 to 80%, 
+
+noncondensing @ 40°C 
+95%, noncondensing 
+@ 40°C 
+
+
+Kegu 
+
+Meets or exceeds the 
+following requirements: 
+
+
+Safety 
+
+RFI/EMI 
+X-ray Emissions 
+
+Static Discharge 
+
+Ergonomics 
+Industrial Design 
+
+Electrical 
+AC Voltage 
+AC Frequency 
+Power 
+
+Dimensions and Weights 
+19-inch High-Resolution 
+Monochrome and 
+Grayscale Monitors 
+Height 
+Width 
+Depth 
+Net weight 
+Shipping weight 
+19-inch Color Monit< 
+Height 
+Width 
+Depth 
+Net weight 
+Shipping weight 
+12-slot Pedestal 
+Height 
+Width 
+Depth 
+Net weight 
+Shipping Weight 
+Keyboard 
+Height 
+Width 
+Depth 
+
+Shipping weight 
+
+
+UL478, CSA154, TUV 
+(VDE 0806, lEC 380) 
+FCC Class A, VDE 0871 
+DHHS Rule 21 
+(Subchapter J), PTB 
+15 KV—no hard errors 
+
+ZH 1/618 Standards 
+
+90-132 or 180-264 VAC 
+47.5 to 66 Hz 
+1450 VA to system 
+
+
+44.5 cm (17.5 inches) 
+46.0 cm (18.1 inches) 
+
+40.4 cm U5.9 inches) 
+
+24.8 kg (54.5 lbs.) 
+
+27.7 kg (61 lbs.) 
+
+44.2 cm (17.4 inches) 
+
+46.7 cm (18.4 inches) 
+
+52.3 cm (20.6 inches) 
+
+34.1 kg (75 lbs.) 
+
+37.1 kg (81.5 lbs.) 
+
+71.1 cm (28 inches) 
+
+32.5 cm (12.8 inches) 
+
+59.7 cm (23.5 inches) 
+
+84.1 kg (185 lbs.) 
+
+90.9 kg (200 lbs.) 
+
+4.1 cm (1.6 inches) 
+
+46 cm (18.1 inches) 
+
+19.8 cm (7.8 inches) 
+
+6.8 kg U5 lbs.) 
+
+
+
+sun 
+
+microsystems 
+
+
+The Network Is The Computer'' 
+
+
+Corporate Headquarters 
+Sun Microsystems, Inc. 
+2550 Garcia Avenue 
+Mountain View, CA 94043 
+415 960-1300 
+TLX 287815 
+
+For U.S. Sales Office 
+locations, call: 
+
+800 821-4643 
+In CA: 800 821-4642 
+
+
+European Headquarters 
+Sun Microsystems Europe, Inc. 
+Sun House 
+
+31-41 Pembroke Broadway 
+
+Camberley 
+
+Surrey GU15 3XD 
+
+England 
+
+0276 62111 
+
+TLX 859017 
+
+
+Australia: 61-2-436-4699 
+Canada: 416 477-6745 
+France: (1) 46 30 23 24 
+Germany: (089) 95094-0 
+Japan: (03) 221-7021 
+The Netherlands: 02155 24888 
+UK: 0276 62111 
+
+
+Europe, Middle East, and Africa, 
+call European Headquarters: 
+0276 62111 
+
+Elsewhere in the world, 
+call Corporate Headquarters: 
+
+415 960-1300 
+Intercontinental Sales 
+
+
+Specifications are subject to change without notice. 
+
+UNIX is a remstered trademark of AT&T. PC/AT is a trademark of IBM. X Window System is a trademark of M.I.T. DECnet is a trademark of Digital Equipment 
+Corporation. DEC and VAX are registered trademarks of Digital Equipment Corporation. Sun Microsystems, Sun Workstation, SunCore, and the Sun logo are registered 
+trademarks of Sun Microsystems, Inc. SunIPC, PC-NFS, NFS, DVMA, SunView, SunPro, SunCGI, SunGKS, SunLink, SunSimplify, SunServer, Sun-4, Sun-3, and 
+Sun-2 are trademarks of Sun Microsystems, Inc. SunINGRES is a trademark of Sun Microsystems, Inc., and is derived from INGRES, a product marketed by Relational 
+Technology, Inc. SunUNIFY is a trademark of Sun Microsystems, Inc., and is derived from UNIFY,® a registered trademark of Unify Corporation. SunAlis is derived 
+from Alis™ a trademark of Applix, Incorporated. ECAD screen image courtesy of Racal-Redac, Earth Science screen image courtesy of Sierra Geophysics, and CogniSeis 
+Development, Inc. Bio-Medical screen image courtesy of BioDesign, Inc. 
+
+Design: Michael Chikamura Design Photography: Charly Franklin Printing: Graphic Arts Center © 1987 Sun Microsystems, Inc. 
+
+Printed in USA 7/87 DE 189-0/80K 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

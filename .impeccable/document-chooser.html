@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grocy Next — directions from interiors</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #1a1714;
+        --muted: #6a6258;
+        --line: #cfc6b8;
+        --paper: #efe9df;
+        --surface: #f7f3ec;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+        line-height: 1.45;
+        padding: 1.25rem 1rem 3rem;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-family: "IBM Plex Serif", serif;
+        font-size: clamp(1.4rem, 2.6vw, 1.85rem);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .lede {
+        margin: 0 0 1rem;
+        color: var(--muted);
+        max-width: 52rem;
+        font-size: 0.94rem;
+      }
+      .evidence {
+        margin-bottom: 1.35rem;
+        padding: 0.85rem;
+        background: var(--surface);
+        border: 1px solid var(--line);
+      }
+      .evidence h2 {
+        margin: 0 0 0.55rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.55rem;
+      }
+      .evidence figure {
+        margin: 0;
+      }
+      .evidence img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        object-position: top;
+        border: 1px solid var(--line);
+        display: block;
+        background: #ddd;
+      }
+      .evidence figcaption {
+        margin-top: 0.25rem;
+        font-size: 0.7rem;
+        color: var(--muted);
+        line-height: 1.3;
+      }
+      .notes {
+        margin: 0.75rem 0 0;
+        padding-left: 1.1rem;
+        font-size: 0.86rem;
+      }
+      .notes li {
+        margin: 0.25rem 0;
+      }
+      .reco {
+        display: inline-block;
+        margin: 0 0 0.85rem;
+        padding: 0.28rem 0.6rem;
+        background: #8ba8d1;
+        color: #15202a;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+      .anti {
+        margin: 0 0 1rem;
+        padding: 0.6rem 0.75rem;
+        border: 1px dashed #b9a0a0;
+        background: #fff7f7;
+        color: #6b3a3a;
+        font-size: 0.84rem;
+      }
+      .grid {
+        display: grid;
+        gap: 0.85rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+      }
+      .option {
+        appearance: none;
+        text-align: left;
+        border: 2px solid #b8aea0;
+        background: #fffdf8;
+        padding: 0;
+        overflow: hidden;
+        cursor: pointer;
+        color: inherit;
+        font: inherit;
+        border-radius: 0;
+      }
+      .option:hover {
+        border-color: #7d7366;
+      }
+      .option[aria-pressed="true"] {
+        border-color: #15202a;
+        outline: 1px solid #15202a;
+      }
+      .option-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.7rem 0.8rem 0.5rem;
+        border-bottom: 1px solid var(--line);
+        background: #f3eee5;
+      }
+      .option-head strong {
+        display: block;
+        font-family: "IBM Plex Serif", serif;
+        font-size: 1rem;
+        font-style: italic;
+        color: #5f7ea8;
+        font-weight: 600;
+      }
+      .source {
+        display: block;
+        margin-top: 0.15rem;
+        font-size: 0.7rem;
+        color: var(--muted);
+        font-style: normal;
+        font-family: "IBM Plex Sans", sans-serif;
+      }
+      .key {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.7rem;
+        align-self: start;
+        padding: 0.12rem 0.4rem;
+        background: #15202a;
+        color: #fff;
+        height: fit-content;
+      }
+      .preview {
+        min-height: 250px;
+      }
+      .caption {
+        padding: 0.7rem 0.8rem 0.85rem;
+        font-size: 0.84rem;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+      }
+      .swatches {
+        display: flex;
+        gap: 0.28rem;
+        margin-top: 0.45rem;
+      }
+      .swatches i {
+        width: 1.1rem;
+        height: 1.1rem;
+        border: 1px solid rgba(0, 0, 0, 0.18);
+        display: block;
+      }
+
+      /* 1 Spec Interior — from Sun-4 p1/p4 */
+      .spec {
+        background: #f7f3ec;
+        color: #1a1714;
+        padding: 0.65rem 0.7rem;
+        font-family: "IBM Plex Serif", serif;
+      }
+      .spec .h {
+        font-style: italic;
+        color: #5f7ea8;
+        font-size: 0.95rem;
+        margin-bottom: 0.45rem;
+      }
+      .spec .split {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 0.5rem;
+      }
+      .spec .bullets {
+        margin: 0;
+        padding-left: 0.95rem;
+        font-size: 0.7rem;
+      }
+      .spec .bullets li {
+        margin: 0.12rem 0;
+      }
+      .spec table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.66rem;
+        background: #d7e3f0;
+      }
+      .spec th {
+        text-align: left;
+        padding: 0.28rem 0.35rem;
+        border-bottom: 1px solid #9eb4cb;
+        font-style: italic;
+        color: #35516f;
+      }
+      .spec td {
+        padding: 0.22rem 0.35rem;
+        border-bottom: 1px solid #b7c8d9;
+        font-variant-numeric: tabular-nums;
+      }
+      .spec .tables {
+        display: grid;
+        gap: 0.35rem;
+        margin-top: 0.45rem;
+      }
+      .spec .t-tan {
+        background: #e7d8c4;
+        font-size: 0.64rem;
+        padding: 0.3rem 0.4rem;
+        border: 1px solid #c4b39a;
+      }
+      .spec .t-lilac {
+        background: #ddd4e8;
+        font-size: 0.64rem;
+        padding: 0.3rem 0.4rem;
+        border: 1px solid #beb3cc;
+      }
+      .spec .btn {
+        margin-top: 0.45rem;
+        display: inline-block;
+        border: 1px solid #5f7ea8;
+        color: #35516f;
+        background: transparent;
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 0.28rem 0.55rem;
+      }
+
+      /* 2 Type Grid — SPARC brochure */
+      .type {
+        background: #f5f5f0;
+        color: #1a1a1a;
+        padding: 0.75rem 0.8rem;
+        font-family: "IBM Plex Serif", serif;
+        min-height: 250px;
+      }
+      .type .drop {
+        float: left;
+        font-size: 2.4rem;
+        line-height: 0.85;
+        margin: 0 0.35rem 0 0;
+        color: #8a8a8a;
+        font-weight: 600;
+      }
+      .type .title {
+        font-style: italic;
+        font-size: 0.95rem;
+        margin-bottom: 0.45rem;
+      }
+      .type .cols {
+        columns: 2;
+        column-gap: 0.75rem;
+        font-size: 0.7rem;
+      }
+      .type .sub {
+        font-style: italic;
+        display: block;
+        margin: 0.45rem 0 0.2rem;
+        break-after: avoid;
+      }
+      .type .btn {
+        clear: both;
+        margin-top: 0.65rem;
+        display: inline-block;
+        background: #1a1a1a;
+        color: #f5f5f0;
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 0.3rem 0.55rem;
+        border: none;
+      }
+
+      /* 3 NeXTSTEP Workspace */
+      .next {
+        min-height: 250px;
+        display: grid;
+        grid-template-columns: 1fr 42px;
+        background: #9a9a9a;
+        color: #111;
+        font-family: "IBM Plex Sans", sans-serif;
+      }
+      .next .desk {
+        padding: 0.55rem;
+        display: grid;
+        gap: 0.4rem;
+      }
+      .next .win {
+        background: #c8c8c8;
+        border: 1px solid #000;
+        box-shadow:
+          inset 1px 1px 0 #eee,
+          inset -1px -1px 0 #777;
+      }
+      .next .titlebar {
+        background: #bdbdbd;
+        border-bottom: 1px solid #000;
+        text-align: center;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 0.2rem;
+      }
+      .next .body {
+        background: #d6d6d6;
+        padding: 0.4rem;
+        font-size: 0.68rem;
+      }
+      .next table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid #777;
+        font-variant-numeric: tabular-nums;
+      }
+      .next td,
+      .next th {
+        border-bottom: 1px solid #ccc;
+        padding: 0.2rem 0.3rem;
+        text-align: left;
+        font-size: 0.66rem;
+      }
+      .next .btn {
+        display: inline-block;
+        margin-top: 0.35rem;
+        background: #c8c8c8;
+        border-top: 1px solid #eee;
+        border-left: 1px solid #eee;
+        border-right: 1px solid #555;
+        border-bottom: 1px solid #555;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.66rem;
+        font-weight: 700;
+      }
+      .next .dock {
+        background: #3a3a3a;
+        border-left: 1px solid #000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        padding: 0.35rem 0.25rem;
+        align-items: center;
+      }
+      .next .dock span {
+        width: 26px;
+        height: 26px;
+        background: #b0b0b0;
+        border: 1px solid #000;
+        box-shadow:
+          inset 1px 1px 0 #ddd,
+          inset -1px -1px 0 #666;
+      }
+      .next .dock span.on {
+        outline: 1px solid #e83e8c;
+      }
+
+      .picks {
+        position: sticky;
+        bottom: 0.65rem;
+        margin-top: 1.25rem;
+        padding: 0.85rem 1rem;
+        background: rgba(247, 243, 236, 0.96);
+        border: 1px solid var(--line);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem 1.2rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .picks code {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 1rem;
+        background: #15202a;
+        color: #f7f3ec;
+        padding: 0.28rem 0.55rem;
+      }
+      .picks .note {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+      .dl {
+        margin: 0 0 1rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      .dl code {
+        font-size: 0.72rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Directions from the actual interiors</h1>
+      <p class="lede">
+        Downloaded full scans (not cover tiles). Evidence strip below is real
+        interior pages. Directions follow those layout systems — functionality
+        first.
+      </p>
+      <p class="dl">
+        Local copies in <code>.impeccable/refs/</code>: Sun-4/200 text PDF +
+        OCR, Sun-2 technical overview, SPARC family brochure, UnixWorld NeXT
+        pages 1–8, Softalk IBM Aug 1983 OCR, Oh!MZ 1984-09 OCR.
+      </p>
+
+      <div class="evidence">
+        <h2>Evidence — interior pages used</h2>
+        <div class="evidence-grid">
+          <figure>
+            <img src="refs/sun4200-p1-sm.jpg" alt="Sun-4 features table interior" />
+            <figcaption>Sun-4/200 — Features/Benefits table + dense bullets</figcaption>
+          </figure>
+          <figure>
+            <img src="refs/sun4200-p4-sm.jpg" alt="Sun-4 color-coded comparison tables" />
+            <figcaption>Sun-4/200 — tan / slate / lilac comparison tables</figcaption>
+          </figure>
+          <figure>
+            <img src="refs/sun4200-p6-sm.jpg" alt="Sun-4 Why RISC callout box" />
+            <figcaption>Sun-4/200 — mustard callout box + 2-col body</figcaption>
+          </figure>
+          <figure>
+            <img src="refs/sparc-p1-sm.jpg" alt="SPARCsystem typography page" />
+            <figcaption>SPARCsystem — typography-only 2-col grid</figcaption>
+          </figure>
+          <figure>
+            <img src="refs/next-ui-sm.jpg" alt="NeXTSTEP grayscale UI" />
+            <figcaption>UnixWorld NeXT — NeXTSTEP grayscale workspace UI</figcaption>
+          </figure>
+          <figure>
+            <img src="refs/next-article-sm.jpg" alt="UnixWorld article columns" />
+            <figcaption>UnixWorld — 3-col article, pull quote, B&amp;W</figcaption>
+          </figure>
+        </div>
+        <ul class="notes">
+          <li>
+            <strong>Sun interiors:</strong> cream paper; muted slate-blue italic
+            heads; tables tinted by role (blue / tan / lilac); horizontal rules
+            only; square bullets; mustard sidebar boxes.
+          </li>
+          <li>
+            <strong>SPARCsystem interiors:</strong> almost no color — hierarchy
+            via italic serif + drop cap + justified columns.
+          </li>
+          <li>
+            <strong>NeXTSTEP on-page UI:</strong> light-gray windows, black
+            hairlines, beveled controls, right dock, directory/browser density —
+            grayscale ops with jewel accents only on the logo cube.
+          </li>
+        </ul>
+      </div>
+
+      <div class="reco">Recommended for household ops density: 1 · Spec Interior</div>
+      <p class="anti">
+        Out: cover-only vibes · previous citrus/cobalt mock cards · soft teal
+        SaaS · neon cyberpunk magazine energy as the whole chrome.
+      </p>
+
+      <div class="grid" role="listbox" aria-label="Directions from interiors">
+        <button class="option" type="button" data-value="1" aria-pressed="false" role="option">
+          <div class="option-head">
+            <div>
+              <strong>Spec Interior</strong>
+              <span class="source">from Sun-4/200 interior tables (p. features / versatility)</span>
+            </div>
+            <span class="key">1 · pick</span>
+          </div>
+          <div class="preview spec" aria-hidden="true">
+            <div class="h">Stock · volatile overview</div>
+            <div class="split">
+              <ul class="bullets">
+                <li>Milk — 2 L — due 2d</li>
+                <li>Yogurt — 4 — due 3d</li>
+                <li>Bread — 1 — due 1d</li>
+                <li>Eggs — 10 — due 5d</li>
+                <li>Olive oil — open</li>
+                <li>Oats — shop</li>
+              </ul>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Benefit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Due soon</td>
+                    <td>Act before waste</td>
+                  </tr>
+                  <tr>
+                    <td>Open items</td>
+                    <td>Finish first</td>
+                  </tr>
+                  <tr>
+                    <td>Shop queue</td>
+                    <td>One list</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="tables">
+              <div class="t-tan"><b>Locations</b> · Pantry 14 · Fridge 9 · Freezer 6</div>
+              <div class="t-lilac"><b>Lists</b> · Weekly 12 · Bulk 3</div>
+            </div>
+            <span class="btn">Purchase</span>
+          </div>
+          <div class="caption">
+            Role-tinted tables, slate italic titles, cream ground, outlined
+            actions. Max scanability — closest to how Sun actually laid out
+            specs inside the brochure.
+            <div class="swatches">
+              <i style="background: #f7f3ec"></i>
+              <i style="background: #d7e3f0"></i>
+              <i style="background: #e7d8c4"></i>
+              <i style="background: #ddd4e8"></i>
+              <i style="background: #5f7ea8"></i>
+            </div>
+          </div>
+        </button>
+
+        <button class="option" type="button" data-value="2" aria-pressed="false" role="option">
+          <div class="option-head">
+            <div>
+              <strong>Type Grid</strong>
+              <span class="source">from SPARCsystem family brochure interiors</span>
+            </div>
+            <span class="key">2</span>
+          </div>
+          <div class="preview type" aria-hidden="true">
+            <div class="title">Household stock</div>
+            <div class="cols">
+              <span class="drop">T</span>
+              Dense two-column reading for lists and notes. Hierarchy from
+              italic heads and a drop cap — almost no chrome color.
+              <span class="sub">Due this week</span>
+              Milk 2 L · Yogurt 4 · Bread 1 · Eggs 10. Finish open items before
+              buying duplicates.
+              <span class="sub">Shopping</span>
+              Oats · Rice · Butter · Tomatoes. One queue, print when ready.
+            </div>
+            <span class="btn">Add item</span>
+          </div>
+          <div class="caption">
+            Extreme restraint: parchment, charcoal, serif structure. Color only
+            where state demands it. Quietest option — strongest anti-SaaS.
+            <div class="swatches">
+              <i style="background: #f5f5f0"></i>
+              <i style="background: #1a1a1a"></i>
+              <i style="background: #8a8a8a"></i>
+              <i style="background: #ffffff"></i>
+            </div>
+          </div>
+        </button>
+
+        <button class="option" type="button" data-value="3" aria-pressed="false" role="option">
+          <div class="option-head">
+            <div>
+              <strong>Workspace Gray</strong>
+              <span class="source">from NeXTSTEP UI shown inside UnixWorld (not the cover)</span>
+            </div>
+            <span class="key">3</span>
+          </div>
+          <div class="preview next" aria-hidden="true">
+            <div class="desk">
+              <div class="win">
+                <div class="titlebar">Products</div>
+                <div class="body">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Qty</th>
+                        <th>Due</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Milk</td>
+                        <td>2</td>
+                        <td>2d</td>
+                      </tr>
+                      <tr>
+                        <td>Oats</td>
+                        <td>1.2</td>
+                        <td>—</td>
+                      </tr>
+                      <tr>
+                        <td>Eggs</td>
+                        <td>10</td>
+                        <td>5d</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <span class="btn">Add</span>
+                </div>
+              </div>
+            </div>
+            <div class="dock">
+              <span class="on"></span><span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="caption">
+            Real NeXTSTEP grammar: gray panels, black hairlines, beveled
+            buttons, right dock. Jewel magenta only for active — never a wash.
+            <div class="swatches">
+              <i style="background: #9a9a9a"></i>
+              <i style="background: #c8c8c8"></i>
+              <i style="background: #000000"></i>
+              <i style="background: #ffffff"></i>
+              <i style="background: #e83e8c"></i>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div class="picks" aria-live="polite">
+        <div>
+          Reply with:
+          <code id="reply-code">?</code>
+        </div>
+        <div class="note">Click a direction to fill the code.</div>
+      </div>
+    </div>
+    <script>
+      const code = document.getElementById("reply-code");
+      const options = document.querySelectorAll(".option");
+      options.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          options.forEach((o) => o.setAttribute("aria-pressed", "false"));
+          btn.setAttribute("aria-pressed", "true");
+          code.textContent = btn.getAttribute("data-value");
+        });
+      });
+    </script>
+  </body>
+</html>
