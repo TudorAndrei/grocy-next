@@ -1,3 +1,4 @@
+import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -11,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 
 from grocy.compatibility import client_defaults
 from grocy.compatibility.input import database_error
+from grocy.compatibility.php import php_error, php_string
 from grocy.compatibility.query import query_rows
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
@@ -40,8 +42,10 @@ def _required(values: dict[str, str | None], *names: str) -> None:
 
 def _permission(value: Any) -> Any:
     if isinstance(value, (dict, list)):
-        raise GrocyError("Invalid permission", code=None)
-    return int(value) if isinstance(value, bool) else value
+        raise php_error("PDO::quote(): Argument #1 ($string) must be of type string, array given")
+    if value is None:
+        return None
+    return php_string(int(value) if isinstance(value, bool) else value).split("\x00", 1)[0]
 
 
 class UsersService:
@@ -126,30 +130,41 @@ class UsersService:
                 text("DELETE FROM users WHERE id=:user_id"), {"user_id": user_id}
             )
             if not result.rowcount:
-                raise GrocyError("User does not exist", code=None)
+                raise php_error("Call to a member function delete() on null")
 
     async def settings(self, user_id: int) -> dict[str, Any]:
         result = await self.session.execute(
             text('SELECT "key",value FROM user_settings WHERE user_id=:user_id'),
             {"user_id": user_id},
         )
-        return {**client_defaults()["user_settings"], **dict(result.all())}
+        settings = dict(client_defaults()["user_settings"])
+        next_index = 0
+        for key, value in result:
+            if re.fullmatch(r"0|-?[1-9][0-9]*", key) and -(2**63) <= int(key) < 2**63:
+                key = str(next_index)
+                next_index += 1
+            settings[key] = value
+        return settings
 
     async def setting(self, user_id: int, key: str) -> Any:
-        return (await self.settings(user_id)).get(key)
+        result = await self.session.execute(
+            text('SELECT value FROM user_settings WHERE user_id=:user_id AND "key"=:key'),
+            {"user_id": user_id, "key": key},
+        )
+        row = result.first()
+        return row[0] if row is not None else client_defaults()["user_settings"].get(key)
 
     async def set_setting(self, user_id: int, key: str, value: Any) -> None:
-        if isinstance(value, (dict, list)):
-            raise GrocyError("Invalid setting value", code=None)
         async with self._write():
             existing = await self.session.scalar(
                 text('SELECT id FROM user_settings WHERE user_id=:user_id AND "key"=:key'),
                 {"user_id": user_id, "key": key},
             )
+            column = "value_id" if isinstance(value, (dict, list)) else "value"
             statement = (
-                'INSERT INTO user_settings(user_id,"key",value) VALUES (:user_id,:key,:value)'
+                f'INSERT INTO user_settings(user_id,"key",{column}) VALUES (:user_id,:key,:value)'
                 if existing is None
-                else "UPDATE user_settings SET value=:value,row_updated_timestamp=:updated "
+                else f"UPDATE user_settings SET {column}=:value,row_updated_timestamp=:updated "
                 "WHERE id=:id"
             )
             await self.session.execute(
@@ -158,7 +173,7 @@ class UsersService:
                     "id": existing,
                     "user_id": user_id,
                     "key": key,
-                    "value": value,
+                    "value": None if isinstance(value, (dict, list)) else value,
                     "updated": datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S"),
                 },
             )
@@ -179,17 +194,26 @@ class UsersService:
         return [dict(row) for row in result.mappings()]
 
     async def add_permission(self, user_id: str, value: Any) -> None:
-        permission_id = _permission(value)
         async with self._write():
+            column = "permission_id_id" if isinstance(value, (dict, list)) else "permission_id"
             await self.session.execute(
                 text(
-                    "INSERT INTO user_permissions(user_id,permission_id) "
+                    f"INSERT INTO user_permissions(user_id,{column}) "
                     "VALUES (:user_id,:permission_id)"
                 ),
-                {"user_id": user_id, "permission_id": permission_id},
+                {
+                    "user_id": user_id,
+                    "permission_id": None
+                    if isinstance(value, (dict, list))
+                    else _permission(value),
+                },
             )
 
     async def set_permissions(self, user_id: str, values: Any) -> None:
+        async with self._write():
+            await self.session.execute(
+                text("DELETE FROM user_permissions WHERE user_id=:user_id"), {"user_id": user_id}
+            )
         if get_settings().mode in {"demo", "prerelease"}:
             permissions = [1]
         elif isinstance(values, dict):
@@ -198,15 +222,13 @@ class UsersService:
             permissions = [_permission(value) for value in values]
         else:
             permissions = []
-        async with self._write():
-            await self.session.execute(
-                text("DELETE FROM user_permissions WHERE user_id=:user_id"), {"user_id": user_id}
-            )
-            for permission_id in permissions:
-                await self.session.execute(
-                    text(
-                        "INSERT INTO user_permissions(user_id,permission_id) "
-                        "VALUES (:user_id,:permission_id)"
+        if permissions:
+            async with self._write():
+                connection = await self.session.connection()
+                await connection.exec_driver_sql(
+                    "INSERT INTO user_permissions(user_id,permission_id) VALUES "
+                    + ",".join("(?,?)" for _ in permissions),
+                    tuple(
+                        value for permission_id in permissions for value in (user_id, permission_id)
                     ),
-                    {"user_id": user_id, "permission_id": permission_id},
                 )

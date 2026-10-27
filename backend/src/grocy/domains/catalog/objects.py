@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.php import find, loose_equals
 from grocy.compatibility.query import query_rows
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
@@ -121,13 +122,13 @@ class GenericObjectsService:
                 ),
                 {"entity": entity},
             )
-            values: dict[str, dict[str, Any]] = {}
-            for reference, name, value in result:
-                values.setdefault(str(reference), {}).setdefault(name, value)
+            values = [dict(row) for row in result.mappings()]
             for row in rows:
                 reference = row["stock_id"] if entity == "stock" else row["id"]
-                saved = values.get(str(reference), {})
-                row["userfields"] = field_response({name: saved.get(name) for _, name in fields})
+                saved = [value for value in values if loose_equals(value["object_id"], reference)]
+                row["userfields"] = field_response(
+                    {name: (find(saved, "name", name) or {}).get("value") for _, name in fields}
+                )
         return rows
 
     async def get_entity(self, entity: str, object_id: int | str) -> dict[str, Any]:
@@ -155,6 +156,8 @@ class GenericObjectsService:
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, str]:
         self._require_writable(entity)
         payload = self._payload(payload)
+        if not payload:
+            return {"created_object_id": "0"}
         if payload:
             columns = ",".join(_identifier(name) for name in payload)
             bindings = ",".join("?" for _ in payload)
@@ -243,13 +246,11 @@ class GenericObjectsService:
                 raise GrocyError(
                     f"Field {name} is not a valid userfield of the given entity", code=None
                 )
-            if isinstance(value, (dict, list)):
-                raise GrocyError(f"Invalid value for field {name}", code=None)
-        for name, value in values.items():
+            column = "value_id" if isinstance(value, (dict, list)) else "value"
             parameters = {
                 "field_id": fields[name],
                 "object_id": str(object_id),
-                "value": "" if value is None else value,
+                "value": None if isinstance(value, (dict, list)) else value,
             }
             existing = await self.session.scalar(
                 text(
@@ -261,17 +262,17 @@ class GenericObjectsService:
             if existing is None:
                 await self.session.execute(
                     text(
-                        "INSERT INTO userfield_values(field_id,object_id,value) "
+                        f"INSERT INTO userfield_values(field_id,object_id,{column}) "
                         "VALUES (:field_id,:object_id,:value)"
                     ),
                     parameters,
                 )
             else:
                 await self.session.execute(
-                    text("UPDATE userfield_values SET value=:value WHERE id=:id"),
+                    text(f"UPDATE userfield_values SET {column}=:value WHERE id=:id"),
                     {"value": parameters["value"], "id": existing},
                 )
-        await self.session.commit()
+            await self.session.commit()
 
     async def get_userfields(self, entity: str, object_id: int | str) -> dict[str, Any]:
         fields = await self._fields(entity)
@@ -282,10 +283,8 @@ class GenericObjectsService:
             ),
             {"entity": entity, "object_id": str(object_id)},
         )
-        values = {}
-        for name, value in result:
-            values.setdefault(name, value)
-        return {name: values.get(name) for _, name in fields}
+        values = [dict(row) for row in result.mappings()]
+        return {name: (find(values, "name", name) or {}).get("value") for _, name in fields}
 
 
 def _identifier(name: str) -> str:

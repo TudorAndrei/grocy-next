@@ -82,7 +82,7 @@ def test_python_runtime_persists_objects_users_settings_and_files(tmp_path, monk
         ({"query[]": "id!=1001"}, [900, 1010]),
         ({"query[]": "name~AB_C"}, [1001]),
         ({"query[]": "name!~AB_C"}, [900, 1010]),
-        ({"query[]": "description=null"}, [900, 1010]),
+        ({"query[]": "description=null"}, [1010]),
         ({"query[]": "description§^Bä.$"}, [1001]),
         ({"query[]": "description§["}, []),
         ({"query[]": "name~ABC]"}, [1010]),

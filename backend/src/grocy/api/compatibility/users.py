@@ -3,6 +3,8 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 
 from grocy.compatibility.input import json_body
+from grocy.compatibility.lessql import query_parameters
+from grocy.compatibility.php import parse_request_body, request_body
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.domains.users.service import UsersService
@@ -85,7 +87,7 @@ async def get_user_permissions(
 async def add_user_permission(
     user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    payload = await json_body(request)
+    payload = await request_body(request, caught=True) or {}
     await UsersService(session).add_permission(user_id, payload.get("permission_id"))
     return Response(status_code=204)
 
@@ -94,6 +96,13 @@ async def add_user_permission(
 async def set_user_permissions(
     user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    payload = await json_body(request)
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    raw = await request.body()
+    if media_type == "application/json" or media_type.endswith("+json"):
+        payload = parse_request_body(raw, filter_values=False) or {}
+    elif media_type == "application/x-www-form-urlencoded":
+        payload = query_parameters(raw)
+    else:
+        payload = {}
     await UsersService(session).set_permissions(user_id, payload.get("permissions"))
     return Response(status_code=204)
