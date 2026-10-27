@@ -53,6 +53,7 @@ export type PurchaseOptions = {
 export type ConsumeOptions = {
   spoiled?: boolean;
   location_id?: number | null;
+  exact_amount?: boolean;
 };
 
 function post<T>(path: string, body?: JsonValue): Promise<T> {

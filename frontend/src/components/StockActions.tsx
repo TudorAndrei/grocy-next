@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, queryKeys, type ConsumeOptions, type PurchaseOptions } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { isoDay } from "@/lib/format";
+import { isoDay, unitLabel } from "@/lib/format";
 import { preferenceEnabled, usePreferences } from "@/lib/preferences";
 import { objectsQuery } from "@/hooks/queries";
 import { useStockMove } from "@/lib/stockActions";
@@ -29,6 +29,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
   const preferences = usePreferences();
   const { formatAmount } = preferences;
   const stores = useQuery({ ...objectsQuery("shopping_locations"), enabled: priceEnabled });
+  const conversions = useQuery(objectsQuery("quantity_unit_conversions_resolved"));
 
   const stock = useQuery({
     queryKey: queryKeys.stock(productId),
@@ -36,15 +37,21 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
   });
 
   const [selection, setMove] = useState<Move>(initialMove);
+  const tareEnabled = preferenceEnabled(product?.enable_tare_weight_handling);
 
   const move =
-    selection === "open" && (!openingEnabled || product?.disable_open) ? "consume" : selection;
+    selection === "open" && (!openingEnabled || product?.disable_open || tareEnabled)
+      ? "consume"
+      : selection;
 
   const [amount, setAmount] = useState<string | null>(null);
   const [bestBefore, setBestBefore] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [spoiled, setSpoiled] = useState(false);
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState<string | null>(null);
+  const [priceType, setPriceType] = useState<string | null>(null);
+  const [quantityUnitId, setQuantityUnitId] = useState<string | null>(null);
+  const [exactAmount, setExactAmount] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [purchasedDate, setPurchasedDate] = useState(isoDay);
   const [note, setNote] = useState("");
@@ -79,55 +86,115 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
   const minimumAmount =
     onHand - (preferenceEnabled(product?.treat_opened_as_out_of_stock) ? opened : 0);
 
+  const stockUnitId = product?.qu_id_stock ?? 0;
+  const unitFactors = new Map<number, number>([[stockUnitId, 1]]);
+
+  for (const conversion of conversions.data ?? []) {
+    const from = Number(conversion.from_qu_id);
+    const to = Number(conversion.to_qu_id);
+
+    if (
+      Number(conversion.product_id) === productId &&
+      (from === stockUnitId || to === stockUnitId) &&
+      !unitFactors.has(to)
+    )
+      unitFactors.set(to, Number(conversion.factor));
+  }
+
+  const defaultUnitId =
+    move === "purchase"
+      ? tareEnabled
+        ? stockUnitId
+        : (product?.qu_id_purchase ?? stockUnitId)
+      : (product?.qu_id_consume ?? stockUnitId);
+
+  const selectedUnitId = Number(quantityUnitId ?? defaultUnitId);
+  const unitId = unitFactors.has(selectedUnitId) ? selectedUnitId : stockUnitId;
+  const unitFactor = unitFactors.get(unitId) ?? 1;
+  const defaultUnitFactor = unitFactors.get(defaultUnitId) ?? 1;
+  const selectedUnit = catalog.unit(unitId);
+  const unitSelectionEnabled = unitFactors.size > 1 && !(move === "purchase" && tareEnabled);
+
   const defaultAmount =
     move === "purchase"
       ? preferences.purchaseAmount
       : preferences.useQuickConsumeAmount
-        ? (product?.quick_consume_amount ?? 1)
+        ? (product?.quick_consume_amount ?? 1) * unitFactor
         : preferences.consumeAmount;
 
   const amountValue = amount ?? (defaultAmount > 0 ? String(defaultAmount) : "");
   const value = Number(amountValue);
+  // The legacy amount picker rounds in stock units, with at least one decimal place.
+  const stockValue = Number((value / unitFactor).toFixed(preferences.amountPrecision || 1));
+  const grossWeight = tareEnabled && (move === "purchase" || (move === "consume" && !exactAmount));
+  const tareWeight = product?.tare_weight ?? 0;
+  const ownStock = stock.data?.stock_amount ?? 0;
+  const minimumValue = grossWeight ? tareWeight + (move === "purchase" ? ownStock : 0) : 0;
+  const maximumValue = move === "purchase" ? Infinity : onHand + (grossWeight ? tareWeight : 0);
+  const amountValid = stockValue > 0 && stockValue >= minimumValue && stockValue <= maximumValue;
+
+  const priceTypeValue =
+    priceType ?? (product?.default_purchase_price_type === 3 ? "total" : "unit");
+
+  const priceValue =
+    price ??
+    (stock.data?.last_price
+      ? (stock.data.last_price / defaultUnitFactor).toFixed(preferences.priceDisplayPrecision)
+      : "");
+
+  const storeValue =
+    storeId ?? String(stock.data?.last_shopping_location_id ?? product?.shopping_location_id ?? "");
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (!(value > 0)) return;
+    if (!amountValid || conversions.isPending || conversions.isError) return;
     const location = locationValue ? Number(locationValue) : null;
 
     if (move === "purchase") {
+      let unitPrice = Number(
+        (Number(priceValue) * unitFactor).toFixed(preferences.priceInputPrecision),
+      );
+
+      if (priceTypeValue === "total")
+        unitPrice = Number(
+          (unitPrice / (value - (tareEnabled ? tareWeight : 0))).toFixed(
+            preferences.priceInputPrecision,
+          ),
+        );
+
       const purchaseOptions: PurchaseOptions = {
         best_before_date: datesEnabled ? bestBefore || null : null,
-        price: priceEnabled ? (price === "" ? null : Number(price)) : 0,
+        price: priceEnabled ? (priceValue === "" ? null : unitPrice) : 0,
         purchased_date: purchasedDate || null,
         note: note || null,
       };
 
       if (locationsEnabled) purchaseOptions.location_id = location;
 
-      if (priceEnabled)
-        purchaseOptions.shopping_location_id =
-          Number(storeId ?? product?.shopping_location_id) || null;
+      if (priceEnabled) purchaseOptions.shopping_location_id = Number(storeValue) || null;
       purchase.mutate({
         productId,
-        amount: value,
+        amount: stockValue,
         purchase: purchaseOptions,
       });
     } else if (move === "consume") {
       const consumeOptions: ConsumeOptions = { spoiled };
 
+      if (tareEnabled) consumeOptions.exact_amount = exactAmount;
+
       if (locationsEnabled) consumeOptions.location_id = location;
       consume.mutate({
         productId,
-        amount: value,
+        amount: stockValue,
         consume: consumeOptions,
       });
     } else {
-      open.mutate({ productId, amount: value });
+      open.mutate({ productId, amount: stockValue });
     }
   }
 
-  const unit = catalog.stockUnitText(productId, value || 1);
+  const unit = unitLabel(selectedUnit, value || 1);
   const verb = { purchase: "Purchase", consume: "Consume", open: "Mark opened" }[move];
 
   return (
@@ -138,6 +205,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
       </h2>
       {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
       {stock.isError ? <ErrorBlock message={stock.error.message} /> : null}
+      {conversions.isError ? <ErrorBlock message={conversions.error.message} /> : null}
       <div className="stock-level">
         <div className="stock-figure">
           <span className="stock-amount">{formatAmount(onHand)}</span>
@@ -152,7 +220,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
       <form className="move-form" onSubmit={onSubmit}>
         <div className="seg-group" role="group" aria-label="Stock move">
           {(["purchase", "consume", "open"] as const).flatMap((id) =>
-            id === "open" && (!openingEnabled || product?.disable_open)
+            id === "open" && (!openingEnabled || product?.disable_open || tareEnabled)
               ? []
               : [
                   <button
@@ -164,6 +232,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
                       setMove(id);
                       setAmount(null);
                       setLocationId(null);
+                      setQuantityUnitId(null);
                     }}
                   >
                     {{ purchase: "Purchase", consume: "Consume", open: "Open" }[id]}
@@ -173,18 +242,37 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
         </div>
         <div className="field-row">
           <label className="field">
-            <span>Amount</span>
-            <span className="amount-field">
+            <span>{grossWeight ? "Gross weight" : "Amount"}</span>
+            <span className="amount-field" data-unit-select={unitSelectionEnabled || undefined}>
               <input
+                aria-label={grossWeight ? "Gross weight" : "Amount"}
                 value={amountValue}
                 onChange={(e) => setAmount(e.target.value)}
                 inputMode="decimal"
                 autoFocus={initialMove !== "purchase"}
                 required
               />
-              <span className="unit">{unit}</span>
+              {unitSelectionEnabled ? null : <span className="unit">{unit}</span>}
             </span>
           </label>
+          {unitSelectionEnabled ? (
+            <label className="field">
+              <span>Quantity unit</span>
+              <select
+                value={unitId}
+                onChange={(e) => {
+                  setAmount(amountValue);
+                  setQuantityUnitId(e.target.value);
+                }}
+              >
+                {[...unitFactors.keys()].map((id) => (
+                  <option key={id} value={id}>
+                    {catalog.unit(id)?.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {move === "purchase" ? (
             <>
               {datesEnabled ? (
@@ -224,29 +312,60 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
             </label>
           ) : null}
         </div>
+        {unitId !== stockUnitId && value > 0 ? (
+          <p className="field-hint">This equals {catalog.amountText(productId, stockValue)}.</p>
+        ) : null}
+        {grossWeight ? (
+          <p className="field-hint">
+            Tare weight: {catalog.amountText(productId, tareWeight)}. Enter the weight including the
+            container.
+          </p>
+        ) : null}
+        {move === "consume" && tareEnabled ? (
+          <label className="check-field">
+            <input
+              type="checkbox"
+              checked={exactAmount}
+              onChange={(e) => setExactAmount(e.target.checked)}
+            />
+            <span>Consume exact amount</span>
+          </label>
+        ) : null}
         {move === "purchase" ? (
           <details>
             <summary>Purchase details</summary>
             <div className="form-grid">
               {priceEnabled ? (
                 <label className="field">
-                  <span>Price per stock unit</span>
+                  <span>
+                    {priceTypeValue === "total"
+                      ? "Total price"
+                      : unitId === stockUnitId
+                        ? "Price per stock unit"
+                        : `Price per ${selectedUnit?.name ?? "unit"}`}
+                  </span>
                   <input
                     type="number"
                     min="0"
                     step="any"
-                    value={price}
+                    value={priceValue}
                     onChange={(e) => setPrice(e.target.value)}
                   />
                 </label>
               ) : null}
               {priceEnabled ? (
                 <label className="field">
+                  <span>Price type</span>
+                  <select value={priceTypeValue} onChange={(e) => setPriceType(e.target.value)}>
+                    <option value="unit">Unit price</option>
+                    <option value="total">Total price</option>
+                  </select>
+                </label>
+              ) : null}
+              {priceEnabled ? (
+                <label className="field">
                   <span>Store</span>
-                  <select
-                    value={storeId ?? String(product?.shopping_location_id ?? "")}
-                    onChange={(e) => setStoreId(e.target.value)}
-                  >
+                  <select value={storeValue} onChange={(e) => setStoreId(e.target.value)}>
                     <option value="">No store</option>
                     {(stores.data ?? []).map((store) => (
                       <option key={store.id} value={store.id}>
@@ -274,11 +393,16 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={pending || !(value > 0) || (move !== "purchase" && value > onHand)}
+          disabled={pending || conversions.isPending || conversions.isError || !amountValid}
         >
           {verb} {value > 0 ? `${formatAmount(value)} ${unit}` : ""}
         </button>
-        {move !== "purchase" && value > onHand ? (
+        {stockValue < minimumValue ? (
+          <p className="field-hint" role="status">
+            Minimum gross weight: {catalog.amountText(productId, minimumValue)}.
+          </p>
+        ) : null}
+        {move !== "purchase" && stockValue > maximumValue ? (
           <p className="field-hint" role="status">
             Only {catalog.amountText(productId, onHand)} on hand.
           </p>

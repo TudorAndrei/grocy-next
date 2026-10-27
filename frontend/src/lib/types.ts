@@ -11,6 +11,10 @@ export type ProductSummary = {
   location_id?: number | null;
   qu_id_stock?: number | null;
   qu_id_purchase?: number | null;
+  qu_id_consume?: number | null;
+  default_purchase_price_type?: number;
+  enable_tare_weight_handling?: number | boolean;
+  tare_weight?: number;
   default_best_before_days?: number | null;
   default_best_before_days_after_freezing?: number | null;
   default_consume_location_id?: number | null;
@@ -136,6 +140,8 @@ export type CreateProposalPayload = {
 };
 
 export type StockProductDetails = ProductSummary & {
+  last_price?: number | null;
+  last_shopping_location_id?: number | null;
   stock_amount_aggregated?: number;
   stock_amount_opened_aggregated?: number;
   stock_amount?: number;

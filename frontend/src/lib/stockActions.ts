@@ -3,6 +3,7 @@ import { useNotify } from "@/components/Toaster";
 import { api, type ConsumeOptions, type PurchaseOptions } from "./api";
 import { useCatalog, useInvalidateStock } from "./catalog";
 import { useFeatures } from "./features";
+import { preferenceEnabled } from "./preferences";
 
 type Move = {
   productId: number;
@@ -44,8 +45,15 @@ export function useStockMove(kind: keyof typeof VERB, enabled = true) {
     onSuccess: async (bookings, { productId, amount }) => {
       await invalidate();
       const transactionId = bookings[0]?.transaction_id;
+
+      const movedAmount =
+        preferenceEnabled(catalog.product(productId)?.enable_tare_weight_handling) &&
+        bookings.length
+          ? Math.abs(bookings.reduce((sum, booking) => sum + Number(booking.amount), 0))
+          : amount;
+
       notify({
-        message: `${VERB[kind]} ${catalog.amountText(productId, amount)} ${catalog.productName(productId)}`,
+        message: `${VERB[kind]} ${catalog.amountText(productId, movedAmount)} ${catalog.productName(productId)}`,
         undo: transactionId
           ? async () => {
               await api.undoTransaction(transactionId);

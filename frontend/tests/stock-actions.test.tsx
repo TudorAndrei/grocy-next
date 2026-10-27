@@ -93,6 +93,8 @@ test.each([true, false])(
           return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);
         }
 
+        if (path === "/api/objects/quantity_unit_conversions_resolved") return Response.json([]);
+
         if (path === "/api/user/settings") {
           return Response.json({ stock_default_purchase_amount: 1 });
         }

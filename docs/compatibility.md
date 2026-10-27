@@ -53,6 +53,7 @@ The current repair work covers these confirmed differences:
 - Barcode forms apply opening, location, and price tracking flags. Scan defaults accept numeric values and the legacy browser boolean forms, including `"on"`.
 - Opening the web root uses the configured `ENTRY_PAGE`. Native page names map to the related web routes. Today remains available at `/today`.
 - Stock shortages use the server result. Minimum gauges exclude opened stock when required, and parent product displays and consumption forms use the aggregated stock amounts.
+- Stock forms select the default purchase or consume unit and use the resolved product conversions. Amounts and prices use the checked legacy rounding rules. The forms support unit prices, total prices, gross tare weights, and exact consumption amounts. Tare success messages show the booked stock change.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 

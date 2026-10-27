@@ -32,6 +32,14 @@ export function usePreferences() {
 
   return {
     amountPrecision,
+    priceInputPrecision: Math.max(
+      0,
+      Math.min(20, Math.trunc(number("stock_decimal_places_prices_input", 2))),
+    ),
+    priceDisplayPrecision: Math.max(
+      0,
+      Math.min(20, Math.trunc(number("stock_decimal_places_prices_display", 2))),
+    ),
     dueSoonDays: Math.max(0, Math.trunc(number("stock_due_soon_days", 5))),
     purchaseAmount: number("stock_default_purchase_amount", 0),
     consumeAmount: number("stock_default_consume_amount", 1),
