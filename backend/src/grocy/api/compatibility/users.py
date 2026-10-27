@@ -33,7 +33,7 @@ async def get_user_setting(
 async def put_user_setting(
     setting_key: str, request: Request, actor: CurrentActor, session: DbSession
 ) -> Response:
-    payload = await json_body(request)
+    payload = await request_body(request) or {}
     value = payload.get("value")
     if value is None and "value" in payload:
         value = ""

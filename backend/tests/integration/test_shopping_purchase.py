@@ -4,6 +4,42 @@ from sqlalchemy import text
 from grocy.db.session import get_session_factory
 
 
+def test_legacy_shopping_actions_check_credentials_before_input_and_keep_saved_items(
+    client, api_headers
+):
+    client.headers.update(api_headers)
+    assert (
+        client.post(
+            "/api/users", json={"username": "No shopping access", "password": "test"}
+        ).status_code
+        == 204
+    )
+    user = client.get("/api/users", params={"query[]": "username=No shopping access"}).json()[0][
+        "id"
+    ]
+    client.put(f"/api/users/{user}/permissions", json={"permissions": []})
+    key = client.post("/api/v2/api-keys", json={"user_id": user}).json()["api_key"]
+    client.post("/api/objects/shopping_list", json={"product_id": 1, "amount": 2})
+    before = client.get("/api/objects/shopping_list").json()
+    client.headers.pop("GROCY-API-KEY")
+    for headers, status in (({}, 401), ({"GROCY-API-KEY": key}, 403)):
+        for action in (
+            "add-product",
+            "remove-product",
+            "clear",
+            "add-missing-products",
+            "add-overdue-products",
+            "add-expired-products",
+        ):
+            response = client.post(
+                "/api/stock/shoppinglist/" + action,
+                content=b"{",
+                headers={**headers, "Content-Type": "text/plain"},
+            )
+            assert response.status_code == status, response.text
+    assert client.get("/api/objects/shopping_list", headers=api_headers).json() == before
+
+
 def test_checked_shopping_purchase_converts_units_and_retries_once(client, api_headers):
     client.headers.update(api_headers)
     case = client.post("/api/objects/quantity_units", json={"name": "Case"}).json()[

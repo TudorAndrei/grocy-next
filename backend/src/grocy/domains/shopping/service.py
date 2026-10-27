@@ -258,8 +258,6 @@ class ShoppingService:
         product = await self.products.get(product_id)
         if not product.active:
             raise GrocyError("Product is inactive")
-        if not amount.is_finite() or amount <= 0:
-            raise GrocyError("Amount must be positive", code="invalid_amount")
         item = await self.session.scalar(
             select(ShoppingListItem)
             .where(

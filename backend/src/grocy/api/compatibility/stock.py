@@ -1,12 +1,11 @@
-from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
-from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.api.compatibility.stock_input import ShoppingInput, StockInput
 from grocy.compatibility.lessql import query_parameters, query_rows
 from grocy.compatibility.php import PhpJSONResponse, argument_error, filter_bool, int_argument
 from grocy.core.auth import CurrentActor
@@ -18,61 +17,6 @@ from grocy.domains.printing import product_label, stock_entry, stock_label
 from grocy.domains.stock.service import StockService
 
 router = APIRouter(tags=["stock"])
-
-
-class StockAmountBody(BaseModel):
-    amount: Decimal = Field(default=Decimal("1"), gt=0)
-    best_before_date: date | None = None
-    purchased_date: date | None = None
-    price: float | None = None
-    location_id: int | None = None
-    shopping_location_id: int | None = None
-    note: str | None = None
-    stock_label_type: int = 0
-    transaction_type: str = "purchase"
-    exact_amount: bool = False
-    spoiled: bool = False
-    allow_subproduct_substitution: bool = False
-    stock_entry_id: str | None = None
-    recipe_id: int | None = None
-
-
-class StockTransferBody(StockAmountBody):
-    location_id_from: int
-    location_id_to: int
-
-
-class StockInventoryBody(BaseModel):
-    new_amount: Decimal = Field(ge=0)
-    best_before_date: date | None = None
-    purchased_date: date | None = None
-    location_id: int | None = None
-    price: float | None = None
-    shopping_location_id: int | None = None
-    note: str | None = None
-    stock_label_type: int = 0
-
-
-class StockEntryEditBody(BaseModel):
-    amount: Decimal | None = None
-    best_before_date: date | None = None
-    purchased_date: date | None = None
-    price: float | None = None
-    location_id: int | None = None
-    shopping_location_id: int | None = None
-    note: str | None = None
-    open: bool | None = None
-
-
-class ShoppingListMutation(BaseModel):
-    list_id: int = 1
-    done_only: bool = False
-
-
-class ShoppingProductMutation(BaseModel):
-    list_id: int = 1
-    product_id: int
-    product_amount: Decimal = Field(default=Decimal("1"), gt=0)
 
 
 @router.get("/api/stock")
@@ -105,7 +49,7 @@ async def stock_get_entry(entry_id: str, _actor: CurrentActor, session: DbSessio
 @router.put("/api/stock/entry/{entry_id}")
 async def stock_edit_entry(
     entry_id: int,
-    body: StockEntryEditBody,
+    body: StockInput,
     actor: CurrentActor,
     stock: StockSvc,
 ) -> list[dict[str, Any]]:
@@ -198,7 +142,7 @@ async def stock_price_history(product_id: int, _actor: CurrentActor, stock: Stoc
 
 @router.post("/api/stock/products/{product_id}/add")
 async def stock_add(
-    product_id: int, body: StockAmountBody, actor: CurrentActor, stock: StockSvc
+    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.purchase(
         actor,
@@ -218,13 +162,14 @@ async def stock_add(
 
 @router.post("/api/stock/products/{product_id}/consume")
 async def stock_consume(
-    product_id: int, body: StockAmountBody, actor: CurrentActor, stock: StockSvc
+    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.consume(
         actor,
         product_id,
         body.amount,
         spoiled=body.spoiled,
+        transaction_type=body.transaction_type,
         location_id=body.location_id,
         allow_subproduct_substitution=body.allow_subproduct_substitution,
         stock_entry_id=body.stock_entry_id,
@@ -235,7 +180,7 @@ async def stock_consume(
 
 @router.post("/api/stock/products/{product_id}/open")
 async def stock_open(
-    product_id: int, body: StockAmountBody, actor: CurrentActor, stock: StockSvc
+    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.open(
         actor,
@@ -248,7 +193,7 @@ async def stock_open(
 
 @router.post("/api/stock/products/{product_id}/transfer")
 async def stock_transfer(
-    product_id: int, body: StockTransferBody, actor: CurrentActor, stock: StockSvc
+    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.transfer(
         actor,
@@ -262,7 +207,7 @@ async def stock_transfer(
 
 @router.post("/api/stock/products/{product_id}/inventory")
 async def stock_inventory(
-    product_id: int, body: StockInventoryBody, actor: CurrentActor, stock: StockSvc
+    product_id: int, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.inventory(
         actor,
@@ -311,7 +256,7 @@ async def stock_product_by_barcode(barcode: str, _actor: CurrentActor, stock: St
 
 @router.post("/api/stock/products/by-barcode/{barcode}/add")
 async def stock_add_by_barcode(
-    barcode: str, body: StockAmountBody, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.purchase_by_barcode(
         actor,
@@ -324,21 +269,21 @@ async def stock_add_by_barcode(
 
 @router.post("/api/stock/products/by-barcode/{barcode}/consume")
 async def stock_consume_by_barcode(
-    barcode: str, body: StockAmountBody, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.consume_by_barcode(actor, barcode, body.amount, spoiled=body.spoiled)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/open")
 async def stock_open_by_barcode(
-    barcode: str, body: StockAmountBody, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.open_by_barcode(actor, barcode, body.amount)
 
 
 @router.post("/api/stock/products/by-barcode/{barcode}/transfer")
 async def stock_transfer_by_barcode(
-    barcode: str, body: StockTransferBody, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.transfer_by_barcode(
         actor,
@@ -351,7 +296,7 @@ async def stock_transfer_by_barcode(
 
 @router.post("/api/stock/products/by-barcode/{barcode}/inventory")
 async def stock_inventory_by_barcode(
-    barcode: str, body: StockInventoryBody, actor: CurrentActor, stock: StockSvc
+    barcode: str, body: StockInput, actor: CurrentActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
     return await stock.inventory_by_barcode(actor, barcode, body.new_amount)
 
@@ -378,41 +323,43 @@ async def stock_location_entries(
 
 
 @router.post("/api/stock/shoppinglist/add-missing-products", status_code=204)
-async def stock_shopping_add_missing(body: ShoppingListMutation, shopping: ShoppingSvc) -> Response:
+async def stock_shopping_add_missing(body: ShoppingInput, shopping: ShoppingSvc) -> Response:
     await shopping.add_missing_products(shopping_list_id=body.list_id)
     return Response(status_code=204)
 
 
 @router.post("/api/stock/shoppinglist/add-overdue-products", status_code=204)
-async def stock_shopping_add_overdue(body: ShoppingListMutation, shopping: ShoppingSvc) -> Response:
+async def stock_shopping_add_overdue(body: ShoppingInput, shopping: ShoppingSvc) -> Response:
     await shopping.add_overdue_products(shopping_list_id=body.list_id)
     return Response(status_code=204)
 
 
 @router.post("/api/stock/shoppinglist/add-expired-products", status_code=204)
-async def stock_shopping_add_expired(body: ShoppingListMutation, shopping: ShoppingSvc) -> Response:
+async def stock_shopping_add_expired(body: ShoppingInput, shopping: ShoppingSvc) -> Response:
     await shopping.add_expired_products(shopping_list_id=body.list_id)
     return Response(status_code=204)
 
 
 @router.post("/api/stock/shoppinglist/clear", status_code=204)
-async def stock_shopping_clear(body: ShoppingListMutation, shopping: ShoppingSvc) -> Response:
+async def stock_shopping_clear(body: ShoppingInput, shopping: ShoppingSvc) -> Response:
     await shopping.clear_list(shopping_list_id=body.list_id, done_only=body.done_only)
     return Response(status_code=204)
 
 
 @router.post("/api/stock/shoppinglist/add-product", status_code=204)
-async def stock_shopping_add_product(
-    body: ShoppingProductMutation, shopping: ShoppingSvc
-) -> Response:
-    await shopping.add_product(body.product_id, body.product_amount, shopping_list_id=body.list_id)
+async def stock_shopping_add_product(body: ShoppingInput, shopping: ShoppingSvc) -> Response:
+    await shopping.add_product(
+        body.product_id,
+        body.product_amount,
+        shopping_list_id=body.list_id,
+        note=body.note,
+        qu_id=body.qu_id,
+    )
     return Response(status_code=204)
 
 
 @router.post("/api/stock/shoppinglist/remove-product", status_code=204)
-async def stock_shopping_remove_product(
-    body: ShoppingProductMutation, shopping: ShoppingSvc
-) -> Response:
+async def stock_shopping_remove_product(body: ShoppingInput, shopping: ShoppingSvc) -> Response:
     await shopping.remove_product(
         body.product_id, body.product_amount, shopping_list_id=body.list_id
     )
