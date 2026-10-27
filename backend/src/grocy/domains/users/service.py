@@ -12,32 +12,13 @@ from starlette.concurrency import run_in_threadpool
 
 from grocy.compatibility import client_defaults
 from grocy.compatibility.input import database_error
-from grocy.compatibility.php import php_error, php_string
+from grocy.compatibility.php import argument_error, int_argument, php_error, php_string
 from grocy.compatibility.query import query_rows
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.permissions import PERMISSIONS
 from grocy.core.time import server_timezone
 from grocy.db.native_schema import SCHEMA
-
-
-def _text(payload: dict[str, Any], name: str) -> str | None:
-    value = payload.get(name)
-    if value is None or isinstance(value, str):
-        return value
-    if isinstance(value, bool):
-        return "1" if value else ""
-    if isinstance(value, int):
-        return str(value)
-    if isinstance(value, float):
-        return str(int(value)) if value.is_integer() and abs(value) < 1e15 else repr(value)
-    raise GrocyError(f"Invalid value for field {name}", code=None)
-
-
-def _required(values: dict[str, str | None], *names: str) -> None:
-    for name in names:
-        if values[name] is None:
-            raise GrocyError(f"Invalid value for field {name}", code=None)
 
 
 def _permission(value: Any) -> Any:
@@ -77,13 +58,31 @@ class UsersService:
         hashed = await run_in_threadpool(bcrypt.hashpw, value.encode()[:72], bcrypt.gensalt())
         return hashed.decode().replace("$2b$", "$2y$", 1)
 
-    def _profile(self, payload: dict[str, Any]) -> dict[str, str | None]:
-        names = ("username", "first_name", "last_name", "picture_file_name", "password")
-        return {name: _text(payload, name) for name in names}
+    def _profile(self, payload: dict[str, Any], *, editing: bool = False) -> dict[str, str | None]:
+        values = {}
+        method = "EditUser" if editing else "CreateUser"
+        fields = (
+            ("username", "username", False),
+            ("first_name", "firstName", not editing),
+            ("last_name", "lastName", not editing),
+            ("password", "password", editing),
+            ("picture_file_name", "pictureFileName", True),
+        )
+        for position, (field, parameter, nullable) in enumerate(fields, start=2 if editing else 1):
+            value = payload.get(field)
+            if isinstance(value, (list, dict)) or (value is None and not nullable):
+                raise argument_error(
+                    "Grocy\\Services\\UsersService::" + method,
+                    position,
+                    parameter,
+                    "?string" if nullable else "string",
+                    value,
+                )
+            values[field] = None if value is None else php_string(value)
+        return values
 
     async def create_user(self, payload: dict[str, Any]) -> None:
         values = self._profile(payload)
-        _required(values, "username")
         values["password"] = await self._password(values["password"])
         async with self._write():
             connection = await self.session.connection()
@@ -106,13 +105,13 @@ class UsersService:
                     )
 
     async def update_user(self, user_id: str, payload: dict[str, Any]) -> None:
-        values = self._profile(payload)
-        _required(values, "username", "first_name", "last_name")
+        identity = int_argument(user_id, "Grocy\\Services\\UsersService::EditUser", "userId")
+        values = self._profile(payload, editing=True)
         password = values.pop("password")
         if password not in (None, "", "0"):
             values["password"] = await self._password(password)
         exists = await self.session.scalar(
-            text("SELECT 1 FROM users WHERE id=:user_id"), {"user_id": user_id}
+            text("SELECT 1 FROM users WHERE id=:user_id"), {"user_id": identity}
         )
         if not exists:
             raise GrocyError("User does not exist", code=None)
@@ -120,7 +119,7 @@ class UsersService:
         async with self._write():
             await self.session.execute(
                 text(f"UPDATE users SET {assignments} WHERE id=:user_id"),
-                {**values, "user_id": user_id},
+                {**values, "user_id": identity},
             )
 
     async def delete_user(self, user_id: str) -> None:

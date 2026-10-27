@@ -66,7 +66,7 @@ async def create_user(request: Request, _actor: CurrentActor, session: DbSession
 async def update_user(
     user_id: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
-    await UsersService(session).update_user(user_id, await json_body(request))
+    await UsersService(session).update_user(user_id, await request_body(request) or {})
     return Response(status_code=204)
 
 

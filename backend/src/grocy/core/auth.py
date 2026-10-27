@@ -10,6 +10,7 @@ from sqlalchemy import or_, select, text, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.php import loose_equals, php_error
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
@@ -187,6 +188,8 @@ def require_request_permission(request: Request, actor: Actor) -> None:
             raise GrocyError(
                 f"Permission missing: {permission}", status_code=403, code=None
             ) from None
+        if not path.startswith("v2/"):
+            raise php_error(f"Permission missing: {permission}", status_code=403) from None
         raise
 
 
@@ -288,7 +291,7 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
             return "USERS_READ"
         if request.method == "POST":
             return "USERS_CREATE"
-        if request.method == "PUT" and action == str(user_id):
+        if request.method == "PUT" and loose_equals(action, user_id):
             return "USERS_EDIT_SELF"
         return "USERS_EDIT"
     if not path.startswith("v2/"):
