@@ -361,12 +361,14 @@ def body_array(body: dict[Any, Any] | None) -> dict[Any, Any]:
 
 def php_json(value: Any) -> bytes:
     try:
+        if not _valid_json_strings(value):
+            return b""
         text = json.dumps(
             value,
             ensure_ascii=True,
             separators=(",", ":"),
             allow_nan=False,
-            default=lambda item: item.decode() if isinstance(item, bytes) else str(item),
+            default=lambda item: (item.decode() or None) if isinstance(item, bytes) else str(item),
         )
     except (TypeError, ValueError):
         return b""
@@ -377,4 +379,7 @@ class PhpJSONResponse(Response):
     media_type = "application/json"
 
     def render(self, content: Any) -> bytes:
-        return php_json(content)
+        body = php_json(content)
+        if not body:
+            raise php_error("fwrite(): Argument #2 ($data) must be of type string, false given")
+        return body

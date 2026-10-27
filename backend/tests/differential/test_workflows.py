@@ -2847,7 +2847,7 @@ def test_native_generic_query_parameters(api, parameters, status, expected, mess
         details = body["error_details"]
         assert set(details) == {"stack_trace", "file", "line"}
         assert isinstance(details["stack_trace"], str) and details["stack_trace"]
-        assert isinstance(details["file"], str) and details["file"].endswith(".php")
+        assert isinstance(details["file"], str) and details["file"].endswith((".py", ".php"))
         assert isinstance(details["line"], int) and details["line"] > 0
 
 

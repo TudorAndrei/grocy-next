@@ -80,7 +80,7 @@ class GenericObjectsService:
     def supported_entities(self) -> list[str]:
         return sorted(set(ENTITY_MODELS) | VIEW_ENTITIES)
 
-    def _require_writable(self, entity: str, *, deleting: bool = False) -> type[Base]:
+    def require_writable(self, entity: str, *, deleting: bool = False) -> type[Base]:
         model = ENTITY_MODELS.get(entity)
         if model is None or entity in READ_ONLY_ENTITIES or (entity == "api_keys" and not deleting):
             message = "Invalid entity" if deleting else "Entity does not exist or is not exposed"
@@ -145,7 +145,7 @@ class GenericObjectsService:
         self.session.expire_all()
 
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, str]:
-        self._require_writable(entity)
+        self.require_writable(entity)
         object_id = await save_rows(self.session, entity, payload)
         await self._after_write(entity)
         return {"created_object_id": object_id}
@@ -153,7 +153,7 @@ class GenericObjectsService:
     async def update_entity(
         self, entity: str, object_id: int | str, payload: dict[str, Any]
     ) -> None:
-        self._require_writable(entity)
+        self.require_writable(entity)
         if not await self._read(entity, object_id):
             raise GrocyError("Object not found", code=None)
         if payload:
@@ -161,7 +161,7 @@ class GenericObjectsService:
         await self._after_write(entity)
 
     async def delete_entity(self, entity: str, object_id: int | str) -> None:
-        self._require_writable(entity, deleting=True)
+        self.require_writable(entity, deleting=True)
         row = (
             await self.session.execute(
                 text(f'SELECT id FROM "{entity}" WHERE id=:object_id'),
