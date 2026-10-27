@@ -134,6 +134,7 @@ class SystemService:
             "ENTRY_PAGE": settings.entry_page,
             "LOCALE": locale,
             "BASE_URL": settings.base_url,
+            "BASE_PATH": settings.base_path,
             "DISABLE_URL_REWRITING": settings.disable_url_rewriting,
             "DEFAULT_PERMISSIONS": settings.default_permissions,
             "AUTH_CLASS": settings.auth_class_name(),

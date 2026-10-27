@@ -34,12 +34,13 @@ The current repair work covers these confirmed differences:
 - File responses use content-based MIME types and preserve the checked stream and header rules.
 - API key and session checks preserve the checked expiry, byte value, credential order, and use-record rules.
 - HEAD, OPTIONS, method errors, and CORS headers use the legacy API response rules.
+- A configured API base path supports the checked route, authentication, error page, and encoded file rules. Python extension routes keep their JSON errors and CORS rules under the prefix.
 - User profile errors and self-edit ID checks follow the checked legacy rules. The web profile form retains the saved photo.
 - `GROCY_DEFAULT_USER_SETTINGS` supplies Python configuration defaults. Saved values have priority, and recipe views use the same defaults.
 - Python authentication modes support API keys, sessions, and reverse proxy identities. Session mode also works with web login and logout.
 - Python LDAP login checks the directory password, uses the returned user ID attribute, and creates users with the configured default permissions. Real directory tests compare these rules with legacy login. TLS tests check LDAPS, StartTLS, and rejection of an untrusted certificate.
 
-Full Python parity is not complete. Open work includes exact image output, further printer transport errors, further configuration options, base paths, mode-specific databases, and web feature flags and form options. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes exact image output, further printer transport errors, further configuration options, mode-specific databases, and web feature flags, base paths, and form options. Test results must identify the runtime and selected cases.
 
 ## Verification
 
@@ -71,5 +72,7 @@ For an existing reference server, set `GROCY_REFERENCE_URL`, `GROCY_REFERENCE_AP
 The compatibility API must retain observed Grocy 4.5.0 behavior, including partial writes and known defects. The v2 API keeps its documented application rules. For example, the shopping purchase extension uses an atomic write for each item.
 
 PHP version text, PHP interpreter warnings, and execution of arbitrary PHP code are properties of the reference runtime. They must not make PHP a release dependency. Equivalent product features belong in Python.
+
+The PHP template cache and its first-request redirects are checked only on the reference runtime.
 
 Python checks environment configuration at process startup. It rejects the checked invalid settings before it starts the HTTP server. PHP reloads `config.php` for each request and can return an HTML configuration error. The tests check the same value rules at each runtime's configuration boundary.

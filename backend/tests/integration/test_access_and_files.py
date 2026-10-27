@@ -17,6 +17,24 @@ def test_configured_authentication_bypass_uses_the_first_user(client, monkeypatc
         assert client.get("/api/v2/api-keys", headers=headers).status_code == 200
 
 
+def test_api_base_path_preserves_extension_authentication_and_cors(
+    client, api_headers, monkeypatch
+):
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "base_path", "/grocy")
+    origin = {"Origin": "http://localhost:5173"}
+    legacy = client.get("/grocy/api/system/info", headers={**api_headers, **origin})
+    assert legacy.status_code == 200, legacy.text
+    assert legacy.headers["Access-Control-Allow-Origin"] == "*"
+    extension = client.get("/grocy/api/v2/api-keys", headers={**api_headers, **origin})
+    assert extension.status_code == 200, extension.text
+    assert extension.headers["Access-Control-Allow-Origin"] == origin["Origin"]
+    denied = client.get("/grocy/api/v2/api-keys", headers=origin)
+    assert denied.status_code == 401, denied.text
+    assert denied.json()["error_code"] == "unauthorized"
+
+
 def test_permissions_keys_and_mcp_use_stored_identity(
     client: TestClient, api_headers: dict, monkeypatch, tmp_path: Path
 ):

@@ -1,7 +1,8 @@
+from html import escape
 from typing import Any
 
 from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 
 class GrocyError(Exception):
@@ -37,6 +38,23 @@ class ConflictError(GrocyError):
 
 async def grocy_error_handler(_request: Request, exc: Exception) -> Response:
     assert isinstance(exc, GrocyError)
+    if _request.scope.get("grocy_legacy_base_path"):
+        if isinstance(exc, UnauthorizedError):
+            from grocy.core.config import get_settings
+
+            return Response(
+                status_code=302,
+                headers={
+                    "Location": get_settings().base_url.rstrip("/") + "/login",
+                    "Content-Type": "text/html; charset=UTF-8",
+                },
+            )
+        if exc.details is not None:
+            return HTMLResponse(
+                '<!DOCTYPE html><html lang="en"><head><title>Request failed</title></head>'
+                "<body><h1>Request failed</h1><p>" + escape(exc.message) + "</p></body></html>",
+                status_code=exc.status_code if exc.status_code in {403, 404} else 500,
+            )
     if (
         isinstance(exc, UnauthorizedError)
         and _request.url.path.startswith("/api/")

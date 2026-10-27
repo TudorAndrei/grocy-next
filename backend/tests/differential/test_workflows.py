@@ -5375,6 +5375,11 @@ def configuration_values(api, runtime_configuration, monkeypatch):
 def test_native_cache_change_redirects_before_authentication(
     api, runtime_configuration, method, mode
 ):
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if not reference and not get_settings().use_native_php:
+        pytest.skip("The PHP template cache is checked only on the reference runtime")
     runtime_configuration(f"Setting('BASE_URL', '/startup-gap');Setting('MODE', '{mode}');")
     headers = dict(api.headers)
     try:
@@ -5403,10 +5408,11 @@ def test_native_cache_change_redirects_before_authentication(
     ],
 )
 def test_native_base_path_uses_original_routes_and_error_pages(
-    api, runtime_configuration, method, path, authenticated, status
+    api, configuration_values, method, path, authenticated, status
 ):
-    runtime_configuration("Setting('BASE_PATH', '/parity');")
-    assert api.options("/api/system/info", follow_redirects=False).status_code == 302
+    configuration_values(settings={"BASE_PATH": "/parity"})
+    if api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused")):
+        assert api.options("/api/system/info", follow_redirects=False).status_code == 302
     headers = dict(api.headers)
     try:
         if not authenticated:
@@ -5445,11 +5451,12 @@ def test_native_mode_uses_uninitialized_separate_database(
         path.unlink(missing_ok=True)
 
 
-def test_native_base_path_dispatches_encoded_file_routes(api, runtime_configuration):
+def test_native_base_path_dispatches_encoded_file_routes(api, configuration_values):
     from urllib.parse import quote
 
-    runtime_configuration("Setting('BASE_PATH', '/parity');")
-    assert api.options("/api/system/info", follow_redirects=False).status_code == 302
+    configuration_values(settings={"BASE_PATH": "/parity"})
+    if api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused")):
+        assert api.options("/api/system/info", follow_redirects=False).status_code == 302
     name = "Prefixed Ä " + uuid4().hex + ".bin"
     encoded = quote(base64.b64encode(name.encode()).decode(), safe="")
     path = "/parity/api/files/productpictures/" + encoded

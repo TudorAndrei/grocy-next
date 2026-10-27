@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     meal_plan_first_day_of_week: Any = ""
     entry_page: str = "stock"
     base_url: str = "/"
+    base_path: str = ""
     disable_url_rewriting: bool | str = False
     default_permissions: list[str] = ["ADMIN"]
     default_user_settings: dict[str, Any] = {}

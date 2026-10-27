@@ -8,6 +8,7 @@ from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from grocy.compatibility.php import php_error
+from grocy.core.config import get_settings
 from grocy.core.errors import grocy_error_handler
 
 
@@ -45,6 +46,22 @@ class LegacyHttpMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            prefix = get_settings().base_path.rstrip("/")
+            if prefix and scope["path"].startswith(prefix + "/"):
+                path = scope["path"][len(prefix) :]
+                raw = scope.get("raw_path", b"")
+                encoded = prefix.encode()
+                scope = {
+                    **scope,
+                    "path": path,
+                    "root_path": scope.get("root_path", "") + prefix,
+                    "raw_path": raw[len(encoded) :] if raw.startswith(encoded) else raw,
+                    "grocy_api_path": path,
+                    "grocy_legacy_base_path": path.startswith("/api/")
+                    and not path.startswith("/api/v2/")
+                    and path != "/api/health",
+                }
         path = scope.get("path", "")
         if (
             scope["type"] != "http"

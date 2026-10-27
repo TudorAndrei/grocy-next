@@ -1,5 +1,7 @@
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from grocy.core.config import get_settings
+
 _GROCY_CORS = (
     (b"access-control-allow-origin", b"*"),
     (b"access-control-allow-headers", b"*"),
@@ -13,14 +15,18 @@ class GrocyCorsHeadersMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not scope["path"].startswith("/api"):
+        path = scope.get("path", "")
+        prefix = get_settings().base_path.rstrip("/")
+        if prefix and path.startswith(prefix + "/"):
+            path = path[len(prefix) :]
+        if scope["type"] != "http" or not path.startswith("/api"):
             await self.app(scope, receive, send)
             return
 
         async def send_with_cors(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
-                if not scope["path"].startswith("/api/v2/") and scope["path"] != "/api/health":
+                if not path.startswith("/api/v2/") and path != "/api/health":
                     headers = [
                         (name, value)
                         for name, value in headers
