@@ -9,6 +9,7 @@ import { api, ApiError, type ExternalBarcodeProduct } from "@/lib/api";
 import { objectsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
+import { CameraScanner } from "@/components/CameraScanner";
 
 export const Route = createFileRoute("/barcode")({
   component: BarcodePage,
@@ -55,8 +56,8 @@ function BarcodePage() {
   }, []);
 
   const run = useMutation({
-    mutationFn: async () => {
-      const code = barcode.trim();
+    mutationFn: async (scannedCode: string) => {
+      const code = scannedCode.trim();
 
       if (!code) throw new Error("Enter a barcode.");
       const qty = Number(amount);
@@ -173,7 +174,7 @@ function BarcodePage() {
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    run.mutate();
+    run.mutate(barcode);
   };
 
   const needsLocation =
@@ -273,9 +274,18 @@ function BarcodePage() {
             </div>
           ) : null}
         </div>
-        <button type="submit" className="btn btn-primary" disabled={run.isPending}>
-          {mode === "lookup" ? "Look up" : "Submit"}
-        </button>
+        <div className="actions">
+          <CameraScanner
+            disabled={run.isPending}
+            onScan={(code) => {
+              setBarcode(code);
+              run.mutate(code);
+            }}
+          />
+          <button type="submit" className="btn btn-primary" disabled={run.isPending}>
+            {mode === "lookup" ? "Look up" : "Submit"}
+          </button>
+        </div>
       </form>
       {run.error ? <ErrorBlock message={run.error.message} /> : null}
       {createFromExternal.error ? <ErrorBlock message={createFromExternal.error.message} /> : null}

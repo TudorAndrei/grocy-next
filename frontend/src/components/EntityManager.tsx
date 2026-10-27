@@ -12,6 +12,7 @@ import {
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { useFeatures } from "@/lib/features";
+import { CameraScanner } from "./CameraScanner";
 import {
   EntityPictureDetails,
   EntityPictureField,
@@ -577,6 +578,9 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                         }
                       />
                     )}
+                    {entity === "product_barcodes" && field.key === "barcode" ? (
+                      <CameraScanner onScan={(code) => setValues({ ...values, barcode: code })} />
+                    ) : null}
                   </div>
                 );
               })}

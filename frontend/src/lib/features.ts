@@ -13,7 +13,9 @@ export function configuredFeatures(config: JsonObject | undefined): Features {
     const value = config[`FEATURE_FLAG_${name}`];
 
     return value === undefined
-      ? name !== "LABEL_PRINTER" && name !== "THERMAL_PRINTER"
+      ? name !== "LABEL_PRINTER" &&
+          name !== "THERMAL_PRINTER" &&
+          name !== "DISABLE_BROWSER_BARCODE_CAMERA_SCANNING"
       : value !== false && value !== null && value !== 0 && value !== "" && value !== "0";
   };
 

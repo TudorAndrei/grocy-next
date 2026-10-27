@@ -1756,6 +1756,46 @@ a.btn[aria-disabled="true"] {
   backdrop-filter: blur(2px);
 }
 
+.camera-dialog {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.camera-dialog::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+
+.camera-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.camera-head h2 {
+  margin: 0;
+}
+
+.camera-dialog video {
+  display: block;
+  width: 100%;
+  max-height: 50dvh;
+  margin-bottom: 16px;
+  background: var(--ink);
+  object-fit: contain;
+}
+
+.camera-dialog video[hidden] {
+  display: none;
+}
+
 @keyframes command-in {
   from {
     transform: translateY(-8px) scale(0.985);

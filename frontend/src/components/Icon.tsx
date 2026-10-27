@@ -26,6 +26,7 @@ const PATHS = {
   back: ["M15 5l-7 7 7 7"],
   household: ["M4 11.5 12 4l8 7.5", "M6 10.5V20h12v-9.5", "M9 14h6M9 17h6"],
   barcode: ["M4 6v12M7 6v12M10 6v12M14 6v12M17 6v12M20 6v12"],
+  camera: ["M3 7h4l2-3h6l2 3h4v13H3Z", "M16 13a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"],
   locations: ["M4 9h7v11H4z", "M13 9h7v11h-7z", "M4 4h16v3H4z"],
   journal: ["M4 6h16v12H4z", "M8 10h8M8 14h5"],
   labels: ["M6 4h12v6H6z", "M6 14h8v6H6z"],
