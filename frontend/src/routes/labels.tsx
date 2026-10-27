@@ -7,6 +7,7 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { openApiDocument } from "@/lib/open-document";
 import { batteriesQuery, choresQuery, productsQuery, recipesQuery } from "@/hooks/queries";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/labels")({
   component: LabelsPage,
@@ -15,12 +16,24 @@ export const Route = createFileRoute("/labels")({
 type LabelTab = "products" | "recipes" | "chores" | "batteries" | "shopping";
 
 function LabelsPage() {
-  const [tab, setTab] = useState<LabelTab>("products");
+  const features = useFeatures();
+
+  const tabs: Array<{ id: LabelTab; label: string }> = [
+    { id: "products", label: "Products" },
+    { id: "recipes", label: "Recipes" },
+    { id: "chores", label: "Chores" },
+    { id: "batteries", label: "Batteries" },
+    { id: "shopping", label: "Shopping" },
+  ];
+
+  const enabledTabs = tabs.filter((item) => features.routeEnabled(`/${item.id}`));
+  const [selection, setTab] = useState<LabelTab>("products");
+  const tab = enabledTabs.some((item) => item.id === selection) ? selection : enabledTabs[0]?.id;
   const [busy, setBusy] = useState<string | null>(null);
-  const products = useQuery(productsQuery());
-  const recipes = useQuery(recipesQuery());
-  const chores = useQuery(choresQuery());
-  const batteries = useQuery(batteriesQuery());
+  const products = useQuery({ ...productsQuery(), enabled: features.enabled("STOCK") });
+  const recipes = useQuery({ ...recipesQuery(), enabled: features.enabled("RECIPES") });
+  const chores = useQuery({ ...choresQuery(), enabled: features.enabled("CHORES") });
+  const batteries = useQuery({ ...batteriesQuery(), enabled: features.enabled("BATTERIES") });
 
   const open = async (key: string, path: string) => {
     setBusy(key);
@@ -40,18 +53,7 @@ function LabelsPage() {
         title="Labels & printouts"
         lead="Open Grocy label and list layouts in a new tab. Your API key is sent with each request."
       />
-      <Tabs
-        ariaLabel="Label types"
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { id: "products", label: "Products" },
-          { id: "recipes", label: "Recipes" },
-          { id: "chores", label: "Chores" },
-          { id: "batteries", label: "Batteries" },
-          { id: "shopping", label: "Shopping" },
-        ]}
-      />
+      <Tabs ariaLabel="Label types" value={tab ?? ""} onChange={setTab} tabs={enabledTabs} />
       {error ? (
         <ErrorBlock message={error instanceof Error ? error.message : "Could not load data."} />
       ) : null}

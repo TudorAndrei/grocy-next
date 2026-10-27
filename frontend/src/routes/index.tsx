@@ -283,8 +283,10 @@ function TodayPage() {
                     >
                       {item.name}
                       <small>
-                        {item.location ?? "No location"} · min{" "}
-                        {catalog.amountText(item.id, item.min)}
+                        {features.enabled("STOCK_LOCATION_TRACKING")
+                          ? `${item.location ?? "No location"} · `
+                          : ""}
+                        min {catalog.amountText(item.id, item.min)}
                       </small>
                     </Link>
                     <Gauge amount={item.amount} min={item.min} label={item.name} />

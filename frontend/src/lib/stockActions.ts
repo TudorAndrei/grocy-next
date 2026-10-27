@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNotify } from "@/components/Toaster";
 import { api, type ConsumeOptions, type PurchaseOptions } from "./api";
 import { useCatalog, useInvalidateStock } from "./catalog";
+import { useFeatures } from "./features";
 
 type Move = {
   productId: number;
@@ -14,13 +15,27 @@ const VERB = { purchase: "Purchased", consume: "Consumed", open: "Opened" } as c
 
 /** Purchase / consume / open with an undo toast. */
 export function useStockMove(kind: keyof typeof VERB, enabled = true) {
+  const features = useFeatures();
   const notify = useNotify();
   const catalog = useCatalog(enabled);
   const invalidate = useInvalidateStock();
 
   return useMutation({
     mutationFn: ({ productId, amount, purchase, consume }: Move) => {
-      if (kind === "purchase") return api.purchaseStock(productId, amount, purchase);
+      if (kind === "purchase") {
+        const options = { ...purchase };
+
+        if (!features.enabled("STOCK_PRICE_TRACKING")) {
+          options.price = 0;
+          delete options.shopping_location_id;
+        }
+
+        if (!features.enabled("STOCK_LOCATION_TRACKING")) delete options.location_id;
+
+        if (!features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING")) options.best_before_date = null;
+
+        return api.purchaseStock(productId, amount, options);
+      }
 
       if (kind === "consume") return api.consumeStock(productId, amount, consume);
 

@@ -14,6 +14,7 @@ import { ProductMerge } from "@/components/ProductMerge";
 import { StockActions } from "@/components/StockActions";
 import { StockLedger } from "@/components/StockLedger";
 import { openApiDocument } from "@/lib/open-document";
+import { useFeatures } from "@/lib/features";
 
 type ProductSearch = { move?: "purchase" | "consume" | "open" };
 
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/products/$productId")({
 });
 
 function ProductDetailPage() {
+  const features = useFeatures();
   const { productId } = Route.useParams();
   const { move } = Route.useSearch();
   const id = Number(productId);
@@ -43,7 +45,9 @@ function ProductDetailPage() {
   const nutritionMissing = nutrition.error instanceof ApiError && nutrition.error.status === 404;
 
   const facts = [
-    catalog.location(product?.location_id)?.name,
+    features.enabled("STOCK_LOCATION_TRACKING")
+      ? catalog.location(product?.location_id)?.name
+      : null,
     product ? `Stock unit ${catalog.unit(product.qu_id_stock)?.name ?? "—"}` : null,
     product?.barcode ? `Barcode ${product.barcode}` : null,
   ].filter(Boolean);
@@ -60,13 +64,15 @@ function ProductDetailPage() {
         title={product?.name ?? `Product #${productId}`}
         lead={facts.length ? facts.join(" · ") : product?.description}
         actions={
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => openApiDocument(`/api/stock/products/${id}/printlabel`)}
-          >
-            Print label
-          </button>
+          features.enabled("LABEL_PRINTER") ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => openApiDocument(`/api/stock/products/${id}/printlabel`)}
+            >
+              Print label
+            </button>
+          ) : null
         }
       />
 

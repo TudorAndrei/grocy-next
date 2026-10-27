@@ -12,6 +12,7 @@ import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { QuickMoves } from "@/components/QuickMoves";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
@@ -30,11 +31,18 @@ type Row = {
 };
 
 function StockPage() {
+  const features = useFeatures();
+  const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
+  const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const { dueSoonDays, formatAmount } = usePreferences();
   const catalog = useCatalog();
   const command = useCommandBar();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<StockFilter>("all");
+  const [selection, setFilter] = useState<StockFilter>("all");
+
+  const filter =
+    !datesEnabled && (selection === "due" || selection === "expired") ? "all" : selection;
+
   const [locationId, setLocationId] = useState("");
 
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
@@ -86,7 +94,8 @@ function StockPage() {
 
   const isLow = (row: Row) => row.min > 0 && row.amount < row.min;
 
-  const anyOpened = rows.some((row) => row.opened > 0);
+  const anyOpened =
+    features.enabled("STOCK_PRODUCT_OPENED_TRACKING") && rows.some((row) => row.opened > 0);
 
   const counts = {
     all: rows.length,
@@ -102,7 +111,7 @@ function StockPage() {
 
     if (filter === "low" && !isLow(row)) return false;
 
-    if (locationId && String(row.locationId) !== locationId) return false;
+    if (locationsEnabled && locationId && String(row.locationId) !== locationId) return false;
     const q = search.trim().toLowerCase();
 
     return !q || row.name.toLowerCase().includes(q);
@@ -153,31 +162,37 @@ function StockPage() {
           />
         </label>
         <div className="chips" role="group" aria-label="Stock filter">
-          {filters.map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className="chip"
-              data-tone={id}
-              aria-pressed={filter === id}
-              onClick={() => setFilter(id)}
-            >
-              {label}
-              <span className="chip-count">{counts[id]}</span>
-            </button>
-          ))}
+          {filters.flatMap(([id, label]) =>
+            !datesEnabled && (id === "due" || id === "expired")
+              ? []
+              : [
+                  <button
+                    key={id}
+                    type="button"
+                    className="chip"
+                    data-tone={id}
+                    aria-pressed={filter === id}
+                    onClick={() => setFilter(id)}
+                  >
+                    {label}
+                    <span className="chip-count">{counts[id]}</span>
+                  </button>,
+                ],
+          )}
         </div>
-        <label className="select-field">
-          <span className="sr-only">Location</span>
-          <select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
-            <option value="">All locations</option>
-            {catalog.locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {locationsEnabled ? (
+          <label className="select-field">
+            <span className="sr-only">Location</span>
+            <select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+              <option value="">All locations</option>
+              {catalog.locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
 
       {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
@@ -206,7 +221,7 @@ function StockPage() {
                     Opened
                   </th>
                 ) : null}
-                <th scope="col">Best before</th>
+                {datesEnabled ? <th scope="col">Best before</th> : null}
                 <th scope="col">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -223,7 +238,9 @@ function StockPage() {
                         {row.name}
                       </Link>
                       <small>
-                        {catalog.location(row.locationId)?.name ?? "No location"}
+                        {locationsEnabled
+                          ? (catalog.location(row.locationId)?.name ?? "No location")
+                          : null}
                         {row.min > 0 ? ` · min ${catalog.amountText(row.productId, row.min)}` : ""}
                       </small>
                     </td>
@@ -240,15 +257,17 @@ function StockPage() {
                         )}
                       </td>
                     ) : null}
-                    <td className="date">
-                      {tone ? (
-                        <span className="badge" data-tone={tone}>
-                          {dueLabel(row.bestBefore, dueSoonDays)}
-                        </span>
-                      ) : (
-                        <span className="faint">—</span>
-                      )}
-                    </td>
+                    {datesEnabled ? (
+                      <td className="date">
+                        {tone ? (
+                          <span className="badge" data-tone={tone}>
+                            {dueLabel(row.bestBefore, dueSoonDays)}
+                          </span>
+                        ) : (
+                          <span className="faint">—</span>
+                        )}
+                      </td>
+                    ) : null}
                     <td className="row-actions">
                       <QuickMoves productId={row.productId} name={row.name} amount={row.amount} />
                     </td>

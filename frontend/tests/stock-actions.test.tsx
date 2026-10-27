@@ -8,88 +8,97 @@ import { Toaster } from "@/components/Toaster";
 import { isoDay } from "@/lib/format";
 import { fireEvent, waitFor } from "@testing-library/react";
 
-test("a purchase can be undone from its confirmation", async () => {
-  let stock = 0;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn<typeof fetch>(async (input) => {
-      const path = String(input);
+test.each([true, false])(
+  "a purchase follows price tracking (%s) and can be undone",
+  async (tracking) => {
+    let stock = 0;
+    let price: number | null | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(async (input, init) => {
+        const path = String(input);
 
-      if (path === "/api/objects/products") {
-        return Response.json([
-          { id: 1, name: "Milk", qu_id_stock: 1, location_id: 1, min_stock_amount: 1 },
-        ]);
-      }
+        if (path === "/api/system/config")
+          return Response.json({ FEATURE_FLAG_STOCK_PRICE_TRACKING: tracking });
 
-      if (path === "/api/objects/locations") {
-        return Response.json([{ id: 1, name: "Fridge" }]);
-      }
+        if (path === "/api/objects/products") {
+          return Response.json([
+            { id: 1, name: "Milk", qu_id_stock: 1, location_id: 1, min_stock_amount: 1 },
+          ]);
+        }
 
-      if (path === "/api/objects/quantity_units") {
-        return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);
-      }
+        if (path === "/api/objects/locations") {
+          return Response.json([{ id: 1, name: "Fridge" }]);
+        }
 
-      if (path === "/api/user/settings") {
-        return Response.json({ stock_default_purchase_amount: 1 });
-      }
+        if (path === "/api/objects/quantity_units") {
+          return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);
+        }
 
-      if (path === "/api/stock/products/1") {
-        return Response.json({ stock_amount: stock, stock_amount_opened: 0 });
-      }
+        if (path === "/api/user/settings") {
+          return Response.json({ stock_default_purchase_amount: 1 });
+        }
 
-      if (path === "/api/stock/products/1/entries") {
-        return Response.json(stock ? [{ id: 1, amount: stock, location_id: 1 }] : []);
-      }
+        if (path === "/api/stock/products/1") {
+          return Response.json({ stock_amount: stock, stock_amount_opened: 0 });
+        }
 
-      if (
-        path === "/api/stock/products/1/price-history" ||
-        path.startsWith("/api/objects/stock_log")
-      ) {
-        return Response.json([]);
-      }
+        if (path === "/api/stock/products/1/entries") {
+          return Response.json(stock ? [{ id: 1, amount: stock, location_id: 1 }] : []);
+        }
 
-      if (path === "/api/stock/products/1/add") {
-        stock = 1;
+        if (
+          path === "/api/stock/products/1/price-history" ||
+          path.startsWith("/api/objects/stock_log")
+        ) {
+          return Response.json([]);
+        }
 
-        return Response.json([
-          {
-            id: 2,
-            product_id: 1,
-            amount: 1,
-            transaction_type: "purchase",
-            transaction_id: "sale-1",
-          },
-        ]);
-      }
+        if (path === "/api/stock/products/1/add") {
+          price = JSON.parse(String(init?.body)).price;
+          stock = 1;
 
-      if (path === "/api/stock/transactions/sale-1/undo") {
-        stock = 0;
+          return Response.json([
+            {
+              id: 2,
+              product_id: 1,
+              amount: 1,
+              transaction_type: "purchase",
+              transaction_id: "sale-1",
+            },
+          ]);
+        }
 
-        return new Response(null, { status: 204 });
-      }
+        if (path === "/api/stock/transactions/sale-1/undo") {
+          stock = 0;
 
-      return Response.json({ error_message: "Transaction not found" }, { status: 400 });
-    }),
-  );
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={queryClient}>
-      <Toaster>
-        <StockActions productId={1} />
-        <StockLedger productId={1} />
-      </Toaster>
-    </QueryClientProvider>,
-  );
-  const user = userEvent.setup();
-  await screen.findByRole("img", { name: "Milk, 0% of minimum" });
-  await user.click(screen.getByRole("button", { name: "Purchase 1 pc" }));
-  await screen.findByRole("img", { name: "Milk, 100% of minimum" });
-  await screen.findByText("1 at Fridge");
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await screen.findByRole("img", { name: "Milk, 0% of minimum" });
-  expect(screen.queryByText("1 at Fridge")).toBeNull();
-  expect(stock).toBe(0);
-});
+          return new Response(null, { status: 204 });
+        }
+
+        return Response.json({ error_message: "Transaction not found" }, { status: 400 });
+      }),
+    );
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Toaster>
+          <StockActions productId={1} />
+          <StockLedger productId={1} />
+        </Toaster>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await screen.findByRole("img", { name: "Milk, 0% of minimum" });
+    await user.click(screen.getByRole("button", { name: "Purchase 1 pc" }));
+    await screen.findByRole("img", { name: "Milk, 100% of minimum" });
+    await screen.findByText("1 at Fridge");
+    expect(price).toBe(tracking ? null : 0);
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+    await screen.findByRole("img", { name: "Milk, 0% of minimum" });
+    expect(screen.queryByText("1 at Fridge")).toBeNull();
+    expect(stock).toBe(0);
+  },
+);
 
 test("purchase details keep the selected freezer date and stored amount preferences", async () => {
   let purchase: Record<string, string | number | null> | null = null;

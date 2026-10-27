@@ -8,12 +8,14 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
 function ProductsPage() {
+  const features = useFeatures();
   const catalog = useCatalog();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(false);
@@ -107,8 +109,14 @@ function ProductsPage() {
                         {product.name}
                       </Link>
                       <small>
-                        {catalog.location(product.location_id)?.name ?? "No location"}
-                        {product.description ? ` · ${product.description}` : ""}
+                        {[
+                          features.enabled("STOCK_LOCATION_TRACKING")
+                            ? (catalog.location(product.location_id)?.name ?? "No location")
+                            : null,
+                          product.description,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </small>
                     </td>
                     <td className="level">

@@ -1,4 +1,5 @@
 export type ProductSummary = {
+  disable_open?: number;
   id: number;
   name: string;
   barcode?: string | null;

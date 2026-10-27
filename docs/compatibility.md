@@ -45,10 +45,13 @@ The current repair work covers these confirmed differences:
 - Picture responses use libgd from Python. Reference checks compare exact bytes for PNG, JPEG, GIF, WebP, and BMP, including palette images, EXIF rotation, and fractional resize values. The release image includes libgd and does not include PHP.
 - Recipe printer labels expose the native fields. Empty printer paths return the checked legacy error.
 - The web app applies server feature flags to navigation, direct routes, quick actions, Today requests, household choices, and data management choices. String values retain PHP truth rules: `"0"` disables a feature, but `"off"` enables it.
+- Stock forms, stock tables, shopping tools, and label choices use the related tracking and printer flags. Disabled entry fields retain the legacy submission rules, including price `0`, location `1`, and a closed entry.
 
 Full Python parity is not complete. Open work includes further configuration options, web base paths, and form options. Test results must identify the runtime and selected cases.
 
 ## Verification
+
+On 2026-10-27, the full reference comparison passed on Python commit `b91d908` in `Europe/Bucharest`: 1,850 tests passed and 56 were skipped. The release image also passed HTTP checks for startup, catalog, stock, undo, settings, custom fields, files, calendar, the API specification, and profile access. The image had no PHP executable. These results cover the checked cases; they do not prove complete web feature coverage.
 
 Run the normal tests without PHP:
 

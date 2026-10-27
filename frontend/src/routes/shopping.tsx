@@ -12,6 +12,7 @@ import { Icon } from "@/components/Icon";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { useNotify } from "@/components/Toaster";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/shopping")({
   component: ShoppingPage,
@@ -26,17 +27,22 @@ function initialMode(): Mode {
 }
 
 function ShoppingPage() {
+  const features = useFeatures();
+  const stockEnabled = features.enabled("STOCK");
+  const datesEnabled = stockEnabled && features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const { formatAmount } = usePreferences();
   const queryClient = useQueryClient();
   const catalog = useCatalog();
   const notify = useNotify();
   const invalidateStock = useInvalidateStock();
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [listId, setListId] = useState(1);
+  const [selectedListId, setListId] = useState(1);
+  const listId = features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedListId : 1;
 
   const lists = useQuery({
     queryKey: queryKeys.objects("shopping_lists"),
     queryFn: () => api.objects("shopping_lists"),
+    enabled: features.enabled("SHOPPINGLIST_MULTIPLE_LISTS"),
   });
 
   const listKey = queryKeys.shopping(listId);
@@ -158,7 +164,7 @@ function ShoppingPage() {
         }
         actions={
           <>
-            {(lists.data?.length ?? 0) > 1 ? (
+            {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") && (lists.data?.length ?? 0) > 1 ? (
               <label className="select-field">
                 <span className="sr-only">Shopping list</span>
                 <select value={listId} onChange={(e) => setListId(Number(e.target.value))}>
@@ -196,43 +202,53 @@ function ShoppingPage() {
         <div className="toolbar">
           <AddItemForm listId={listId} onAdded={refresh} />
           <div className="toolbar-end">
-            <button
-              type="button"
-              className="btn"
-              disabled={addMissing.isPending}
-              onClick={() => addMissing.mutate()}
-            >
-              Add missing
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={addDue.isPending}
-              onClick={() => addDue.mutate("overdue")}
-            >
-              Add overdue
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={addDue.isPending}
-              onClick={() => addDue.mutate("expired")}
-            >
-              Add expired
-            </button>
+            {stockEnabled ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={addMissing.isPending}
+                onClick={() => addMissing.mutate()}
+              >
+                Add missing
+              </button>
+            ) : null}
+            {datesEnabled ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={addDue.isPending}
+                onClick={() => addDue.mutate("overdue")}
+              >
+                Add overdue
+              </button>
+            ) : null}
+            {datesEnabled ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={addDue.isPending}
+                onClick={() => addDue.mutate("expired")}
+              >
+                Add expired
+              </button>
+            ) : null}
             <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
               Print
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => openApiDocument("/api/print/shoppinglist/thermal")}
-            >
-              Thermal print
-            </button>
-            <Link to="/labels" className="btn btn-ghost">
-              Labels
-            </Link>
+            {features.enabled("THERMAL_PRINTER") ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => openApiDocument(`/api/print/shoppinglist/thermal?list=${listId}`)}
+              >
+                Thermal print
+              </button>
+            ) : null}
+            {features.enabled("LABEL_PRINTER") ? (
+              <Link to="/labels" className="btn btn-ghost">
+                Labels
+              </Link>
+            ) : null}
             <button
               type="button"
               className="btn btn-danger-quiet"
