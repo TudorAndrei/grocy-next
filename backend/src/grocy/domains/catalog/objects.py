@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.php import find, loose_equals
 from grocy.compatibility.query import query_rows
+from grocy.compatibility.rows import save_rows
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.base import Base
@@ -137,16 +138,6 @@ class GenericObjectsService:
             raise NotFoundError("Object not found", code=None)
         return rows[0]
 
-    def _payload(self, payload: dict[str, Any]) -> dict[str, Any]:
-        values = {}
-        for name, value in payload.items():
-            if isinstance(value, (dict, list)):
-                raise GrocyError(f"Invalid value for field {name}", code=None)
-            if isinstance(value, int) and not -(2**63) <= value < 2**63:
-                value = float(value)
-            values[name] = value
-        return values
-
     async def _after_write(self, entity: str) -> None:
         if entity == "products":
             await self.recipes.shopping.auto_add_missing()
@@ -155,18 +146,7 @@ class GenericObjectsService:
 
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, str]:
         self._require_writable(entity)
-        payload = self._payload(payload)
-        if not payload:
-            return {"created_object_id": "0"}
-        if payload:
-            columns = ",".join(_identifier(name) for name in payload)
-            bindings = ",".join("?" for _ in payload)
-            statement = f'INSERT INTO "{entity}" ({columns}) VALUES ({bindings})'
-        else:
-            statement = f'INSERT INTO "{entity}" DEFAULT VALUES'
-        connection = await self.session.connection()
-        result = await connection.exec_driver_sql(statement, tuple(payload.values()))
-        object_id = str(result.lastrowid)
+        object_id = await save_rows(self.session, entity, payload)
         await self._after_write(entity)
         return {"created_object_id": object_id}
 
@@ -176,14 +156,8 @@ class GenericObjectsService:
         self._require_writable(entity)
         if not await self._read(entity, object_id):
             raise GrocyError("Object not found", code=None)
-        payload = self._payload(payload)
         if payload:
-            assignments = ",".join(f"{_identifier(name)}=?" for name in payload)
-            connection = await self.session.connection()
-            await connection.exec_driver_sql(
-                f'UPDATE "{entity}" SET {assignments} WHERE id=?',
-                (*payload.values(), str(object_id)),
-            )
+            await save_rows(self.session, entity, payload, object_id)
         await self._after_write(entity)
 
     async def delete_entity(self, entity: str, object_id: int | str) -> None:
@@ -285,10 +259,6 @@ class GenericObjectsService:
         )
         values = [dict(row) for row in result.mappings()]
         return {name: (find(values, "name", name) or {}).get("value") for _, name in fields}
-
-
-def _identifier(name: str) -> str:
-    return '"' + name.replace('"', '""') + '"'
 
 
 def field_response(values: dict[str, Any]) -> dict[str, Any] | list[Any]:
