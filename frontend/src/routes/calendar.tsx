@@ -7,6 +7,7 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { batteriesQuery, choresQuery, objectsQuery, tasksQuery } from "@/hooks/queries";
+import { downloadApiDocument } from "@/lib/open-document";
 
 export const Route = createFileRoute("/calendar")({ component: CalendarPage });
 
@@ -42,17 +43,7 @@ function CalendarPage() {
   });
 
   const download = useMutation({
-    mutationFn: async () => {
-      const text = await request<string>("/api/calendar/ical");
-
-      const url = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "Grocy.ics";
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    },
+    mutationFn: () => downloadApiDocument("/api/calendar/ical", "Grocy.ics"),
   });
 
   const agenda: AgendaItem[] = [];

@@ -209,13 +209,13 @@ export const api = {
     request<StockProductDetails>(`/api/stock/products/${productId}`),
 
   purchaseStock: (productId: number, amount: number, options: PurchaseOptions = {}) =>
-    post<Booking>(`/api/stock/products/${productId}/add`, { amount, ...options }),
+    post<Booking[]>(`/api/stock/products/${productId}/add`, { amount, ...options }),
 
   consumeStock: (productId: number, amount: number, options: ConsumeOptions = {}) =>
-    post<Booking>(`/api/stock/products/${productId}/consume`, { amount, ...options }),
+    post<Booking[]>(`/api/stock/products/${productId}/consume`, { amount, ...options }),
 
   openStock: (productId: number, amount: number) =>
-    post<Booking>(`/api/stock/products/${productId}/open`, { amount }),
+    post<Booking[]>(`/api/stock/products/${productId}/open`, { amount }),
 
   undoTransaction: (transactionId: string) =>
     post<void>(`/api/stock/transactions/${transactionId}/undo`),

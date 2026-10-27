@@ -10,7 +10,7 @@ function resolveUrl(path: string): string {
   return `${baseUrl.replace(/\/$/, "")}${normalized}`;
 }
 
-export async function openApiDocument(path: string): Promise<void> {
+async function fetchDocument(path: string): Promise<Blob> {
   const { apiKey } = readApiConfig();
   const headers: HeadersInit = {};
 
@@ -21,10 +21,23 @@ export async function openApiDocument(path: string): Promise<void> {
     throw new ApiError(response.status, response.statusText || "Could not open document.", null);
   }
 
-  const blob = await response.blob();
+  return response.blob();
+}
+
+export async function openApiDocument(path: string): Promise<void> {
+  const blob = await fetchDocument(path);
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function downloadApiDocument(path: string, filename: string): Promise<void> {
+  const url = URL.createObjectURL(await fetchDocument(path));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function apiHref(path: string): string {

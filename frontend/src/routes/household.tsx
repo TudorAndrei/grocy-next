@@ -83,7 +83,8 @@ function HouseholdPage() {
     if (!recording) return;
 
     const body: JsonObject = {};
-    body[entity === "tasks" ? "done_time" : "tracked_time"] = trackedTime;
+    body[entity === "tasks" ? "done_time" : "tracked_time"] =
+      trackedTime.replace("T", " ") + (trackedTime.length === 16 ? ":00" : "");
 
     if (entity === "chores") {
       body.skipped = skipped;

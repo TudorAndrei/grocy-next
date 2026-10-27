@@ -26,14 +26,17 @@ export function useStockMove(kind: keyof typeof VERB) {
 
       return api.openStock(productId, amount);
     },
-    onSuccess: async (booking, { productId, amount }) => {
+    onSuccess: async (bookings, { productId, amount }) => {
       await invalidate();
+      const transactionId = bookings[0]?.transaction_id;
       notify({
         message: `${VERB[kind]} ${catalog.amountText(productId, amount)} ${catalog.productName(productId)}`,
-        undo: async () => {
-          await api.undoTransaction(booking.transaction_id);
-          await invalidate();
-        },
+        undo: transactionId
+          ? async () => {
+              await api.undoTransaction(transactionId);
+              await invalidate();
+            }
+          : undefined,
       });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
