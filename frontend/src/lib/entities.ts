@@ -9,6 +9,7 @@ export type EntityRow = {
   note?: string | null;
   barcode?: string | null;
   instruction_manual_file_name?: string | null;
+  picture_file_name?: string | null;
   custom_values?: Record<string, string | null>;
   userfields?: Record<string, string | null> | null;
   next_execution_assigned_user?: AssignedUser | null;

@@ -11,6 +11,7 @@ import { Icon } from "@/components/Icon";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { useNotify } from "@/components/Toaster";
+import { EntityPicture } from "@/components/EntityPicture";
 
 export const Route = createFileRoute("/recipes/$recipeId")({
   component: RecipeDetailPage,
@@ -129,6 +130,14 @@ function RecipeDetailPage() {
           </>
         }
       />
+
+      {recipe?.picture_file_name ? (
+        <EntityPicture
+          group="recipepictures"
+          source={recipe.picture_file_name}
+          label={`${recipe.name} picture`}
+        />
+      ) : null}
 
       {fulfillment.isLoading ? <LoadingBlock label="Checking stock…" /> : null}
       {fulfillment.isError ? <ErrorBlock message={fulfillment.error.message} /> : null}

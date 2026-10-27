@@ -10,12 +10,12 @@ function resolveUrl(path: string): string {
   return `${baseUrl.replace(/\/$/, "")}${normalized}`;
 }
 
-async function fetchDocument(path: string): Promise<Blob> {
+export async function fetchApiDocument(path: string, signal?: AbortSignal): Promise<Blob> {
   const { apiKey } = readApiConfig();
   const headers: HeadersInit = {};
 
   if (apiKey) headers["GROCY-API-KEY"] = apiKey;
-  const response = await fetch(resolveUrl(path), { headers });
+  const response = await fetch(resolveUrl(path), { headers, signal });
 
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText || "Could not open document.", null);
@@ -25,14 +25,14 @@ async function fetchDocument(path: string): Promise<Blob> {
 }
 
 export async function openApiDocument(path: string): Promise<void> {
-  const blob = await fetchDocument(path);
+  const blob = await fetchApiDocument(path);
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export async function downloadApiDocument(path: string, filename: string): Promise<void> {
-  const url = URL.createObjectURL(await fetchDocument(path));
+  const url = URL.createObjectURL(await fetchApiDocument(path));
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;

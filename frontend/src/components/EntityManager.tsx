@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode, type FormEvent } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonObject } from "@/lib/json";
-import { api, request } from "@/lib/api";
+import { api, filePath, request } from "@/lib/api";
 import {
   entities,
   getEntitySpec,
@@ -12,6 +12,12 @@ import {
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { useFeatures } from "@/lib/features";
+import {
+  EntityPictureDetails,
+  EntityPictureField,
+  type PictureSelection,
+  type PictureUpload,
+} from "./EntityPicture";
 
 type Props = {
   entity: string;
@@ -58,6 +64,15 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
     !field.features || field.features.every(features.enabled);
 
   const [values, setValues] = useState<Record<string, string>>({});
+
+  const pictureGroup =
+    entity === "products" ? "productpictures" : entity === "recipes" ? "recipepictures" : null;
+
+  const [picture, setPicture] = useState<PictureSelection>({
+    original: null,
+    upload: null,
+    remove: false,
+  });
 
   const recordTypes = useQuery({
     queryKey: ["objects", "userentities"],
@@ -177,8 +192,18 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
       body?: JsonObject;
       fields?: Record<string, Record<string, string>>;
       id?: number;
+      picture?: PictureUpload | null;
+      removePicture?: string | null;
     }) => {
       if (operation.kind === "delete") return api.deleteObject(entity, operation.id!);
+
+      const removal =
+        pictureGroup && operation.removePicture
+          ? request(filePath(pictureGroup, operation.removePicture), { method: "DELETE" }).catch(
+              (error: Error) => error,
+            )
+          : undefined;
+
       const body = { ...operation.body };
       const purchaseFactor = body.qu_factor_purchase_to_stock;
 
@@ -234,6 +259,17 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
           method: "PUT",
           body: JSON.stringify(values),
         });
+
+      if (pictureGroup && operation.picture) {
+        await request(filePath(pictureGroup, operation.picture.name), {
+          method: "PUT",
+          body: operation.picture.file,
+        });
+      }
+
+      const removalError = await removal;
+
+      if (removalError) throw removalError;
     },
     onSuccess: async () => {
       setEditing(undefined);
@@ -245,6 +281,11 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
   const start = (row?: EntityRow) => {
     mutate.reset();
     setEditing(row?.id ?? null);
+    setPicture({
+      original: row?.picture_file_name ?? null,
+      upload: null,
+      remove: false,
+    });
     setValues(
       Object.fromEntries(
         [
@@ -322,7 +363,18 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
               : value;
     }
 
-    mutate.mutate({ kind: "save", body, fields });
+    if (pictureGroup) {
+      if (picture.upload) body.picture_file_name = picture.upload.name;
+      else if (picture.remove) body.picture_file_name = null;
+    }
+
+    mutate.mutate({
+      kind: "save",
+      body,
+      fields,
+      picture: picture.upload,
+      removePicture: picture.remove ? picture.original : null,
+    });
   };
 
   const rows = (query.data ?? []).filter(
@@ -347,6 +399,15 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
         >
           <h3>{editing === null ? `New ${spec.singular}` : `Edit ${spec.singular}`}</h3>
           <div className="form-grid">
+            {pictureGroup ? (
+              <EntityPictureField
+                group={pictureGroup}
+                value={picture}
+                onChange={setPicture}
+                disabled={mutate.isPending}
+                label={`${entity === "products" ? "Product" : "Recipe"} picture`}
+              />
+            ) : null}
             {spec.fields
               .filter(
                 (f) =>
@@ -554,6 +615,13 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
         {rows.map((row) => (
           <li key={row.id} className="product-row management-row">
             <div>
+              {pictureGroup && row.picture_file_name ? (
+                <EntityPictureDetails
+                  group={pictureGroup}
+                  name={row.picture_file_name}
+                  label={`${row.name ?? spec.singular} picture`}
+                />
+              ) : null}
               {detail ? (
                 detail(row)
               ) : (

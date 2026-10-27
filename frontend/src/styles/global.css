@@ -2317,6 +2317,19 @@ a.btn[aria-disabled="true"] {
   gap: 0 12px;
 }
 
+.entity-picture-field {
+  grid-column: 1 / -1;
+  align-items: start;
+}
+
+.entity-picture {
+  display: block;
+  width: min(100%, 320px);
+  max-height: 240px;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .actions,
 .tabs {
   display: flex;

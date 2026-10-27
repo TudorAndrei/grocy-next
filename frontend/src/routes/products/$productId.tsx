@@ -15,6 +15,7 @@ import { StockActions } from "@/components/StockActions";
 import { StockLedger } from "@/components/StockLedger";
 import { openApiDocument } from "@/lib/open-document";
 import { useFeatures } from "@/lib/features";
+import { EntityPicture } from "@/components/EntityPicture";
 
 type ProductSearch = { move?: "purchase" | "consume" | "open" };
 
@@ -79,6 +80,13 @@ function ProductDetailPage() {
       <div className="detail">
         <StockActions key={move ?? "purchase"} productId={id} initialMove={move} />
         <div className="detail-side">
+          {product?.picture_file_name ? (
+            <EntityPicture
+              group="productpictures"
+              source={product.picture_file_name}
+              label={`${product.name} picture`}
+            />
+          ) : null}
           {nutrition.isLoading ? <LoadingBlock label="Loading nutrition…" /> : null}
           {nutrition.isError && !nutritionMissing ? (
             <ErrorBlock message={nutrition.error.message} />

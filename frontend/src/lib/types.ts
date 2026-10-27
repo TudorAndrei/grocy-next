@@ -1,4 +1,5 @@
 export type ProductSummary = {
+  picture_file_name?: string | null;
   disable_open?: number;
   id: number;
   name: string;
@@ -219,6 +220,7 @@ export type RecipePosition = {
 };
 
 export type Recipe = {
+  picture_file_name?: string | null;
   id: number;
   name: string;
   description?: string | null;
