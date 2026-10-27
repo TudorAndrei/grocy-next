@@ -1258,6 +1258,42 @@ def test_reference_parent_stock_and_volatile_records(
 
 
 @pytest.mark.parametrize(
+    "start", ["0000-01-01 00:30:00", "0000-01-01 01:44:24", "0000-01-02 00:30:00"]
+)
+def test_reference_calendar_utc_year_boundary(client, api_headers, reference, start):
+    client.headers.update(api_headers)
+    name = "Calendar boundary " + uuid4().hex
+    snapshots = []
+    for app in (reference, client):
+        chore = create(
+            app,
+            "chores",
+            {
+                "name": name,
+                "period_type": "daily",
+                "start_date": start,
+                "rollover": 0,
+                "track_date_only": 0,
+            },
+        )
+        try:
+            details = app.get(f"/api/chores/{chore}").json()
+            assert details["next_estimated_execution_time"] == start
+            response = app.get("/api/calendar/ical")
+            snapshots.append(
+                (
+                    response.status_code,
+                    response.json()["error_message"]
+                    if response.status_code != 200
+                    else name in response.text,
+                )
+            )
+        finally:
+            assert app.delete(f"/api/objects/chores/{chore}").status_code == 204
+    assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize(
     "suffix,encodings",
     [
         ("box/part/add", 1),

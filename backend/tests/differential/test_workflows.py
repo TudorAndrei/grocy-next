@@ -3170,8 +3170,9 @@ def test_native_stock_list_ids_keep_php_and_sql_conversion(api, catalog, action)
         assert "must be of type int, string given" in message
 
 
-def test_native_filtered_lists_keep_saved_dates_and_related_rows(api):
+def test_native_filtered_lists_keep_saved_dates_and_related_rows(api, request):
     category = create(api, "task_categories", name=uuid4().hex)
+    request.addfinalizer(lambda: api.delete(f"/api/objects/task_categories/{category}"))
     task = create(
         api,
         "tasks",
@@ -3181,6 +3182,7 @@ def test_native_filtered_lists_keep_saved_dates_and_related_rows(api):
         assigned_to_user_id=1,
         category_id=category,
     )
+    request.addfinalizer(lambda: api.delete(f"/api/objects/tasks/{task}"))
     response = api.get("/api/tasks")
     assert response.status_code == 200, response.text
     saved = next(row for row in response.json() if row["id"] == task)
