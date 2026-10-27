@@ -30,11 +30,21 @@ export type Catalog = {
 };
 
 /** Products, locations and quantity units, joined for display. */
-export function useCatalog(): Catalog {
+export function useCatalog(enabled = true): Catalog {
   const { amountPrecision } = usePreferences();
-  const products = useQuery({ queryKey: queryKeys.products, queryFn: api.listProducts });
-  const locations = useQuery({ queryKey: queryKeys.locations, queryFn: api.listLocations });
-  const units = useQuery({ queryKey: queryKeys.quantityUnits, queryFn: api.listQuantityUnits });
+  const products = useQuery({ queryKey: queryKeys.products, queryFn: api.listProducts, enabled });
+
+  const locations = useQuery({
+    queryKey: queryKeys.locations,
+    queryFn: api.listLocations,
+    enabled,
+  });
+
+  const units = useQuery({
+    queryKey: queryKeys.quantityUnits,
+    queryFn: api.listQuantityUnits,
+    enabled,
+  });
 
   return useMemo(() => {
     const productMap = new Map((products.data ?? []).map((p) => [p.id, p]));

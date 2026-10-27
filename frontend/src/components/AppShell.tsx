@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
+import { useFeatures } from "@/lib/features";
 import { forgetKey } from "@/lib/session";
 import { useCommandBar } from "./CommandBar";
 import { Icon } from "./Icon";
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const command = useCommandBar();
   const pathname = usePathname();
   const counts = useNavCounts();
+  const features = useFeatures();
   const [menuOpen, setMenuOpen] = useState(false);
   const [previousPath, setPreviousPath] = useState(pathname);
   const queryClient = useQueryClient();
@@ -65,10 +67,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Icon name="today" />
           Today
         </Link>
-        <Link to="/stock" aria-current={pathname.startsWith("/stock") ? "page" : undefined}>
-          <Icon name="stock" />
-          Stock
-        </Link>
+        {features.enabled("STOCK") ? (
+          <Link to="/stock" aria-current={pathname.startsWith("/stock") ? "page" : undefined}>
+            <Icon name="stock" />
+            Stock
+          </Link>
+        ) : null}
         <button
           type="button"
           className="tabbar-act"
@@ -77,11 +81,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <Icon name="search" />
         </button>
-        <Link to="/shopping" aria-current={pathname.startsWith("/shopping") ? "page" : undefined}>
-          <Icon name="shopping" />
-          List
-          {counts.shopping > 0 ? <em data-domain="shopping">{counts.shopping}</em> : null}
-        </Link>
+        {features.enabled("SHOPPINGLIST") ? (
+          <Link to="/shopping" aria-current={pathname.startsWith("/shopping") ? "page" : undefined}>
+            <Icon name="shopping" />
+            List
+            {counts.shopping > 0 ? <em data-domain="shopping">{counts.shopping}</em> : null}
+          </Link>
+        ) : null}
         <button type="button" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen}>
           <Icon name="menu" />
           More

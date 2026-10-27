@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { QuickMoves } from "@/components/QuickMoves";
 import { useNotify } from "@/components/Toaster";
 import type { Domain } from "@/components/SiteNav";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/")({
   component: TodayPage,
@@ -35,34 +36,59 @@ type DueItem = {
 
 function TodayPage() {
   const { dueSoonDays } = usePreferences();
-  const catalog = useCatalog();
+  const features = useFeatures();
+  const stockEnabled = features.enabled("STOCK");
+  const shoppingEnabled = features.enabled("SHOPPINGLIST");
+  const choresEnabled = features.enabled("CHORES");
+  const tasksEnabled = features.enabled("TASKS");
+  const datesEnabled = stockEnabled && features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
+  const catalog = useCatalog(stockEnabled || shoppingEnabled);
   const command = useCommandBar();
   const notify = useNotify();
   const queryClient = useQueryClient();
 
-  const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
+  const stock = useQuery({
+    queryKey: queryKeys.stockOverview,
+    queryFn: api.listStock,
+    enabled: stockEnabled,
+  });
 
-  const volatile = useQuery(stockVolatileQuery(dueSoonDays));
+  const volatile = useQuery({ ...stockVolatileQuery(dueSoonDays), enabled: stockEnabled });
 
-  const chores = useQuery({ queryKey: queryKeys.chores, queryFn: api.listChores });
-  const tasks = useQuery({ queryKey: queryKeys.tasks, queryFn: () => api.listTasks(false) });
+  const chores = useQuery({
+    queryKey: queryKeys.chores,
+    queryFn: api.listChores,
+    enabled: choresEnabled,
+  });
+
+  const tasks = useQuery({
+    queryKey: queryKeys.tasks,
+    queryFn: () => api.listTasks(false),
+    enabled: tasksEnabled,
+  });
 
   const proposals = useQuery({
     queryKey: queryKeys.proposalsPending,
     queryFn: api.listPendingProposals,
+    enabled: stockEnabled,
   });
 
-  const log = useQuery({ queryKey: queryKeys.stockLog, queryFn: api.listStockLog });
+  const log = useQuery({
+    queryKey: queryKeys.stockLog,
+    queryFn: api.listStockLog,
+    enabled: stockEnabled,
+  });
 
   const shopping = useQuery({
     queryKey: queryKeys.shopping(1),
     queryFn: () => api.getShoppingList(1),
+    enabled: shoppingEnabled,
   });
 
   const me = useQuery({ queryKey: queryKeys.currentUser, queryFn: api.getCurrentUser });
   const toBuy = (shopping.data?.items ?? []).filter((item) => !item.done);
 
-  const consume = useStockMove("consume");
+  const consume = useStockMove("consume", stockEnabled);
   const { execute: executeChore, complete: completeTask } = useChoreActions();
 
   const addMissing = useMutation({
@@ -80,6 +106,8 @@ function TodayPage() {
   );
 
   const low = useMemo(() => {
+    if (!stockEnabled) return [];
+
     return (volatile.data?.missing_products ?? []).map((missing) => {
       const product = catalog.product(missing.id);
 
@@ -91,12 +119,12 @@ function TodayPage() {
         location: catalog.location(product?.location_id)?.name,
       };
     });
-  }, [volatile.data, catalog, amounts]);
+  }, [volatile.data, catalog, amounts, stockEnabled]);
 
   const due = useMemo<DueItem[]>(() => {
     const items: DueItem[] = [];
 
-    for (const entry of stock.data ?? []) {
+    for (const entry of datesEnabled ? (stock.data ?? []) : []) {
       const days = daysUntil(entry.best_before_date);
 
       if (days === null || days > DUE_WINDOW_DAYS || entry.amount <= 0) continue;
@@ -115,7 +143,7 @@ function TodayPage() {
       });
     }
 
-    for (const chore of chores.data ?? []) {
+    for (const chore of choresEnabled ? (chores.data ?? []) : []) {
       const days = daysUntil(chore.next_estimated_execution_time);
 
       if (days === null || days > DUE_WINDOW_DAYS) continue;
@@ -133,7 +161,7 @@ function TodayPage() {
       });
     }
 
-    for (const task of tasks.data ?? []) {
+    for (const task of tasksEnabled ? (tasks.data ?? []) : []) {
       const days = daysUntil(task.due_date);
 
       if (days === null || days > DUE_WINDOW_DAYS) continue;
@@ -152,7 +180,18 @@ function TodayPage() {
     }
 
     return items.sort((a, b) => a.days - b.days);
-  }, [stock.data, chores.data, tasks.data, catalog, consume, executeChore, completeTask]);
+  }, [
+    stock.data,
+    chores,
+    tasks,
+    catalog,
+    consume,
+    executeChore,
+    completeTask,
+    datesEnabled,
+    choresEnabled,
+    tasksEnabled,
+  ]);
 
   const recent = useMemo(
     () =>
@@ -175,7 +214,7 @@ function TodayPage() {
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
 
-  const pendingCount = proposals.data?.length ?? 0;
+  const pendingCount = stockEnabled ? (proposals.data?.length ?? 0) : 0;
   const needsYou = low.length + due.filter((d) => d.days <= 5).length + pendingCount;
   const loading = stock.isLoading || volatile.isLoading;
 
@@ -195,21 +234,25 @@ function TodayPage() {
         }
         actions={
           <>
-            <button
-              type="button"
-              className="btn"
-              disabled={addMissing.isPending || low.length === 0}
-              onClick={() => addMissing.mutate()}
-            >
-              Add missing to list
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => command.open("purchase")}
-            >
-              Purchase
-            </button>
+            {stockEnabled && shoppingEnabled ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={addMissing.isPending || low.length === 0}
+                onClick={() => addMissing.mutate()}
+              >
+                Add missing to list
+              </button>
+            ) : null}
+            {stockEnabled ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => command.open("purchase")}
+              >
+                Purchase
+              </button>
+            ) : null}
           </>
         }
       />
@@ -218,176 +261,191 @@ function TodayPage() {
 
       <div className="today">
         <div className="today-main">
-          <section className="panel today-low" aria-labelledby="low-heading">
-            <h2 className="panel-head" id="low-heading">
-              Running low
-              <span>{low.length === 0 ? "all above minimum" : `${low.length} below minimum`}</span>
-            </h2>
-            {loading ? <LoadingBlock label="Checking stock…" /> : null}
-            {!loading && low.length === 0 ? (
-              <p className="panel-empty">Every product with a minimum has enough on hand.</p>
-            ) : null}
-            <ul className="stock-rows">
-              {low.map((item) => (
-                <li key={item.id} className="stock-row">
-                  <Link
-                    to="/products/$productId"
-                    params={{ productId: String(item.id) }}
-                    className="stock-name"
-                  >
-                    {item.name}
-                    <small>
-                      {item.location ?? "No location"} · min {catalog.amountText(item.id, item.min)}
-                    </small>
-                  </Link>
-                  <Gauge amount={item.amount} min={item.min} label={item.name} />
-                  <span className="amount">{catalog.amountText(item.id, item.amount)}</span>
-                  <span className="row-actions">
-                    <QuickMoves productId={item.id} name={item.name} amount={item.amount} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="panel" aria-labelledby="due-heading">
-            <h2 className="panel-head" id="due-heading">
-              Use first
-              <span>next {DUE_WINDOW_DAYS} days</span>
-            </h2>
-            {!loading && due.length === 0 ? (
-              <p className="panel-empty">Nothing expires or falls due in the next two weeks.</p>
-            ) : null}
-            <ul className="due-rows">
-              {due.map((item) => (
-                <li key={item.key} className="due-row" data-domain={item.domain}>
-                  <span className="due-name">
-                    {item.link ? (
-                      <Link to={item.link.to} params={{ productId: String(item.link.productId) }}>
-                        {item.name}
-                      </Link>
-                    ) : (
-                      item.name
-                    )}
-                    <small>{item.detail}</small>
-                  </span>
-                  <DueBar days={item.days} />
-                  {item.action ? (
-                    <button
-                      type="button"
-                      className="btn btn-sm"
-                      disabled={item.action.busy}
-                      onClick={item.action.run}
+          {stockEnabled ? (
+            <section className="panel today-low" aria-labelledby="low-heading">
+              <h2 className="panel-head" id="low-heading">
+                Running low
+                <span>
+                  {low.length === 0 ? "all above minimum" : `${low.length} below minimum`}
+                </span>
+              </h2>
+              {loading ? <LoadingBlock label="Checking stock…" /> : null}
+              {!loading && low.length === 0 ? (
+                <p className="panel-empty">Every product with a minimum has enough on hand.</p>
+              ) : null}
+              <ul className="stock-rows">
+                {low.map((item) => (
+                  <li key={item.id} className="stock-row">
+                    <Link
+                      to="/products/$productId"
+                      params={{ productId: String(item.id) }}
+                      className="stock-name"
                     >
-                      {item.action.label}
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-
-        <div className="today-side">
-          <section className="panel" aria-labelledby="list-heading" data-domain="shopping">
-            <h2 className="panel-head" id="list-heading">
-              Shopping list
-              <span>{toBuy.length === 0 ? "empty" : `${toBuy.length} to buy`}</span>
-            </h2>
-            {toBuy.length > 0 ? (
-              <ul className="list-preview">
-                {toBuy.slice(0, 8).map((item) => (
-                  <li key={item.id}>
-                    {item.product_id != null ? (
-                      <>
-                        <b>{catalog.amountText(item.product_id, item.amount)}</b>{" "}
-                        {catalog.productName(item.product_id)}
-                      </>
-                    ) : (
-                      item.note
-                    )}
+                      {item.name}
+                      <small>
+                        {item.location ?? "No location"} · min{" "}
+                        {catalog.amountText(item.id, item.min)}
+                      </small>
+                    </Link>
+                    <Gauge amount={item.amount} min={item.min} label={item.name} />
+                    <span className="amount">{catalog.amountText(item.id, item.amount)}</span>
+                    <span className="row-actions">
+                      <QuickMoves productId={item.id} name={item.name} amount={item.amount} />
+                    </span>
                   </li>
                 ))}
-                {toBuy.length > 8 ? <li>+{toBuy.length - 8} more</li> : null}
               </ul>
-            ) : (
-              <p className="panel-empty">
-                Nothing on the list. Add missing pulls in everything below its minimum.
-              </p>
-            )}
-            <div className="panel-actions">
-              <Link to="/shopping" className="btn btn-sm btn-primary">
-                Go shopping
-              </Link>
-              <button type="button" className="btn btn-sm" onClick={() => command.open("list")}>
-                Add to list
-              </button>
-            </div>
-          </section>
+            </section>
+          ) : null}
 
-          <section className="panel" aria-labelledby="review-heading">
-            <h2 className="panel-head" id="review-heading">
-              Review and undo
-              <span>{pendingCount === 0 ? "no proposals waiting" : `${pendingCount} waiting`}</span>
-            </h2>
-            {pendingCount > 0 ? (
-              <ul className="review-rows">
-                {(proposals.data ?? []).slice(0, 3).map((proposal) => {
-                  const fromAgent = proposal.payload.origin !== "web";
-
-                  return (
-                    <li key={proposal.id}>
-                      <span className="tag" data-domain={fromAgent ? "agent" : undefined}>
-                        {fromAgent ? "Agent" : "Web"}
-                      </span>
-                      <span className="review-what">
-                        <b>{catalog.productName(proposal.product_id)}</b> nutrition
-                        {proposal.payload.nutrients.energy_kcal != null
-                          ? ` · ${proposal.payload.nutrients.energy_kcal} kcal / ${proposal.payload.basis.quantity} ${proposal.payload.basis.unit}`
-                          : ""}
-                      </span>
-                      <Link to="/reviews" className="btn btn-sm btn-primary">
-                        Review
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-            {recent.length > 0 ? (
-              <>
-                <h3 className="panel-sub">Recent bookings</h3>
-                <ul className="review-rows">
-                  {recent.map((entry) => (
-                    <li key={entry.id}>
-                      <ActorTag userId={entry.user_id} currentUserId={me.data?.id} />
-                      <span className="review-what">
-                        {bookingVerb(entry.transaction_type)}{" "}
-                        <b>{catalog.amountText(entry.product_id, Math.abs(entry.amount))}</b>{" "}
-                        {catalog.productName(entry.product_id)}
-                        <small>{relativeTime(entry.row_created_timestamp)}</small>
-                      </span>
+          {datesEnabled || choresEnabled || tasksEnabled ? (
+            <section className="panel" aria-labelledby="due-heading">
+              <h2 className="panel-head" id="due-heading">
+                Use first
+                <span>next {DUE_WINDOW_DAYS} days</span>
+              </h2>
+              {!loading && due.length === 0 ? (
+                <p className="panel-empty">Nothing expires or falls due in the next two weeks.</p>
+              ) : null}
+              <ul className="due-rows">
+                {due.map((item) => (
+                  <li key={item.key} className="due-row" data-domain={item.domain}>
+                    <span className="due-name">
+                      {item.link ? (
+                        <Link to={item.link.to} params={{ productId: String(item.link.productId) }}>
+                          {item.name}
+                        </Link>
+                      ) : (
+                        item.name
+                      )}
+                      <small>{item.detail}</small>
+                    </span>
+                    <DueBar days={item.days} />
+                    {item.action ? (
                       <button
                         type="button"
                         className="btn btn-sm"
-                        disabled={undo.isPending}
-                        onClick={() => undo.mutate(entry.transaction_id)}
+                        disabled={item.action.busy}
+                        onClick={item.action.run}
                       >
-                        Undo
+                        {item.action.label}
                       </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </div>
+
+        <div className="today-side">
+          {shoppingEnabled ? (
+            <section className="panel" aria-labelledby="list-heading" data-domain="shopping">
+              <h2 className="panel-head" id="list-heading">
+                Shopping list
+                <span>{toBuy.length === 0 ? "empty" : `${toBuy.length} to buy`}</span>
+              </h2>
+              {toBuy.length > 0 ? (
+                <ul className="list-preview">
+                  {toBuy.slice(0, 8).map((item) => (
+                    <li key={item.id}>
+                      {item.product_id != null ? (
+                        <>
+                          <b>{catalog.amountText(item.product_id, item.amount)}</b>{" "}
+                          {catalog.productName(item.product_id)}
+                        </>
+                      ) : (
+                        item.note
+                      )}
                     </li>
                   ))}
+                  {toBuy.length > 8 ? <li>+{toBuy.length - 8} more</li> : null}
                 </ul>
-              </>
-            ) : null}
-            {pendingCount === 0 && recent.length === 0 ? (
-              <p className="panel-empty">No proposals and no bookings yet.</p>
-            ) : (
-              <Link to="/activity" className="panel-more">
-                All activity
-              </Link>
-            )}
-          </section>
+              ) : (
+                <p className="panel-empty">
+                  Nothing on the list. Add missing pulls in everything below its minimum.
+                </p>
+              )}
+              <div className="panel-actions">
+                <Link to="/shopping" className="btn btn-sm btn-primary">
+                  Go shopping
+                </Link>
+                {stockEnabled ? (
+                  <button type="button" className="btn btn-sm" onClick={() => command.open("list")}>
+                    Add to list
+                  </button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {stockEnabled ? (
+            <section className="panel" aria-labelledby="review-heading">
+              <h2 className="panel-head" id="review-heading">
+                Review and undo
+                <span>
+                  {pendingCount === 0 ? "no proposals waiting" : `${pendingCount} waiting`}
+                </span>
+              </h2>
+              {pendingCount > 0 ? (
+                <ul className="review-rows">
+                  {(proposals.data ?? []).slice(0, 3).map((proposal) => {
+                    const fromAgent = proposal.payload.origin !== "web";
+
+                    return (
+                      <li key={proposal.id}>
+                        <span className="tag" data-domain={fromAgent ? "agent" : undefined}>
+                          {fromAgent ? "Agent" : "Web"}
+                        </span>
+                        <span className="review-what">
+                          <b>{catalog.productName(proposal.product_id)}</b> nutrition
+                          {proposal.payload.nutrients.energy_kcal != null
+                            ? ` · ${proposal.payload.nutrients.energy_kcal} kcal / ${proposal.payload.basis.quantity} ${proposal.payload.basis.unit}`
+                            : ""}
+                        </span>
+                        <Link to="/reviews" className="btn btn-sm btn-primary">
+                          Review
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+              {recent.length > 0 ? (
+                <>
+                  <h3 className="panel-sub">Recent bookings</h3>
+                  <ul className="review-rows">
+                    {recent.map((entry) => (
+                      <li key={entry.id}>
+                        <ActorTag userId={entry.user_id} currentUserId={me.data?.id} />
+                        <span className="review-what">
+                          {bookingVerb(entry.transaction_type)}{" "}
+                          <b>{catalog.amountText(entry.product_id, Math.abs(entry.amount))}</b>{" "}
+                          {catalog.productName(entry.product_id)}
+                          <small>{relativeTime(entry.row_created_timestamp)}</small>
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          disabled={undo.isPending}
+                          onClick={() => undo.mutate(entry.transaction_id)}
+                        >
+                          Undo
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              {pendingCount === 0 && recent.length === 0 ? (
+                <p className="panel-empty">No proposals and no bookings yet.</p>
+              ) : (
+                <Link to="/activity" className="panel-more">
+                  All activity
+                </Link>
+              )}
+            </section>
+          ) : null}
         </div>
       </div>
     </>

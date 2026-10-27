@@ -3,11 +3,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EntityManager } from "@/components/EntityManager";
 import { AccessManager } from "@/components/AccessManager";
 import { entities } from "@/lib/entities";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/manage")({ component: ManagePage });
 
 function ManagePage() {
-  const [entity, setEntity] = useState("locations");
+  const [selection, setEntity] = useState("locations");
+  const features = useFeatures();
 
   const choices = [
     "locations",
@@ -22,7 +24,26 @@ function ManagePage() {
     "meal_plan_sections",
     "task_categories",
     "shopping_lists",
-  ];
+  ].filter((value) => {
+    if (value === "locations") return features.routeEnabled("/locations");
+
+    if (value === "shopping_locations")
+      return features.enabled("STOCK") && features.enabled("STOCK_PRICE_TRACKING");
+
+    if (value === "product_barcodes") return features.enabled("STOCK");
+
+    if (value === "meal_plan_sections") return features.routeEnabled("/meal-plan");
+
+    if (value === "task_categories") return features.enabled("TASKS");
+
+    if (value === "shopping_lists")
+      return features.enabled("SHOPPINGLIST") && features.enabled("SHOPPINGLIST_MULTIPLE_LISTS");
+
+    return true;
+  });
+
+  const entity =
+    selection === "access" || choices.includes(selection) ? selection : (choices[0] ?? "access");
 
   return (
     <>

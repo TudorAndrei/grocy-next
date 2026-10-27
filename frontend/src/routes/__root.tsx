@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { LoadingBlock } from "@/components/LoadingBlock";
@@ -9,6 +9,7 @@ import { api, ApiError, queryKeys } from "@/lib/api";
 import { CommandProvider } from "@/components/CommandBar";
 import { Toaster } from "@/components/Toaster";
 import { DatabaseRefresh } from "@/components/DatabaseRefresh";
+import { FeatureRoute } from "@/components/FeatureRoute";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -50,7 +51,7 @@ function RootLayout() {
       <DatabaseRefresh />
       <CommandProvider>
         <AppShell>
-          <Outlet />
+          <FeatureRoute />
         </AppShell>
       </CommandProvider>
     </Toaster>

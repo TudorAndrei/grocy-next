@@ -319,6 +319,7 @@ export const api = {
     ),
 
   getSystemInfo: () => request<SystemInfo>("/api/system/info"),
+  getSystemConfig: () => request<JsonObject>("/api/system/config"),
   setupStatus: () => request<{ needs_setup: boolean }>("/api/v2/setup"),
   runSetup: (body: { setup_token: string; username: string; password: string }) =>
     request<AuthResult>("/api/v2/setup", {
@@ -408,6 +409,7 @@ export const queryKeys = {
   tasks: ["tasks"] as const,
   batteries: ["batteries"] as const,
   systemInfo: ["system", "info"] as const,
+  systemConfig: ["system", "config"] as const,
   setup: ["setup"] as const,
   userSettings: ["user", "settings"] as const,
   currentUser: ["user", "current"] as const,

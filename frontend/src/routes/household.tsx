@@ -6,6 +6,7 @@ import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { api, request } from "@/lib/api";
 import type { EntityRow } from "@/lib/entities";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/household")({
   component: HouseholdPage,
@@ -26,7 +27,14 @@ function displayTime(value: string | null | undefined) {
 
 function HouseholdPage() {
   const client = useQueryClient();
-  const [entity, setEntity] = useState("chores");
+  const features = useFeatures();
+
+  const choices = ["chores", "tasks", "batteries"].filter((name) =>
+    features.enabled(name.toUpperCase()),
+  );
+
+  const [selection, setEntity] = useState("chores");
+  const entity = choices.includes(selection) ? selection : (choices[0] ?? "chores");
   const [recording, setRecording] = useState<EntityRow | null>(null);
   const [merging, setMerging] = useState<EntityRow | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
@@ -37,11 +45,13 @@ function HouseholdPage() {
   const records = useQuery({
     queryKey: ["objects", entity],
     queryFn: () => api.objects(entity),
+    enabled: choices.length > 0,
   });
 
   const current = useQuery({
     queryKey: ["household-current", entity],
     queryFn: () => request<EntityRow[]>(`/api/${entity}`),
+    enabled: choices.length > 0,
   });
 
   const users = useQuery({
@@ -55,7 +65,7 @@ function HouseholdPage() {
   const history = useQuery({
     queryKey: ["objects", logsEntity],
     queryFn: () => api.objects(logsEntity),
-    enabled: entity !== "tasks",
+    enabled: choices.length > 0 && entity !== "tasks",
   });
 
   const action = useMutation({
@@ -106,7 +116,7 @@ function HouseholdPage() {
       <h1 className="page-title">Household</h1>
       <p className="page-lead">Manage chores, tasks, and battery charges.</p>
       <div className="tabs" role="group" aria-label="Household type">
-        {["chores", "tasks", "batteries"].map((value) => (
+        {choices.map((value) => (
           <button
             key={value}
             className="btn btn-ghost"
@@ -229,77 +239,81 @@ function HouseholdPage() {
           </div>
         </form>
       )}
-      <EntityManager
-        key={entity}
-        entity={entity}
-        detail={(row) => {
-          const state = current.data?.find((item) => item.id === row.id);
+      {choices.length > 0 ? (
+        <EntityManager
+          key={entity}
+          entity={entity}
+          detail={(row) => {
+            const state = current.data?.find((item) => item.id === row.id);
 
-          const assigned = state?.next_execution_assigned_user ?? state?.assigned_to_user;
+            const assigned = state?.next_execution_assigned_user ?? state?.assigned_to_user;
 
-          return (
+            return (
+              <>
+                <h3>{row.name}</h3>
+                {row.description && <p>{row.description}</p>}
+                <p className="muted">
+                  {entity === "tasks"
+                    ? row.done
+                      ? `Completed ${displayTime(row.done_timestamp)}`
+                      : `Due ${displayTime(row.due_date)}`
+                    : row.active === 0
+                      ? "Inactive"
+                      : `Next ${displayTime(state?.[entity === "chores" ? "next_estimated_execution_time" : "next_estimated_charge_time"])}`}
+                </p>
+                {assigned && (
+                  <p>Assigned to {String(assigned.display_name ?? assigned.username)}</p>
+                )}
+              </>
+            );
+          }}
+          actions={(row) => (
             <>
-              <h3>{row.name}</h3>
-              {row.description && <p>{row.description}</p>}
-              <p className="muted">
+              <button
+                className="btn btn-primary"
+                disabled={action.isPending || row.active === 0}
+                onClick={() =>
+                  entity === "tasks" && row.done
+                    ? action.mutate({ path: `/api/tasks/${row.id}/undo` })
+                    : record(row)
+                }
+              >
                 {entity === "tasks"
                   ? row.done
-                    ? `Completed ${displayTime(row.done_timestamp)}`
-                    : `Due ${displayTime(row.due_date)}`
-                  : row.active === 0
-                    ? "Inactive"
-                    : `Next ${displayTime(state?.[entity === "chores" ? "next_estimated_execution_time" : "next_estimated_charge_time"])}`}
-              </p>
-              {assigned && <p>Assigned to {String(assigned.display_name ?? assigned.username)}</p>}
+                    ? "Reopen"
+                    : "Complete"
+                  : entity === "chores"
+                    ? "Record execution"
+                    : "Record charge"}
+              </button>
+              {entity === "chores" && row.period_type !== "manually" && (
+                <button
+                  className="btn btn-ghost"
+                  disabled={action.isPending || row.active === 0}
+                  onClick={() => record(row, true)}
+                >
+                  Skip
+                </button>
+              )}
+              {entity === "chores" && (
+                <button
+                  className="btn btn-ghost"
+                  disabled={action.isPending}
+                  onClick={() => {
+                    action.reset();
+                    setMerging(row);
+                    setMergeTarget("");
+                    setRecording(null);
+                  }}
+                >
+                  Merge
+                </button>
+              )}
             </>
-          );
-        }}
-        actions={(row) => (
-          <>
-            <button
-              className="btn btn-primary"
-              disabled={action.isPending || row.active === 0}
-              onClick={() =>
-                entity === "tasks" && row.done
-                  ? action.mutate({ path: `/api/tasks/${row.id}/undo` })
-                  : record(row)
-              }
-            >
-              {entity === "tasks"
-                ? row.done
-                  ? "Reopen"
-                  : "Complete"
-                : entity === "chores"
-                  ? "Record execution"
-                  : "Record charge"}
-            </button>
-            {entity === "chores" && row.period_type !== "manually" && (
-              <button
-                className="btn btn-ghost"
-                disabled={action.isPending || row.active === 0}
-                onClick={() => record(row, true)}
-              >
-                Skip
-              </button>
-            )}
-            {entity === "chores" && (
-              <button
-                className="btn btn-ghost"
-                disabled={action.isPending}
-                onClick={() => {
-                  action.reset();
-                  setMerging(row);
-                  setMergeTarget("");
-                  setRecording(null);
-                }}
-              >
-                Merge
-              </button>
-            )}
-          </>
-        )}
-      />
-      {entity === "chores" && (
+          )}
+        />
+      ) : null}
+      {entity === "chores" && features.enabled("CHORES_ASSIGNMENTS") && (
         <button
           className="btn btn-ghost"
           disabled={action.isPending}

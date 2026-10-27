@@ -13,9 +13,9 @@ type Move = {
 const VERB = { purchase: "Purchased", consume: "Consumed", open: "Opened" } as const;
 
 /** Purchase / consume / open with an undo toast. */
-export function useStockMove(kind: keyof typeof VERB) {
+export function useStockMove(kind: keyof typeof VERB, enabled = true) {
   const notify = useNotify();
-  const catalog = useCatalog();
+  const catalog = useCatalog(enabled);
   const invalidate = useInvalidateStock();
 
   return useMutation({

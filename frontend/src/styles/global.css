@@ -1976,7 +1976,8 @@ a.btn[aria-disabled="true"] {
     inset: auto 0 0 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
     align-items: center;
     height: calc(var(--tabbar) + env(safe-area-inset-bottom));
     padding: 0 6px env(safe-area-inset-bottom);

@@ -42,8 +42,11 @@ The current repair work covers these confirmed differences:
 - `GROCY_DEFAULT_USER_SETTINGS` supplies Python configuration defaults. Saved values have priority, and recipe views use the same defaults.
 - Python authentication modes support API keys, sessions, and reverse proxy identities. Session mode also works with web login and logout.
 - Python LDAP login checks the directory password, uses the returned user ID attribute, and creates users with the configured default permissions. Real directory tests compare these rules with legacy login. TLS tests check LDAPS, StartTLS, and rejection of an untrusted certificate.
+- Picture responses use libgd from Python. Reference checks compare exact bytes for PNG, JPEG, GIF, WebP, and BMP, including palette images, EXIF rotation, and fractional resize values. The release image includes libgd and does not include PHP.
+- Recipe printer labels expose the native fields. Empty printer paths return the checked legacy error.
+- The web app applies server feature flags to navigation, direct routes, quick actions, Today requests, household choices, and data management choices. String values retain PHP truth rules: `"0"` disables a feature, but `"off"` enables it.
 
-Full Python parity is not complete. Open work includes exact image output, further printer transport errors, further configuration options, and web feature flags, base paths, and form options. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes further configuration options, web base paths, and form options. Test results must identify the runtime and selected cases.
 
 ## Verification
 
