@@ -5534,6 +5534,11 @@ def test_native_configuration_defaults_and_saved_setting_precedence(api, configu
     assert settings.json()["stock_due_soon_days"] == 37
     assert settings.json()["stock_decimal_places_amounts"] == 2
     assert settings.json()["native_nested_default"] == {"key": [1, True, None]}
+    if hasattr(api, "portal"):
+        bulk = api.put("/api/v2/user/settings", json={})
+        assert bulk.status_code == 200, bulk.text
+        assert bulk.json()["stock_due_soon_days"] == 37
+        assert bulk.json()["native_nested_default"] == {"key": [1, True, None]}
     assert api.get("/api/system/config").json()["CURRENCY"] == "EUR"
     path = "/api/user/settings/stock_decimal_places_amounts"
     try:

@@ -8,8 +8,8 @@ from typing import Any
 from fastapi import APIRouter, Response
 from sqlalchemy import select
 
-from grocy.compatibility import client_defaults
 from grocy.core.auth import CurrentActor
+from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
 from grocy.db.models.settings import UserSetting
@@ -49,7 +49,7 @@ async def put_user_settings(
             row.row_updated_timestamp = datetime.now()
     await session.commit()
     return {
-        **client_defaults()["user_settings"],
+        **get_settings().user_defaults(),
         **{row.key: row.value for row in existing.values()},
     }
 
