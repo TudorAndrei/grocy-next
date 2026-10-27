@@ -14,6 +14,7 @@ export type HouseholdRow = {
 /** Chores, tasks and batteries share one shape: name, when it is due, one action. */
 export function HouseholdTable({ rows, dueLabel }: { rows: HouseholdRow[]; dueLabel: string }) {
   const sorted = [...rows].sort((a, b) => (daysUntil(a.due) ?? 9999) - (daysUntil(b.due) ?? 9999));
+
   return (
     <div className="panel">
       <table className="stock-table household-table">
@@ -30,6 +31,7 @@ export function HouseholdTable({ rows, dueLabel }: { rows: HouseholdRow[]; dueLa
         <tbody>
           {sorted.map((row) => {
             const days = daysUntil(row.due);
+
             return (
               <tr key={row.id}>
                 <td className="stock-name">

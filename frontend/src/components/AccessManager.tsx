@@ -2,18 +2,21 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
 import { ErrorBlock } from "./ErrorBlock";
+
 type User = {
   id: number;
   username: string;
   first_name: string;
   last_name: string;
 };
+
 type Key = {
   id: number;
   user_id: number;
   description: string | null;
   expires: string | null;
 };
+
 const permissionNames = [
   "Administrator",
   "Users",
@@ -46,6 +49,7 @@ const permissionNames = [
   "Complete task",
   "Edit master data",
 ];
+
 export function AccessManager() {
   const client = useQueryClient();
   const [selected, setSelected] = useState(0);
@@ -57,29 +61,34 @@ export function AccessManager() {
   const [keyValue, setKeyValue] = useState("");
   const [description, setDescription] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
   const users = useQuery({
     queryKey: ["users"],
     queryFn: () => request<User[]>("/api/users"),
   });
+
   const keys = useQuery({
     queryKey: ["api-keys"],
     queryFn: () => request<Key[]>("/api/v2/api-keys"),
   });
+
   const permissions = useQuery({
     queryKey: ["permissions", selected],
-    queryFn: () =>
-      request<{ permission_id: number }[]>(
-        `/api/users/${selected}/permissions`,
-      ),
+    queryFn: () => request<{ permission_id: number }[]>(`/api/users/${selected}/permissions`),
     enabled: selected > 0,
   });
+
   const mutate = useMutation({
-    mutationFn: (fn: () => Promise<unknown>) => fn(),
+    mutationFn: async (fn: () => Promise<void>) => {
+      await fn();
+    },
     onSuccess: async () => {
       await client.invalidateQueries();
     },
   });
+
   const ids = draft ?? permissions.data?.map((p) => p.permission_id) ?? [];
+
   const choose = (id: number) => {
     setSelected(id);
     setDraft(null);
@@ -91,6 +100,7 @@ export function AccessManager() {
     setFirstName(user?.first_name ?? "");
     setLastName(user?.last_name ?? "");
   };
+
   const save = (event: FormEvent) => {
     event.preventDefault();
     mutate.mutate(() =>
@@ -105,7 +115,9 @@ export function AccessManager() {
       }),
     );
   };
+
   const error = users.error || keys.error || permissions.error || mutate.error;
+
   return (
     <div className="stack">
       <section>
@@ -202,9 +214,7 @@ export function AccessManager() {
                     checked={ids.includes(i + 1)}
                     onChange={(e) =>
                       setDraft(
-                        e.target.checked
-                          ? [...ids, i + 1]
-                          : ids.filter((id) => id !== i + 1),
+                        e.target.checked ? [...ids, i + 1] : ids.filter((id) => id !== i + 1),
                       )
                     }
                   />{" "}
@@ -243,10 +253,11 @@ export function AccessManager() {
               disabled={mutate.isPending}
               onClick={() =>
                 mutate.mutate(async () => {
-                  const result = await api.action<{ api_key: string }>(
-                    "/api/v2/api-keys",
-                    { user_id: selected, description },
-                  );
+                  const result = await api.action<{ api_key: string }>("/api/v2/api-keys", {
+                    user_id: selected,
+                    description,
+                  });
+
                   setKeyValue(result.api_key);
                 })
               }
@@ -255,9 +266,7 @@ export function AccessManager() {
             </button>
             {keyValue && (
               <div className="field">
-                <label htmlFor="created-key">
-                  New API key. Save this value now.
-                </label>
+                <label htmlFor="created-key">New API key. Save this value now.</label>
                 <input
                   id="created-key"
                   readOnly

@@ -17,9 +17,11 @@ export const NUTRIENTS: Array<{ key: NutrientKey; label: string; unit: string; i
 
 export function formatNutrient(value: number | string | null | undefined, unit: string): string {
   if (value === null || value === undefined || value === "") return "—";
-  const num = typeof value === "string" ? Number(value) : value;
+  const num = Number(value);
+
   if (!Number.isFinite(num)) return String(value);
   // Keep stored precision (salt is often 0.01 g); only trim trailing zeros.
   const text = Number.isInteger(num) ? String(num) : String(Number(num.toFixed(3)));
+
   return unit ? `${text} ${unit}` : text;
 }

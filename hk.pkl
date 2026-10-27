@@ -1,0 +1,87 @@
+amends "package://github.com/jdx/hk/releases/download/v2.9.0/hk@2.9.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.9.0/hk@2.9.0#/Builtins.pkl"
+
+// Keep copied source and agent assets unchanged.
+exclude = List(
+  "backend/src/grocy/_vendor/**",
+  "frontend/tools/oxlint/anti-slop/**",
+  "frontend/src/routeTree.gen.ts",
+  "**/.agents/**",
+  "**/.claude/**",
+  "**/.impeccable/**",
+)
+
+steps = new Mapping<String, Step | Group> {
+  ["check-merge-conflict"] = Builtins.check_merge_conflict
+  ["check-added-large-files"] = Builtins.check_added_large_files
+  ["gitleaks"] = Builtins.gitleaks
+  ["detect-private-key"] = Builtins.detect_private_key
+
+  ["jactionlint"] = new Step {
+    glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
+    check = "jactionlint --format gcc {{files}}"
+    fix = "jactionlint --fix {{files}}"
+  }
+  ["ruff"] = (Builtins.ruff) {
+    glob = List("backend/**/*.py", "scripts/*.py")
+    check = "uv run --frozen --project backend ruff check --config backend/pyproject.toml --force-exclude {{files}}"
+    check_diff = null
+    check_after_diff = false
+    fix = "uv run --frozen --project backend ruff check --config backend/pyproject.toml --force-exclude --fix {{files}}"
+  }
+  ["oxlint"] = (Builtins.ox_lint) {
+    dir = "frontend"
+    prefix = List("npm", "exec", "--offline", "--")
+  }
+  ["rumdl"] = Builtins.rumdl
+
+  ["ruff-format"] = (Builtins.ruff_format) {
+    glob = List("backend/**/*.py", "scripts/*.py")
+    depends = List("ruff")
+    check_diff = null
+    check = "uv run --frozen --project backend ruff format --config backend/pyproject.toml --force-exclude --check {{files}}"
+    fix = "uv run --frozen --project backend ruff format --config backend/pyproject.toml --force-exclude {{files}}"
+  }
+  ["oxfmt"] = (Builtins.oxfmt) {
+    // The builtin diff helper calls hk, which npm exec must not resolve from npm.
+    check_diff = null
+    dir = "frontend"
+    prefix = List("npm", "exec", "--offline", "--")
+    depends = List("oxlint")
+    glob = List("**/*.js", "**/*.mjs", "**/*.cjs", "**/*.ts", "**/*.mts", "**/*.cts",
+                "**/*.jsx", "**/*.tsx", "**/*.json", "**/*.jsonc", "**/*.css", "**/*.html")
+  }
+  ["rumdl-format"] = (Builtins.rumdl_format) { depends = List("rumdl") }
+  ["tombi-format"] = Builtins.tombi_format
+
+  ["hygiene"] = new Group {
+    steps {
+      ["trailing-whitespace"] = Builtins.trailing_whitespace
+      ["newlines"] = Builtins.newlines
+    }
+  }
+
+  ["validators"] = new Group {
+    steps {
+      ["ty"] = (Builtins.ty) {
+        glob = List("backend/**/*.py", "backend/pyproject.toml", "backend/uv.lock", "scripts/*.py")
+        check = "uv run --frozen --project backend ty check --project backend backend scripts --error-on-warning"
+      }
+      ["tsc"] = (Builtins.tsc) {
+        dir = "frontend"
+        workspace_indicator = null
+        glob = List("**/*.ts", "**/*.tsx", "*.json")
+        check = "npm run typecheck"
+      }
+      ["tombi"] = Builtins.tombi
+    }
+  }
+}
+
+hooks {
+  ["commit-msg"] {
+    steps {
+      ["conventional-commit"] = Builtins.check_conventional_commit
+    }
+  }
+}

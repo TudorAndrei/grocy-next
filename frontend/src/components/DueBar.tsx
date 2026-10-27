@@ -6,6 +6,7 @@ export const DUE_WINDOW_DAYS = 14;
 export function DueBar({ days }: { days: number }) {
   const tone = days < 0 ? "danger" : days <= 5 ? "warn" : "ok";
   const width = days < 0 ? 3 : Math.max(3, Math.min(100, (days / DUE_WINDOW_DAYS) * 100));
+
   return (
     <span className="due-bar" data-tone={tone}>
       <span className="due-track" aria-hidden="true">

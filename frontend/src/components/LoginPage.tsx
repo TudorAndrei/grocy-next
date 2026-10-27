@@ -16,6 +16,7 @@ export function LoginPage() {
     event.preventDefault();
     setError(null);
     setBusy(true);
+
     try {
       const result = await api.login({ username: username.trim(), password });
       await signInWithKey(queryClient, result.api_key);

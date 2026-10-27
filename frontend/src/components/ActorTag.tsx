@@ -10,7 +10,9 @@ export function ActorTag({
   currentUserId: number | undefined;
 }) {
   if (userId == null || currentUserId === undefined) return <span className="tag">—</span>;
+
   if (userId === currentUserId) return <span className="tag">You</span>;
+
   return (
     <span className="tag" data-domain="agent" title={`Booked with the API key of user #${userId}`}>
       User #{userId}
@@ -18,14 +20,16 @@ export function ActorTag({
   );
 }
 
-const VERBS: Record<string, string> = {
-  purchase: "Bought",
-  consume: "Used",
-  "product-opened": "Opened",
-  "inventory-correction": "Corrected",
-  transfer: "Moved",
-};
+const VERBS = new Map<string, string>(
+  Object.entries({
+    purchase: "Bought",
+    consume: "Used",
+    "product-opened": "Opened",
+    "inventory-correction": "Corrected",
+    transfer: "Moved",
+  }),
+);
 
 export function bookingVerb(type: string): string {
-  return VERBS[type] ?? type.replace(/[-_]/g, " ");
+  return VERBS.get(type) ?? type.replace(/[-_]/g, " ");
 }

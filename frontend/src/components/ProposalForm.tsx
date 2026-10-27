@@ -10,12 +10,14 @@ type ProposalFormProps = {
   nutrition: NutritionRecord | null;
 };
 
-function initialValues(nutrition: NutritionRecord | null): Record<string, string> {
+function initialValues(nutrition: NutritionRecord | null) {
   const out: Record<string, string> = {};
+
   for (const n of NUTRIENTS) {
     const value = nutrition?.nutrients?.[n.key];
     out[n.key] = value === null || value === undefined ? "" : String(value);
   }
+
   return out;
 }
 
@@ -33,12 +35,15 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
     mutationFn: async () => {
       // Blank stays unknown (null); never turn a missing value into zero.
       const nutrients: Nutrients = {};
+
       for (const n of NUTRIENTS) {
         const raw = values[n.key]?.trim().replace(",", ".");
         const num = raw ? Number(raw) : NaN;
         nutrients[n.key] = Number.isFinite(num) ? num : null;
       }
+
       let photoPath: string | undefined;
+
       if (photo) {
         const name = `${productId}-${Date.now()}-${photo.name}`;
         await request(`/api/v2/files/nutrition/${encodeURIComponent(name)}`, {
@@ -47,6 +52,7 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
         });
         photoPath = `nutrition/${name}`;
       }
+
       return api.createProposal({
         product_id: productId,
         expected_revision: nutrition?.revision ?? 0,
@@ -61,6 +67,7 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
       notify({ message: "Proposal sent to the review queue" });
       setNote("");
       setPhoto(null);
+
       if (photoInput.current) photoInput.current.value = "";
       await queryClient.invalidateQueries({ queryKey: queryKeys.proposalsPending });
     },

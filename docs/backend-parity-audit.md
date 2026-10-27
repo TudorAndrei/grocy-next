@@ -326,7 +326,6 @@ The final image is `sha256:99563baa04510fd64937d2765c9cc4c56c0967f50c94525cb7318
 
 This batch needs no database revision. Other household, stock, and recipe writes, domain date limits, printer errors, and further combined permission cases still require work. Full runtime parity remains incomplete.
 
-
 ## Native chore actions and schedule reads
 
 All chore routes now use the unchanged `ChoresApiController` and `ChoresService`. Details, execution, undo, assignment calculation, and merge retain native request parsing, permission boundaries, numeric conversions, response bytes, and errors. PHP accepts date-only values and year 0000. Its boolean filter keeps invalid skipped values false. Empty user arrays use the current user. Invalid user text returns the original error.
@@ -346,7 +345,6 @@ The Linux image passed 79 selected HTTP cases on both a new database and a saved
 The image is `sha256:5011ac21e8f1f79ddfbe9e711130dfc74874bbe72293d564bf8aa1728e72a6c4`. All 470 vendor checksums match. The wheel retains those files, all 25 original Grocy core files, and all six PHP adapters. Git retains the original vendor bytes. The final image and wheel match all 613 application and bundled source files. Ruff, basedpyright, and PHP syntax checks passed. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
 
 This batch needs no database revision. Stock and recipe writes, calendar date limits, printer errors, and further combined permission cases still require work. Full runtime parity remains incomplete.
-
 
 ## Native recipe and shopping actions
 
@@ -369,7 +367,6 @@ The Linux image passed 49 selected HTTP cases on both a new database and a saved
 The image is `sha256:a6bb6d2d3b0b3441128de37779e8049781d01c9dff3b2c564a7aa28060f0d7e8`. All 651 vendor checksums match. The wheel and image retain all 801 current application and bundled source files. The 36 Grocy core files match the release archive. Git retains all original vendor bytes. Ruff, basedpyright, PHP syntax, and the frontend build passed. The disabled-feature profile passed both cases in UTC and Europe/Bucharest.
 
 This batch needs no database revision. Stock writes and remaining stock reads, calendar date limits, label endpoints, printer paths outside recipe output, and further combined permission cases still require work. Full runtime parity remains incomplete.
-
 
 ## Native stock routes and label endpoints
 

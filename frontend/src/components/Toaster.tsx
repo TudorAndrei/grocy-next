@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   type ReactNode,
@@ -12,7 +13,7 @@ type Toast = {
   id: number;
   message: string;
   tone: "ok" | "error";
-  undo?: () => Promise<unknown>;
+  undo?: () => Promise<void>;
 };
 
 type Notify = (toast: Omit<Toast, "id" | "tone"> & { tone?: Toast["tone"] }) => void;
@@ -53,11 +54,11 @@ export function Toaster({ children }: { children: ReactNode }) {
 function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
   const [undoing, setUndoing] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
-  const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
+  const finish = useEffectEvent(onDone);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => onDoneRef.current(), TOAST_MS);
+    const timer = window.setTimeout(() => finish(), TOAST_MS);
+
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -71,6 +72,7 @@ function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
           disabled={undoing}
           onClick={async () => {
             setUndoing(true);
+
             try {
               await toast.undo?.();
               onDone();

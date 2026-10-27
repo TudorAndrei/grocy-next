@@ -12,6 +12,9 @@ Bundled assets under `_vendor/grocy-core` (OpenAPI, locales, ESC/POS tables, and
 uv sync
 uv run grocy
 uv run pytest
+uv run ruff check --config pyproject.toml . ../scripts
+uv run ruff format --config pyproject.toml --check . ../scripts
+uv run ty check . ../scripts --error-on-warning
 ```
 
 ## Optional native PHP parity

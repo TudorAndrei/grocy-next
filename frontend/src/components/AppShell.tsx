@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { forgetKey } from "@/lib/session";
 import { useCommandBar } from "./CommandBar";
@@ -13,14 +13,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const counts = useNavCounts();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [previousPath, setPreviousPath] = useState(pathname);
   const queryClient = useQueryClient();
+
+  if (previousPath !== pathname) {
+    setPreviousPath(pathname);
+    setMenuOpen(false);
+  }
+
   const signOut = async () => {
     // Forget the key even when the server cannot revoke it.
     await api.logout().catch(() => undefined);
     await forgetKey(queryClient);
   };
-
-  useEffect(() => setMenuOpen(false), [pathname]);
 
   return (
     <div className="app-shell">

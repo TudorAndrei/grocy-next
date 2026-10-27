@@ -1588,10 +1588,13 @@ def test_reference_native_picture_bytes(
 
     monkeypatch.setattr(get_settings(), "files_root", tmp_path)
     image = Image.new("RGBA", (32, 20))
-    image.putdata([
-        ((x * 7) % 256, (y * 11) % 256, ((x + y) * 13) % 256, (x * 17 + y * 7) % 256)
-        for y in range(20) for x in range(32)
-    ])
+    image.putdata(
+        [
+            ((x * 7) % 256, (y * 11) % 256, ((x + y) * 13) % 256, (x * 17 + y * 7) % 256)
+            for y in range(20)
+            for x in range(32)
+        ]
+    )
     if image_format == "JPEG":
         image = image.convert("RGB")
     source = BytesIO()

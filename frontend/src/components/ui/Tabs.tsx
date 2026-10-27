@@ -12,12 +12,7 @@ type TabsProps<T extends string> = {
   ariaLabel: string;
 };
 
-export function Tabs<T extends string>({
-  tabs,
-  value,
-  onChange,
-  ariaLabel,
-}: TabsProps<T>) {
+export function Tabs<T extends string>({ tabs, value, onChange, ariaLabel }: TabsProps<T>) {
   return (
     <div className="tabs" role="tablist" aria-label={ariaLabel}>
       {tabs.map((tab) => (
@@ -45,13 +40,7 @@ type TabPanelProps = {
 
 export function TabPanel({ id, labelledBy, hidden, children }: TabPanelProps) {
   return (
-    <div
-      id={id}
-      role="tabpanel"
-      aria-labelledby={labelledBy}
-      hidden={hidden}
-      className="tab-panel"
-    >
+    <div id={id} role="tabpanel" aria-labelledby={labelledBy} hidden={hidden} className="tab-panel">
       {children}
     </div>
   );

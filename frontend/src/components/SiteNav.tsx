@@ -97,7 +97,13 @@ export const NAV_GROUPS: NavGroup[] = [
         domain: "stock",
         match: starts("/journal"),
       },
-      { to: "/labels", label: "Labels", icon: "labels", domain: "system", match: starts("/labels") },
+      {
+        to: "/labels",
+        label: "Labels",
+        icon: "labels",
+        domain: "system",
+        match: starts("/labels"),
+      },
     ],
   },
   {
@@ -124,7 +130,13 @@ export const NAV_GROUPS: NavGroup[] = [
         domain: "home",
         match: starts("/equipment"),
       },
-      { to: "/manage", label: "Manage", icon: "manage", domain: "system", match: starts("/manage") },
+      {
+        to: "/manage",
+        label: "Manage",
+        icon: "manage",
+        domain: "system",
+        match: starts("/manage"),
+      },
     ],
   },
   {
@@ -161,10 +173,12 @@ export function useNavCounts() {
     queryKey: queryKeys.shopping(1),
     queryFn: () => api.getShoppingList(1),
   });
+
   const proposals = useQuery({
     queryKey: queryKeys.proposalsPending,
     queryFn: api.listPendingProposals,
   });
+
   return {
     shopping: shopping.data?.items.filter((item) => !item.done).length ?? 0,
     review: proposals.data?.length ?? 0,
@@ -187,6 +201,7 @@ export function SiteNav({ onNavigate }: { onNavigate?: () => void }) {
           {group.links.map((link) => {
             const count = link.count && link.count !== "today" ? counts[link.count] : 0;
             const active = link.match(pathname);
+
             return (
               <Link
                 key={link.to}

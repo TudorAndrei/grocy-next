@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, queryKeys } from "@/lib/api";
@@ -16,12 +17,13 @@ import { openApiDocument } from "@/lib/open-document";
 
 type ProductSearch = { move?: "purchase" | "consume" | "open" };
 
+const productSearchSchema = z.object({
+  move: z.enum(["purchase", "consume", "open"]).optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/products/$productId")({
   component: ProductDetailPage,
-  validateSearch: (search: Record<string, unknown>): ProductSearch => {
-    const move = search.move;
-    return move === "purchase" || move === "consume" || move === "open" ? { move } : {};
-  },
+  validateSearch: (search): ProductSearch => productSearchSchema.parse(search),
 });
 
 function ProductDetailPage() {
@@ -39,6 +41,7 @@ function ProductDetailPage() {
 
   const product = catalog.product(id);
   const nutritionMissing = nutrition.error instanceof ApiError && nutrition.error.status === 404;
+
   const facts = [
     catalog.location(product?.location_id)?.name,
     product ? `Stock unit ${catalog.unit(product.qu_id_stock)?.name ?? "—"}` : null,
@@ -72,7 +75,7 @@ function ProductDetailPage() {
         <div className="detail-side">
           {nutrition.isLoading ? <LoadingBlock label="Loading nutrition…" /> : null}
           {nutrition.isError && !nutritionMissing ? (
-            <ErrorBlock message={(nutrition.error as Error).message} />
+            <ErrorBlock message={nutrition.error.message} />
           ) : null}
           {nutritionMissing ? (
             <section className="panel">

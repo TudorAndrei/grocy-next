@@ -22,7 +22,7 @@ function ChoresPage() {
         lead="Recurring work. Track a chore when it is done; the next date follows its period."
       />
       {chores.isLoading ? <LoadingBlock label="Loading chores…" /> : null}
-      {chores.isError ? <ErrorBlock message={(chores.error as Error).message} /> : null}
+      {chores.isError ? <ErrorBlock message={chores.error.message} /> : null}
       {chores.isSuccess && chores.data.length === 0 ? (
         <p className="empty-state">No chores set up yet.</p>
       ) : null}

@@ -36,6 +36,7 @@ function ShoppingPage() {
     queryKey: queryKeys.objects("shopping_lists"),
     queryFn: () => api.objects("shopping_lists"),
   });
+
   const listKey = queryKeys.shopping(listId);
   const list = useQuery({ queryKey: listKey, queryFn: () => api.getShoppingList(listId) });
   const items = list.data?.items ?? [];
@@ -43,8 +44,10 @@ function ShoppingPage() {
   const checked = items.filter((item) => item.done);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: listKey });
+
   const itemName = (item: ShoppingListItem) =>
     item.product_id != null ? catalog.productName(item.product_id) : (item.note ?? "Note");
+
   const onError = (err: Error) => notify({ message: err.message, tone: "error" });
 
   const toggle = useMutation({
@@ -60,6 +63,7 @@ function ShoppingPage() {
             }
           : data,
       );
+
       return { previous };
     },
     onError: (err: Error, _item, context) => {
@@ -128,7 +132,9 @@ function ShoppingPage() {
         // Note-only rows have nothing to put in stock.
         if (item.product_id != null) await api.purchaseStock(item.product_id, item.amount);
       }
+
       await api.clearShoppingList(listId, true);
+
       return done.length;
     },
     onSuccess: async (count) => {
@@ -152,36 +158,36 @@ function ShoppingPage() {
         }
         actions={
           <>
-          {(lists.data?.length ?? 0) > 1 ? (
-            <label className="select-field">
-              <span className="sr-only">Shopping list</span>
-              <select value={listId} onChange={(e) => setListId(Number(e.target.value))}>
-                {lists.data?.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {String(row.name ?? `List ${row.id}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <div className="seg-group" role="group" aria-label="Mode">
-            <button
-              type="button"
-              className="seg"
-              aria-pressed={mode === "plan"}
-              onClick={() => setMode("plan")}
-            >
-              Plan
-            </button>
-            <button
-              type="button"
-              className="seg"
-              aria-pressed={mode === "shop"}
-              onClick={() => setMode("shop")}
-            >
-              In the shop
-            </button>
-          </div>
+            {(lists.data?.length ?? 0) > 1 ? (
+              <label className="select-field">
+                <span className="sr-only">Shopping list</span>
+                <select value={listId} onChange={(e) => setListId(Number(e.target.value))}>
+                  {lists.data?.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {String(row.name ?? `List ${row.id}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <div className="seg-group" role="group" aria-label="Mode">
+              <button
+                type="button"
+                className="seg"
+                aria-pressed={mode === "plan"}
+                onClick={() => setMode("plan")}
+              >
+                Plan
+              </button>
+              <button
+                type="button"
+                className="seg"
+                aria-pressed={mode === "shop"}
+                onClick={() => setMode("shop")}
+              >
+                In the shop
+              </button>
+            </div>
           </>
         }
       />
@@ -243,7 +249,7 @@ function ShoppingPage() {
       ) : null}
 
       {list.isLoading ? <LoadingBlock label="Loading shopping list…" /> : null}
-      {list.isError ? <ErrorBlock message={(list.error as Error).message} /> : null}
+      {list.isError ? <ErrorBlock message={list.error.message} /> : null}
       {list.isSuccess && items.length === 0 ? (
         <p className="empty-state">
           The list is empty. Add a product above, press ⌘K and type “list coffee”, or pull in
@@ -255,6 +261,7 @@ function ShoppingPage() {
         <ul className="shop-list panel">
           {[...open, ...checked].map((item) => {
             const product = item.product_id != null ? catalog.product(item.product_id) : undefined;
+
             return (
               <li key={item.id} className="shop-item" data-done={item.done ? "true" : "false"}>
                 <button
@@ -327,13 +334,7 @@ function ShoppingPage() {
   );
 }
 
-function AddItemForm({
-  listId,
-  onAdded,
-}: {
-  listId: number;
-  onAdded: () => Promise<unknown>;
-}) {
+function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promise<void> }) {
   const catalog = useCatalog();
   const notify = useNotify();
   const [productId, setProductId] = useState("");
@@ -341,15 +342,18 @@ function AddItemForm({
   const [note, setNote] = useState("");
 
   const add = useMutation({
-    mutationFn: () =>
-      productId
-        ? api.addShoppingProduct(Number(productId), Number(amount), note.trim(), listId)
-        : api.createObject("shopping_list", {
-            shopping_list_id: listId,
-            product_id: null,
-            amount: Number(amount),
-            note: note.trim(),
-          }),
+    mutationFn: async () => {
+      if (productId) {
+        await api.addShoppingProduct(Number(productId), Number(amount), note.trim(), listId);
+      } else {
+        await api.createObject("shopping_list", {
+          shopping_list_id: listId,
+          product_id: null,
+          amount: Number(amount),
+          note: note.trim(),
+        });
+      }
+    },
     onSuccess: async () => {
       await onAdded();
       notify({
@@ -364,6 +368,7 @@ function AddItemForm({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+
     if ((!productId && !note.trim()) || !(Number(amount) > 0)) return;
     add.mutate();
   }
@@ -397,7 +402,11 @@ function AddItemForm({
           required={!productId}
         />
       </label>
-      <button type="submit" className="btn btn-primary" disabled={add.isPending || (!productId && !note.trim())}>
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={add.isPending || (!productId && !note.trim())}
+      >
         <Icon name="plus" />
         Add
       </button>

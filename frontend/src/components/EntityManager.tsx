@@ -1,13 +1,10 @@
 import { useId, useState, type ReactNode, type FormEvent } from "react";
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { JsonObject } from "@/lib/json";
 import { api, request } from "@/lib/api";
 import {
   entities,
+  getEntitySpec,
   type EntityField,
   type EntityRow,
   type EntitySpec,
@@ -19,12 +16,13 @@ type Props = {
   entity: string;
   detail?: (row: EntityRow) => ReactNode;
   actions?: (row: EntityRow) => ReactNode;
-  fixed?: Record<string, unknown>;
+  fixed?: JsonObject;
   title?: string;
 };
 
 function customField(row: EntityRow): EntityField {
   const kind = String(row.type);
+
   return {
     key: `custom:${row.entity}:${row.name}`,
     label: String(row.caption),
@@ -50,25 +48,23 @@ function customField(row: EntityRow): EntityField {
       : undefined,
   };
 }
-export function EntityManager({
-  entity,
-  detail,
-  actions,
-  fixed,
-  title,
-}: Props) {
-  const baseSpec = entities[entity];
+
+export function EntityManager({ entity, detail, actions, fixed, title }: Props) {
+  const baseSpec = getEntitySpec(entity);
   const [values, setValues] = useState<Record<string, string>>({});
+
   const recordTypes = useQuery({
     queryKey: ["objects", "userentities"],
     queryFn: () => api.objects("userentities"),
     enabled: ["userfields", "userobjects"].includes(entity),
   });
+
   const custom = useQuery({
     queryKey: ["objects", "userfields"],
     queryFn: () => api.objects("userfields"),
     enabled: !["userfields", "userentities"].includes(entity),
   });
+
   const customFields = (custom.data ?? []).filter(
     (row) =>
       row.entity === entity ||
@@ -76,6 +72,7 @@ export function EntityManager({
         row.entity ===
           `userentity-${recordTypes.data?.find((type) => type.id === Number(values.userentity_id))?.name}`),
   );
+
   const spec: EntitySpec = {
     ...baseSpec,
     fields: [
@@ -84,10 +81,7 @@ export function EntityManager({
           ? {
               ...field,
               choiceLabels: Object.fromEntries([
-                ...(field.choices ?? []).map((key) => [
-                  key,
-                  entities[key]?.label ?? key,
-                ]),
+                ...(field.choices ?? []).map((key) => [key, entities.get(key)?.label ?? key]),
                 ...(recordTypes.data ?? []).map((type) => [
                   `userentity-${type.name}`,
                   String(type.caption ?? type.name),
@@ -95,9 +89,7 @@ export function EntityManager({
               ]),
               choices: [
                 ...(field.choices ?? []),
-                ...(recordTypes.data ?? []).map(
-                  (type) => `userentity-${type.name}`,
-                ),
+                ...(recordTypes.data ?? []).map((type) => `userentity-${type.name}`),
               ],
             }
           : field,
@@ -105,108 +97,122 @@ export function EntityManager({
       ...customFields.map(customField),
     ],
   };
+
   const prefix = useId();
   const client = useQueryClient();
   const [editing, setEditing] = useState<number | null | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
   const query = useQuery({
     queryKey: ["entity-manager", entity],
     queryFn: async () => {
       const [rows, types, conversions] = await Promise.all([
         api.objects(entity),
         entity === "userobjects" ? api.objects("userentities") : [],
-        entity === "products"
-          ? api.objects("quantity_unit_conversions_resolved")
-          : [],
+        entity === "products" ? api.objects("quantity_unit_conversions_resolved") : [],
       ]);
+
       return Promise.all(
         rows.map(async (row): Promise<EntityRow> => {
-          const fields: Record<string, unknown> = Object.fromEntries(
+          const fields: Record<string, string | null> = Object.fromEntries(
             Object.entries(row.userfields ?? {}).map(([key, value]) => [
               `custom:${entity}:${key}`,
               value,
             ]),
           );
+
           const type = types.find((type) => type.id === row.userentity_id);
+
           if (type) {
             const namespace = `userentity-${type.name}`;
+
             const values = await request<Record<string, string | null>>(
               `/api/userfields/${encodeURIComponent(namespace)}/${row.id}`,
             );
+
             for (const [key, value] of Object.entries(values))
               fields[`custom:${namespace}:${key}`] = value;
           }
+
           const purchase = conversions.find(
             (conversion) =>
               conversion.product_id === row.id &&
               conversion.from_qu_id === row.qu_id_purchase &&
               conversion.to_qu_id === row.qu_id_stock,
           );
-          return {
-            ...row,
-            ...(entity === "products"
-              ? { qu_factor_purchase_to_stock: Number(purchase?.factor ?? 1) }
-              : {}),
-            custom_values: fields,
-          };
+
+          const result: EntityRow = { ...row, custom_values: fields };
+
+          if (entity === "products") {
+            result.qu_factor_purchase_to_stock = Number(purchase?.factor ?? 1);
+          }
+
+          return result;
         }),
       );
     },
   });
+
   const refs = [...new Set(spec.fields.flatMap((f) => (f.ref ? [f.ref] : [])))];
+
   const options = useQueries({
     queries: refs.map((ref) => ({
       queryKey: ["objects", ref],
-      queryFn: () =>
-        ref === "users" ? request<EntityRow[]>("/api/users") : api.objects(ref),
+      queryFn: () => (ref === "users" ? request<EntityRow[]>("/api/users") : api.objects(ref)),
     })),
   });
+
   const error = query.error || options.find((q) => q.error)?.error;
+
   const mutate = useMutation({
     mutationFn: async (operation: {
       kind: "save" | "delete";
-      body?: Record<string, unknown>;
+      body?: JsonObject;
       fields?: Record<string, Record<string, string>>;
       id?: number;
     }) => {
-      if (operation.kind === "delete")
-        return api.deleteObject(entity, operation.id!);
+      if (operation.kind === "delete") return api.deleteObject(entity, operation.id!);
       const body = { ...operation.body };
       const purchaseFactor = body.qu_factor_purchase_to_stock;
+
       if (entity === "products") delete body.qu_factor_purchase_to_stock;
       let id = editing!;
+
       if (editing === null) {
         const created = await api.createObject(entity, body);
         id = Number(created.created_object_id);
         setEditing(id);
       } else await api.updateObject(entity, id, body);
+
       if (
         entity === "products" &&
         purchaseFactor != null &&
         body.qu_id_purchase !== body.qu_id_stock
       ) {
         const conversions = await api.objects("quantity_unit_conversions");
+
         const conversion = conversions.find(
           (row) =>
             row.product_id === id &&
             row.from_qu_id === body.qu_id_purchase &&
             row.to_qu_id === body.qu_id_stock,
         );
+
         if (conversion)
           await api.updateObject("quantity_unit_conversions", conversion.id, {
             factor: purchaseFactor,
           });
         else {
-          const resolved = await api.objects(
-            "quantity_unit_conversions_resolved",
-          );
+          const resolved = await api.objects("quantity_unit_conversions_resolved");
+
           const current = resolved.find(
             (row) =>
               row.product_id === id &&
               row.from_qu_id === body.qu_id_purchase &&
               row.to_qu_id === body.qu_id_stock,
           );
+
           if (Number(current?.factor) !== Number(purchaseFactor))
             await api.createObject("quantity_unit_conversions", {
               product_id: id,
@@ -216,6 +222,7 @@ export function EntityManager({
             });
         }
       }
+
       for (const [namespace, values] of Object.entries(operation.fields ?? {}))
         await request(`/api/userfields/${encodeURIComponent(namespace)}/${id}`, {
           method: "PUT",
@@ -228,6 +235,7 @@ export function EntityManager({
       await client.invalidateQueries();
     },
   });
+
   const start = (row?: EntityRow) => {
     mutate.reset();
     setEditing(row?.id ?? null);
@@ -248,18 +256,12 @@ export function EntityManager({
           f.key,
           row
             ? f.type === "checkbox"
-              ? Number(
-                  f.key.startsWith("custom:")
-                    ? (row.custom_values as Record<string, unknown>)?.[f.key]
-                    : row[f.key],
-                )
+              ? Number(f.key.startsWith("custom:") ? row.custom_values?.[f.key] : row[f.key])
                 ? "1"
                 : "0"
               : String(
                   f.key.startsWith("custom:")
-                    ? ((row.custom_values as Record<string, string> | undefined)?.[
-                        f.key
-                      ] ?? "")
+                    ? (row.custom_values?.[f.key] ?? "")
                     : (row[f.key] ?? ""),
                 )
             : (f.value ?? ""),
@@ -267,23 +269,27 @@ export function EntityManager({
       ),
     );
   };
+
   const save = (event: FormEvent) => {
     event.preventDefault();
-    const body: Record<string, unknown> = { ...fixed };
+    const body: JsonObject = {};
+    Object.assign(body, fixed);
     const fields: Record<string, Record<string, string>> = {};
+
     for (const field of spec.fields) {
       if (fixed && field.key in fixed) continue;
-      if (field.when && !field.when.values.includes(values[field.when.key]))
-        continue;
+
+      if (field.when && !field.when.values.includes(values[field.when.key])) continue;
       const value = values[field.key] ?? field.value ?? "";
+
       if (field.key.startsWith("custom:")) {
         const definition = customFields.find(
           (definition) => customField(definition).key === field.key,
         )!;
+
         const namespace = String(definition.entity);
         (fields[namespace] ??= {})[String(definition.name)] = value;
-      } else if (field.type === "checkbox")
-        body[field.key] = value === "1" ? 1 : 0;
+      } else if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
         if (editing !== null && !field.required) body[field.key] = null;
       } else
@@ -294,14 +300,16 @@ export function EntityManager({
               ? Number(value)
               : value;
     }
+
     mutate.mutate({ kind: "save", body, fields });
   };
+
   const rows = (query.data ?? []).filter(
     (row) =>
-      (!fixed ||
-        Object.entries(fixed).every(([key, value]) => row[key] === value)) &&
+      (!fixed || Object.entries(fixed).every(([key, value]) => row[key] === value)) &&
       JSON.stringify(row).toLowerCase().includes(search.toLowerCase()),
   );
+
   return (
     <section className="collection" aria-label={title ?? spec.label}>
       <div className="section-heading">
@@ -314,15 +322,9 @@ export function EntityManager({
         <form
           onSubmit={save}
           className="panel panel-inner"
-          aria-label={
-            editing === null ? `Add ${spec.singular}` : `Edit ${spec.singular}`
-          }
+          aria-label={editing === null ? `Add ${spec.singular}` : `Edit ${spec.singular}`}
         >
-          <h3>
-            {editing === null
-              ? `New ${spec.singular}`
-              : `Edit ${spec.singular}`}
-          </h3>
+          <h3>{editing === null ? `New ${spec.singular}` : `Edit ${spec.singular}`}</h3>
           <div className="form-grid">
             {spec.fields
               .filter(
@@ -332,27 +334,23 @@ export function EntityManager({
               )
               .map((field) => {
                 const id = `${prefix}-${field.key}`;
-                const optionsQuery = field.ref
-                  ? options[refs.indexOf(field.ref)]
-                  : undefined;
+
+                const optionsQuery = field.ref ? options[refs.indexOf(field.ref)] : undefined;
+
                 return (
                   <div className="field" key={field.key}>
                     <label htmlFor={id}>{field.label}</label>
                     {field.type === "multiple" ? (
-                      <div
-                        role="group"
-                        aria-label={field.label}
-                        className="weekday-options"
-                      >
+                      <div role="group" aria-label={field.label} className="weekday-options">
                         {(
                           field.choices?.map((name) => ({ id: name, name })) ??
                           optionsQuery?.data ??
                           []
                         ).map((row) => {
-                          const selected = (values[field.key] ?? "")
-                            .split(",")
-                            .filter(Boolean);
+                          const selected = (values[field.key] ?? "").split(",").filter(Boolean);
+
                           const value = String(row.id);
+
                           return (
                             <label key={row.id}>
                               <input
@@ -363,9 +361,7 @@ export function EntityManager({
                                     ...values,
                                     [field.key]: (e.target.checked
                                       ? [...selected, value]
-                                      : selected.filter(
-                                          (item) => item !== value,
-                                        )
+                                      : selected.filter((item) => item !== value)
                                     ).join(","),
                                   })
                                 }
@@ -380,19 +376,14 @@ export function EntityManager({
                             </label>
                           );
                         })}
-                        {optionsQuery?.isSuccess &&
-                          !optionsQuery.data.length && (
-                            <span className="muted">
-                              Create a user in Manage to assign this chore.
-                            </span>
-                          )}
+                        {optionsQuery?.isSuccess && !optionsQuery.data.length && (
+                          <span className="muted">
+                            Create a user in Manage to assign this chore.
+                          </span>
+                        )}
                       </div>
                     ) : field.type === "weekdays" ? (
-                      <div
-                        role="group"
-                        aria-label={field.label}
-                        className="weekday-options"
-                      >
+                      <div role="group" aria-label={field.label} className="weekday-options">
                         {[
                           "monday",
                           "tuesday",
@@ -402,9 +393,8 @@ export function EntityManager({
                           "saturday",
                           "sunday",
                         ].map((day) => {
-                          const days = (values[field.key] ?? "")
-                            .split(",")
-                            .filter(Boolean);
+                          const days = (values[field.key] ?? "").split(",").filter(Boolean);
+
                           return (
                             <label key={day}>
                               <input
@@ -443,9 +433,7 @@ export function EntityManager({
                           })
                         }
                       >
-                        <option value="">
-                          {field.required ? "Select an option" : "None"}
-                        </option>
+                        <option value="">{field.required ? "Select an option" : "None"}</option>
                         {field.choices?.map((choice) => (
                           <option key={choice} value={choice}>
                             {field.choiceLabels?.[choice] ?? choice}
@@ -468,9 +456,7 @@ export function EntityManager({
                         id={id}
                         value={values[field.key] ?? field.value ?? ""}
                         required={field.required}
-                        onChange={(e) =>
-                          setValues({ ...values, [field.key]: e.target.value })
-                        }
+                        onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
                       />
                     ) : (
                       <input
@@ -526,14 +512,10 @@ export function EntityManager({
       )}
       {error && <ErrorBlock message={error.message} />}
       {mutate.error && <ErrorBlock message={mutate.error.message} />}
-      {query.isPending && (
-        <LoadingBlock label={`Loading ${spec.label.toLowerCase()}...`} />
-      )}
+      {query.isPending && <LoadingBlock label={`Loading ${spec.label.toLowerCase()}...`} />}
       {(query.data?.length ?? 0) > 5 && (
         <div className="field">
-          <label htmlFor={`${prefix}-search`}>
-            Search {spec.label.toLowerCase()}
-          </label>
+          <label htmlFor={`${prefix}-search`}>Search {spec.label.toLowerCase()}</label>
           <input
             id={`${prefix}-search`}
             type="search"
@@ -544,8 +526,7 @@ export function EntityManager({
       )}
       {query.isSuccess && rows.length === 0 && (
         <p className="empty-state">
-          No {spec.label.toLowerCase()} to show. Use Add {spec.singular} to
-          create one.
+          No {spec.label.toLowerCase()} to show. Use Add {spec.singular} to create one.
         </p>
       )}
       <ul className="product-list">
@@ -556,12 +537,7 @@ export function EntityManager({
                 detail(row)
               ) : (
                 <>
-                  <h3>
-                    {row.name ??
-                      (row.note as string) ??
-                      (row.barcode as string) ??
-                      `#${row.id}`}
-                  </h3>
+                  <h3>{row.name ?? row.note ?? row.barcode ?? `#${row.id}`}</h3>
                   {row.description && <p>{row.description}</p>}
                   <p className="muted">
                     {spec.fields
@@ -602,10 +578,7 @@ export function EntityManager({
                 <span className="sr-only"> {row.name ?? row.id}</span>
               </button>
               {deleteId === row.id && (
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setDeleteId(null)}
-                >
+                <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>
                   Cancel delete
                 </button>
               )}

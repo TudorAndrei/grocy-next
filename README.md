@@ -37,7 +37,7 @@ cd ..
 ./scripts/dev.sh
 ```
 
-Open http://127.0.0.1:5173. The development API key is `dev-key`. The script sets this key for the web application. It does not replace existing environment files.
+Open <http://127.0.0.1:5173>. The development API key is `dev-key`. The script sets this key for the web application. It does not replace existing environment files.
 
 To run the services separately:
 
@@ -59,7 +59,7 @@ Use Connection to set another server URL or API key. Use Manage to create the fi
 docker compose up --build
 ```
 
-Open http://127.0.0.1:8080. The API is also available at http://127.0.0.1:8000. Compose uses the Python default runtime; native PHP does not need to be enabled. The image still includes PHP for optional parity and CI. The volume stores the database and files under `/data`.
+Open <http://127.0.0.1:8080>. The API is also available at <http://127.0.0.1:8000>. Compose uses the Python default runtime; native PHP does not need to be enabled. The image still includes PHP for optional parity and CI. The volume stores the database and files under `/data`.
 
 For a new installation without demo records, set `GROCY_SEED_DEMO_DATA=false` and `GROCY_DEV_OPEN_API_KEY=` before startup. Create an administrator and a random API key:
 
@@ -74,10 +74,32 @@ Save the returned key and enter it in Connection. `init` refuses a database that
 ```bash
 cd backend
 uv run pytest
-uv run ruff check src tests
-uv run basedpyright
+uv run ruff check --config pyproject.toml . ../scripts
+uv run ruff format --config pyproject.toml --check . ../scripts
+uv run ty check . ../scripts --error-on-warning
 cd ../frontend
+npm run check
 npm run build
 ```
 
+Run `mise run check` from the repository root for lint, format, and type checks.
+Run `mise run fix` to apply safe lint fixes and format the files. Run tests separately.
+
 The optional PHP reference comparison suite is skipped unless a reference server is configured. See [compatibility](docs/compatibility.md) for the command and for enabling `GROCY_USE_NATIVE_PHP`. See [migration](docs/migration.md) for database import and recovery, and [MCP tools](docs/mcp-tools.md) for assistant access.
+
+## Git hooks
+
+Run `mise install` to install the hook tools and repository hooks. Run
+`mise run setup` to install the backend and frontend dependencies.
+
+```bash
+mise x -- hk check --all
+mise x -- hk fix --all
+```
+
+The pre-commit hook applies safe fixes and stages the changed files. The
+commit-msg hook checks Conventional Commit messages. The checks cover Python,
+TypeScript, Markdown, TOML, GitHub Actions, secrets, and file whitespace.
+Copied source and agent assets are excluded from format changes. Gitleaks also
+scans copied source, with a narrow exception for SHA-256 manifest checksums.
+There is no spelling check.

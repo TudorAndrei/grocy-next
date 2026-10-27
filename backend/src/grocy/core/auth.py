@@ -235,9 +235,7 @@ async def authenticate_key(
         path = Path(database)
         if path.exists():
             preserve_mtime = path.stat()
-    await session.execute(
-        update(ApiKey).where(ApiKey.api_key == key).values(last_used=stamp)
-    )
+    await session.execute(update(ApiKey).where(ApiKey.api_key == key).values(last_used=stamp))
     await session.commit()
     if preserve_mtime is not None and path is not None:
         os.utime(path, (preserve_mtime.st_atime, preserve_mtime.st_mtime))

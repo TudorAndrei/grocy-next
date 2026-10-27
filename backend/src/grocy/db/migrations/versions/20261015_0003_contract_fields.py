@@ -45,9 +45,7 @@ def upgrade() -> None:
             continue
         columns = {column["name"] for column in inspect(bind).get_columns(table.name)}
         for column in table.columns:
-            if column.name in columns or column.name in deferred_columns.get(
-                table.name, set()
-            ):
+            if column.name in columns or column.name in deferred_columns.get(table.name, set()):
                 continue
             default = None
             if not column.nullable and isinstance(column.type, DateTime):

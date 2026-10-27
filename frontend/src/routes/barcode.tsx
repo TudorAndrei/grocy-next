@@ -1,22 +1,20 @@
+import { z } from "zod";
+import type { JsonObject } from "@/lib/json";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type ExternalBarcodeProduct } from "@/lib/api";
 import { objectsQuery, userSettingsQuery } from "@/hooks/queries";
 
 export const Route = createFileRoute("/barcode")({
   component: BarcodePage,
 });
 
-type ScanMode =
-  | "lookup"
-  | "purchase"
-  | "consume"
-  | "open"
-  | "transfer"
-  | "inventory";
+const scanModeSchema = z.enum(["lookup", "purchase", "consume", "open", "transfer", "inventory"]);
+
+type ScanMode = z.infer<typeof scanModeSchema>;
 
 function BarcodePage() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -25,49 +23,52 @@ function BarcodePage() {
   const locations = useQuery(objectsQuery("locations"));
   const [barcode, setBarcode] = useState("");
   const [amount, setAmount] = useState("1");
-  const [mode, setMode] = useState<ScanMode>("lookup");
+  const [selectedMode, setMode] = useState<ScanMode | null>(null);
+  const s = settings.data;
+
+  const mode =
+    selectedMode ??
+    (s?.scan_mode_purchase_enabled === true || s?.scan_mode_purchase_enabled === "1"
+      ? "purchase"
+      : s?.scan_mode_consume_enabled === true || s?.scan_mode_consume_enabled === "1"
+        ? "consume"
+        : "lookup");
+
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [lookup, setLookup] = useState<Awaited<
-    ReturnType<typeof api.getProductByBarcode>
-  > | null>(null);
-  const [external, setExternal] = useState<Record<string, unknown> | null>(
+
+  const [lookup, setLookup] = useState<Awaited<ReturnType<typeof api.getProductByBarcode>> | null>(
     null,
   );
+
+  const [external, setExternal] = useState<ExternalBarcodeProduct | null>(null);
+
   const [lookupMiss, setLookupMiss] = useState(false);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    const s = settings.data;
-    if (!s) return;
-    if (s.scan_mode_purchase_enabled === true || s.scan_mode_purchase_enabled === "1") {
-      setMode("purchase");
-    } else if (
-      s.scan_mode_consume_enabled === true ||
-      s.scan_mode_consume_enabled === "1"
-    ) {
-      setMode("consume");
-    }
-  }, [settings.data]);
-
   const run = useMutation({
     mutationFn: async () => {
       const code = barcode.trim();
+
       if (!code) throw new Error("Enter a barcode.");
       const qty = Number(amount);
+
       if (!Number.isFinite(qty) || qty < 0) {
         throw new Error("Enter a valid amount.");
       }
+
       if (mode !== "inventory" && qty <= 0) {
         throw new Error("Enter a positive amount.");
       }
+
       if (mode === "lookup") {
         setLookup(null);
         setExternal(null);
         setLookupMiss(false);
+
         try {
           const product = await api.getProductByBarcode(code);
           setLookup(product);
@@ -75,35 +76,36 @@ function BarcodePage() {
           if (!(error instanceof ApiError) || error.status !== 404) {
             throw error;
           }
+
           setLookupMiss(true);
         }
+
         try {
           setExternal(await api.externalBarcodeLookup(code));
         } catch (error) {
-          if (
-            error instanceof ApiError &&
-            (error.status === 404 || error.status === 501)
-          ) {
+          if (error instanceof ApiError && (error.status === 404 || error.status === 501)) {
             setExternal(null);
           } else {
             throw error;
           }
         }
+
         return;
       }
-      const body: Record<string, unknown> =
-        mode === "inventory"
-          ? { new_amount: qty }
-          : { amount: qty };
+
+      const body: JsonObject = mode === "inventory" ? { new_amount: qty } : { amount: qty };
+
       if (mode === "transfer") {
         if (!from || !to) {
           throw new Error("Choose from and to locations.");
         }
+
         body.location_id_from = Number(from);
         body.location_id_to = Number(to);
       } else if (from && (mode === "purchase" || mode === "inventory")) {
         body.location_id = Number(from);
       }
+
       const action =
         mode === "purchase"
           ? "add"
@@ -114,6 +116,7 @@ function BarcodePage() {
               : mode === "transfer"
                 ? "transfer"
                 : "inventory";
+
       await api.stockActionByBarcode(code, action, body);
       setLookup(null);
       setExternal(null);
@@ -131,12 +134,15 @@ function BarcodePage() {
   const createFromExternal = useMutation({
     mutationFn: async () => {
       const code = barcode.trim();
+
       if (!code) throw new Error("Enter a barcode.");
       const created = await api.externalBarcodeLookup(code, true);
+
       if (!created) throw new Error("External lookup found nothing to create.");
       setExternal(created);
       setLookupMiss(false);
       const id = Number(created.id ?? created.product_id);
+
       if (Number.isFinite(id) && id > 0) {
         try {
           setLookup(await api.getProductByBarcode(code));
@@ -144,6 +150,7 @@ function BarcodePage() {
           setLookup(null);
         }
       }
+
       return created;
     },
     onSuccess: async () => {
@@ -156,11 +163,12 @@ function BarcodePage() {
     run.mutate();
   };
 
-  const needsLocation =
-    mode === "transfer" || mode === "inventory" || mode === "purchase";
+  const needsLocation = mode === "transfer" || mode === "inventory" || mode === "purchase";
+
   const showAmount = mode !== "lookup";
-  const externalName =
-    external && typeof external.name === "string" ? external.name : null;
+
+  const externalName = external?.name ?? null;
+
   const canCreateFromExternal =
     lookupMiss && external !== null && Boolean(externalName || external.__barcode);
 
@@ -188,7 +196,7 @@ function BarcodePage() {
             <select
               id="barcode-mode"
               value={mode}
-              onChange={(e) => setMode(e.target.value as ScanMode)}
+              onChange={(e) => setMode(scanModeSchema.parse(e.target.value))}
             >
               <option value="lookup">Look up</option>
               <option value="purchase">Purchase</option>
@@ -201,9 +209,7 @@ function BarcodePage() {
           {showAmount ? (
             <div className="field">
               <label htmlFor="barcode-amount">
-                {mode === "inventory"
-                  ? "New stock count"
-                  : "Amount in stock units"}
+                {mode === "inventory" ? "New stock count" : "Amount in stock units"}
               </label>
               <input
                 id="barcode-amount"
@@ -242,12 +248,7 @@ function BarcodePage() {
           {mode === "transfer" ? (
             <div className="field">
               <label htmlFor="barcode-to">To location</label>
-              <select
-                id="barcode-to"
-                required
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-              >
+              <select id="barcode-to" required value={to} onChange={(e) => setTo(e.target.value)}>
                 <option value="">Select location</option>
                 {(locations.data ?? []).map((loc) => (
                   <option key={loc.id} value={loc.id}>
@@ -258,18 +259,12 @@ function BarcodePage() {
             </div>
           ) : null}
         </div>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={run.isPending}
-        >
+        <button type="submit" className="btn btn-primary" disabled={run.isPending}>
           {mode === "lookup" ? "Look up" : "Submit"}
         </button>
       </form>
       {run.error ? <ErrorBlock message={run.error.message} /> : null}
-      {createFromExternal.error ? (
-        <ErrorBlock message={createFromExternal.error.message} />
-      ) : null}
+      {createFromExternal.error ? <ErrorBlock message={createFromExternal.error.message} /> : null}
       {lookupMiss && !lookup ? (
         <section className="panel">
           <div className="panel-inner">
@@ -277,8 +272,7 @@ function BarcodePage() {
             {canCreateFromExternal ? (
               <>
                 <p>
-                  External lookup found{" "}
-                  <strong>{externalName ?? "a product"}</strong>.
+                  External lookup found <strong>{externalName ?? "a product"}</strong>.
                 </p>
                 <button
                   type="button"
@@ -291,14 +285,11 @@ function BarcodePage() {
               </>
             ) : (
               <p className="muted">
-                External lookup did not return a creatable product for this
-                code.
+                External lookup did not return a creatable product for this code.
               </p>
             )}
             {external ? (
-              <pre className="code-block">
-                {JSON.stringify(external, null, 2)}
-              </pre>
+              <pre className="code-block">{JSON.stringify(external, null, 2)}</pre>
             ) : null}
           </div>
         </section>

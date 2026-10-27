@@ -38,8 +38,10 @@ export function useCatalog(): Catalog {
     const productMap = new Map((products.data ?? []).map((p) => [p.id, p]));
     const locationMap = new Map((locations.data ?? []).map((l) => [l.id, l]));
     const unitMap = new Map((units.data ?? []).map((u) => [u.id, u]));
+
     const stockUnitText = (productId: number, amount: number) =>
       unitLabel(unitMap.get(productMap.get(productId)?.qu_id_stock ?? -1), amount);
+
     return {
       products: products.data ?? [],
       product: (id) => productMap.get(id),
@@ -50,6 +52,7 @@ export function useCatalog(): Catalog {
       stockUnitText,
       countsItems: (productId) => {
         const unit = unitMap.get(productMap.get(productId)?.qu_id_stock ?? -1);
+
         return !unit || !MEASURED_UNITS.has(unit.name.toLowerCase());
       },
       amountText: (productId, amount) =>
@@ -61,6 +64,7 @@ export function useCatalog(): Catalog {
 /** Refresh everything a stock movement can change. */
 export function useInvalidateStock() {
   const queryClient = useQueryClient();
+
   return async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["stock"] }),

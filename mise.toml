@@ -1,12 +1,22 @@
 min_version = "2024.11.1"
 
 [tools]
+hk = "2.9.0"
+gitleaks = "8.30.1"
+rumdl = "0.3.0"
+tombi = "1.9.0"
+jactionlint = "2.2.0"
+shellcheck = "0.11.0"
 node = "22"
 python = "3.13"
 uv = "latest"
 
 [env]
+HK_MISE = "1"
 GROCY_USE_NATIVE_PHP = "false"
+
+[hooks]
+postinstall = "hk install --mise"
 
 [tasks.setup]
 description = "Install backend and frontend dependencies"
@@ -18,3 +28,44 @@ run = [
 [tasks.dev]
 description = "Start the API and Vite dev servers"
 run = "./scripts/dev.sh"
+
+[tasks.lint]
+description = "Check Python and frontend lint rules"
+run = [
+  "cd backend && uv run ruff check --config pyproject.toml . ../scripts",
+  "cd frontend && npm run lint",
+]
+
+[tasks.format]
+description = "Format Python and frontend files"
+run = [
+  "cd backend && uv run ruff format --config pyproject.toml . ../scripts",
+  "cd frontend && npm run format",
+]
+
+[tasks."format:check"]
+description = "Check Python and frontend formatting"
+run = [
+  "cd backend && uv run ruff format --config pyproject.toml --check . ../scripts",
+  "cd frontend && npm run format:check",
+]
+
+[tasks.typecheck]
+description = "Check Python and TypeScript types"
+run = [
+  "cd backend && uv run ty check . ../scripts --error-on-warning",
+  "cd frontend && npm run typecheck",
+]
+
+[tasks.fix]
+description = "Apply safe lint fixes and format all source files"
+run = [
+  "cd backend && uv run ruff check --config pyproject.toml --fix . ../scripts",
+  "cd backend && uv run ruff format --config pyproject.toml . ../scripts",
+  "cd frontend && npm run lint:fix",
+  "cd frontend && npm run format",
+]
+
+[tasks.check]
+description = "Run lint, format, and type checks"
+depends = ["lint", "format:check", "typecheck"]

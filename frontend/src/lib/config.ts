@@ -11,19 +11,23 @@ function readStored(key: string): string | null {
   if (typeof localStorage === "undefined") {
     return null;
   }
+
   const value = localStorage.getItem(key);
+
   if (value === null) {
     return null;
   }
+
   const trimmed = value.trim();
+
   return trimmed === "" ? null : trimmed;
 }
 
 export function readApiConfig(): ApiConfig {
-  const baseUrl =
-    readStored(STORAGE_BASE) ?? import.meta.env.VITE_API_BASE ?? "";
-  const apiKey =
-    readStored(STORAGE_KEY) ?? import.meta.env.VITE_API_KEY ?? DEFAULT_API_KEY;
+  const baseUrl = readStored(STORAGE_BASE) ?? import.meta.env.VITE_API_BASE ?? "";
+
+  const apiKey = readStored(STORAGE_KEY) ?? import.meta.env.VITE_API_KEY ?? DEFAULT_API_KEY;
+
   return { baseUrl, apiKey };
 }
 

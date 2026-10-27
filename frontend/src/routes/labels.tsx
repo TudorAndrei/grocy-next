@@ -6,12 +6,7 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { openApiDocument } from "@/lib/open-document";
-import {
-  batteriesQuery,
-  choresQuery,
-  productsQuery,
-  recipesQuery,
-} from "@/hooks/queries";
+import { batteriesQuery, choresQuery, productsQuery, recipesQuery } from "@/hooks/queries";
 
 export const Route = createFileRoute("/labels")({
   component: LabelsPage,
@@ -29,6 +24,7 @@ function LabelsPage() {
 
   const open = async (key: string, path: string) => {
     setBusy(key);
+
     try {
       await openApiDocument(path);
     } finally {
@@ -36,8 +32,7 @@ function LabelsPage() {
     }
   };
 
-  const error =
-    products.error || recipes.error || chores.error || batteries.error;
+  const error = products.error || recipes.error || chores.error || batteries.error;
 
   return (
     <>
@@ -58,9 +53,7 @@ function LabelsPage() {
         ]}
       />
       {error ? (
-        <ErrorBlock
-          message={error instanceof Error ? error.message : "Could not load data."}
-        />
+        <ErrorBlock message={error instanceof Error ? error.message : "Could not load data."} />
       ) : null}
       <TabPanel id="panel-products" labelledBy="tab-products" hidden={tab !== "products"}>
         {products.isLoading ? <LoadingBlock label="Loading products…" /> : null}
@@ -74,10 +67,7 @@ function LabelsPage() {
                   className="btn btn-ghost btn-sm"
                   disabled={busy === `p-${product.id}`}
                   onClick={() =>
-                    open(
-                      `p-${product.id}`,
-                      `/api/stock/products/${product.id}/printlabel`,
-                    )
+                    open(`p-${product.id}`, `/api/stock/products/${product.id}/printlabel`)
                   }
                 >
                   Stock label
@@ -97,9 +87,7 @@ function LabelsPage() {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 disabled={busy === `r-${recipe.id}`}
-                onClick={() =>
-                  open(`r-${recipe.id}`, `/api/recipes/${recipe.id}/printlabel`)
-                }
+                onClick={() => open(`r-${recipe.id}`, `/api/recipes/${recipe.id}/printlabel`)}
               >
                 Recipe label
               </button>
@@ -117,9 +105,7 @@ function LabelsPage() {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 disabled={busy === `c-${chore.id}`}
-                onClick={() =>
-                  open(`c-${chore.id}`, `/api/chores/${chore.id}/printlabel`)
-                }
+                onClick={() => open(`c-${chore.id}`, `/api/chores/${chore.id}/printlabel`)}
               >
                 Chore label
               </button>
@@ -137,12 +123,7 @@ function LabelsPage() {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 disabled={busy === `b-${battery.id}`}
-                onClick={() =>
-                  open(
-                    `b-${battery.id}`,
-                    `/api/batteries/${battery.id}/printlabel`,
-                  )
-                }
+                onClick={() => open(`b-${battery.id}`, `/api/batteries/${battery.id}/printlabel`)}
               >
                 Battery label
               </button>
@@ -152,16 +133,12 @@ function LabelsPage() {
       </TabPanel>
       <TabPanel id="panel-shopping" labelledBy="tab-shopping" hidden={tab !== "shopping"}>
         <div className="panel panel-inner">
-          <p className="page-lead">
-            Thermal shopping list layout for receipt printers.
-          </p>
+          <p className="page-lead">Thermal shopping list layout for receipt printers.</p>
           <button
             type="button"
             className="btn btn-primary"
             disabled={busy === "shopping-thermal"}
-            onClick={() =>
-              open("shopping-thermal", "/api/print/shoppinglist/thermal")
-            }
+            onClick={() => open("shopping-thermal", "/api/print/shoppinglist/thermal")}
           >
             Open thermal list
           </button>

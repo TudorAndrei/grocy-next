@@ -12,6 +12,7 @@ export function ProductMerge({ productId }: Props) {
   const client = useQueryClient();
   const products = useQuery(productsQuery());
   const [removeId, setRemoveId] = useState("");
+
   const merge = useMutation({
     mutationFn: () => api.mergeProducts(productId, Number(removeId)),
     onSuccess: async () => {
@@ -22,6 +23,7 @@ export function ProductMerge({ productId }: Props) {
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
+
     if (!removeId) return;
     merge.mutate();
   };
@@ -35,8 +37,8 @@ export function ProductMerge({ productId }: Props) {
       </h2>
       <div className="panel-body">
         <p className="field-hint">
-          Move stock and history from another product into this one, then remove
-          the duplicate catalog entry.
+          Move stock and history from another product into this one, then remove the duplicate
+          catalog entry.
         </p>
         {merge.error ? <ErrorBlock message={merge.error.message} /> : null}
         <form className="inline-form" onSubmit={onSubmit}>
@@ -48,14 +50,12 @@ export function ProductMerge({ productId }: Props) {
           >
             <option value="">Select duplicate product</option>
             {choices.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
-          <button
-            type="submit"
-            className="btn btn-ghost"
-            disabled={merge.isPending || !removeId}
-          >
+          <button type="submit" className="btn btn-ghost" disabled={merge.isPending || !removeId}>
             Merge into this product
           </button>
         </form>

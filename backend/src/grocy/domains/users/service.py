@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
@@ -49,7 +49,7 @@ class UsersService:
         self.session = session
 
     @asynccontextmanager
-    async def _write(self) -> AsyncIterator[None]:
+    async def _write(self) -> AsyncGenerator[None]:
         try:
             yield
             await self.session.commit()
