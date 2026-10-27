@@ -18,6 +18,7 @@ function RecipesPage() {
   const [filter, setFilter] = useState<ReadyFilter>("all");
   const [editing, setEditing] = useState(false);
   const recipes = useQuery({ queryKey: queryKeys.recipes, queryFn: api.listRecipes });
+
   const fulfillment = useQuery({
     queryKey: queryKeys.recipesFulfillment,
     queryFn: api.listRecipeFulfillment,
@@ -30,9 +31,12 @@ function RecipesPage() {
 
   const visible = (recipes.data ?? []).filter((recipe) => {
     const f = status.get(recipe.id);
+
     if (filter === "ready" && !f?.need_fulfilled) return false;
+
     if (filter === "missing" && (f?.need_fulfilled ?? true)) return false;
     const q = search.trim().toLowerCase();
+
     return (
       !q ||
       recipe.name.toLowerCase().includes(q) ||
@@ -95,7 +99,7 @@ function RecipesPage() {
         </div>
       </div>
       {recipes.isLoading ? <LoadingBlock label="Loading recipes…" /> : null}
-      {recipes.isError ? <ErrorBlock message={(recipes.error as Error).message} /> : null}
+      {recipes.isError ? <ErrorBlock message={recipes.error.message} /> : null}
       {recipes.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
           {recipes.data.length === 0 ? "No recipes yet." : "No recipe matches this filter."}
@@ -105,6 +109,7 @@ function RecipesPage() {
         <ul className="panel recipe-list">
           {visible.map((recipe) => {
             const f = status.get(recipe.id);
+
             return (
               <li key={recipe.id}>
                 <Link

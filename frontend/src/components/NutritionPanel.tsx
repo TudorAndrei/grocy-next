@@ -4,7 +4,7 @@ import { NUTRIENTS, formatNutrient } from "@/lib/nutrients";
 export function NutritionPanel({ data }: { data: NutritionRecord }) {
   const nutrients = data.nutrients ?? {};
   const known = NUTRIENTS.filter((n) => n.key in nutrients);
-  const extra = Object.keys(nutrients).filter((key) => !NUTRIENTS.some((n) => n.key === key));
+  const extra = Object.entries(nutrients).filter(([key]) => !NUTRIENTS.some((n) => n.key === key));
 
   return (
     <section className="panel" aria-labelledby="nutrition-heading">
@@ -24,10 +24,10 @@ export function NutritionPanel({ data }: { data: NutritionRecord }) {
               <dd>{formatNutrient(nutrients[n.key], n.unit)}</dd>
             </div>
           ))}
-          {extra.map((key) => (
+          {extra.map(([key, value]) => (
             <div key={key}>
               <dt>{key.replace(/_/g, " ")}</dt>
-              <dd>{formatNutrient((nutrients as Record<string, number | null>)[key], "")}</dd>
+              <dd>{formatNutrient(value, "")}</dd>
             </div>
           ))}
         </dl>

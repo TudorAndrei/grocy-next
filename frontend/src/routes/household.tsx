@@ -1,3 +1,4 @@
+import type { JsonObject } from "@/lib/json";
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,15 +13,17 @@ export const Route = createFileRoute("/household")({
 
 function localTime() {
   const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
+
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
-function displayTime(value: unknown) {
+
+function displayTime(value: string | null | undefined) {
   if (!value || String(value).startsWith("2999-")) return "No scheduled date";
   const date = new Date(String(value).replace(" ", "T"));
+
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
 }
+
 function HouseholdPage() {
   const client = useQueryClient();
   const [entity, setEntity] = useState("chores");
@@ -30,40 +33,41 @@ function HouseholdPage() {
   const [trackedTime, setTrackedTime] = useState(localTime);
   const [doneBy, setDoneBy] = useState("");
   const [skipped, setSkipped] = useState(false);
+
   const records = useQuery({
     queryKey: ["objects", entity],
     queryFn: () => api.objects(entity),
   });
+
   const current = useQuery({
     queryKey: ["household-current", entity],
     queryFn: () => request<EntityRow[]>(`/api/${entity}`),
   });
+
   const users = useQuery({
     queryKey: ["objects", "users"],
     queryFn: () => request<EntityRow[]>("/api/users"),
     enabled: Boolean(recording) && entity === "chores",
   });
-  const logsEntity =
-    entity === "chores" ? "chores_log" : "battery_charge_cycles";
+
+  const logsEntity = entity === "chores" ? "chores_log" : "battery_charge_cycles";
+
   const history = useQuery({
     queryKey: ["objects", logsEntity],
     queryFn: () => api.objects(logsEntity),
     enabled: entity !== "tasks",
   });
+
   const action = useMutation({
-    mutationFn: ({
-      path,
-      body,
-    }: {
-      path: string;
-      body?: Record<string, unknown>;
-    }) => api.action(path, body ?? {}),
+    mutationFn: ({ path, body }: { path: string; body?: JsonObject }) =>
+      api.action(path, body ?? {}),
     onSuccess: async () => {
       setRecording(null);
       setMerging(null);
       await client.invalidateQueries();
     },
   });
+
   const record = (row: EntityRow, skip = false) => {
     action.reset();
     setRecording(row);
@@ -72,16 +76,21 @@ function HouseholdPage() {
     setDoneBy("");
     setSkipped(skip);
   };
+
   const submitRecord = (event: FormEvent) => {
     event.preventDefault();
+
     if (!recording) return;
-    const body: Record<string, unknown> = {
-      [entity === "tasks" ? "done_time" : "tracked_time"]: trackedTime,
-    };
+
+    const body: JsonObject = {};
+    body[entity === "tasks" ? "done_time" : "tracked_time"] = trackedTime;
+
     if (entity === "chores") {
       body.skipped = skipped;
+
       if (doneBy) body.done_by = Number(doneBy);
     }
+
     action.mutate({
       path:
         entity === "tasks"
@@ -90,6 +99,7 @@ function HouseholdPage() {
       body,
     });
   };
+
   return (
     <>
       <h1 className="page-title">Household</h1>
@@ -120,8 +130,7 @@ function HouseholdPage() {
           aria-label={`Record ${recording.name}`}
         >
           <h2>
-            {skipped ? "Skip" : entity === "tasks" ? "Complete" : "Record"}{" "}
-            {recording.name}
+            {skipped ? "Skip" : entity === "tasks" ? "Complete" : "Record"} {recording.name}
           </h2>
           <div className="form-grid">
             <div className="field">
@@ -185,9 +194,7 @@ function HouseholdPage() {
           }}
         >
           <h2>Merge {merging.name}</h2>
-          <p>
-            Move this chore's history to another chore, then delete this chore.
-          </p>
+          <p>Move this chore's history to another chore, then delete this chore.</p>
           <div className="field">
             <label htmlFor="merge-target">Chore to keep</label>
             <select
@@ -226,8 +233,9 @@ function HouseholdPage() {
         entity={entity}
         detail={(row) => {
           const state = current.data?.find((item) => item.id === row.id);
-          const assigned = (state?.next_execution_assigned_user ??
-            state?.assigned_to_user) as EntityRow | null | undefined;
+
+          const assigned = state?.next_execution_assigned_user ?? state?.assigned_to_user;
+
           return (
             <>
               <h3>{row.name}</h3>
@@ -241,12 +249,7 @@ function HouseholdPage() {
                     ? "Inactive"
                     : `Next ${displayTime(state?.[entity === "chores" ? "next_estimated_execution_time" : "next_estimated_charge_time"])}`}
               </p>
-              {assigned && (
-                <p>
-                  Assigned to{" "}
-                  {String(assigned.display_name ?? assigned.username)}
-                </p>
-              )}
+              {assigned && <p>Assigned to {String(assigned.display_name ?? assigned.username)}</p>}
             </>
           );
         }}
@@ -320,13 +323,9 @@ function HouseholdPage() {
               .map((row) => (
                 <li key={row.id} className="product-row">
                   <span>
-                    {records.data?.find(
-                      (record) =>
-                        record.id === (row.chore_id ?? row.battery_id),
-                    )?.name ??
-                      `#${String(row.chore_id ?? row.battery_id)}`}{" "}
-                    {row.skipped ? "skipped" : "recorded"}{" "}
-                    {displayTime(row.tracked_time)}
+                    {records.data?.find((record) => record.id === (row.chore_id ?? row.battery_id))
+                      ?.name ?? `#${String(row.chore_id ?? row.battery_id)}`}{" "}
+                    {row.skipped ? "skipped" : "recorded"} {displayTime(row.tracked_time)}
                     {row.undone ? " (undone)" : ""}
                   </span>
                   {!row.undone && (

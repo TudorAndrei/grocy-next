@@ -21,7 +21,9 @@ export function useStockMove(kind: keyof typeof VERB) {
   return useMutation({
     mutationFn: ({ productId, amount, purchase, consume }: Move) => {
       if (kind === "purchase") return api.purchaseStock(productId, amount, purchase);
+
       if (kind === "consume") return api.consumeStock(productId, amount, consume);
+
       return api.openStock(productId, amount);
     },
     onSuccess: async (booking, { productId, amount }) => {

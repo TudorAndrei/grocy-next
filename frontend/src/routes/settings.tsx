@@ -1,3 +1,5 @@
+import { z } from "zod";
+import type { JsonObject } from "@/lib/json";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
@@ -6,30 +8,22 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/useTheme";
-import {
-  currentUserQuery,
-  systemInfoQuery,
-  userSettingsQuery,
-} from "@/hooks/queries";
+import { currentUserQuery, systemInfoQuery, userSettingsQuery } from "@/hooks/queries";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { api } from "@/lib/api";
-import type { ThemePreference } from "@/lib/theme";
 
 type SettingsTab = "connection" | "appearance" | "preferences" | "about";
 
+type SettingsSearch = { tab: SettingsTab };
+
+const settingsSearchSchema = z.object({
+  tab: z.enum(["connection", "appearance", "preferences", "about"]).catch("connection"),
+});
+
+const themePreferenceSchema = z.enum(["light", "dark", "system"]);
+
 export const Route = createFileRoute("/settings")({
-  validateSearch: (search: Record<string, unknown>): { tab: SettingsTab } => {
-    const tab = search.tab;
-    if (
-      tab === "connection" ||
-      tab === "appearance" ||
-      tab === "preferences" ||
-      tab === "about"
-    ) {
-      return { tab };
-    }
-    return { tab: "connection" };
-  },
+  validateSearch: (search): SettingsSearch => settingsSearchSchema.parse(search),
   component: SettingsPage,
 });
 
@@ -103,10 +97,13 @@ function SettingsPage() {
 
   const savePreferences = useMutation({
     mutationFn: () => {
-      const body: Record<string, unknown> = {};
+      const body: JsonObject = {};
+
       for (const field of preferenceFields) {
         const raw = draft[field.key];
+
         if (raw === undefined) continue;
+
         if (field.type === "checkbox") {
           body[field.key] = raw === "1";
         } else if (field.type === "number") {
@@ -115,6 +112,7 @@ function SettingsPage() {
           body[field.key] = raw;
         }
       }
+
       return api.putUserSettings(body);
     },
     onSuccess: async () => {
@@ -129,14 +127,17 @@ function SettingsPage() {
   const settingsValue = (key: string) => {
     if (draft[key] !== undefined) return draft[key];
     const value = settings.data?.[key];
+
     if (value === true || value === "1") return "1";
+
     if (value === false || value === "0") return "0";
+
     if (value == null) return "";
+
     return String(value);
   };
 
-  const error =
-    system.error || user.error || settings.error || savePreferences.error;
+  const error = system.error || user.error || settings.error || savePreferences.error;
 
   return (
     <>
@@ -156,15 +157,9 @@ function SettingsPage() {
         ]}
       />
       {error ? (
-        <ErrorBlock
-          message={error instanceof Error ? error.message : "Settings error."}
-        />
+        <ErrorBlock message={error instanceof Error ? error.message : "Settings error."} />
       ) : null}
-      <TabPanel
-        id="settings-connection"
-        labelledBy="tab-connection"
-        hidden={tab !== "connection"}
-      >
+      <TabPanel id="settings-connection" labelledBy="tab-connection" hidden={tab !== "connection"}>
         <section className="panel" style={{ maxWidth: "32rem" }}>
           <div className="panel-inner">
             <form onSubmit={saveConnection}>
@@ -198,17 +193,15 @@ function SettingsPage() {
                 Save connection
               </button>
               {connectionSaved ? (
-                <p className="muted" role="status">Connection saved.</p>
+                <p className="muted" role="status">
+                  Connection saved.
+                </p>
               ) : null}
             </form>
           </div>
         </section>
       </TabPanel>
-      <TabPanel
-        id="settings-appearance"
-        labelledBy="tab-appearance"
-        hidden={tab !== "appearance"}
-      >
+      <TabPanel id="settings-appearance" labelledBy="tab-appearance" hidden={tab !== "appearance"}>
         <section className="panel" style={{ maxWidth: "32rem" }}>
           <div className="panel-inner">
             <div className="field">
@@ -216,9 +209,7 @@ function SettingsPage() {
               <select
                 id="theme-pref"
                 value={preference}
-                onChange={(e) =>
-                  setPreference(e.target.value as ThemePreference)
-                }
+                onChange={(e) => setPreference(themePreferenceSchema.parse(e.target.value))}
               >
                 <option value="system">Match system</option>
                 <option value="light">Light</option>
@@ -226,8 +217,7 @@ function SettingsPage() {
               </select>
             </div>
             <p className="muted">
-              This theme applies to Grocy Next only. Server-side night mode is
-              under Preferences.
+              This theme applies to Grocy Next only. Server-side night mode is under Preferences.
             </p>
           </div>
         </section>
@@ -266,12 +256,12 @@ function SettingsPage() {
                     <select
                       id={`pref-${field.key}`}
                       value={settingsValue(field.key)}
-                      onChange={(e) =>
-                        setDraft((d) => ({ ...d, [field.key]: e.target.value }))
-                      }
+                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
                     >
                       {(field.options ?? []).map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
                       ))}
                     </select>
                   ) : (
@@ -279,35 +269,25 @@ function SettingsPage() {
                       id={`pref-${field.key}`}
                       type="number"
                       value={settingsValue(field.key)}
-                      onChange={(e) =>
-                        setDraft((d) => ({ ...d, [field.key]: e.target.value }))
-                      }
+                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
                     />
                   )}
                 </div>
               ))}
             </div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={savePreferences.isPending}
-            >
+            <button type="submit" className="btn btn-primary" disabled={savePreferences.isPending}>
               Save preferences
             </button>
             {savePreferences.isSuccess ? (
-              <p className="muted" role="status">Preferences saved.</p>
+              <p className="muted" role="status">
+                Preferences saved.
+              </p>
             ) : null}
           </form>
         ) : null}
       </TabPanel>
-      <TabPanel
-        id="settings-about"
-        labelledBy="tab-about"
-        hidden={tab !== "about"}
-      >
-        {system.isLoading || user.isLoading ? (
-          <LoadingBlock label="Loading system info…" />
-        ) : null}
+      <TabPanel id="settings-about" labelledBy="tab-about" hidden={tab !== "about"}>
+        {system.isLoading || user.isLoading ? <LoadingBlock label="Loading system info…" /> : null}
         {system.data ? (
           <section className="panel">
             <div className="panel-inner">
@@ -315,8 +295,7 @@ function SettingsPage() {
                 <div>
                   <dt>Grocy</dt>
                   <dd>
-                    {system.data.grocy_version.Version} (
-                    {system.data.grocy_version.ReleaseDate})
+                    {system.data.grocy_version.Version} ({system.data.grocy_version.ReleaseDate})
                   </dd>
                 </div>
                 <div>
@@ -339,8 +318,7 @@ function SettingsPage() {
                   <div>
                     <dt>Signed in as</dt>
                     <dd>
-                      {user.data.first_name} {user.data.last_name} (
-                      {user.data.username})
+                      {user.data.first_name} {user.data.last_name} ({user.data.username})
                     </dd>
                   </div>
                 ) : null}

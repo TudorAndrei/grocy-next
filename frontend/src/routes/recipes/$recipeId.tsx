@@ -27,6 +27,7 @@ function RecipeDetailPage() {
   const servingsValid = Number(servings) > 0 && Number.isFinite(Number(servings));
 
   const recipes = useQuery({ queryKey: queryKeys.recipes, queryFn: api.listRecipes });
+
   const fulfillment = useQuery({
     queryKey: [...queryKeys.recipeFulfillment(id), servings],
     queryFn: () =>
@@ -105,24 +106,24 @@ function RecipeDetailPage() {
             </button>
             {f ? (
               <>
-              {!f.need_fulfilled ? (
+                {!f.need_fulfilled ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={addMissing.isPending}
+                    onClick={() => addMissing.mutate()}
+                  >
+                    Add missing to list
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="btn"
-                  disabled={addMissing.isPending}
-                  onClick={() => addMissing.mutate()}
+                  className="btn btn-primary"
+                  disabled={cook.isPending || !f.need_fulfilled}
+                  onClick={() => cook.mutate()}
                 >
-                  Add missing to list
+                  {cook.isPending ? "Cooking…" : "Cook and consume"}
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={cook.isPending || !f.need_fulfilled}
-                onClick={() => cook.mutate()}
-              >
-                {cook.isPending ? "Cooking…" : "Cook and consume"}
-              </button>
               </>
             ) : null}
           </>
@@ -130,7 +131,7 @@ function RecipeDetailPage() {
       />
 
       {fulfillment.isLoading ? <LoadingBlock label="Checking stock…" /> : null}
-      {fulfillment.isError ? <ErrorBlock message={(fulfillment.error as Error).message} /> : null}
+      {fulfillment.isError ? <ErrorBlock message={fulfillment.error.message} /> : null}
 
       {f ? (
         <div className="panel">
@@ -189,11 +190,7 @@ function RecipeDetailPage() {
       ) : null}
 
       <EntityManager entity="recipes_pos" fixed={{ recipe_id: id }} title="Edit ingredients" />
-      <EntityManager
-        entity="recipes_nestings"
-        fixed={{ recipe_id: id }}
-        title="Included recipes"
-      />
+      <EntityManager entity="recipes_nestings" fixed={{ recipe_id: id }} title="Included recipes" />
     </>
   );
 }

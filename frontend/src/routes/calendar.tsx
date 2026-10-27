@@ -6,12 +6,7 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
-import {
-  batteriesQuery,
-  choresQuery,
-  objectsQuery,
-  tasksQuery,
-} from "@/hooks/queries";
+import { batteriesQuery, choresQuery, objectsQuery, tasksQuery } from "@/hooks/queries";
 
 export const Route = createFileRoute("/calendar")({ component: CalendarPage });
 
@@ -24,10 +19,11 @@ type AgendaItem = {
   kind: string;
 };
 
-function parseWhen(value: unknown): string | null {
+function parseWhen(value: string | null | undefined): string | null {
   if (!value || String(value).startsWith("2999-")) return null;
   const text = String(value).replace(" ", "T");
   const date = new Date(text);
+
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
@@ -48,9 +44,9 @@ function CalendarPage() {
   const download = useMutation({
     mutationFn: async () => {
       const text = await request<string>("/api/calendar/ical");
-      const url = URL.createObjectURL(
-        new Blob([text], { type: "text/calendar" }),
-      );
+
+      const url = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
+
       const link = document.createElement("a");
       link.href = url;
       link.download = "Grocy.ics";
@@ -60,8 +56,10 @@ function CalendarPage() {
   });
 
   const agenda: AgendaItem[] = [];
+
   for (const row of meals.data ?? []) {
     const when = parseWhen(row.day);
+
     if (!when) continue;
     agenda.push({
       id: `meal-${row.id}`,
@@ -70,8 +68,10 @@ function CalendarPage() {
       label: String(row.note ?? row.type ?? "Meal plan entry"),
     });
   }
+
   for (const row of tasks.data ?? []) {
     const when = parseWhen(row.due_date);
+
     if (!when) continue;
     agenda.push({
       id: `task-${row.id}`,
@@ -80,8 +80,10 @@ function CalendarPage() {
       label: row.name,
     });
   }
+
   for (const row of chores.data ?? []) {
     const when = parseWhen(row.next_estimated_execution_time);
+
     if (!when) continue;
     agenda.push({
       id: `chore-${row.id}`,
@@ -90,8 +92,10 @@ function CalendarPage() {
       label: row.chore_name ?? row.name ?? "Chore",
     });
   }
+
   for (const row of batteries.data ?? []) {
     const when = parseWhen(row.next_estimated_charge_time);
+
     if (!when) continue;
     agenda.push({
       id: `battery-${row.id}`,
@@ -100,10 +104,11 @@ function CalendarPage() {
       label: row.battery?.name ?? row.name ?? "Battery",
     });
   }
+
   agenda.sort((a, b) => a.when.localeCompare(b.when));
 
-  const loading =
-    meals.isLoading || tasks.isLoading || chores.isLoading || batteries.isLoading;
+  const loading = meals.isLoading || tasks.isLoading || chores.isLoading || batteries.isLoading;
+
   const error =
     meals.error ||
     tasks.error ||
@@ -136,9 +141,7 @@ function CalendarPage() {
           <ul className="agenda-list">
             {agenda.map((item) => (
               <li key={item.id} className="agenda-item">
-                <time dateTime={item.when}>
-                  {new Date(item.when).toLocaleString()}
-                </time>
+                <time dateTime={item.when}>{new Date(item.when).toLocaleString()}</time>
                 <span className="badge">{item.kind}</span>
                 <span>{item.label}</span>
               </li>

@@ -19,7 +19,7 @@ function TasksPage() {
     <>
       <PageHeader title="Tasks" lead="One-off jobs with an optional due date." />
       {tasks.isLoading ? <LoadingBlock label="Loading tasks…" /> : null}
-      {tasks.isError ? <ErrorBlock message={(tasks.error as Error).message} /> : null}
+      {tasks.isError ? <ErrorBlock message={tasks.error.message} /> : null}
       {tasks.isSuccess && tasks.data.length === 0 ? (
         <p className="empty-state">No open tasks.</p>
       ) : null}

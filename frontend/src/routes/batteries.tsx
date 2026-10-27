@@ -14,9 +14,11 @@ export const Route = createFileRoute("/batteries")({
 
 function nextCharge(battery: Battery): string | null {
   if (battery.next_estimated_charge_time) return battery.next_estimated_charge_time;
+
   if (!battery.last_tracked_time || !battery.charge_interval_days) return null;
   const next = new Date(battery.last_tracked_time);
   next.setDate(next.getDate() + battery.charge_interval_days);
+
   return next.toISOString();
 }
 
@@ -31,7 +33,7 @@ function BatteriesPage() {
         lead="Rechargeable and replaceable batteries, with their charge cycle."
       />
       {batteries.isLoading ? <LoadingBlock label="Loading batteries…" /> : null}
-      {batteries.isError ? <ErrorBlock message={(batteries.error as Error).message} /> : null}
+      {batteries.isError ? <ErrorBlock message={batteries.error.message} /> : null}
       {batteries.isSuccess && batteries.data.length === 0 ? (
         <p className="empty-state">No batteries tracked.</p>
       ) : null}

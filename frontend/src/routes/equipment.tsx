@@ -4,21 +4,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { api, downloadFile, filePath, request } from "@/lib/api";
+
 export const Route = createFileRoute("/equipment")({
   component: EquipmentPage,
 });
+
 function EquipmentPage() {
   const client = useQueryClient();
   const [equipmentId, setEquipmentId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+
   const query = useQuery({
     queryKey: ["objects", "equipment"],
     queryFn: () => api.objects("equipment"),
   });
+
   const upload = useMutation({
     mutationFn: async () => {
-      if (!file || !equipmentId)
-        throw new Error("Select equipment and a file.");
+      if (!file || !equipmentId) throw new Error("Select equipment and a file.");
       const filename = `${equipmentId}-${file.name}`;
       await request(filePath("equipmentmanuals", filename), {
         method: "PUT",
@@ -32,30 +35,28 @@ function EquipmentPage() {
       await client.invalidateQueries();
     },
   });
+
   const download = useMutation({
     mutationFn: (name: string) => downloadFile("equipmentmanuals", name, "equipment"),
   });
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     upload.mutate();
   };
+
   return (
     <>
       <h1 className="page-title">Equipment</h1>
-      <p className="page-lead">
-        Keep equipment records and instruction manuals together.
-      </p>
+      <p className="page-lead">Keep equipment records and instruction manuals together.</p>
       <EntityManager
         entity="equipment"
         actions={(row) =>
-          typeof row.instruction_manual_file_name === "string" &&
           row.instruction_manual_file_name ? (
             <button
               className="btn btn-ghost"
               disabled={download.isPending}
-              onClick={() =>
-                download.mutate(row.instruction_manual_file_name as string)
-              }
+              onClick={() => download.mutate(row.instruction_manual_file_name ?? "")}
             >
               Download manual
             </button>

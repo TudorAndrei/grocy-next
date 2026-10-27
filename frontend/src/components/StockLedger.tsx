@@ -1,3 +1,4 @@
+import type { JsonObject } from "@/lib/json";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, request } from "@/lib/api";
@@ -42,6 +43,7 @@ export function StockLedger({ productId }: { productId: number }) {
     queryKey: ["stock-entries", productId],
     queryFn: () => request<Entry[]>(`/api/stock/products/${productId}/entries`),
   });
+
   const bookings = useQuery({
     queryKey: ["stock-log", productId],
     queryFn: () =>
@@ -49,12 +51,16 @@ export function StockLedger({ productId }: { productId: number }) {
         `/api/objects/stock_log?query[]=product_id=${productId}&order=id:desc&limit=12`,
       ),
   });
+
   const prices = useQuery({
     queryKey: ["stock-prices", productId],
     queryFn: () => request<PriceRow[]>(`/api/stock/products/${productId}/price-history`),
   });
+
   const action = useMutation({
-    mutationFn: (fn: () => Promise<unknown>) => fn(),
+    mutationFn: async (fn: () => Promise<void>) => {
+      await fn();
+    },
     onSuccess: async () => {
       setEditEntry(null);
       await client.invalidateQueries();
@@ -63,24 +69,30 @@ export function StockLedger({ productId }: { productId: number }) {
 
   const locationName = (id: number) =>
     catalog.locations.find((l) => l.id === id)?.name ?? `Location #${id}`;
+
   const error = entries.error || bookings.error || prices.error || action.error;
 
   function submitAdjust(e: FormEvent) {
     e.preventDefault();
-    const body: Record<string, unknown> =
+
+    const body: JsonObject =
       adjust === "inventory" ? { new_amount: Number(amount) } : { amount: Number(amount) };
+
     if (adjust === "transfer") {
       body.location_id_from = Number(from);
       body.location_id_to = Number(to);
     } else {
       if (from) body.location_id = Number(from);
+
       if (bestBefore) body.best_before_date = bestBefore;
     }
+
     action.mutate(() => api.action(`/api/stock/products/${productId}/${adjust}`, body));
   }
 
   function submitEntry(e: FormEvent) {
     e.preventDefault();
+
     if (!editEntry) return;
     action.mutate(() =>
       request(`/api/stock/entry/${editEntry.id}`, {
@@ -142,7 +154,9 @@ export function StockLedger({ productId }: { productId: number }) {
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             >
-              <option value="">{adjust === "transfer" ? "Select location" : "All locations"}</option>
+              <option value="">
+                {adjust === "transfer" ? "Select location" : "All locations"}
+              </option>
               {locationOptions}
             </select>
           </label>
@@ -256,7 +270,9 @@ export function StockLedger({ productId }: { productId: number }) {
                 type="button"
                 className="btn btn-ghost"
                 disabled={action.isPending}
-                onClick={() => action.mutate(() => api.action(`/api/stock/bookings/${log.id}/undo`))}
+                onClick={() =>
+                  action.mutate(() => api.action(`/api/stock/bookings/${log.id}/undo`))
+                }
               >
                 Undo
               </button>

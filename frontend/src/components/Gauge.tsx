@@ -17,8 +17,10 @@ export function Gauge({ amount, min, label }: GaugeProps) {
       </span>
     );
   }
+
   const ratio = Math.max(0, Math.min(1, amount / (min * 2)));
   const state = amount <= 0 ? "empty" : amount < min ? "low" : "ok";
+
   return (
     <span
       className="gauge"

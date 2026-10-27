@@ -5,16 +5,19 @@ import { LoadingBlock } from "./LoadingBlock";
 
 export function RevisionHistory({ productId }: { productId: number }) {
   const client = useQueryClient();
+
   const restore = useMutation({
     mutationFn: (revision: number) => api.restoreRevision(productId, revision),
     onSuccess: async () => {
       await client.invalidateQueries();
     },
   });
+
   const query = useQuery({
     queryKey: queryKeys.revisions(productId),
     queryFn: () => api.listNutritionRevisions(productId),
   });
+
   const items = [...(query.data ?? [])].sort((a, b) => b.revision - a.revision);
 
   return (
@@ -24,7 +27,7 @@ export function RevisionHistory({ productId }: { productId: number }) {
         <span>{items.length ? `${items.length} saved` : ""}</span>
       </h2>
       {query.isLoading ? <LoadingBlock label="Loading revisions…" /> : null}
-      {query.isError ? <ErrorBlock message={(query.error as Error).message} /> : null}
+      {query.isError ? <ErrorBlock message={query.error.message} /> : null}
       {restore.error ? <ErrorBlock message={restore.error.message} /> : null}
       {query.isSuccess && items.length === 0 ? (
         <p className="panel-empty">

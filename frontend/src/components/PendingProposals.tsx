@@ -15,9 +15,11 @@ export function PendingProposals() {
   });
 
   if (query.isLoading) return <LoadingBlock label="Loading proposals…" />;
-  if (query.isError) return <ErrorBlock message={(query.error as Error).message} />;
+
+  if (query.isError) return <ErrorBlock message={query.error.message} />;
 
   const items = query.data ?? [];
+
   if (items.length === 0) {
     return (
       <p className="empty-state">
@@ -40,6 +42,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
   const catalog = useCatalog();
   const notify = useNotify();
   const queryClient = useQueryClient();
+
   const current = useQuery({
     queryKey: queryKeys.nutrition(proposal.product_id),
     queryFn: () => api.getProductNutrition(proposal.product_id),
@@ -53,6 +56,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
       queryClient.invalidateQueries({ queryKey: ["revisions"] }),
     ]);
   };
+
   const name = catalog.productName(proposal.product_id);
 
   const approve = useMutation({
@@ -63,6 +67,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
+
   const reject = useMutation({
     mutationFn: () => api.rejectProposal(proposal.id),
     onSuccess: async () => {
@@ -115,6 +120,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
         <tbody>
           {rows.map((n) => {
             const changed = (before[n.key] ?? null) !== (proposed[n.key] ?? null);
+
             return (
               <tr key={n.key} data-changed={changed ? "true" : undefined}>
                 <th scope="row" data-indent={n.indent ? "true" : undefined}>

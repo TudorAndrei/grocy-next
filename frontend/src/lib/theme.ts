@@ -5,9 +5,11 @@ export type ThemePreference = "light" | "dark" | "system";
 export function readThemePreference(): ThemePreference {
   if (typeof localStorage === "undefined") return "system";
   const stored = localStorage.getItem(STORAGE_THEME);
+
   if (stored === "light" || stored === "dark" || stored === "system") {
     return stored;
   }
+
   return "system";
 }
 
@@ -17,7 +19,9 @@ export function writeThemePreference(theme: ThemePreference): void {
 
 export function resolveTheme(preference: ThemePreference): "light" | "dark" {
   if (preference === "light" || preference === "dark") return preference;
+
   if (typeof matchMedia === "undefined") return "light";
+
   return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 

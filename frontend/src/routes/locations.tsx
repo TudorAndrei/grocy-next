@@ -23,10 +23,10 @@ function LocationsPage() {
   const [locationId, setLocationId] = useState<number>(0);
   const locations = useQuery(objectsQuery("locations"));
   const products = useQuery(objectsQuery("products"));
+
   const entries = useQuery({
     queryKey: ["stock", "location", locationId],
-    queryFn: () =>
-      request<LocationEntry[]>(`/api/stock/locations/${locationId}/entries`),
+    queryFn: () => request<LocationEntry[]>(`/api/stock/locations/${locationId}/entries`),
     enabled: locationId > 0,
   });
 
@@ -50,14 +50,14 @@ function LocationsPage() {
         >
           <option value="">Choose a location</option>
           {(locations.data ?? []).map((loc) => (
-            <option key={loc.id} value={loc.id}>{loc.name}</option>
+            <option key={loc.id} value={loc.id}>
+              {loc.name}
+            </option>
           ))}
         </select>
       </div>
       {error ? <ErrorBlock message={error.message} /> : null}
-      {locationId > 0 && entries.isLoading ? (
-        <LoadingBlock label="Loading entries…" />
-      ) : null}
+      {locationId > 0 && entries.isLoading ? <LoadingBlock label="Loading entries…" /> : null}
       {locationId > 0 && entries.isSuccess && entries.data.length === 0 ? (
         <p className="empty-state">No stock in this location.</p>
       ) : null}

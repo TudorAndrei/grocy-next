@@ -27,6 +27,7 @@ function ProductsPage() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     return (products.data ?? [])
       .filter(
         (p) =>
@@ -70,7 +71,7 @@ function ProductsPage() {
         </span>
       </div>
       {products.isLoading ? <LoadingBlock label="Loading products…" /> : null}
-      {products.isError ? <ErrorBlock message={(products.error as Error).message} /> : null}
+      {products.isError ? <ErrorBlock message={products.error.message} /> : null}
       {products.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
           {search
@@ -98,6 +99,7 @@ function ProductsPage() {
               {visible.map((product) => {
                 const amount = amounts.get(product.id) ?? 0;
                 const min = product.min_stock_amount ?? 0;
+
                 return (
                   <tr key={product.id}>
                     <td className="stock-name">

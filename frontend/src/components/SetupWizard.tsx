@@ -18,22 +18,29 @@ export function SetupWizard() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+
     if (password.length < MIN_PASSWORD) {
       setError(`Password must have at least ${MIN_PASSWORD} characters.`);
+
       return;
     }
+
     if (password !== confirm) {
       setError("The passwords do not match.");
+
       return;
     }
+
     setError(null);
     setBusy(true);
+
     try {
       const result = await api.runSetup({
         setup_token: token.trim(),
         username: username.trim(),
         password,
       });
+
       await signInWithKey(queryClient, result.api_key);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Setup failed.");

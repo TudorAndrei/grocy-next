@@ -38,21 +38,27 @@ function TodayPage() {
   const queryClient = useQueryClient();
 
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
+
   const volatile = useQuery({
     queryKey: queryKeys.stockVolatile,
     queryFn: () => api.getStockVolatile(),
   });
+
   const chores = useQuery({ queryKey: queryKeys.chores, queryFn: api.listChores });
   const tasks = useQuery({ queryKey: queryKeys.tasks, queryFn: () => api.listTasks(false) });
+
   const proposals = useQuery({
     queryKey: queryKeys.proposalsPending,
     queryFn: api.listPendingProposals,
   });
+
   const log = useQuery({ queryKey: queryKeys.stockLog, queryFn: api.listStockLog });
+
   const shopping = useQuery({
     queryKey: queryKeys.shopping(1),
     queryFn: () => api.getShoppingList(1),
   });
+
   const me = useQuery({ queryKey: queryKeys.currentUser, queryFn: api.getCurrentUser });
   const toBuy = (shopping.data?.items ?? []).filter((item) => !item.done);
 
@@ -76,6 +82,7 @@ function TodayPage() {
   const low = useMemo(() => {
     return (volatile.data?.missing_products ?? []).map((missing) => {
       const product = catalog.product(missing.id);
+
       return {
         id: missing.id,
         name: missing.name,
@@ -88,8 +95,10 @@ function TodayPage() {
 
   const due = useMemo<DueItem[]>(() => {
     const items: DueItem[] = [];
+
     for (const entry of stock.data ?? []) {
       const days = daysUntil(entry.best_before_date);
+
       if (days === null || days > DUE_WINDOW_DAYS || entry.amount <= 0) continue;
       items.push({
         key: `s${entry.product_id}`,
@@ -105,8 +114,10 @@ function TodayPage() {
         },
       });
     }
+
     for (const chore of chores.data ?? []) {
       const days = daysUntil(chore.next_estimated_execution_time);
+
       if (days === null || days > DUE_WINDOW_DAYS) continue;
       items.push({
         key: `c${chore.id}`,
@@ -121,8 +132,10 @@ function TodayPage() {
         },
       });
     }
+
     for (const task of tasks.data ?? []) {
       const days = daysUntil(task.due_date);
+
       if (days === null || days > DUE_WINDOW_DAYS) continue;
       items.push({
         key: `t${task.id}`,
@@ -137,6 +150,7 @@ function TodayPage() {
         },
       });
     }
+
     return items.sort((a, b) => a.days - b.days);
   }, [stock.data, chores.data, tasks.data, catalog, consume, executeChore, completeTask]);
 
@@ -200,7 +214,7 @@ function TodayPage() {
         }
       />
 
-      {stock.isError ? <ErrorBlock message={(stock.error as Error).message} /> : null}
+      {stock.isError ? <ErrorBlock message={stock.error.message} /> : null}
 
       <div className="today">
         <div className="today-main">
@@ -320,6 +334,7 @@ function TodayPage() {
               <ul className="review-rows">
                 {(proposals.data ?? []).slice(0, 3).map((proposal) => {
                   const fromAgent = proposal.payload.origin !== "web";
+
                   return (
                     <li key={proposal.id}>
                       <span className="tag" data-domain={fromAgent ? "agent" : undefined}>

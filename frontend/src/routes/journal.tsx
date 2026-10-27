@@ -7,7 +7,6 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { api } from "@/lib/api";
 import { formatAmount } from "@/lib/format";
 import { productsQuery, stockJournalQuery } from "@/hooks/queries";
-import type { StockLogRow } from "@/lib/types";
 
 export const Route = createFileRoute("/journal")({
   component: JournalPage,
@@ -21,24 +20,22 @@ function JournalPage() {
   const products = useQuery(productsQuery());
 
   const productName = useMemo(() => {
-    const map = new Map(
-      (products.data ?? []).map((p) => [p.id, p.name] as const),
-    );
+    const map = new Map((products.data ?? []).map((p) => [p.id, p.name] as const));
+
     return (id: number) => map.get(id) ?? `Product #${id}`;
   }, [products.data]);
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = (journal.data ?? []) as StockLogRow[];
+    const list = journal.data ?? [];
+
     if (!q) return list;
-    return list.filter((row) =>
-      productName(row.product_id).toLowerCase().includes(q),
-    );
+
+    return list.filter((row) => productName(row.product_id).toLowerCase().includes(q));
   }, [journal.data, search, productName]);
 
   const undo = useMutation({
-    mutationFn: (bookingId: number) =>
-      api.action(`/api/stock/bookings/${bookingId}/undo`),
+    mutationFn: (bookingId: number) => api.action(`/api/stock/bookings/${bookingId}/undo`),
     onSuccess: async () => {
       await client.invalidateQueries();
     },
@@ -54,7 +51,9 @@ function JournalPage() {
       />
       <div className="toolbar">
         <div className="search-field">
-          <label className="sr-only" htmlFor="journal-search">Search journal</label>
+          <label className="sr-only" htmlFor="journal-search">
+            Search journal
+          </label>
           <input
             id="journal-search"
             type="search"
@@ -64,22 +63,24 @@ function JournalPage() {
           />
         </div>
         <div className="field" style={{ maxWidth: "8rem" }}>
-          <label className="sr-only" htmlFor="journal-limit">Row limit</label>
+          <label className="sr-only" htmlFor="journal-limit">
+            Row limit
+          </label>
           <select
             id="journal-limit"
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
           >
             {[50, 150, 300].map((n) => (
-              <option key={n} value={n}>{n} rows</option>
+              <option key={n} value={n}>
+                {n} rows
+              </option>
             ))}
           </select>
         </div>
       </div>
       {error ? (
-        <ErrorBlock
-          message={error instanceof Error ? error.message : "Could not load journal."}
-        />
+        <ErrorBlock message={error instanceof Error ? error.message : "Could not load journal."} />
       ) : null}
       {journal.isLoading ? <LoadingBlock label="Loading journal…" /> : null}
       {journal.isSuccess && rows.length === 0 ? (
@@ -101,9 +102,7 @@ function JournalPage() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td className="muted">
-                      {row.row_created_timestamp ?? "—"}
-                    </td>
+                    <td className="muted">{row.row_created_timestamp ?? "—"}</td>
                     <td>
                       <Link
                         to="/products/$productId"

@@ -36,20 +36,25 @@ export function parseCommand(text: string): Parsed {
   let verb: Verb | null = null;
   const first = words[0]?.toLowerCase();
   const match = VERBS.find((v) => first && v.words.includes(first));
+
   if (match && words.length > 0) {
     verb = match.id;
     words.shift();
   }
+
   let amount: number | null = null;
   const maybe = Number(words[0]?.replace(",", "."));
+
   if (words.length > 0 && Number.isFinite(maybe) && maybe > 0) {
     amount = maybe;
     words.shift();
   }
+
   return { verb, amount, query: words.join(" ").toLowerCase() };
 }
 
 type CommandApi = { open: (verb?: Verb) => void };
+
 const CommandContext = createContext<CommandApi>({ open: () => {} });
 
 export function useCommandBar(): CommandApi {
@@ -72,15 +77,19 @@ export function CommandProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const dialog = dialogRef.current;
+
     if (!dialog) return;
+
     if (isOpen && !dialog.open) dialog.showModal();
+
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
 
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
+      const target = e.target instanceof Element ? e.target : null;
       const typing = target?.closest("input, textarea, select, [contenteditable='true']") != null;
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         open();
@@ -89,7 +98,9 @@ export function CommandProvider({ children }: { children: ReactNode }) {
         open();
       }
     }
+
     window.addEventListener("keydown", onKey);
+
     return () => window.removeEventListener("keydown", onKey);
   }, [open, isOpen]);
 
@@ -132,6 +143,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
 
   const purchase = useStockMove("purchase");
   const consume = useStockMove("consume");
+
   const addToList = useMutation({
     mutationFn: (productId: number) => api.addShoppingProduct(productId, amount),
     onSuccess: async (_data, productId) => {
@@ -154,6 +166,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
 
   const results = useMemo<Result[]>(() => {
     const q = parsed.query;
+
     const products: Result[] = catalog.products
       .filter(
         (p) =>
@@ -163,7 +176,9 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
       )
       .slice(0, 8)
       .map((p) => ({ kind: "product", key: `p${p.id}`, productId: p.id }));
+
     if (verb !== "find") return products;
+
     const pages: Result[] = NAV_GROUPS.flatMap((group) => group.links)
       .filter((link) => q && link.label.toLowerCase().includes(q))
       .map((link) => ({
@@ -173,10 +188,9 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
         to: link.to,
         icon: link.icon,
       }));
+
     return [...pages, ...products];
   }, [catalog.products, parsed.query, verb]);
-
-  useEffect(() => setActive(0), [text, tabVerb]);
 
   useEffect(() => {
     listRef.current
@@ -186,12 +200,16 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
 
   function run(result: Result | undefined) {
     if (!result) return;
+
     if (result.kind === "page") {
       void navigate({ to: result.to });
       onClose();
+
       return;
     }
+
     const productId = result.productId;
+
     if (verb === "find") {
       void navigate({ to: "/products/$productId", params: { productId: String(productId) } });
     } else if (verb === "purchase") {
@@ -201,6 +219,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
     } else {
       addToList.mutate(productId);
     }
+
     onClose();
   }
 
@@ -226,7 +245,10 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
         <input
           autoFocus
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            setActive(0);
+          }}
           onKeyDown={onKeyDown}
           placeholder="buy 2 milk · use oats · list coffee · or search"
           aria-label="Command"
@@ -248,6 +270,8 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
             aria-pressed={verb === v.id}
             onClick={() => {
               setTabVerb(v.id);
+              setActive(0);
+
               if (parsed.verb) setText(text.trim().split(/\s+/).slice(1).join(" "));
             }}
           >

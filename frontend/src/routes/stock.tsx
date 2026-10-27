@@ -35,6 +35,7 @@ function StockPage() {
   const [locationId, setLocationId] = useState("");
 
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
+
   const volatile = useQuery({
     queryKey: queryKeys.stockVolatile,
     queryFn: () => api.getStockVolatile(),
@@ -51,7 +52,9 @@ function StockPage() {
       bestBefore: item.best_before_date ?? null,
       locationId: item.product.location_id ?? null,
     }));
+
     const present = new Set(out.map((row) => row.productId));
+
     for (const missing of volatile.data?.missing_products ?? []) {
       if (present.has(missing.id)) continue;
       const product = catalog.product(missing.id);
@@ -65,17 +68,22 @@ function StockPage() {
         locationId: product?.location_id ?? null,
       });
     }
+
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }, [stock.data, volatile.data, catalog]);
 
   const isDue = (row: Row) => {
     const days = daysUntil(row.bestBefore);
+
     return days !== null && days >= 0 && days <= 5;
   };
+
   const isExpired = (row: Row) => {
     const days = daysUntil(row.bestBefore);
+
     return days !== null && days < 0;
   };
+
   const isLow = (row: Row) => row.min > 0 && row.amount < row.min;
 
   const anyOpened = rows.some((row) => row.opened > 0);
@@ -89,10 +97,14 @@ function StockPage() {
 
   const visible = rows.filter((row) => {
     if (filter === "due" && !isDue(row)) return false;
+
     if (filter === "expired" && !isExpired(row)) return false;
+
     if (filter === "low" && !isLow(row)) return false;
+
     if (locationId && String(row.locationId) !== locationId) return false;
     const q = search.trim().toLowerCase();
+
     return !q || row.name.toLowerCase().includes(q);
   });
 
@@ -169,7 +181,7 @@ function StockPage() {
       </div>
 
       {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
-      {stock.isError ? <ErrorBlock message={(stock.error as Error).message} /> : null}
+      {stock.isError ? <ErrorBlock message={stock.error.message} /> : null}
 
       {stock.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
@@ -203,6 +215,7 @@ function StockPage() {
             <tbody>
               {visible.map((row) => {
                 const tone = dueTone(row.bestBefore);
+
                 return (
                   <tr key={row.productId} data-low={isLow(row) ? "true" : undefined}>
                     <td className="stock-name">

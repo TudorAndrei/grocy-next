@@ -19,19 +19,23 @@ function RootLayout() {
     queryFn: api.setupStatus,
     staleTime: Infinity,
   });
+
   const needsSetup = setup.data?.needs_setup;
+
   const user = useQuery({
     ...currentUserQuery(),
     enabled: needsSetup === false,
-    retry: (count, error) =>
-      !(error instanceof ApiError && error.status === 401) && count < 2,
+    retry: (count, error) => !(error instanceof ApiError && error.status === 401) && count < 2,
   });
+
   if (needsSetup) {
     return <SetupWizard />;
   }
+
   if (user.error instanceof ApiError && user.error.status === 401) {
     return <LoginPage />;
   }
+
   if (setup.isPending || (needsSetup === false && user.isPending)) {
     return (
       <main id="main-content" className="setup-page">
@@ -39,6 +43,7 @@ function RootLayout() {
       </main>
     );
   }
+
   return (
     <Toaster>
       <CommandProvider>

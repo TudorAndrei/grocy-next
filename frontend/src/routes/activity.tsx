@@ -56,7 +56,7 @@ function ActivityPage() {
         </label>
       </div>
       {log.isLoading ? <LoadingBlock label="Loading activity…" /> : null}
-      {log.isError ? <ErrorBlock message={(log.error as Error).message} /> : null}
+      {log.isError ? <ErrorBlock message={log.error.message} /> : null}
       {log.isSuccess && entries.length === 0 ? (
         <p className="empty-state">No bookings yet. Purchases, consumes and moves appear here.</p>
       ) : null}

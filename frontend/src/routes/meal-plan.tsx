@@ -18,6 +18,7 @@ function toDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
+
   return `${y}-${m}-${d}`;
 }
 
@@ -27,12 +28,14 @@ function startOfWeek(date: Date): Date {
   const day = monday.getDay();
   const offset = day === 0 ? -6 : 1 - day;
   monday.setDate(monday.getDate() + offset);
+
   return monday;
 }
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
+
   return next;
 }
 
@@ -43,12 +46,16 @@ function mealLabel(
 ): string {
   if (row.type === "recipe") {
     const recipe = recipes?.find((r) => r.id === row.recipe_id);
+
     return recipe?.name ?? `Recipe #${row.recipe_id ?? "?"}`;
   }
+
   if (row.type === "product") {
     const product = products?.find((p) => p.id === row.product_id);
+
     return product?.name ?? `Product #${row.product_id ?? "?"}`;
   }
+
   return String(row.note ?? "Note");
 }
 
@@ -62,59 +69,56 @@ function MealPlanPage() {
 
   const action = useMutation({
     mutationFn: ({ id, kind }: { id: number; kind: string }) =>
-      api.action(
-        `/api/v2/meal-plan/${id}/${kind}`,
-        kind === "shopping-list" ? {} : undefined,
-      ),
+      api.action(`/api/v2/meal-plan/${id}/${kind}`, kind === "shopping-list" ? {} : undefined),
     onSuccess: async () => {
       await client.invalidateQueries();
     },
   });
 
   const days = useMemo(
-    () => WEEKDAY_LABELS.map((label, index) => {
-      const date = addDays(weekStart, index);
-      return { label, date, key: toDateKey(date) };
-    }),
+    () =>
+      WEEKDAY_LABELS.map((label, index) => {
+        const date = addDays(weekStart, index);
+
+        return { label, date, key: toDateKey(date) };
+      }),
     [weekStart],
   );
 
   const byDay = useMemo(() => {
     const map = new Map<string, EntityRow[]>();
+
     for (const day of days) map.set(day.key, []);
+
     for (const row of meals.data ?? []) {
       const key = String(row.day ?? "").slice(0, 10);
       const list = map.get(key);
+
       if (!list) continue;
       list.push(row);
     }
+
     for (const list of map.values()) {
       list.sort((a, b) => {
-        const sectionA =
-          sections.data?.find((s) => s.id === a.section_id)?.sort_number ?? 0;
-        const sectionB =
-          sections.data?.find((s) => s.id === b.section_id)?.sort_number ?? 0;
+        const sectionA = sections.data?.find((s) => s.id === a.section_id)?.sort_number ?? 0;
+
+        const sectionB = sections.data?.find((s) => s.id === b.section_id)?.sort_number ?? 0;
+
         return Number(sectionA) - Number(sectionB) || a.id - b.id;
       });
     }
+
     return map;
   }, [meals.data, days, sections.data]);
 
-  const todayKey = toDateKey(new Date());
+  const [todayKey] = useState(() => toDateKey(new Date()));
   const weekLabel = `${days[0].key} – ${days[6].key}`;
-  const loading =
-    meals.isLoading ||
-    sections.isLoading ||
-    recipes.isLoading ||
-    products.isLoading;
-  const error =
-    meals.error ||
-    sections.error ||
-    recipes.error ||
-    products.error ||
-    action.error;
 
-  const sectionName = (id: unknown) =>
+  const loading = meals.isLoading || sections.isLoading || recipes.isLoading || products.isLoading;
+
+  const error = meals.error || sections.error || recipes.error || products.error || action.error;
+
+  const sectionName = (id: EntityRow["section_id"]) =>
     sections.data?.find((s) => s.id === id)?.name;
 
   return (
@@ -157,6 +161,7 @@ function MealPlanPage() {
         <div className="meal-week" role="list">
           {days.map((day) => {
             const entries = byDay.get(day.key) ?? [];
+
             return (
               <section
                 key={day.key}
@@ -174,19 +179,14 @@ function MealPlanPage() {
                   <ul className="meal-day-list">
                     {entries.map((row) => {
                       const section = sectionName(row.section_id);
+
                       return (
                         <li key={row.id} className="meal-entry">
                           <div>
                             {section ? (
-                              <p className="muted meal-entry-section">
-                                {String(section)}
-                              </p>
+                              <p className="muted meal-entry-section">{String(section)}</p>
                             ) : null}
-                            <p
-                              className={
-                                row.done ? "completed" : undefined
-                              }
-                            >
+                            <p className={row.done ? "completed" : undefined}>
                               {mealLabel(row, recipes.data, products.data)}
                             </p>
                             <p className="muted">
@@ -259,9 +259,7 @@ function MealPlanPage() {
               <button
                 className="btn btn-ghost"
                 disabled={action.isPending}
-                onClick={() =>
-                  action.mutate({ id: row.id, kind: "shopping-list" })
-                }
+                onClick={() => action.mutate({ id: row.id, kind: "shopping-list" })}
               >
                 Add missing ingredients
               </button>

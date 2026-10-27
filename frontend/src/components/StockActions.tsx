@@ -18,6 +18,7 @@ type StockActionsProps = {
 export function StockActions({ productId, initialMove = "purchase" }: StockActionsProps) {
   const catalog = useCatalog();
   const product = catalog.product(productId);
+
   const stock = useQuery({
     queryKey: queryKeys.stock(productId),
     queryFn: () => api.getStockProduct(productId),
@@ -46,8 +47,10 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+
     if (!(value > 0)) return;
     const location = locationValue ? Number(locationValue) : null;
+
     if (move === "purchase") {
       purchase.mutate({
         productId,
@@ -71,7 +74,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
         <span>{min > 0 ? `minimum ${catalog.amountText(productId, min)}` : "no minimum set"}</span>
       </h2>
       {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
-      {stock.isError ? <ErrorBlock message={(stock.error as Error).message} /> : null}
+      {stock.isError ? <ErrorBlock message={stock.error.message} /> : null}
       <div className="stock-level">
         <div className="stock-figure">
           <span className="stock-amount">{formatAmount(onHand)}</span>
