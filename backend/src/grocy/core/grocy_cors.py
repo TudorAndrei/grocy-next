@@ -20,6 +20,12 @@ class GrocyCorsHeadersMiddleware:
         async def send_with_cors(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
+                if not scope["path"].startswith("/api/v2/") and scope["path"] != "/api/health":
+                    headers = [
+                        (name, value)
+                        for name, value in headers
+                        if not name.lower().startswith(b"access-control-")
+                    ]
                 present = {name.lower() for name, _ in headers}
                 for name, value in _GROCY_CORS:
                     if name not in present:

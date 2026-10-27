@@ -10,8 +10,8 @@ from sqlalchemy import or_, select, text, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from grocy.compatibility.auth import select_key
-from grocy.compatibility.lessql import query_parameters
+from grocy.compatibility.auth import select_key, select_session
+from grocy.compatibility.lessql import cookie_parameters, query_parameters
 from grocy.compatibility.php import loose_equals, php_error
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
@@ -103,6 +103,21 @@ async def authenticate_request(
 
 
 async def authenticate_release_request(request: Request, session: AsyncSession) -> Actor:
+    try:
+        return await authenticate_release_key(request, session)
+    except UnauthorizedError:
+        header = b"; ".join(
+            value for name, value in request.scope["headers"] if name.lower() == b"cookie"
+        )
+        selected, user_id = await select_session(
+            session, cookie_parameters(header).get("grocy_session")
+        )
+        if selected and user_id is not None:
+            return await actor_for_user(session, user_id)
+        raise
+
+
+async def authenticate_release_key(request: Request, session: AsyncSession) -> Actor:
     settings = get_settings()
     header_name = settings.api_key_header.lower().encode()
     header = b", ".join(

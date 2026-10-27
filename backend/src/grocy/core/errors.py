@@ -43,7 +43,7 @@ async def grocy_error_handler(_request: Request, exc: Exception) -> Response:
         and not _request.url.path.startswith("/api/v2/")
         and _request.url.path != "/api/health"
     ):
-        return Response(status_code=401)
+        return Response(status_code=401, headers={"Content-Type": "text/html; charset=UTF-8"})
     content: dict[str, Any] = {"error_message": exc.message}
     if exc.code is not None:
         content["error_code"] = exc.code

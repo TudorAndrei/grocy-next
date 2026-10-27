@@ -2054,6 +2054,9 @@ def test_reference_native_system_config_exposes_current_printer_and_url_settings
         ("GET", "/api/missing-route", "http://localhost:5173"),
         ("PATCH", "/api/system/info", "https://example.invalid"),
         ("POST", "/api/system/info", "https://example.invalid"),
+        ("PATCH", "/api/objects/products", "https://example.invalid"),
+        ("PATCH", "/api/objects/products/1", "https://example.invalid"),
+        ("PATCH", "/api/files/productpictures/aW1hZ2U=", "https://example.invalid"),
         ("GET", "/api/system/info", "http://localhost:5173"),
     ],
 )

@@ -5793,8 +5793,14 @@ def test_native_development_output_and_authentication_bypass(
     ids=lambda value: value if isinstance(value, str) and "{key}" not in value else "",
 )
 def test_native_session_cookie_authentication_and_use_time(
-    api, execute_sql, php_http_settings, case, suffix, cookie, valid
+    api, execute_sql, request, case, suffix, cookie, valid
 ):
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    # PHP warnings describe the reference interpreter. Python still checks each
+    # session, cookie, expiry, and persistence rule below without that runtime.
+    php_http_settings = (
+        request.getfixturevalue("php_http_settings") if reference else {"startup_output": b""}
+    )
     token = uuid4().hex
     hex_key = (token.encode() + suffix).hex()
     expiry = (

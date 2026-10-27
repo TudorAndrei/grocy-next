@@ -82,6 +82,23 @@ def query_parameters(query_string: bytes) -> dict[Any, Any]:
     return parameters
 
 
+def cookie_parameters(header: bytes) -> dict[Any, Any]:
+    parameters: dict[Any, Any] = {}
+    for count, pair in enumerate(header.split(b";")):
+        if count >= 1000:
+            break
+        name, _, value = pair.lstrip(b" \t").partition(b"=")
+        name = name.decode("utf-8", "surrogateescape")
+        base = name.split("[", 1)[0].replace(" ", "_").replace(".", "_")
+        if name.count("[") > 64:
+            parameters.pop(base, None)
+            continue
+        if "[" not in name and base in parameters:
+            continue
+        _register(parameters, name, unquote_to_bytes(value).decode("utf-8", "surrogateescape"))
+    return parameters
+
+
 def filtered(parameters: dict[Any, Any]) -> bool:
     return any(key in parameters for key in _QUERY_KEYS)
 

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
+from starlette.exceptions import HTTPException
 
 from grocy import __version__
 from grocy.api.compatibility import router as compatibility_router
@@ -20,6 +21,7 @@ from grocy.compatibility.runtime import PythonRuntime
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, grocy_error_handler
 from grocy.core.grocy_cors import GrocyCorsHeadersMiddleware
+from grocy.core.legacy_http import LegacyHttpMiddleware, legacy_http_error
 from grocy.db.models.catalog import Location
 from grocy.db.seed import has_ever_had_users, seed_if_empty
 from grocy.db.session import configure_sqlite, get_engine, get_session_factory, upgrade_schema
@@ -93,10 +95,14 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    if not settings.use_native_php:
+        app.add_middleware(LegacyHttpMiddleware)
     app.add_middleware(GrocyCorsHeadersMiddleware)
     if settings.use_native_php:
         app.add_middleware(NativeProtocol)
     app.add_exception_handler(GrocyError, grocy_error_handler)
+
+    app.add_exception_handler(HTTPException, legacy_http_error)
 
     @app.exception_handler(IntegrityError)
     async def integrity_error_handler(_request, _exc):
