@@ -215,7 +215,7 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Enamel Canister Shelf"**
+### Creative North Star: "The Enamel Canister Shelf"
 
 The app is a kitchen shelf of white enamel canisters with cobalt rims and black stencilled labels. Each product shows how full it is against its minimum, and each due item shows how many real days it has left. The cobalt rim is the shell of the whole app: the rail, the rule under each page title, the outline of every pill button, and the fill of every gauge. Inside that rim the ground is a warm off-white enamel and the data is black at full contrast.
 
@@ -224,6 +224,7 @@ Density is that of a working ledger, not a dashboard. Rows hold fixed furniture 
 The build refuses the grey admin template: there are no stat tiles, no teal accent, and no card grids of repeated numbers. Depth is flat; only things that float above the page carry a shadow.
 
 **Key Characteristics:**
+
 - Cobalt rail and cobalt rules on an enamel ground; black lettering for data.
 - Expanded 800-weight caps for labels only; normal-width Archivo for UI.
 - Pill controls with a 1.5px cobalt outline; 14px plates for containers.
@@ -236,22 +237,27 @@ The build refuses the grey admin template: there are no stat tiles, no teal acce
 A two-voice palette: one saturated cobalt for the shell against a warm enamel ground, plus four state inks that each come as ink, fill, and soft ground.
 
 ### Primary
+
 - **Cobalt Rim** (`cobalt`): the shell. Rail and mobile tab bar ground, page-title colour, the 3px rule under page titles and in the command bar, pill outlines, primary button fill, selected chip and segment fill, gauge rim and fill, checkbox accent, focus outline, selection colour.
 - **Deep Cobalt** (`cobalt-deep`): primary button hover, the ⌘K trigger well on the rail.
 - **Cobalt Wash** (`cobalt-soft`): hover ground for outline buttons, segments, recipe rows, "more" links, the selected command result, and the 3px input focus halo.
 - **Cobalt Hairline** (`cobalt-line`): outline of small buttons, hover border for inputs and chips, dashed border of empty states and of a gauge with no minimum, scrollbar thumb.
 
 ### Secondary (state inks)
+
 Each state has three tokens: an ink for text (passes on white and soft grounds), a fill for bars and gauges, and a soft ground for badges, tags, and notices.
+
 - **Tomato** (`tomato`, `tomato-fill`, `tomato-soft`): expired, below minimum, empty, errors, destructive actions, error toasts.
 - **Mustard** (`mustard`, `mustard-fill`, `mustard-soft`): due soon (5 days or less), proposal conflicts, shopping list preview pills.
 - **Green** (`green`, `green-fill`, `green-soft`): fresh (more than 5 days), OK badges, home-domain row dots.
 - **Violet** (`violet`, `violet-soft`): the agent. Agent tags, another user's API-key tag, changed values in a proposal diff.
 
 ### Tertiary (domain markers on cobalt)
+
 Light tints that read on the cobalt rail only: `mark-stock` (kitchen and stock), `mark-shopping`, `mark-home` (chores, tasks, batteries), `mark-agent` (review, activity), `mark-system` (settings). They colour nav icons; shopping and agent counts fill with their marker and carry `ink` text.
 
 ### Neutral
+
 - **White Enamel** (`enamel`): page ground; active nav item ground; gauge track; the "lid" fill of buttons inside the cobalt basket bar.
 - **Plate White** (`surface`): panels, inputs, outline buttons, chips, the command dialog.
 - **Sunk Enamel** (`surface-sunk`): table header row, command-bar footer, disabled controls.
@@ -262,6 +268,7 @@ Light tints that read on the cobalt rail only: `mark-stock` (kitchen and stock),
 - **Soft Line** (`line-soft`): row dividers, due-bar track, neutral tag ground.
 
 ### Named Rules
+
 **The Cobalt Rim Rule.** Cobalt is structure, not decoration: rail, rules, outlines, primary fill, gauge. It never fills a panel or a large area on the enamel ground.
 
 **The State Ink Rule.** Tomato, mustard, green, and violet only carry meaning (expired or low, due, fresh, agent). Text uses the ink token; bars use the fill token; grounds use the soft token. Never use a state colour as a brand accent.
@@ -278,6 +285,7 @@ Light tints that read on the cobalt rail only: `mark-stock` (kitchen and stock),
 **Character:** One variable family in two widths. Expanded heavy caps act as stencilled canister labels; the normal width is a plain, dense working grotesque. Tabular numerals are on for the whole body.
 
 ### Hierarchy
+
 - **Display** (800, wdth 125, clamp 24–32px, 1.05, +0.03em, uppercase, cobalt): page titles only, over a 3px cobalt rule. Balanced wrap.
 - **Numeral** (800, wdth 125, 44px, 1; 36px under 720px; cobalt): the on-hand amount on a product page, beside the large gauge.
 - **Headline** (800, wdth 125, 12px, +0.16em, uppercase, cobalt): panel heads. A trailing count or note in the head drops to 13px/500 normal width in `ink-2`.
@@ -289,6 +297,7 @@ Light tints that read on the cobalt rail only: `mark-stock` (kitchen and stock),
 - **Tag** (700, 11px, +0.06em, uppercase, normal width): actor tags (YOU, AGENT, User #n) and status tags.
 
 ### Named Rules
+
 **The Canister Label Rule.** Expanded (wdth 125) 800-weight type is only for names of things: the wordmark, page titles, panel heads, column heads, the stock numeral. Never set sentences, buttons, or values in the expanded cut.
 
 **The Ledger Rule.** Every number is tabular. Amounts are right-aligned and bold, with the unit in the same line beside the number (for example "400 g", "4 pcs"). Never round or invent a value to fill a column.
@@ -310,12 +319,14 @@ Light tints that read on the cobalt rail only: `mark-stock` (kitchen and stock),
 The system is flat. Panels sit on the enamel ground with a 1.5px `line` border and no shadow; hierarchy comes from the cobalt rail, the 3px rules, and tone (enamel, plate white, sunk enamel). Shadows appear only on surfaces that float above the page, and they are tinted cobalt or ink, never neutral grey.
 
 ### Shadow Vocabulary
+
 - **Command lift** (`box-shadow: 0 24px 60px rgb(16 37 94 / 0.32), 0 2px 6px rgb(16 37 94 / 0.12)`): the ⌘K dialog, over a cobalt backdrop at 42% with a 2px blur.
 - **Basket lift** (`box-shadow: 0 10px 28px rgb(16 37 94 / 0.28)`): the sticky shopping basket bar.
 - **Toast lift** (`box-shadow: 0 12px 30px rgb(16 19 24 / 0.28)`): toasts.
 - **Drawer edge** (`box-shadow: 12px 0 40px rgb(16 37 94 / 0.3)`): the open mobile rail.
 
 ### Named Rules
+
 **The Flat Enamel Rule.** Anything that lives in the page flow is flat. A shadow means "this floats and will go away": a dialog, a toast, a sticky bar, a drawer.
 
 ## Shapes
@@ -325,7 +336,9 @@ Two shapes do almost all the work: the pill and the plate. Controls (buttons, se
 ## Components
 
 ### Buttons
+
 Confident pills with a cobalt rim.
+
 - **Shape:** full pill (`rounded.pill`), 1.5px cobalt border, 38px minimum height.
 - **Primary:** cobalt fill, white text; hover deep cobalt.
 - **Outline (default):** plate white with cobalt text and rim; hover cobalt wash.
@@ -336,17 +349,21 @@ Confident pills with a cobalt rim.
 - **Inside the basket bar:** the primary inverts to an enamel lid with cobalt text.
 
 ### Segmented control
+
 A pill track with a 1.5px cobalt rim and 3px inner padding; segments are 13px/700 cobalt text, pressed segment fills cobalt with white text. Used for Purchase / Consume / Open and List / Shop modes.
 
 ### Chips
+
 - **Style:** plate white pill, 1.5px `line` border, 13px/600, with a count pill on `line-soft`.
 - **State:** hover `cobalt-line` border; pressed fills cobalt with white text and a translucent white count.
 
 ### Tags and badges
+
 - **Tag:** small 5px-radius label in tag type. Neutral on `line-soft`/`ink-2`; agent on `violet-soft`/`violet`; danger on `tomato-soft`/`tomato`. Actor tags read YOU or User #n only from the API key; the UI never guesses who booked.
 - **Badge:** pill with ok / warn / danger soft ground and ink text.
 
 ### Cards / Containers (panels)
+
 - **Corner Style:** plate (`rounded.plate`).
 - **Background:** plate white on enamel.
 - **Shadow Strategy:** none (see The Flat Enamel Rule).
@@ -354,6 +371,7 @@ A pill track with a 1.5px cobalt rim and 3px inner padding; segments are 13px/70
 - **Internal Padding:** head 14px 18px 12px, body 16px 18px 18px. The head is a cobalt headline label with an optional right-aligned count; a sub-section uses a label-type line with a soft top rule; a "more" link closes the panel in cobalt.
 
 ### Inputs / Fields
+
 - **Style:** plate white, 1.5px `line` border, field radius, 40px high; labels above in 13px/600 `ink-2`.
 - **Focus:** border turns cobalt with a 3px cobalt-wash halo; hover (unfocused) shows `cobalt-line`.
 - **Amount field:** value right-aligned and bold, unit printed inside the right edge in `ink-2`.
@@ -361,30 +379,38 @@ A pill track with a 1.5px cobalt rim and 3px inner padding; segments are 13px/70
 - **Global focus ring:** 2.5px cobalt outline at 2px offset for every other focusable element.
 
 ### Navigation
+
 - **Rail:** cobalt ground, wordmark in expanded 800 caps (white, with a spaced HOUSEHOLD sub-line in `#b4c1e8`), a deep-cobalt ⌘K trigger with a kbd hint, group labels in 10px expanded caps (`#a9b7e2`). Items are 15px/500 at `#dfe5f6` with a domain-coloured stroke icon; hover is a 8% white wash; the active item becomes an enamel plate with cobalt bold text and a cobalt icon. Counts sit at the right as small pills (shopping and agent in their marker colour).
 - **Mobile:** a 64px cobalt tab bar (Today, Stock, ⌘K, List, More); the active tab gets a 3px enamel notch at its top edge; counts float at the icon's corner. The full rail opens as a drawer from More.
 
 ### Canister Gauge (signature)
+
 A 14px pill canister with a 1.5px cobalt rim and enamel inside. The fill is the amount on a scale of twice the minimum, so the black minimum tick always sits at the centre. At or above minimum the fill is cobalt and the tick turns white; below minimum or empty the rim and fill turn tomato and the tick is black. A product without a minimum shows an empty dashed `cobalt-line` rim with "NO MIN" and no fill. On the product page the same gauge grows to 40px high with a 2px rim beside the 44px stock numeral. Fill width animates over 600ms.
 
 ### Due Bar (signature)
+
 A 10px bar on a `line-soft` track with a 72px right-aligned day count. Bar length is the real number of days left on one 14-day scale (minimum visible stub 3%). Tone: green above 5 days, mustard at 5 days or less, tomato when expired (the count also turns tomato and reads "Yesterday" or similar). Each due row has a 7px domain dot before the name.
 
 ### Command bar (⌘K)
+
 A 640px plate dialog 12vh from the top, with the command lift and a blurred cobalt backdrop. The input row is 18px text over a 3px cobalt rule; verb chips sit below; results are 8px-radius rows with a cobalt icon, bold name, and a hint that turns cobalt when selected (cobalt-wash ground). A sunk-enamel footer lists keys. Opens with a 220ms rise-and-scale.
 
 ### Toast with undo
+
 An ink pill-ish plate (12px radius) at the bottom right (full width above the tab bar on mobile) with white text, an outlined white Undo pill, and a close button. Errors switch the ground to tomato. Rises in over 280ms.
 
 ### Shopping check row
+
 A 56px row (68px in shop mode) with a 24px (30px) cobalt-rimmed check box that fills cobalt and scales to 0.94 when checked; the name and amount go faint with a 1.5px strike-through.
 
 ### Motion
+
 One easing for everything: `cubic-bezier(0.16, 1, 0.3, 1)`. State transitions run 160ms; check and drawer 180–280ms; gauge fill 600ms. Reduced-motion collapses all durations to 1ms.
 
 ## Do's and Don'ts
 
-### Do:
+### Do
+
 - **Do** put a 3px cobalt rule under every page title and keep the title in expanded 800 caps.
 - **Do** show every stocked product with the canister gauge on the 2× minimum scale, tick at the minimum; show "no min" with a dashed rim when there is no minimum.
 - **Do** draw every best-before or due item on the same 14-day due bar, with the day count beside it.
@@ -393,7 +419,8 @@ One easing for everything: `cubic-bezier(0.16, 1, 0.3, 1)`. State transitions ru
 - **Do** use pills (1.5px cobalt rim) for controls and 14px plates with 1.5px `line` borders for containers.
 - **Do** keep data in `ink`; use `ink-2` and `ink-3` only for labels, meta, and inactive states.
 
-### Don't:
+### Don't
+
 - **Don't** build stat tiles or rows of repeated big-number cards; put a count in the panel head instead.
 - **Don't** introduce a teal or second brand accent; cobalt is the only shell colour.
 - **Don't** use a state ink (tomato, mustard, green, violet) for decoration or emphasis without a state behind it.

@@ -1,0 +1,14 @@
+[global]
+# Keep the existing long paragraphs in project documentation.
+disable = ["MD013"]
+exclude = [
+  "backend/src/grocy/_vendor/**",
+  "frontend/tools/oxlint/anti-slop/**",
+  "**/.agents/**",
+  "**/.claude/**",
+  "**/.impeccable/**",
+]
+
+[MD025]
+# DESIGN.md has YAML metadata and one visible title.
+front-matter-title = ""
