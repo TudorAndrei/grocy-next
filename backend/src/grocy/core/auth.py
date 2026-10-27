@@ -10,6 +10,8 @@ from sqlalchemy import or_, select, text, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.auth import select_key
+from grocy.compatibility.lessql import query_parameters
 from grocy.compatibility.php import loose_equals, php_error
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
@@ -71,6 +73,8 @@ async def authenticate_request(
         and request.url.path != "/api/health"
     ):
         return await authenticate_native_request(request, session)
+    if not request.url.path.startswith("/api/v2/") and request.url.path != "/api/health":
+        return await authenticate_release_request(request, session)
     key = grocy_api_key or request.headers.get(settings.api_key_header)
     calendar_secret = (
         request.query_params.get("secret") if request.url.path == "/api/calendar/ical" else None
@@ -95,6 +99,51 @@ async def authenticate_request(
         except UnauthorizedError:
             continue
         return actor
+    raise UnauthorizedError("Invalid API key")
+
+
+async def authenticate_release_request(request: Request, session: AsyncSession) -> Actor:
+    settings = get_settings()
+    header_name = settings.api_key_header.lower().encode()
+    header = b", ".join(
+        value.strip(b" \t")
+        for name, value in request.scope["headers"]
+        if name.lower() == header_name
+    )
+    parameters = query_parameters(request.scope.get("query_string", b""))
+    candidates = [(header, "default"), (parameters.get(settings.api_key_header), "default")]
+    if request.url.path == "/api/calendar/ical":
+        candidates.append((parameters.get("secret"), "special-purpose-calendar-ical"))
+    for candidate, kind in candidates:
+        selected, user_id = await select_key(session, candidate, kind)
+        if selected:
+            if user_id is None:
+                raise _MissingKeyUser("Invalid API key")
+            return await actor_for_user(session, user_id)
+        # Extension keys retain their own expiry and scope rules. Decode raw
+        # headers as UTF-8 only, so a byte key cannot select a different key.
+        if isinstance(candidate, bytes):
+            try:
+                candidate = candidate.decode()
+            except UnicodeDecodeError:
+                continue
+        if isinstance(candidate, str) and candidate not in {"", "0"}:
+            try:
+                candidate.encode()
+            except UnicodeEncodeError:
+                continue
+            try:
+                return await authenticate_key(
+                    session,
+                    candidate,
+                    key_type="calendar"
+                    if kind == "special-purpose-calendar-ical"
+                    else "grocy-next",
+                )
+            except _MissingKeyUser:
+                raise
+            except UnauthorizedError:
+                pass
     raise UnauthorizedError("Invalid API key")
 
 

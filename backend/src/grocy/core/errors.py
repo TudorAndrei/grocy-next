@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
 
@@ -35,8 +35,15 @@ class ConflictError(GrocyError):
         super().__init__(message, status_code=409, code="conflict")
 
 
-async def grocy_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+async def grocy_error_handler(_request: Request, exc: Exception) -> Response:
     assert isinstance(exc, GrocyError)
+    if (
+        isinstance(exc, UnauthorizedError)
+        and _request.url.path.startswith("/api/")
+        and not _request.url.path.startswith("/api/v2/")
+        and _request.url.path != "/api/health"
+    ):
+        return Response(status_code=401)
     content: dict[str, Any] = {"error_message": exc.message}
     if exc.code is not None:
         content["error_code"] = exc.code
