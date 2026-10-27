@@ -29,8 +29,15 @@ The current repair work covers these confirmed differences:
 - Permission replacement preserves the legacy delete and batch failure order.
 - Custom field writes preserve earlier successful values when a later field fails. Field reads preserve numeric name and object-key comparison rules.
 - Numeric settings keys retain the legacy distinction between a full settings response and a single-setting response.
+- Recipe copy, consumption, and shopping writes preserve the checked transaction and partial failure rules.
+- Barcode lookup supports [Python plugins](python-barcode-plugins.md), image downloads, and the legacy write order.
+- File responses use content-based MIME types and preserve the checked stream and header rules.
+- API key and session checks preserve the checked expiry, byte value, credential order, and use-record rules.
+- HEAD, OPTIONS, method errors, and CORS headers use the legacy API response rules.
+- User profile errors and self-edit ID checks follow the checked legacy rules. The web profile form retains the saved photo.
+- `GROCY_DEFAULT_USER_SETTINGS` supplies Python configuration defaults. Saved values have priority, and recipe views use the same defaults.
 
-Full Python parity is not complete. Open work includes further stock argument and date rules, user profile errors, barcode plugins, image output, printer errors, HTTP details, configuration equivalents, and web form options. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes exact image output, further printer transport errors, configuration and authentication options, base paths, mode-specific databases, and web feature flags and form options. Test results must identify the runtime and selected cases.
 
 ## Verification
 

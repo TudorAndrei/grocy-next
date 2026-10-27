@@ -5328,6 +5328,37 @@ def runtime_configuration(api, native_data_directory):
         api.options("/api/system/info", follow_redirects=False)
 
 
+@pytest.fixture
+def configuration_values(api, runtime_configuration, monkeypatch):
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+
+    def php_value(value):
+        encoded = base64.b64encode(json.dumps(value).encode()).decode()
+        return f"json_decode(base64_decode('{encoded}'), true)"
+
+    def configure(*, settings=None, user_defaults=None):
+        settings, user_defaults = settings or {}, user_defaults or {}
+        if reference:
+            runtime_configuration(
+                "".join(
+                    f"Setting({php_value(key)}, {php_value(value)});"
+                    for key, value in settings.items()
+                )
+                + "".join(
+                    f"DefaultUserSetting({php_value(key)}, {php_value(value)});"
+                    for key, value in user_defaults.items()
+                )
+            )
+        else:
+            for key, value in settings.items():
+                monkeypatch.setattr(get_settings(), key.lower(), value)
+            monkeypatch.setattr(get_settings(), "default_user_settings", user_defaults)
+
+    return configure
+
+
 @pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
 @pytest.mark.parametrize("mode", ["production", "dev"])
 def test_native_cache_change_redirects_before_authentication(
@@ -5478,12 +5509,14 @@ def test_native_mode_reads_and_writes_its_own_database(
         path.unlink(missing_ok=True)
 
 
-def test_native_configuration_defaults_and_saved_setting_precedence(api, runtime_configuration):
-    runtime_configuration(
-        "DefaultUserSetting('stock_due_soon_days', 37);"
-        "DefaultUserSetting('stock_decimal_places_amounts', 2);"
-        "DefaultUserSetting('native_nested_default', ['key' => [1, true, null]]);"
-        "Setting('CURRENCY', 'EUR');"
+def test_native_configuration_defaults_and_saved_setting_precedence(api, configuration_values):
+    configuration_values(
+        settings={"CURRENCY": "EUR"},
+        user_defaults={
+            "stock_due_soon_days": 37,
+            "stock_decimal_places_amounts": 2,
+            "native_nested_default": {"key": [1, True, None]},
+        },
     )
     settings = api.get("/api/user/settings")
     assert settings.status_code == 200, settings.text
@@ -5498,11 +5531,11 @@ def test_native_configuration_defaults_and_saved_setting_precedence(api, runtime
     finally:
         assert api.delete(path).status_code == 204
     assert api.get(path).json() == {"value": 2}
-    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 4);")
+    configuration_values(user_defaults={"stock_due_soon_days": 4})
     assert api.get("/api/user/settings/stock_due_soon_days").json() == {"value": 4}
 
 
-def test_native_configured_due_days_reach_recipe_sql(api, catalog, runtime_configuration):
+def test_native_configured_due_days_reach_recipe_sql(api, catalog, configuration_values):
     from datetime import date
 
     product, unit, *_ = catalog
@@ -5515,9 +5548,9 @@ def test_native_configured_due_days_reach_recipe_sql(api, catalog, runtime_confi
         ).status_code
         == 200
     )
-    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 37);")
+    configuration_values(user_defaults={"stock_due_soon_days": 37})
     assert rows(api, "recipes_pos_resolved", recipe_id=recipe)[0]["due_score"] == 1
-    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 4);")
+    configuration_values(user_defaults={"stock_due_soon_days": 4})
     assert rows(api, "recipes_pos_resolved", recipe_id=recipe)[0]["due_score"] == 0
 
 

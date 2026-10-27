@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from grocy.compatibility import client_defaults
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GROCY_", env_file=".env", extra="ignore")
@@ -18,6 +20,7 @@ class Settings(BaseSettings):
     base_url: str = "/"
     disable_url_rewriting: bool | str = False
     default_permissions: list[str] = ["ADMIN"]
+    default_user_settings: dict[str, Any] = {}
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
     database_busy_timeout_ms: int = 5000
@@ -93,6 +96,9 @@ class Settings(BaseSettings):
                     value = value.rstrip("\r\n")
                     values[name] = {"true": True, "false": False}.get(value.lower(), value)
         return values
+
+    def user_defaults(self) -> dict[str, Any]:
+        return {**client_defaults()["user_settings"], **self.default_user_settings}
 
     def feature_flags(self) -> dict[str, bool | str]:
         flags = {

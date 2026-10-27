@@ -17,6 +17,8 @@ Use `GROCY_` environment variables or `.env` for configuration. See [.env.exampl
 
 Use [Python barcode plugins](../docs/python-barcode-plugins.md) for custom lookup services.
 
+Set `GROCY_DEFAULT_USER_SETTINGS` to a JSON object to change the user defaults. For example, `GROCY_DEFAULT_USER_SETTINGS='{"stock_due_soon_days":14}'` sets the default due window to 14 days. Saved user values have priority. Delete a saved value to use the configured default again. These defaults also apply to recipe stock checks.
+
 File type detection uses libmagic. The release image includes this data library. On macOS, the application can also use the system `file` tool.
 
 The package uses pinned Grocy assets for database definitions, the OpenAPI contract, translations, and printer tables. PHP source remains available as a test reference.

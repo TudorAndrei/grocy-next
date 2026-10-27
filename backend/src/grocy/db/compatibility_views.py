@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from grocy.compatibility import client_defaults
+from grocy.core.config import get_settings
 from grocy.db.models.settings import UserSetting
 
 DEFINITIONS = Path(__file__).with_name("compatibility") / "grocy_4_5_0_views.json"
@@ -17,7 +17,7 @@ DEFINITIONS = Path(__file__).with_name("compatibility") / "grocy_4_5_0_views.jso
 def register_compatibility_functions(
     connection: Connection, settings: dict[str, Any] | None = None
 ) -> None:
-    values = client_defaults()["user_settings"] if settings is None else settings
+    values = get_settings().user_defaults() if settings is None else settings
     database: Any = connection.connection.dbapi_connection
     database.create_function("grocy_user_setting", 1, lambda key: values.get(key))
 
@@ -37,7 +37,7 @@ async def configure_compatibility_queries(session: AsyncSession) -> None:
         select(UserSetting.key, UserSetting.value).where(UserSetting.user_id == user_id)
     )
     settings = {
-        **client_defaults()["user_settings"],
+        **get_settings().user_defaults(),
         **session.info.get("native_user_defaults", {}),
         **{key: value for key, value in rows},
     }

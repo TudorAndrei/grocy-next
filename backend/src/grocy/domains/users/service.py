@@ -10,7 +10,6 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-from grocy.compatibility import client_defaults
 from grocy.compatibility.input import database_error
 from grocy.compatibility.php import argument_error, int_argument, php_error, php_string
 from grocy.compatibility.query import query_rows
@@ -136,7 +135,7 @@ class UsersService:
             text('SELECT "key",value FROM user_settings WHERE user_id=:user_id'),
             {"user_id": user_id},
         )
-        settings = dict(client_defaults()["user_settings"])
+        settings = get_settings().user_defaults()
         next_index = 0
         for key, value in result:
             if re.fullmatch(r"0|-?[1-9][0-9]*", key) and -(2**63) <= int(key) < 2**63:
@@ -151,7 +150,7 @@ class UsersService:
             {"user_id": user_id, "key": key},
         )
         row = result.first()
-        return row[0] if row is not None else client_defaults()["user_settings"].get(key)
+        return row[0] if row is not None else get_settings().user_defaults().get(key)
 
     async def set_setting(self, user_id: int, key: str, value: Any) -> None:
         async with self._write():
