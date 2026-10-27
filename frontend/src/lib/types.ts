@@ -143,6 +143,7 @@ export type StockProductDetails = ProductSummary & {
 export type SystemInfo = {
   grocy_version: { Version: string; ReleaseDate: string };
   php_version: string;
+  python_version: string;
   sqlite_version: string;
   db_version: number;
   os: string;

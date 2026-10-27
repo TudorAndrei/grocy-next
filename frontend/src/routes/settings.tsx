@@ -312,8 +312,8 @@ function SettingsPage() {
                   <dd>{system.data.db_version}</dd>
                 </div>
                 <div>
-                  <dt>PHP</dt>
-                  <dd>{system.data.php_version}</dd>
+                  <dt>Python</dt>
+                  <dd>{system.data.python_version}</dd>
                 </div>
                 <div>
                   <dt>SQLite</dt>
