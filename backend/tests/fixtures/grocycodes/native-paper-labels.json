@@ -1,0 +1,152 @@
+{
+  "source": {
+    "version": "4.5.0",
+    "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+    "view": "stockentrylabel.blade.php",
+    "name": "Label & <b>Tomato</b> \"large\"",
+    "stock_id": "paper-stock-17",
+    "styles": {
+      "body": {
+        "font-family": "'Roboto', sans-serif"
+      },
+      "img": {
+        "float": "left",
+        "margin-right": ".5rem",
+        "max-height": "25px",
+        "width": "auto",
+        "margin-top": "2px"
+      },
+      ".productname": {
+        "font-size": "20px",
+        "display": "inline-block",
+        "font-weight": "bold"
+      }
+    }
+  },
+  "cases": [
+    {
+      "kind": "2D",
+      "tracking": true,
+      "locale": "en",
+      "due": "2099-01-01",
+      "entry": "991",
+      "title": "Label & <b>Tomato</b> \"large\"",
+      "name": "Label & <b>Tomato</b> \"large\"",
+      "spans": [
+        "Label & <b>Tomato</b> \"large\"",
+        "DD: 2099-01-01"
+      ],
+      "png": "e856f5e043cb02cbe8f2ff8626b77d0ba6233f5df5e061fce03d8f24e735725f",
+      "pixels": "a0f4f0988b5ac1410cc69802731948ec002eee9e9693fe4541c123d0806a0fef",
+      "size": [
+        100,
+        100
+      ]
+    },
+    {
+      "kind": "1D",
+      "tracking": true,
+      "locale": "en",
+      "due": "2099-01-01",
+      "entry": "991",
+      "title": "Label & <b>Tomato</b> \"large\"",
+      "name": "Label & <b>Tomato</b> \"large\"",
+      "spans": [
+        "Label & <b>Tomato</b> \"large\"",
+        "DD: 2099-01-01"
+      ],
+      "png": "8b06d99fb7ecce65ebc5b3e0158090826509e719fdf2016423e2ae6429ab718a",
+      "pixels": "072736486bea7706b3ce685d31ea63b9db6e6e651e560552184309700a2cb038",
+      "size": [
+        310,
+        100
+      ]
+    },
+    {
+      "kind": "2D",
+      "tracking": false,
+      "locale": "en",
+      "due": "2099-01-01",
+      "entry": "991",
+      "title": "Label & <b>Tomato</b> \"large\"",
+      "name": "Label & <b>Tomato</b> \"large\"",
+      "spans": [
+        "Label & <b>Tomato</b> \"large\""
+      ],
+      "png": "e856f5e043cb02cbe8f2ff8626b77d0ba6233f5df5e061fce03d8f24e735725f",
+      "pixels": "a0f4f0988b5ac1410cc69802731948ec002eee9e9693fe4541c123d0806a0fef",
+      "size": [
+        100,
+        100
+      ]
+    },
+    {
+      "kind": "2D",
+      "tracking": true,
+      "locale": "de",
+      "due": "2099-01-01",
+      "entry": "991",
+      "title": "Label & <b>Tomato</b> \"large\"",
+      "name": "Label & <b>Tomato</b> \"large\"",
+      "spans": [
+        "Label & <b>Tomato</b> \"large\"",
+        "MHD: 2099-01-01"
+      ],
+      "png": "e856f5e043cb02cbe8f2ff8626b77d0ba6233f5df5e061fce03d8f24e735725f",
+      "pixels": "a0f4f0988b5ac1410cc69802731948ec002eee9e9693fe4541c123d0806a0fef",
+      "size": [
+        100,
+        100
+      ]
+    },
+    {
+      "kind": "2D",
+      "tracking": true,
+      "locale": "en",
+      "due": null,
+      "entry": "991",
+      "title": "Label & <b>Tomato</b> \"large\"",
+      "name": "Label & <b>Tomato</b> \"large\"",
+      "spans": [
+        "Label & <b>Tomato</b> \"large\"",
+        "DD: "
+      ],
+      "png": "e856f5e043cb02cbe8f2ff8626b77d0ba6233f5df5e061fce03d8f24e735725f",
+      "pixels": "a0f4f0988b5ac1410cc69802731948ec002eee9e9693fe4541c123d0806a0fef",
+      "size": [
+        100,
+        100
+      ]
+    },
+    {
+      "kind": "2D",
+      "tracking": true,
+      "locale": "en",
+      "due": "2099-01-01",
+      "entry": "99999",
+      "title": "",
+      "name": "",
+      "spans": [
+        "",
+        "DD: "
+      ],
+      "image_path": "/stockentry//grocycode"
+    },
+    {
+      "kind": "2D",
+      "tracking": true,
+      "locale": "en",
+      "due": "2099-01-01",
+      "entry": "991",
+      "title": "Label & <b>Tomato</b> \"large\"",
+      "name": "Label & <b>Tomato</b> \"large\"",
+      "spans": [
+        "Label & <b>Tomato</b> \"large\"",
+        "DD: 2099-01-01"
+      ],
+      "stock_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "image_path": "/stockentry/991/grocycode",
+      "image_error": 500
+    }
+  ]
+}

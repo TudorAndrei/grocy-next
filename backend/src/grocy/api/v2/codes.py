@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Request, Response
 
-from grocy.api.compatibility.grocycode import code_response, stock_entry_code
+from grocy.api.compatibility.grocycode import code_response, paper_response, stock_entry_code
 from grocy.core.auth import AuthenticatedActor
 from grocy.core.deps import DbSession
 
@@ -33,3 +33,11 @@ async def entry_code(
 ) -> Response:
     actor.require("STOCK")
     return await code_response(request, await stock_entry_code(session, entry_id))
+
+
+@router.get("/stock/entries/{entry_id}/label")
+async def entry_paper_label(
+    entry_id: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    actor.require("STOCK")
+    return await paper_response(request, session, entry_id, actor.user_id)

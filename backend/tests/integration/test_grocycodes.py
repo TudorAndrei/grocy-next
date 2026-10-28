@@ -108,9 +108,13 @@ def test_legacy_code_head_and_login_redirect(client, api_headers, entity):
 def test_application_codes_use_their_domain_permission(
     client, api_headers, monkeypatch, permission, allowed
 ):
-    paths = ["products", "stock/entries", "chores", "batteries"]
-    for path in paths:
-        assert client.get(f"/api/v2/{path}/17/grocycode").status_code == 401
+    paths = [
+        (entity, f"/api/v2/{entity}/17/grocycode")
+        for entity in ["products", "stock/entries", "chores", "batteries"]
+    ]
+    paths.append(("stock/entries", "/api/v2/stock/entries/17/label"))
+    for _entity, path in paths:
+        assert client.get(path).status_code == 401
     monkeypatch.setattr(get_settings(), "default_permissions", [])
     assert (
         client.post(
@@ -129,8 +133,8 @@ def test_application_codes_use_their_domain_permission(
         "api_key"
     ]
     headers = {"GROCY-API-KEY": key}
-    for path in paths:
-        assert client.get(f"/api/v2/{path}/17/grocycode", headers=headers).status_code == 403
+    for _entity, path in paths:
+        assert client.get(path, headers=headers).status_code == 403
     assert (
         client.put(
             f"/api/users/{identity}/permissions",
@@ -139,8 +143,9 @@ def test_application_codes_use_their_domain_permission(
         ).status_code
         == 204
     )
-    for path in paths:
-        response = client.get(f"/api/v2/{path}/17/grocycode", headers=headers)
-        assert response.status_code == (200 if path in allowed else 403), response.text
+    for entity, path in paths:
+        response = client.get(path, headers=headers)
+        assert response.status_code == (200 if entity in allowed else 403), response.text
     for path in ["product", "chore", "battery", "stockentry"]:
         assert client.get(f"/{path}/17/grocycode", headers=headers).status_code == 200
+    assert client.get("/stockentry/17/label", headers=headers).status_code == 200
