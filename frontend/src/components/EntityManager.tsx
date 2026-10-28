@@ -1,6 +1,13 @@
 import { useI18n } from "@/lib/i18n";
-import { z } from "zod";
-import { useEffect, useId, useRef, useState, type ReactNode, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type FormEvent,
+  type ComponentType,
+} from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonObject } from "@/lib/json";
 import { api, filePath, request } from "@/lib/api";
@@ -15,13 +22,15 @@ import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { useFeatures } from "@/lib/features";
 import { userSettingsQuery } from "@/hooks/queries";
-import { preferenceEnabled } from "@/lib/preferences";
+import { preferenceEnabled, usePreferences } from "@/lib/preferences";
+import { unitLabel } from "@/lib/format";
+import { compareSqliteNames } from "@/lib/collation";
 import { CameraScanner } from "./CameraScanner";
 import { UserfieldsEditor } from "./UserfieldsEditor";
 import {
   initialUserfields,
   saveUserfields,
-  userfieldSchema,
+  userfieldsQuery,
   type FieldEdits,
   type UserfieldDefinition,
 } from "@/lib/userfields";
@@ -38,38 +47,53 @@ type Props = {
   actions?: (row: EntityRow) => ReactNode;
   fixed?: JsonObject;
   title?: string;
+  onPendingChange?: (pending: boolean) => void;
+  related?: ComponentType<{
+    row: EntityRow;
+    pending: boolean;
+    reload: () => Promise<void>;
+    afterDelete: () => Promise<void>;
+  }>;
   editor?: {
     recordId: number | null;
     initialValues?: Record<string, string>;
-    onSaved: (id: number, body: JsonObject) => Promise<void>;
+    onSaved: (id: number, body: JsonObject, returnToList: boolean) => Promise<void>;
     onCancel: () => void;
+    continueLabel?: string;
+    allowReturn?: boolean;
   };
 };
 
-const customFieldsSchema = z.array(
-  userfieldSchema.extend({ entity: z.string(), sort_number: z.number().nullable().optional() }),
-);
-
-function fieldNameOrder(first: string, second: string) {
-  // SQLite NOCASE folds ASCII letters only, then compares Unicode code points.
-  const fold = (name: string) => [...name.replace(/[A-Z]/g, (letter) => letter.toLowerCase())];
-  const a = fold(first);
-  const b = fold(second);
-
-  for (let index = 0; index < Math.min(a.length, b.length); index++) {
-    const difference = a[index].codePointAt(0)! - b[index].codePointAt(0)!;
-
-    if (difference) return difference;
-  }
-
-  return a.length - b.length;
-}
-
-export function EntityManager({ entity, detail, actions, fixed, title, editor }: Props) {
-  const { t: tr } = useI18n();
+export function EntityManager({
+  entity,
+  detail,
+  actions,
+  fixed,
+  title,
+  editor,
+  related,
+  onPendingChange,
+}: Props) {
+  const { t: tr, pluralIndex } = useI18n();
 
   const features = useFeatures();
-  const productSettings = useQuery({ ...userSettingsQuery(), enabled: entity === "products" });
+  const preferences = usePreferences();
+
+  const amountStep =
+    preferences.amountPrecision === 0 ? "1" : `0.${"0".repeat(preferences.amountPrecision - 1)}1`;
+
+  const needsSettings = ["products", "product_barcodes", "quantity_unit_conversions"].includes(
+    entity,
+  );
+
+  const productSettings = useQuery({ ...userSettingsQuery(), enabled: needsSettings });
+
+  const barcodeConversions = useQuery({
+    queryKey: ["objects", "quantity_unit_conversions_resolved"],
+    queryFn: () => api.objects("quantity_unit_conversions_resolved"),
+    enabled: entity === "product_barcodes",
+  });
+
   const definition = getEntitySpec(entity);
 
   const baseSpec = {
@@ -99,6 +123,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   const [values, setValues] = useState<Record<string, string>>({});
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdits>>({});
   const [creating, setCreating] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
 
   const pictureGroup =
     entity === "products" ? "productpictures" : entity === "recipes" ? "recipepictures" : null;
@@ -116,13 +141,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   });
 
   const custom = useQuery({
-    queryKey: ["entity-manager-userfields"],
-    queryFn: async () =>
-      customFieldsSchema.parse(await api.objects("userfields")).sort((a, b) => {
-        const position = (a.sort_number ?? -Infinity) - (b.sort_number ?? -Infinity);
-
-        return position || fieldNameOrder(a.name, b.name);
-      }),
+    ...userfieldsQuery,
     enabled: !["userfields", "userentities"].includes(entity),
   });
 
@@ -231,8 +250,18 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   const error =
     query.error ||
     custom.error ||
+    (entity === "product_barcodes" ? barcodeConversions.error : null) ||
     options.find((q) => q.error)?.error ||
-    (entity === "products" ? productSettings.error : null);
+    (needsSettings ? productSettings.error : null);
+
+  const ready =
+    query.isSuccess &&
+    features.query.isSuccess &&
+    (!custom.isEnabled || custom.isSuccess) &&
+    (!recordTypes.isEnabled || recordTypes.isSuccess) &&
+    (!needsSettings || productSettings.isSuccess) &&
+    options.every((query) => query.isSuccess) &&
+    (entity !== "product_barcodes" || barcodeConversions.isSuccess);
 
   const mutate = useMutation({
     mutationFn: async (operation: {
@@ -242,6 +271,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       id?: number;
       picture?: PictureUpload | null;
       removePicture?: string | null;
+      intent?: "continue" | "return" | "refresh";
     }) => {
       if (operation.kind === "delete") return api.deleteObject(entity, operation.id!);
 
@@ -266,6 +296,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       };
 
       const fieldsBeforeRecord = entity === "shopping_lists" && editing !== null;
+      const parallelBarcodeEdit = entity === "product_barcodes" && editing !== null;
 
       if (entity === "products") delete body.qu_factor_purchase_to_stock;
       let id = editing!;
@@ -276,10 +307,18 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
         const created = await api.createObject(entity, body);
         id = Number(created.created_object_id);
         setEditing(id);
+      } else if (parallelBarcodeEdit) {
+        const results = await Promise.allSettled([
+          saveFields(id),
+          api.updateObject(entity, id, body),
+        ]);
+
+        for (const result of results) if (result.status === "rejected") throw result.reason;
       } else await api.updateObject(entity, id, body);
 
       if (
         entity === "products" &&
+        operation.intent !== "refresh" &&
         purchaseFactor != null &&
         body.qu_id_purchase !== body.qu_id_stock
       ) {
@@ -316,7 +355,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
         }
       }
 
-      if (!fieldsBeforeRecord) await saveFields(id);
+      if (!fieldsBeforeRecord && !parallelBarcodeEdit) await saveFields(id);
 
       if (pictureGroup && operation.picture) {
         await request(filePath(pictureGroup, operation.picture.name), {
@@ -329,16 +368,28 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
 
       if (removalError) throw removalError;
 
-      return { id, body };
+      return { id, body, intent: operation.intent };
     },
     onSuccess: async (result) => {
+      if (result?.intent === "refresh") {
+        await client.invalidateQueries();
+        await reload(result.id);
+
+        return;
+      }
+
       if (!editor) setEditing(undefined);
       setDeleteId(null);
       await client.invalidateQueries();
 
-      if (editor && result) await editor.onSaved(result.id, result.body);
+      if (editor && related && result?.intent === "continue") await reload(result.id);
+
+      if (editor && result)
+        await editor.onSaved(result.id, result.body, result.intent === "return");
     },
   });
+
+  useEffect(() => onPendingChange?.(mutate.isPending), [mutate.isPending, onPendingChange]);
 
   const selectValue = (field: EntityField, value: string) => {
     if (field.key === "userentity_id") {
@@ -360,6 +411,8 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
 
       next[field.key] = value;
 
+      if (entity === "product_barcodes" && field.key === "product_id") next.qu_id = "";
+
       if (entity === "products" && field.key === "qu_id_stock" && value) {
         for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"]) {
           if (!next[key]) next[key] = value;
@@ -368,6 +421,103 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
 
       return next;
     });
+  };
+
+  const barcodeUnits = (product: EntityRow | undefined) => {
+    const seen = new Set<number>();
+    const units = options[refs.indexOf("quantity_units")]?.data ?? [];
+    const rows: EntityRow[] = [];
+
+    for (const conversion of barcodeConversions.data ?? []) {
+      if (
+        conversion.product_id !== product?.id ||
+        (conversion.from_qu_id !== product?.qu_id_purchase &&
+          conversion.to_qu_id !== product?.qu_id_purchase)
+      )
+        continue;
+      const id = Number(conversion.to_qu_id);
+      const unit = units.find((row) => row.id === id);
+
+      if (unit && !seen.has(id)) {
+        seen.add(id);
+        rows.push(unit);
+      }
+    }
+
+    return rows;
+  };
+
+  const barcodeUnit = (product: EntityRow | undefined, unitId: EntityRow["qu_id"]) =>
+    barcodeUnits(product).some((row) => row.id === Number(unitId)) ? String(unitId) : "";
+
+  const referenceRows = (field: EntityField) => {
+    const rows = options[refs.indexOf(field.ref ?? "")]?.data ?? [];
+
+    if (entity === "product_barcodes" && field.key === "qu_id") {
+      const productId = Number(fixed?.product_id ?? values.product_id);
+      const product = options[refs.indexOf("products")]?.data?.find((row) => row.id === productId);
+
+      return barcodeUnits(product);
+    }
+
+    return ["product_barcodes", "quantity_unit_conversions"].includes(entity)
+      ? rows
+          .filter((row) => row.active !== 0)
+          .sort((a, b) => compareSqliteNames(String(a.name), String(b.name)))
+      : rows;
+  };
+
+  const namedUnit = (id: EntityRow["qu_id"], count: number) => {
+    const unit = options[refs.indexOf("quantity_units")]?.data?.find(
+      (row) => row.id === Number(id),
+    );
+
+    return unit
+      ? unitLabel(
+          {
+            name: String(unit.name),
+            name_plural: unit.name_plural ?? null,
+            plural_forms: unit.plural_forms ?? null,
+          },
+          count,
+          pluralIndex,
+          false,
+        )
+      : "";
+  };
+
+  const conversionHint = (from: string, to: string, factor: number) =>
+    tr(
+      "This means 1 %1$s is the same as %2$s %3$s",
+      namedUnit(from, 1),
+      preferences.formatAmount(factor),
+      namedUnit(to, factor),
+    );
+
+  const barcodeHint = () => {
+    if (!values.amount || !values.qu_id) return null;
+
+    const product = options[refs.indexOf("products")]?.data?.find(
+      (row) => row.id === Number(fixed?.product_id ?? values.product_id),
+    );
+
+    if (!product || Number(values.qu_id) === product.qu_id_purchase) return null;
+
+    const conversion = barcodeConversions.data?.find(
+      (row) =>
+        row.product_id === product.id &&
+        row.to_qu_id === Number(values.qu_id) &&
+        (row.from_qu_id === product.qu_id_purchase || row.to_qu_id === product.qu_id_purchase),
+    );
+
+    if (!conversion || !(Number(conversion.factor) > 0)) return null;
+    const amount = Number(values.amount) / Number(conversion.factor);
+
+    return tr(
+      "This equals %1$s %2$s",
+      preferences.formatAmount(amount),
+      namedUnit(product.qu_id_purchase, amount),
+    );
   };
 
   const start = (row?: EntityRow) => {
@@ -430,6 +580,17 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
 
     if (row && entity === "products" && row.calories == null) initialValues.calories = "1";
 
+    if (["product_barcodes", "quantity_unit_conversions"].includes(entity)) {
+      const productId = Number(fixed?.product_id ?? row?.product_id);
+      const product = options[refs.indexOf("products")]?.data?.find((row) => row.id === productId);
+
+      if (entity === "product_barcodes") initialValues.qu_id = barcodeUnit(product, row?.qu_id);
+      else if (!row) {
+        initialValues.from_qu_id = product ? String(product.qu_id_stock) : "";
+        initialValues.factor = "1";
+      }
+    }
+
     setValues(!row ? { ...initialValues, ...editor?.initialValues } : initialValues);
     setFieldEdits(
       Object.fromEntries(
@@ -455,26 +616,23 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   const editorRecord = query.data?.find((row) => row.id === editor?.recordId);
   const editorMissing = editor && editor.recordId !== null && query.isSuccess && !editorRecord;
 
+  const reload = async (id = editing) => {
+    const result = await query.refetch();
+
+    if (result.error) throw result.error;
+    const row = result.data?.find((row) => row.id === id);
+
+    if (row) start(row);
+  };
+
   useEffect(() => {
-    if (
-      !editor ||
-      editorStarted.current ||
-      editorMissing ||
-      !query.isSuccess ||
-      !features.query.isSuccess ||
-      (custom.isEnabled && custom.isPending) ||
-      custom.isError ||
-      options.some((query) => !query.isSuccess) ||
-      (entity === "products" && !productSettings.isSuccess)
-    )
-      return;
+    if (!editor || editorStarted.current || editorMissing || !ready) return;
 
     editorStarted.current = true;
     start(editorRecord);
   });
 
-  const save = (event: FormEvent) => {
-    event.preventDefault();
+  const recordBody = (): JsonObject => {
     const body: JsonObject = {};
     Object.assign(body, fixed);
 
@@ -500,7 +658,8 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
 
       if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
-        if (editing !== null && !field.required) body[field.key] = null;
+        if (entity === "product_barcodes" && !field.required) body[field.key] = "";
+        else if (editing !== null && !field.required) body[field.key] = null;
       } else
         body[field.key] =
           field.type === "multiple"
@@ -515,13 +674,33 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       else if (picture.remove) body.picture_file_name = null;
     }
 
-    mutate.mutate({
-      kind: "save",
-      body,
-      fields: fieldEdits,
-      picture: picture.upload,
-      removePicture: picture.remove ? picture.original : null,
-    });
+    return body;
+  };
+
+  const saveOperation = (intent: "continue" | "return" | "refresh") => ({
+    kind: "save" as const,
+    body: recordBody(),
+    fields: fieldEdits,
+    picture: picture.upload,
+    removePicture: picture.remove ? picture.original : null,
+    intent,
+  });
+
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    const submitter = event.nativeEvent instanceof SubmitEvent ? event.nativeEvent.submitter : null;
+    mutate.mutate(
+      saveOperation(
+        submitter instanceof HTMLButtonElement && submitter.value === "return"
+          ? "return"
+          : "continue",
+      ),
+    );
+  };
+
+  const afterDelete = async () => {
+    if (!form.current?.reportValidity()) return;
+    await mutate.mutateAsync(saveOperation("refresh"));
   };
 
   const rows = (query.data ?? []).filter(
@@ -530,6 +709,9 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       JSON.stringify(row).toLowerCase().includes(search.toLowerCase()),
   );
 
+  const Related = related;
+  const relatedRecord = query.data?.find((row) => row.id === editing);
+
   return (
     <section className="collection" aria-label={title ?? spec.label}>
       {!editor ? (
@@ -537,13 +719,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
           <h2>{title ?? spec.label}</h2>
           <button
             className="btn btn-primary"
-            disabled={
-              mutate.isPending ||
-              (custom.isEnabled && !custom.isSuccess) ||
-              (recordTypes.isEnabled && !recordTypes.isSuccess) ||
-              (entity === "products" &&
-                (productSettings.isPending || options.some((query) => query.isPending)))
-            }
+            disabled={mutate.isPending || !ready}
             onClick={() => start()}
           >
             {tr("Add")} {spec.singular}
@@ -552,7 +728,23 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       ) : null}
       {editing !== undefined && (
         <form
+          ref={form}
           onSubmit={save}
+          onKeyDown={(event) => {
+            if (
+              editor?.continueLabel &&
+              event.key === "Enter" &&
+              !event.nativeEvent.isComposing &&
+              event.target instanceof HTMLInputElement
+            ) {
+              event.preventDefault();
+
+              if (event.currentTarget.reportValidity() && !mutate.isPending)
+                mutate.mutate(
+                  saveOperation(!creating && editor.allowReturn ? "return" : "continue"),
+                );
+            }
+          }}
           className="panel panel-inner"
           aria-label={
             editing === null
@@ -668,6 +860,14 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
                       </div>
                     ) : field.ref || field.choices ? (
                       <select
+                        ref={(select) => {
+                          if (entity === "quantity_unit_conversions" && field.key === "to_qu_id")
+                            select?.setCustomValidity(
+                              values.from_qu_id && values.from_qu_id === values.to_qu_id
+                                ? tr("The source and destination units must be different.")
+                                : "",
+                            );
+                        }}
                         id={id}
                         value={values[field.key] ?? field.value ?? ""}
                         required={field.required}
@@ -681,7 +881,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
                             {field.choiceLabels?.[choice] ?? choice}
                           </option>
                         ))}
-                        {optionsQuery?.data?.map((row) => (
+                        {referenceRows(field).map((row) => (
                           <option key={row.id} value={row.id}>
                             {String(
                               row.display_name ??
@@ -716,8 +916,20 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
                             : undefined
                         }
                         required={field.required}
-                        min={field.min}
-                        step={field.type === "number" ? "any" : undefined}
+                        min={
+                          (entity === "quantity_unit_conversions" && field.key === "factor") ||
+                          (entity === "product_barcodes" && field.key === "amount")
+                            ? amountStep
+                            : field.min
+                        }
+                        step={
+                          field.type === "number"
+                            ? (entity === "quantity_unit_conversions" && field.key === "factor") ||
+                              (entity === "product_barcodes" && field.key === "amount")
+                              ? amountStep
+                              : "any"
+                            : undefined
+                        }
                         onChange={(e) =>
                           setValues({
                             ...values,
@@ -738,6 +950,18 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
                 );
               })}
           </div>
+          {entity === "product_barcodes" && barcodeHint() ? (
+            <p className="muted">{barcodeHint()}</p>
+          ) : null}
+          {entity === "quantity_unit_conversions" &&
+          values.from_qu_id &&
+          values.to_qu_id &&
+          Number(values.factor) > 0 ? (
+            <div className="muted">
+              <p>{conversionHint(values.from_qu_id, values.to_qu_id, Number(values.factor))}</p>
+              <p>{conversionHint(values.to_qu_id, values.from_qu_id, 1 / Number(values.factor))}</p>
+            </div>
+          ) : null}
           {Object.entries(groups).map(([namespace, fields]) => (
             <UserfieldsEditor
               key={namespace}
@@ -753,13 +977,36 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
               }
             />
           ))}
+          {editor?.continueLabel && entity === "products" && editing === null ? (
+            <p className="muted">
+              {tr("Save & continue to add quantity unit conversions & barcodes")}
+            </p>
+          ) : null}
           <div className="actions">
             <button
               className="btn btn-primary"
+              name="intent"
+              value="continue"
               disabled={mutate.isPending || options.some((q) => q.isPending)}
             >
-              {tr("Save")} {spec.singular}
+              {editor?.continueLabel ? (
+                tr(editor.continueLabel)
+              ) : (
+                <>
+                  {tr("Save")} {spec.singular}
+                </>
+              )}
             </button>
+            {editor?.allowReturn ? (
+              <button
+                className="btn"
+                name="intent"
+                value="return"
+                disabled={mutate.isPending || options.some((q) => q.isPending)}
+              >
+                {tr("Save & return to products")}
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn btn-ghost"
@@ -771,6 +1018,14 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
           </div>
         </form>
       )}
+      {Related && relatedRecord ? (
+        <Related
+          row={relatedRecord}
+          pending={mutate.isPending}
+          reload={reload}
+          afterDelete={afterDelete}
+        />
+      ) : null}
       {error && <ErrorBlock message={error.message} />}
       {editorMissing ? <ErrorBlock message={tr("Item not found.")} /> : null}
       {mutate.error && <ErrorBlock message={mutate.error.message} />}
@@ -839,11 +1094,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
                 {actions?.(row)}
                 <button
                   className="btn btn-ghost"
-                  disabled={
-                    mutate.isPending ||
-                    (custom.isEnabled && !custom.isSuccess) ||
-                    (recordTypes.isEnabled && !recordTypes.isSuccess)
-                  }
+                  disabled={mutate.isPending || !ready}
                   onClick={() => start(row)}
                 >
                   {tr("Edit")}

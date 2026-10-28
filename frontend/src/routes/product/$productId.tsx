@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { EntityManager } from "@/components/EntityManager";
+import { ProductEditor } from "@/components/ProductEditor";
 import { PageHeader } from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
 
@@ -41,17 +41,18 @@ function ProductFormPage() {
   return (
     <>
       <PageHeader title={t(recordId === null ? "Create product" : "Edit product")} />
-      <EntityManager
+      <ProductEditor
         key={productId + ":" + (search.name ?? "")}
-        entity="products"
         editor={{
           recordId,
+          continueLabel: "Save & continue",
+          allowReturn: search.flow === undefined && search.returnto === undefined,
           initialValues:
             search.flow === "InplaceNewProductWithName" ? { name: search.name ?? "" } : undefined,
           onCancel: () => {
             void navigate({ href: returnPath(search.returnto) });
           },
-          onSaved: async (id, body) => {
+          onSaved: async (id, body, returnToList) => {
             if (search.returnto !== undefined) {
               await navigate({
                 href: returnPath(
@@ -59,8 +60,8 @@ function ProductFormPage() {
                   search.flow !== undefined ? String(body.name ?? "") : undefined,
                 ),
               });
-            } else
-              await navigate({ to: "/products/$productId", params: { productId: String(id) } });
+            } else if (returnToList) await navigate({ href: `/products?product=${id}` });
+            else await navigate({ to: "/product/$productId", params: { productId: String(id) } });
           },
         }}
       />

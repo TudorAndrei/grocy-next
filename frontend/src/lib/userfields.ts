@@ -1,6 +1,7 @@
 import { uploadId } from "@/lib/upload-id";
 import { z } from "zod";
-import { filePath, request } from "./api";
+import { compareSqliteNames } from "./collation";
+import { api, filePath, request } from "./api";
 
 export const userfieldSchema = z.object({
   id: z.number(),
@@ -11,6 +12,24 @@ export const userfieldSchema = z.object({
   default_value: z.string().nullable(),
   config: z.string().nullable(),
 });
+
+const customFieldsSchema = z.array(
+  userfieldSchema.extend({
+    entity: z.string(),
+    sort_number: z.number().nullable().optional(),
+    show_as_column_in_tables: z.number().optional(),
+  }),
+);
+
+export const userfieldsQuery = {
+  queryKey: ["entity-manager-userfields"],
+  queryFn: async () =>
+    customFieldsSchema.parse(await api.objects("userfields")).sort((a, b) => {
+      const position = (a.sort_number ?? -Infinity) - (b.sort_number ?? -Infinity);
+
+      return position || compareSqliteNames(a.name, b.name);
+    }),
+};
 
 export type UserfieldDefinition = z.infer<typeof userfieldSchema>;
 

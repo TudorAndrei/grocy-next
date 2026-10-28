@@ -590,7 +590,7 @@ test.each(["name", "barcode"] as const)(
     expect(name.value).toBe(mode === "name" ? "555" : "");
 
     if (mode === "barcode") await user.type(name, "New tea");
-    await user.click(editor.getByRole("button", { name: "Save product" }));
+    await user.click(editor.getByRole("button", { name: "Save & continue" }));
 
     const returned = within(
       await screen.findByRole("dialog", { name: "Create shopping list item" }),
@@ -645,7 +645,7 @@ test("external shopping lookup handles no result and failure before returning th
   expect(editor.getByRole<HTMLInputElement>("textbox", { name: "Name" }).value).toBe(
     "External tea",
   );
-  await user.click(editor.getByRole("button", { name: "Save product" }));
+  await user.click(editor.getByRole("button", { name: "Save & continue" }));
   const returned = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
   expect((await returned.findByRole<HTMLInputElement>("combobox", { name: "Product" })).value).toBe(
     "External tea",

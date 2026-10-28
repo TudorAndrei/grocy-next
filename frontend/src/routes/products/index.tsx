@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
-import { EntityManager } from "@/components/EntityManager";
+import { ProductEditor } from "@/components/ProductEditor";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
@@ -63,7 +63,7 @@ function ProductsPage() {
           </button>
         }
       />
-      {editing ? <EntityManager entity="products" /> : null}
+      {editing ? <ProductEditor /> : null}
       <div className="toolbar">
         <label className="search-field">
           <span className="sr-only">{tr("Search products")}</span>

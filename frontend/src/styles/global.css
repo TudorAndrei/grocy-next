@@ -3256,3 +3256,79 @@ a.btn[aria-disabled="true"] {
 .userfields-editor select[multiple] {
   min-block-size: 5rem;
 }
+
+.product-related {
+  display: grid;
+  gap: 2rem;
+  min-inline-size: 0;
+  margin-block-start: 2rem;
+}
+.product-related > section {
+  min-inline-size: 0;
+}
+.product-related .section-heading {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.product-related .table-scroll {
+  position: relative;
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+.product-related .stock-table {
+  display: table;
+  min-inline-size: 36rem;
+}
+.product-related .stock-table .code {
+  max-inline-size: 24ch;
+  overflow-wrap: anywhere;
+}
+.product-code-preview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-block-start: 1rem;
+}
+.product-code-preview > img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+.product-relation-dialog {
+  width: min(48rem, calc(100% - 2rem));
+  max-inline-size: calc(100vw - 2rem);
+}
+.product-relation-dialog .collection form {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.product-related .stock-table thead {
+  display: table-header-group;
+}
+.product-related .stock-table tbody {
+  display: table-row-group;
+}
+.product-related .stock-table tr {
+  display: table-row;
+  padding: 0;
+  border: 0;
+}
+.product-related .stock-table th,
+.product-related .stock-table td {
+  display: table-cell;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.product-related .stock-table th[scope="row"] {
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  background: transparent;
+}
+.product-related .stock-table caption {
+  text-align: start;
+  margin-block: 1rem 0.5rem;
+}

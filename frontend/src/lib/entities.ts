@@ -5,6 +5,8 @@ type AssignedUser = { display_name?: string; username: string };
 export type EntityRow = {
   id: number;
   name?: string;
+  name_plural?: string | null;
+  plural_forms?: string | null;
   description?: string | null;
   note?: string | null;
   barcode?: string | null;
@@ -347,8 +349,13 @@ export const entities = new Map<string, EntitySpec>(
         ref("product_id", "Product", "products"),
         { key: "barcode", label: "Barcode", required: true },
         ref("qu_id", "Unit", "quantity_units", false),
-        { ...amount, required: false },
+        { ...amount, required: false, value: "" },
         { key: "note", label: "Note" },
+        {
+          ...ref("shopping_location_id", "Store", "shopping_locations", false),
+          features: ["STOCK_PRICE_TRACKING"],
+          disabledValue: "1",
+        },
       ],
     },
     recipes: {
