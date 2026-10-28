@@ -28,6 +28,13 @@ async def shopping_list_editor(
     return await shopping.editor(list_id)
 
 
+@router.get("/shopping-lists/items/editor")
+async def shopping_item_editor(
+    _actor: CurrentActor, shopping: ShoppingSvc, item_id: int | None = None
+) -> dict:
+    return await shopping.item_editor(item_id)
+
+
 @router.get("/shopping-lists/{shopping_list_id}/print", response_class=HTMLResponse)
 async def shopping_paper(
     shopping_list_id: int,

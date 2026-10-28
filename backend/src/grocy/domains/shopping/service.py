@@ -51,6 +51,54 @@ class ShoppingService:
             else {},
         }
 
+    async def item_editor(self, item_id: int | None = None) -> dict:
+        from grocy.domains.catalog.objects import GenericObjectsService
+
+        item = None
+        if item_id is not None:
+            row = await self.session.get(ShoppingListItem, item_id)
+            if row is None:
+                raise NotFoundError(f"Shopping item {item_id} not found")
+            item = {
+                "id": row.id,
+                "shopping_list_id": row.shopping_list_id,
+                "product_id": row.product_id,
+                "amount": float(row.amount),
+                "qu_id": row.qu_id,
+                "note": row.note,
+            }
+
+        async def rows(sql: str) -> list[dict]:
+            result = await self.session.execute(text(sql))
+            return [dict(row) for row in result.mappings()]
+
+        return {
+            "item": item,
+            "lists": await self.lists(),
+            "products": await rows(
+                "SELECT id,name,qu_id_stock,qu_id_purchase FROM products "
+                "WHERE active=1 ORDER BY name COLLATE NOCASE"
+            ),
+            "units": await rows(
+                "SELECT id,name,name_plural,plural_forms FROM quantity_units "
+                "WHERE active=1 ORDER BY name COLLATE NOCASE"
+            ),
+            "conversions": await rows(
+                "SELECT product_id,from_qu_id,to_qu_id,factor,to_qu_name,to_qu_name_plural "
+                "FROM cache__quantity_unit_conversions_resolved"
+            ),
+            "fields": await rows(
+                "SELECT id,name,caption,type,input_required,default_value,config "
+                "FROM userfields WHERE entity='shopping_list' "
+                "ORDER BY sort_number,name COLLATE NOCASE"
+            ),
+            "values": await GenericObjectsService(self.session).get_userfields(
+                "shopping_list", item_id
+            )
+            if item_id is not None
+            else {},
+        }
+
     async def display_factors(self, shopping_list_id: int) -> dict[int, float]:
         rows = await self.session.execute(
             text(

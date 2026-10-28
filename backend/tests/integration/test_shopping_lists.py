@@ -133,3 +133,84 @@ def test_shopping_paper_resolves_uploaded_custom_image(client, api_headers, tmp_
     response = client.get("/api/v2/shopping-lists/1/print", headers=api_headers)
     assert response.status_code == 200, response.text
     assert "data:image/png;base64," in response.text
+
+
+def test_shopping_item_editor_loads_native_fields_units_and_row(client, api_headers):
+    item = create(
+        client,
+        api_headers,
+        "shopping_list",
+        {
+            "product_id": 1,
+            "shopping_list_id": 1,
+            "amount": 12,
+            "qu_id": 1,
+            "note": "Keep cool",
+            "done": 1,
+        },
+    )
+    field = create(
+        client,
+        api_headers,
+        "userfields",
+        {"entity": "shopping_list", "name": "0", "caption": "Priority", "type": "text-single-line"},
+    )
+    assert (
+        client.put(
+            f"/api/userfields/shopping_list/{item}", headers=api_headers, json={"0": "First"}
+        ).status_code
+        == 204
+    )
+    response = client.get(
+        f"/api/v2/shopping-lists/items/editor?item_id={item}", headers=api_headers
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["item"] == {
+        "id": item,
+        "shopping_list_id": 1,
+        "product_id": 1,
+        "amount": 12,
+        "qu_id": 1,
+        "note": "Keep cool",
+    }
+    assert data["values"] == {"0": "First"}
+    assert data["fields"][0]["id"] == field
+    assert data["products"] and data["units"] and data["conversions"]
+    inactive = create(
+        client,
+        api_headers,
+        "products",
+        {
+            "name": "Inactive form product",
+            "active": 0,
+            "qu_id_stock": 1,
+            "qu_id_purchase": 1,
+            "location_id": 1,
+        },
+    )
+    assert all(
+        row["id"] != inactive
+        for row in client.get("/api/v2/shopping-lists/items/editor", headers=api_headers).json()[
+            "products"
+        ]
+    )
+    assert (
+        client.get("/api/v2/shopping-lists/items/editor", headers=api_headers).json()["item"]
+        is None
+    )
+    assert (
+        client.get(
+            "/api/v2/shopping-lists/items/editor?item_id=99999", headers=api_headers
+        ).status_code
+        == 404
+    )
+
+    note_item = create(
+        client, api_headers, "shopping_list", {"product_id": "", "amount": 1, "note": "Bags"}
+    )
+    note_editor = client.get(
+        f"/api/v2/shopping-lists/items/editor?item_id={note_item}", headers=api_headers
+    )
+    assert note_editor.status_code == 200, note_editor.text
+    assert note_editor.json()["item"]["product_id"] is None
