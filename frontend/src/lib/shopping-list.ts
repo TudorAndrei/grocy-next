@@ -6,6 +6,43 @@ export const shoppingSearchSchema = z.object({
   list: z.coerce.number().int().optional().catch(undefined),
 });
 
+export const shoppingItemSearchSchema = shoppingSearchSchema.extend({
+  product: z.coerce.number().int().optional().catch(undefined),
+  "product-name": z.coerce.string().optional().catch(undefined),
+  amount: z.coerce.string().optional().catch(undefined),
+  updateexistingproduct: z
+    .unknown()
+    .optional()
+    .transform((value) => (value === undefined ? undefined : true)),
+  flow: z.coerce.string().optional().catch(undefined),
+  barcode: z.coerce.string().optional().catch(undefined),
+});
+
+export type ShoppingItemOptions = {
+  product?: number;
+  productName?: string;
+  amount?: string;
+  list?: number;
+  merge?: boolean;
+  flow?: string;
+  barcode?: string;
+};
+
+const mergedItemSchema = z.array(z.object({ id: z.coerce.number().int() }));
+
+export async function mergedShoppingItem(productId: string, listId: number): Promise<number> {
+  const query = new URLSearchParams([
+    ["query[]", `product_id=${productId}`],
+    ["query[]", `shopping_list_id=${listId}`],
+  ]);
+
+  const rows = mergedItemSchema.parse(await request(`/api/objects/shopping_list?${query}`));
+
+  if (!rows[0]) throw new Error("Could not load the saved shopping list item. Retry to continue.");
+
+  return rows[0].id;
+}
+
 export type ShoppingSearch = z.infer<typeof shoppingSearchSchema>;
 
 const fieldSchema = z.object({
@@ -176,6 +213,10 @@ export const shoppingItemEditorSchema = z.object({
       to_qu_name_plural: z.string().nullable(),
     }),
   ),
+  barcodes: z
+    .array(z.object({ product_id: z.number(), barcodes: z.string().nullable() }))
+    .optional()
+    .default([]),
   fields: z.array(fieldSchema),
   values: z.record(z.string(), z.string().nullable()),
 });

@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ShoppingItemForm } from "@/components/ShoppingItemForm";
-import { shoppingSearchSchema } from "@/lib/shopping-list";
+import { shoppingItemSearchSchema } from "@/lib/shopping-list";
 
 export const Route = createFileRoute("/shoppinglistitem/$itemId")({
-  validateSearch: shoppingSearchSchema,
+  validateSearch: shoppingItemSearchSchema,
   component: ShoppingItemRoute,
 });
 
 function ShoppingItemRoute() {
   const { itemId } = Route.useParams();
-  const { list } = Route.useSearch();
+  const search = Route.useSearch();
+  const { list } = search;
   const navigate = Route.useNavigate();
 
   const close = async (listId: number) => {
@@ -20,6 +21,15 @@ function ShoppingItemRoute() {
     <ShoppingItemForm
       itemId={itemId === "new" ? undefined : Number(itemId)}
       listId={list ?? 1}
+      options={{
+        product: search.product,
+        productName: search["product-name"],
+        amount: search.amount,
+        list,
+        merge: search.updateexistingproduct,
+        flow: search.flow,
+        barcode: search.flow === "InplaceAddBarcodeToExistingProduct" ? search.barcode : undefined,
+      }}
       onClose={() => {
         void close(list ?? 1);
       }}
