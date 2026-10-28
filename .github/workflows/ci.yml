@@ -101,3 +101,67 @@ jobs:
           --feature-flag BATTERIES=false --feature-flag RECIPES_MEALPLAN=false
           --feature-flag STOCK_BEST_BEFORE_DATE_TRACKING=false
           --feature-flag STOCK_PRODUCT_FREEZING=false --feature-flag STOCK_PRICE_TRACKING=off
+
+  web-resources:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        base-path: ["", "/house.v1+demo"]
+    env:
+      GROCY_BASE_PATH: ${{ matrix.base-path }}
+      GROCY_SEED_DEMO_DATA: "true"
+      GROCY_DEV_OPEN_API_KEY: dev-key
+      GROCY_TEST_SESSION_COOKIE: grocy_session=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Start release images
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: Check Python release runtime
+        run: |
+          docker compose exec -T api /app/.venv/bin/python -c "import shutil; from grocy.core.config import get_settings; assert not get_settings().use_native_php and shutil.which('php') is None"
+          docker compose exec -T web sh -c '! command -v php'
+      - name: Prepare disposable stock and session
+        run: |
+          curl --fail --silent --show-error \
+            -H 'GROCY-API-KEY: dev-key' -H 'Content-Type: application/json' \
+            -d '{"amount":1,"best_before_date":"2099-01-01"}' \
+            "http://127.0.0.1:8000${GROCY_BASE_PATH}/api/stock/products/1/add"
+          docker compose exec -T api python -c "import sqlite3; c=sqlite3.connect('/data/grocy.db'); c.execute('INSERT INTO sessions(session_key,user_id,expires) VALUES (?,?,?)', ('q'*50,1,'2099-01-01')); c.commit()"
+      - name: Check release resource links
+        run: >-
+          uv run --project backend python scripts/check-web-resources.py
+          --api-url "http://127.0.0.1:8000${GROCY_BASE_PATH}"
+          --web-url "http://127.0.0.1:8080${GROCY_BASE_PATH}"
+      - name: Check development resource links
+        run: |
+          npm ci --prefix frontend
+          (
+            cd frontend
+            export VITE_BASE_PATH="${GROCY_BASE_PATH:-/}"
+            exec node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort
+          ) > /tmp/grocy-vite.log 2>&1 &
+          vite_pid=$!
+          trap 'kill "$vite_pid"' EXIT
+          for _ in {1..30}; do
+            if curl --fail --silent "http://127.0.0.1:5173${GROCY_BASE_PATH}/" > /dev/null; then break; fi
+            sleep 1
+          done
+          if ! curl --fail --silent "http://127.0.0.1:5173${GROCY_BASE_PATH}/" > /dev/null; then
+            cat /tmp/grocy-vite.log
+            exit 1
+          fi
+          uv run --project backend python scripts/check-web-resources.py \
+            --api-url "http://127.0.0.1:8000${GROCY_BASE_PATH}" \
+            --web-url "http://127.0.0.1:5173${GROCY_BASE_PATH}"
+      - name: Remove disposable containers
+        if: always()
+        run: docker compose down --volumes
