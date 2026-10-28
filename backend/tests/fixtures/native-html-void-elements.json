@@ -1,0 +1,52 @@
+{
+  "version": "4.5.0",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "source": "PUT and GET /api/objects/shopping_lists/991 on the PHP reference",
+  "cases": [
+    {
+      "name": "empty-paragraph",
+      "input": "<p><br></p>",
+      "expected": "<p><br /></p>"
+    },
+    {
+      "name": "break-forms",
+      "input": "Line<BR>one<br/>two<br />three",
+      "expected": "Line<br />one<br />two<br />three"
+    },
+    {
+      "name": "image",
+      "input": "<p><img src=\"https://example.org/a.png\" alt=\"A &amp; B > C\" width=\"32\"></p>",
+      "expected": "<p><img src=\"https://example.org/a.png\" alt=\"A & B > C\" width=\"32\" /></p>"
+    },
+    {
+      "name": "invalid-data-image",
+      "input": "<img alt='quote \" and >' src=\"data:image/png;base64,aGVsbG8=\">",
+      "expected": null
+    },
+    {
+      "name": "literal-tags",
+      "input": "&lt;br&gt; &lt;img src=&quot;https://example.org/a.png&quot;&gt;",
+      "expected": "<br> <img src=\"https://example.org/a.png\">"
+    },
+    {
+      "name": "mixed",
+      "input": "<p>&lt;br&gt;<br><img src=\"https://example.org/x?a=1&amp;b=2\"></p>",
+      "expected": "<p><br><br /><img src=\"https://example.org/x?a=1&b=2\" alt=\"x?a=1&b=2\" /></p>"
+    },
+    {
+      "name": "valid-data-image",
+      "input": "<img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=\">",
+      "expected": "<img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=\" alt=\"x8AAwMCAO+jXioAAAAASUVORK5CYII=\" />"
+    },
+    {
+      "name": "data-type-correction",
+      "input": "<img alt=\"Tiny\" src=\"data:image/jpeg;charset=UTF-8;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=\">",
+      "expected": "<img alt=\"Tiny\" src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=\" />"
+    },
+    {
+      "name": "quoted-valid-image",
+      "input": "<img alt='quote \" and >' src=\"https://example.org/a.png\">",
+      "expected": "<img alt=\"quote &quot; and >\" src=\"https://example.org/a.png\" />"
+    }
+  ]
+}
