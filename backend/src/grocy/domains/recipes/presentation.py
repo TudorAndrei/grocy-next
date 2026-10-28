@@ -48,11 +48,17 @@ class RecipeCard(BaseModel):
     ingredients: list[RecipeIngredient]
 
 
+class MissingRecipeIngredient(BaseModel):
+    product_id: int
+    product_name: str
+
+
 class RecipeView(BaseModel):
     recipe_id: int
     need_fulfilled: bool
     need_fulfilled_with_shopping_list: bool
     missing_products_count: int
+    missing_ingredients: list[MissingRecipeIngredient]
     cards: list[RecipeCard]
 
 
@@ -125,7 +131,7 @@ async def recipe_view(session: AsyncSession, recipe_id: int) -> RecipeView:
             (conversion["product_id"], conversion["from_qu_id"], conversion["to_qu_id"]),
             float(conversion["factor"]),
         )
-    products = {row["id"]: row for row in await rows("SELECT id,qu_id_stock FROM products")}
+    products = {row["id"]: row for row in await rows("SELECT id,name,qu_id_stock FROM products")}
     summaries = {row["recipe_id"]: row for row in await rows("SELECT * FROM recipes_resolved")}
     cards = []
     for recipe in recipes:
@@ -195,5 +201,13 @@ async def recipe_view(session: AsyncSession, recipe_id: int) -> RecipeView:
         need_fulfilled=bool(summary["need_fulfilled"]),
         need_fulfilled_with_shopping_list=bool(summary["need_fulfilled_with_shopping_list"]),
         missing_products_count=summary["missing_products_count"],
+        missing_ingredients=[
+            MissingRecipeIngredient(
+                product_id=position["product_id"],
+                product_name=products[position["product_id"]]["name"] or "",
+            )
+            for position in root_positions
+            if position["missing_amount"] > 0
+        ],
         cards=cards,
     )

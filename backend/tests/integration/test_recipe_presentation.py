@@ -1,3 +1,6 @@
+from collections import Counter
+
+
 def test_recipe_cards_keep_nested_order_units_groups_and_separate_ingredient_rows(
     client, api_headers
 ):
@@ -79,6 +82,14 @@ def test_recipe_cards_keep_nested_order_units_groups_and_separate_ingredient_row
         only_check_single_unit_in_stock=1,
     )
     create("recipes_pos", recipe_id=leaf, product_id=product, amount=5, qu_id=gram)
+    nested_product = create(
+        "products",
+        name="Missing garnish",
+        location_id=1,
+        qu_id_stock=gram,
+        qu_id_purchase=gram,
+    )
+    create("recipes_pos", recipe_id=leaf, product_id=nested_product, amount=1, qu_id=gram)
     bought = client.post(
         f"/api/stock/products/{product}/add",
         headers=api_headers,
@@ -89,6 +100,9 @@ def test_recipe_cards_keep_nested_order_units_groups_and_separate_ingredient_row
     response = client.get(f"/api/v2/recipes/{root}/view", headers=api_headers)
     assert response.status_code == 200, response.text
     view = response.json()
+    assert Counter(
+        (row["product_id"], row["product_name"]) for row in view["missing_ingredients"]
+    ) == Counter({(product, "Test flour"): 1, (nested_product, "Missing garnish"): 2})
     assert [card["id"] for card in view["cards"]] == [root, leaf, child]
     parent, garnish, sauce = view["cards"]
     assert [row["id"] for row in parent["ingredients"]] == [first, second]
@@ -105,7 +119,9 @@ def test_recipe_cards_keep_nested_order_units_groups_and_separate_ingredient_row
     assert sauce["ingredients"][1]["amount"] == 1.5
     # The pinned controller selects the first root position for a shared child.
     # It shows the garnish once and does not add the two nesting paths together.
-    assert garnish["ingredients"][0]["amount"] == 40
+    assert (
+        next(row for row in garnish["ingredients"] if row["product_id"] == product)["amount"] == 40
+    )
     assert garnish["preparation_html"] == "<p><strong>Chop</strong> finely.</p>"
     assert sauce["desired_servings"] == 10
     assert (
