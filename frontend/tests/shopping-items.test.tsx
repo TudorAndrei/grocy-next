@@ -1,3 +1,4 @@
+import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
@@ -248,6 +249,7 @@ function mount(
   });
 
   vi.stubGlobal("fetch", transport);
+  supportDescriptionEditors();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   const router = createRouter({
@@ -590,7 +592,9 @@ test.each(["name", "barcode"] as const)(
     expect(name.value).toBe(mode === "name" ? "555" : "");
 
     if (mode === "barcode") await user.type(name, "New tea");
-    await user.click(editor.getByRole("button", { name: "Save & continue" }));
+    const save = editor.getByRole<HTMLButtonElement>("button", { name: "Save & continue" });
+    await waitFor(() => expect(save.disabled).toBe(false));
+    await user.click(save);
 
     const returned = within(
       await screen.findByRole("dialog", { name: "Create shopping list item" }),
@@ -645,7 +649,9 @@ test("external shopping lookup handles no result and failure before returning th
   expect(editor.getByRole<HTMLInputElement>("textbox", { name: "Name" }).value).toBe(
     "External tea",
   );
-  await user.click(editor.getByRole("button", { name: "Save & continue" }));
+  const save = editor.getByRole<HTMLButtonElement>("button", { name: "Save & continue" });
+  await waitFor(() => expect(save.disabled).toBe(false));
+  await user.click(save);
   const returned = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
   expect((await returned.findByRole<HTMLInputElement>("combobox", { name: "Product" })).value).toBe(
     "External tea",

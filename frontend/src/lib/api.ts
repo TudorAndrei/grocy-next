@@ -184,7 +184,11 @@ export const api = {
         body: "{}",
       }),
     ).created_object_id,
-  getContent: async (entity: "recipes" | "equipment", id: number) =>
+  getContentList: async (entity: "products" | "recipes" | "equipment") =>
+    z
+      .array(z.object({ id: z.number(), html: z.string() }))
+      .parse(await request<JsonValue>(`/api/v2/content/${entity}`)),
+  getContent: async (entity: "products" | "recipes" | "equipment", id: number) =>
     contentSchema.parse(await request<JsonValue>(`/api/v2/content/${entity}/${id}`)),
   getLocalization: async (locale?: string) =>
     localizationSchema.parse(
@@ -423,6 +427,7 @@ export const api = {
 };
 
 export const queryKeys = {
+  contentList: (entity: string) => ["content", entity] as const,
   content: (entity: string, id: number) => ["content", entity, id] as const,
   localization: (locale?: string) => ["localization", locale ?? "default"] as const,
   products: ["products"] as const,

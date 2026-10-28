@@ -1,3 +1,4 @@
+import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -81,6 +82,7 @@ function app(path: string) {
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
+  supportDescriptionEditors();
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}

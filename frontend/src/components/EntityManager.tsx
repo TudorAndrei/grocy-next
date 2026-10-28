@@ -1,6 +1,8 @@
 import { useI18n } from "@/lib/i18n";
 import {
   useEffect,
+  useCallback,
+  useMemo,
   useId,
   useRef,
   useState,
@@ -10,7 +12,7 @@ import {
 } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonObject } from "@/lib/json";
-import { api, filePath, request } from "@/lib/api";
+import { api, filePath, request, queryKeys } from "@/lib/api";
 import {
   entities,
   getEntitySpec,
@@ -20,6 +22,8 @@ import {
 } from "@/lib/entities";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
+import { DescriptionEditor } from "./DescriptionEditor";
+import { RichText } from "./RichDescription";
 import { useFeatures } from "@/lib/features";
 import { userSettingsQuery } from "@/hooks/queries";
 import { preferenceEnabled, usePreferences } from "@/lib/preferences";
@@ -77,6 +81,10 @@ export function EntityManager({
   const { t: tr, pluralIndex } = useI18n();
 
   const features = useFeatures();
+
+  const richEntity =
+    entity === "products" || entity === "recipes" || entity === "equipment" ? entity : null;
+
   const preferences = usePreferences();
 
   const amountStep =
@@ -121,6 +129,14 @@ export function EntityManager({
     !field.features || field.features.every(features.enabled);
 
   const [values, setValues] = useState<Record<string, string>>({});
+  const [descriptionReady, setDescriptionReady] = useState(!richEntity);
+  const [editorRevision, setEditorRevision] = useState(0);
+
+  const changeDescription = useCallback(
+    (description: string) => setValues((values) => ({ ...values, description })),
+    [],
+  );
+
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdits>>({});
   const [creating, setCreating] = useState(false);
   const form = useRef<HTMLFormElement>(null);
@@ -238,6 +254,21 @@ export function EntityManager({
     },
   });
 
+  const descriptions = useQuery({
+    queryKey: queryKeys.contentList(richEntity ?? "products"),
+    queryFn: () => api.getContentList(richEntity ?? "products"),
+    enabled:
+      !editor &&
+      richEntity !== null &&
+      query.isSuccess &&
+      query.data.some((row) => Boolean(row.description)),
+  });
+
+  const descriptionHtml = useMemo(
+    () => new Map(descriptions.data?.map((row) => [row.id, row.html])),
+    [descriptions.data],
+  );
+
   const refs = [...new Set(spec.fields.flatMap((f) => (f.ref ? [f.ref] : [])))];
 
   const options = useQueries({
@@ -250,6 +281,7 @@ export function EntityManager({
   const error =
     query.error ||
     custom.error ||
+    descriptions.error ||
     (entity === "product_barcodes" ? barcodeConversions.error : null) ||
     options.find((q) => q.error)?.error ||
     (needsSettings ? productSettings.error : null);
@@ -372,7 +404,9 @@ export function EntityManager({
     },
     onSuccess: async (result) => {
       if (result?.intent === "refresh") {
-        await client.invalidateQueries();
+        await client.invalidateQueries({
+          predicate: (query) => query.queryKey[0] !== "description-editor",
+        });
         await reload(result.id);
 
         return;
@@ -380,7 +414,9 @@ export function EntityManager({
 
       if (!editor) setEditing(undefined);
       setDeleteId(null);
-      await client.invalidateQueries();
+      await client.invalidateQueries({
+        predicate: (query) => query.queryKey[0] !== "description-editor",
+      });
 
       if (editor && related && result?.intent === "continue") await reload(result.id);
 
@@ -522,6 +558,8 @@ export function EntityManager({
 
   const start = (row?: EntityRow) => {
     mutate.reset();
+    setDescriptionReady(!richEntity);
+    setEditorRevision((revision) => revision + 1);
     setEditing(row?.id ?? null);
     setCreating(!row);
     setPicture({
@@ -656,7 +694,8 @@ export function EntityManager({
       if (field.when && !field.when.values.includes(values[field.when.key])) continue;
       const value = values[field.key] ?? field.value ?? "";
 
-      if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
+      if (field.key === "description" && richEntity) body.description = value;
+      else if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
         if (entity === "product_barcodes" && !field.required) body[field.key] = "";
         else if (editing !== null && !field.required) body[field.key] = null;
@@ -688,6 +727,8 @@ export function EntityManager({
 
   const save = (event: FormEvent) => {
     event.preventDefault();
+
+    if (!descriptionReady) return;
     const submitter = event.nativeEvent instanceof SubmitEvent ? event.nativeEvent.submitter : null;
     mutate.mutate(
       saveOperation(
@@ -699,7 +740,7 @@ export function EntityManager({
   };
 
   const afterDelete = async () => {
-    if (!form.current?.reportValidity()) return;
+    if (!descriptionReady || !form.current?.reportValidity()) return;
     await mutate.mutateAsync(saveOperation("refresh"));
   };
 
@@ -739,7 +780,7 @@ export function EntityManager({
             ) {
               event.preventDefault();
 
-              if (event.currentTarget.reportValidity() && !mutate.isPending)
+              if (descriptionReady && event.currentTarget.reportValidity() && !mutate.isPending)
                 mutate.mutate(
                   saveOperation(!creating && editor.allowReturn ? "return" : "continue"),
                 );
@@ -776,6 +817,18 @@ export function EntityManager({
                   (!f.when || f.when.values.includes(values[f.when.key])),
               )
               .map((field) => {
+                if (field.key === "description" && richEntity)
+                  return (
+                    <div key={field.key} className="field description-field">
+                      <DescriptionEditor
+                        key={editorRevision}
+                        entity={richEntity}
+                        value={values.description ?? ""}
+                        onChange={changeDescription}
+                        onReady={setDescriptionReady}
+                      />
+                    </div>
+                  );
                 const id = `${prefix}-${field.key}`;
 
                 const optionsQuery = field.ref ? options[refs.indexOf(field.ref)] : undefined;
@@ -987,7 +1040,7 @@ export function EntityManager({
               className="btn btn-primary"
               name="intent"
               value="continue"
-              disabled={mutate.isPending || options.some((q) => q.isPending)}
+              disabled={mutate.isPending || !descriptionReady || options.some((q) => q.isPending)}
             >
               {editor?.continueLabel ? (
                 tr(editor.continueLabel)
@@ -1002,7 +1055,7 @@ export function EntityManager({
                 className="btn"
                 name="intent"
                 value="return"
-                disabled={mutate.isPending || options.some((q) => q.isPending)}
+                disabled={mutate.isPending || !descriptionReady || options.some((q) => q.isPending)}
               >
                 {tr("Save & return to products")}
               </button>
@@ -1021,7 +1074,7 @@ export function EntityManager({
       {Related && relatedRecord ? (
         <Related
           row={relatedRecord}
-          pending={mutate.isPending}
+          pending={mutate.isPending || !descriptionReady}
           reload={reload}
           afterDelete={afterDelete}
         />
@@ -1068,7 +1121,15 @@ export function EntityManager({
                 ) : (
                   <>
                     <h3>{row.name ?? row.note ?? row.barcode ?? `#${row.id}`}</h3>
-                    {row.description && <p>{row.description}</p>}
+                    {row.description ? (
+                      richEntity ? (
+                        descriptionHtml.get(row.id) ? (
+                          <RichText html={descriptionHtml.get(row.id)!} />
+                        ) : null
+                      ) : (
+                        <p>{row.description}</p>
+                      )
+                    ) : null}
                     <p className="muted">
                       {spec.fields
                         .filter(

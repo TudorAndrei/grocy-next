@@ -1,3 +1,4 @@
+import { supportDescriptionEditors } from "./fixtures/editor";
 import { z } from "zod";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
@@ -258,6 +259,7 @@ function mount(
   });
 
   vi.stubGlobal("fetch", transport);
+  supportDescriptionEditors();
 
   const router = createRouter({
     routeTree,
@@ -285,6 +287,13 @@ function mount(
   };
 }
 
+async function availableButton(name: string | RegExp) {
+  const button = await screen.findByRole<HTMLButtonElement>("button", { name });
+  await waitFor(() => expect(button.disabled).toBe(false));
+
+  return button;
+}
+
 test.each(["button", "keyboard"])(
   "%s saves continue after creation and return to the catalog after editing",
   async (mode) => {
@@ -296,13 +305,12 @@ test.each(["button", "keyboard"])(
 
     if (mode === "button") await user.click(form.getByRole("button", { name: "Save & continue" }));
     else await user.keyboard("{Enter}");
-    await screen.findByRole("button", { name: "Add barcode" });
+    await availableButton("Add barcode");
     expect(router.state.location.pathname).toBe("/product/7");
     expect(products).toHaveLength(1);
     expect(await screen.findByRole("img", { name: "New coffee Grocycode" })).toBeTruthy();
 
-    if (mode === "button")
-      await user.click(screen.getByRole("button", { name: "Save & return to products" }));
+    if (mode === "button") await user.click(await availableButton("Save & return to products"));
     else {
       await user.click(screen.getByLabelText("Name"));
       await user.keyboard("{Enter}");
@@ -316,7 +324,7 @@ test("barcode creation uses product units and retries fields on the created barc
   const { barcodes, product, writes } = mount({ fieldFailure: true });
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText("Name"), " draft");
-  await user.click(await screen.findByRole("button", { name: "Add barcode" }));
+  await user.click(await availableButton("Add barcode"));
   const form = within(await screen.findByRole("dialog", { name: "Create Barcode" }));
   const unit = await form.findByLabelText<HTMLSelectElement>("Unit");
   expect(unit.value).toBe("");
@@ -362,7 +370,9 @@ test("barcode edits wait for both independent writes when a custom field fails",
   });
 
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: /Edit.*CODE/ }));
+  const edit = await screen.findByRole<HTMLButtonElement>("button", { name: /Edit.*CODE/ });
+  await waitFor(() => expect(edit.disabled).toBe(false));
+  await user.click(edit);
   const form = within(await screen.findByRole("dialog", { name: "Edit Barcode" }));
   await user.clear(await form.findByLabelText("Amount"));
   await user.type(form.getByLabelText("Origin"), " changed");
@@ -386,7 +396,7 @@ test("barcode edits wait for both independent writes when a custom field fails",
 test("product conversions use the stock unit, reject equal units, and save fields after the row", async () => {
   const { conversions, writes } = mount();
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Add conversion" }));
+  await user.click(await availableButton("Add conversion"));
 
   const form = within(
     await screen.findByRole("dialog", { name: "Create quantity unit conversion" }),
@@ -430,7 +440,7 @@ test.each([
     const { product, writes } = mount({ productFailure: true });
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Name"), " changed");
-    await user.click(await screen.findByRole("button", { name: button }));
+    await user.click(await availableButton(button));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "No" }));
     expect(writes).toEqual([]);
     await user.click(screen.getByRole("button", { name: button }));
@@ -452,7 +462,7 @@ test.each([
 test("empty optional barcode fields retain the native explicit empty values", async () => {
   const { writes } = mount();
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Add barcode" }));
+  await user.click(await availableButton("Add barcode"));
   const form = within(await screen.findByRole("dialog", { name: "Create Barcode" }));
   await user.type(await form.findByLabelText("Barcode"), "EMPTY");
   await user.click(form.getByRole("button", { name: "Save barcode" }));

@@ -1,3 +1,4 @@
+import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,6 +9,7 @@ import type { JsonObject } from "@/lib/json";
 import { pictureBytes } from "./fixtures/picture";
 
 function mount(entity: string) {
+  supportDescriptionEditors();
   vi.stubGlobal(
     "URL",
     class extends URL {

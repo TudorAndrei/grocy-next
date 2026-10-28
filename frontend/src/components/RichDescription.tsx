@@ -8,7 +8,7 @@ export function RichDescription({
   entity,
   objectId,
 }: {
-  entity: "recipes" | "equipment";
+  entity: "products" | "recipes" | "equipment";
   objectId: number;
 }) {
   const { t } = useI18n();

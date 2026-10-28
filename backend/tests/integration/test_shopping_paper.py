@@ -238,8 +238,9 @@ def test_shopping_paper_prints_current_notes_without_saving_them(
 def test_shopping_editor_keeps_imported_markup_in_data_and_authorizes_its_scripts(
     client, api_headers
 ):
-    import json
     import re
+
+    from editor_document import EditorDocument
 
     imported = '</textarea></script><script id="imported">parent.document.body.remove()</script>'
 
@@ -261,21 +262,19 @@ def test_shopping_editor_keeps_imported_markup_in_data_and_authorizes_its_script
     response = client.get("/api/v2/shopping-lists/1/notes/editor", headers=api_headers)
     assert response.status_code == 200
     html = response.text
-    setup = re.search(r"window.initializeShoppingNotes\((\{[^\n]+\})\);", html)
-    assert setup is not None
-    options = json.loads(setup[1])
-    assert options == {
+    document = EditorDocument(html)
+    assert document.options == {
         "initial": imported,
         "locale": "de-DE",
-        "notesLabel": "Notizen",
+        "label": "Notizen",
+        "channel": "grocy-shopping-notes",
         "sourceLabel": "Code view",
     }
     policy = re.search(r"script-src &#39;nonce-([^&]+)&#39;", html)
     assert policy is not None
     nonce = policy[1]
-    scripts = re.findall(r"<script([^>]*)>", html)
-    assert len(scripts) == 5
-    assert all(f'nonce="{nonce}"' in attributes for attributes in scripts)
+    assert len(document.scripts) == 6
+    assert all(attributes.get("nonce") == nonce for attributes in document.scripts)
     assert '<script id="imported">' not in html
     assert (
         client.get("/api/v2/shopping-lists/1", headers=api_headers).json()["description"]

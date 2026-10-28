@@ -17,6 +17,7 @@ import { StockLedger } from "@/components/StockLedger";
 import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { useFeatures } from "@/lib/features";
 import { EntityPicture } from "@/components/EntityPicture";
+import { RichDescription } from "@/components/RichDescription";
 
 type ProductSearch = { move?: "purchase" | "consume" | "open" };
 
@@ -69,6 +70,13 @@ function ProductDetailPage() {
         lead={facts.length ? facts.join(" · ") : product?.description}
         actions={product ? <GrocycodeActions kind="product" id={id} name={product.name} /> : null}
       />
+
+      {product?.description ? (
+        <section className="panel panel-inner" aria-label={tr("Description")}>
+          <h2>{tr("Description")}</h2>
+          <RichDescription entity="products" objectId={id} />
+        </section>
+      ) : null}
 
       <div className="detail">
         <StockActions key={move ?? "purchase"} productId={id} initialMove={move} />

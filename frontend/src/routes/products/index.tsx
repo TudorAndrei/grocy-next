@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
 import { ProductEditor } from "@/components/ProductEditor";
+import { RichText } from "@/components/RichDescription";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
@@ -24,6 +25,18 @@ function ProductsPage() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(false);
   const products = useQuery({ queryKey: queryKeys.products, queryFn: api.listProducts });
+
+  const descriptions = useQuery({
+    queryKey: queryKeys.contentList("products"),
+    queryFn: () => api.getContentList("products"),
+    enabled: products.isSuccess,
+  });
+
+  const descriptionHtml = useMemo(
+    () => new Map(descriptions.data?.map((row) => [row.id, row.html])),
+    [descriptions.data],
+  );
+
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
 
   const amounts = useMemo(
@@ -82,6 +95,7 @@ function ProductsPage() {
       </div>
       {products.isLoading ? <LoadingBlock label={tr("Loading products…")} /> : null}
       {products.isError ? <ErrorBlock message={products.error.message} /> : null}
+      {descriptions.error ? <ErrorBlock message={descriptions.error.message} /> : null}
       {products.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
           {search
@@ -125,11 +139,13 @@ function ProductsPage() {
                           features.enabled("STOCK_LOCATION_TRACKING")
                             ? (catalog.location(product.location_id)?.name ?? "No location")
                             : null,
-                          product.description,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
                       </small>
+                      {descriptionHtml.get(product.id) ? (
+                        <RichText html={descriptionHtml.get(product.id)!} />
+                      ) : null}
                     </td>
                     <td className="level">
                       <Gauge

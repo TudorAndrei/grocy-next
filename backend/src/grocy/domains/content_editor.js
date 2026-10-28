@@ -1,4 +1,4 @@
-window.initializeShoppingNotes = function ({ initial, locale, notesLabel, sourceLabel }) {
+window.initializeRichTextEditor = function ({ initial, locale, label, sourceLabel, channel }) {
   const $ = window.jQuery;
   const editor = $("#description");
   editor.val(initial);
@@ -8,7 +8,7 @@ window.initializeShoppingNotes = function ({ initial, locale, notesLabel, source
     const full = editor.summernote("fullscreen.isFullscreen");
     parent.postMessage(
       {
-        channel: "grocy-shopping-notes",
+        channel,
         kind,
         html: kind === "ready" ? initial : editor.summernote("code"),
         empty: editor.summernote("isEmpty"),
@@ -22,7 +22,7 @@ window.initializeShoppingNotes = function ({ initial, locale, notesLabel, source
   function labelEditor() {
     $(".note-editable").attr({
       role: "textbox",
-      "aria-label": notesLabel,
+      "aria-label": label,
       "aria-multiline": "true",
     });
     $(".note-codable").attr({
@@ -75,7 +75,7 @@ window.initializeShoppingNotes = function ({ initial, locale, notesLabel, source
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
   let lastFullscreen = false;
   window.addEventListener("message", (event) => {
-    if (event.source !== parent || event.data?.channel !== "grocy-shopping-notes") return;
+    if (event.source !== parent || event.data?.channel !== channel) return;
     if (event.data.command === "appearance") {
       document.body.classList.toggle("night-mode", event.data.dark === true);
       document.documentElement.dir = event.data.direction === "rtl" ? "rtl" : "ltr";
