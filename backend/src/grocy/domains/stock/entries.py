@@ -5,7 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.php import loose_equals
+from grocy.core.errors import NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.domains.catalog.objects import GenericObjectsService
 from grocy.domains.stock.journal import JournalChoice
 
 
@@ -43,6 +45,40 @@ class EntriesView(BaseModel):
     products: list[JournalChoice]
     locations: list[JournalChoice]
     stores: list[JournalChoice]
+
+
+async def entry_editor(session: AsyncSession, entry_id: int) -> dict:
+    await configure_compatibility_queries(session)
+    result = await session.execute(
+        text(
+            "SELECT s.*,p.name AS product_name,q.name AS qu_name FROM stock s "
+            "JOIN products p ON p.id=s.product_id "
+            "LEFT JOIN quantity_units q ON q.id=p.qu_id_stock WHERE s.id=:id"
+        ),
+        {"id": entry_id},
+    )
+    entry = result.mappings().first()
+    if entry is None:
+        raise NotFoundError(f"Stock entry {entry_id} not found")
+
+    async def rows(sql: str) -> list[dict]:
+        result = await session.execute(text(sql))
+        return [dict(row) for row in result.mappings()]
+
+    return {
+        "entry": dict(entry),
+        "locations": await rows(
+            "SELECT id,name FROM locations WHERE active=1 ORDER BY name COLLATE NOCASE"
+        ),
+        "stores": await rows(
+            "SELECT id,name FROM shopping_locations WHERE active=1 ORDER BY name COLLATE NOCASE"
+        ),
+        "fields": await rows(
+            "SELECT id,name,caption,type,input_required,default_value,config "
+            "FROM userfields WHERE entity='stock' ORDER BY sort_number,name COLLATE NOCASE"
+        ),
+        "values": await GenericObjectsService(session).get_userfields("stock", entry["stock_id"]),
+    }
 
 
 async def entries_view(session: AsyncSession) -> EntriesView:

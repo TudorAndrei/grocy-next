@@ -37,6 +37,7 @@ import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes/$recipeId'
 import { Route as ShoppinglistitemItemIdRouteImport } from './routes/shoppinglistitem/$itemId'
 import { Route as StockentriesIndexRouteImport } from './routes/stockentries/index'
+import { Route as StockentryEntryIdRouteImport } from './routes/stockentry/$entryId'
 import { Route as StockjournalIndexRouteImport } from './routes/stockjournal/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -179,6 +180,11 @@ const StockentriesIndexRoute = StockentriesIndexRouteImport.update({
   path: '/stockentries/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StockentryEntryIdRoute = StockentryEntryIdRouteImport.update({
+  id: '/stockentry/$entryId',
+  path: '/stockentry/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockjournalIndexRoute = StockjournalIndexRouteImport.update({
   id: '/stockjournal/',
   path: '/stockjournal/',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
   '/stockentries/': typeof StockentriesIndexRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/products': typeof ProductsIndexRoute
   '/recipes': typeof RecipesIndexRoute
   '/stockentries': typeof StockentriesIndexRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
   '/stockentries/': typeof StockentriesIndexRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/shoppinglistitem/$itemId'
+    | '/stockentry/$entryId'
     | '/products/'
     | '/recipes/'
     | '/stockentries/'
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/shoppinglistitem/$itemId'
+    | '/stockentry/$entryId'
     | '/products'
     | '/recipes'
     | '/stockentries'
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/products/$productId'
     | '/recipes/$recipeId'
     | '/shoppinglistitem/$itemId'
+    | '/stockentry/$entryId'
     | '/products/'
     | '/recipes/'
     | '/stockentries/'
@@ -401,6 +413,7 @@ export interface RootRouteChildren {
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
   ShoppinglistitemItemIdRoute: typeof ShoppinglistitemItemIdRoute
+  StockentryEntryIdRoute: typeof StockentryEntryIdRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   RecipesIndexRoute: typeof RecipesIndexRoute
   StockentriesIndexRoute: typeof StockentriesIndexRoute
@@ -605,6 +618,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockentriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stockentry/$entryId': {
+      id: '/stockentry/$entryId'
+      path: '/stockentry/$entryId'
+      fullPath: '/stockentry/$entryId'
+      preLoaderRoute: typeof StockentryEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stockjournal/': {
       id: '/stockjournal/'
       path: '/stockjournal'
@@ -641,6 +661,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductsProductIdRoute: ProductsProductIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
   ShoppinglistitemItemIdRoute: ShoppinglistitemItemIdRoute,
+  StockentryEntryIdRoute: StockentryEntryIdRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   RecipesIndexRoute: RecipesIndexRoute,
   StockentriesIndexRoute: StockentriesIndexRoute,

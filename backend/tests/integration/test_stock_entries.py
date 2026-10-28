@@ -83,6 +83,37 @@ def test_entries_fields_choices_and_exact_booking_actions(client, api_headers):
     assert row["product_values"] == {"1": "Roastery"} and row["stock_values"] == {"1": "Mint"}
     assert row["note"] == "Mint batch" and row["purchased_date"] == "2026-10-25"
     assert row["open"] == 0
+    editor_path = f"/api/v2/stock/entries/{row['id']}/editor"
+    editor = client.get(editor_path).json()
+    assert editor["entry"]["stock_id"] == row["stock_id"]
+    assert editor["entry"]["qu_name"] == "Entry piece"
+    assert editor["values"] == {"1": "Mint"}
+    assert [field["caption"] for field in editor["fields"]] == ["Batch"]
+    edited = client.put(
+        f"/api/stock/entry/{row['id']}",
+        json={
+            "amount": "3.5",
+            "price": "2.50",
+            "best_before_date": "2999-12-31",
+            "purchased_date": "2026-10-24",
+            "location_id": location,
+            "shopping_location_id": store,
+            "note": "Edited batch",
+            "open": False,
+        },
+    )
+    edited.raise_for_status()
+    transaction = edited.json()[0]
+    client.put(
+        f"/api/userfields/stock/{transaction['transaction_id']}", json={"1": "Green"}
+    ).raise_for_status()
+    refreshed = client.get(editor_path).json()
+    assert refreshed["entry"]["amount"] == 3.5 and refreshed["entry"]["price"] == 2.5
+    assert refreshed["entry"]["note"] == "Edited batch"
+    assert refreshed["values"] == {"1": "Green"}
+    client.post(f"/api/stock/bookings/{transaction['id']}/undo").raise_for_status()
+    assert batch()["amount"] == 2.5 and batch()["price"] == 1.25
+    assert batch()["stock_values"] == {"1": "Green"}
     opened = client.post(
         f"/api/stock/products/{product}/open",
         json={"amount": row["amount"], "stock_entry_id": row["stock_id"]},
@@ -108,7 +139,7 @@ def test_entries_fields_choices_and_exact_booking_actions(client, api_headers):
     log = client.get(f"/api/stock/bookings/{consumed.json()[0]['id']}").json()
     assert log["spoiled"] == 1 and log["amount"] == -2.5
     client.post(f"/api/stock/bookings/{log['id']}/undo").raise_for_status()
-    assert batch()["amount"] == 2.5 and batch()["stock_values"] == {"1": "Mint"}
+    assert batch()["amount"] == 2.5 and batch()["stock_values"] == {"1": "Green"}
 
     for table, identity in [
         ("products", product),
@@ -123,3 +154,8 @@ def test_entries_fields_choices_and_exact_booking_actions(client, api_headers):
     assert product not in {c["id"] for c in view()["products"]}
     assert location not in {c["id"] for c in view()["locations"]}
     assert store not in {c["id"] for c in view()["stores"]}
+    editor = client.get(f"/api/v2/stock/entries/{batch()['id']}/editor").json()
+    assert location not in {c["id"] for c in editor["locations"]}
+    assert store not in {c["id"] for c in editor["stores"]}
+    assert editor["entry"]["location_id"] == location
+    assert client.get("/api/v2/stock/entries/2147483647/editor").status_code == 404

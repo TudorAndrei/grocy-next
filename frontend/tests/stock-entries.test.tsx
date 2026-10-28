@@ -1,30 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import type { EntryRow } from "@/lib/stock-entries";
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
+import { supportDialogs } from "./fixtures/dialogs";
 
-beforeEach(() => {
-  for (const method of ["showModal", "close"] as const) {
-    const original = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, method);
-    Object.defineProperty(HTMLDialogElement.prototype, method, {
-      configurable: true,
-      value: function (this: HTMLDialogElement) {
-        this.open = method === "showModal";
-      },
-    });
-    onTestFinished(() => {
-      if (original) Object.defineProperty(HTMLDialogElement.prototype, method, original);
-      else Reflect.deleteProperty(HTMLDialogElement.prototype, method);
-    });
-  }
-});
+beforeEach(supportDialogs);
 
-function mount(path: string, { fail = false, stock = true, tracking = true } = {}) {
+function mount(
+  path: string,
+  {
+    fail = false,
+    stock = true,
+    tracking = true,
+    editRetry = false,
+    printer = false,
+    precision = 2,
+    deferSavedRead = false,
+  } = {},
+) {
   const base: EntryRow = {
     id: 51,
     product_id: 7,
@@ -83,6 +81,34 @@ function mount(path: string, { fail = false, stock = true, tracking = true } = {
   let actions = 0;
   let undoReads = 0;
   let before: EntryRow[] = [];
+  let editorReads = 0;
+  let editorWrites = 0;
+  let uploads = 0;
+  let heldRead = false;
+  let releaseSavedRead = () => {};
+  const labels: string[] = [];
+
+  const editorFields = [
+    {
+      id: 2,
+      name: "batch",
+      caption: "Batch",
+      type: "text-single-line",
+      input_required: 0,
+      default_value: null,
+      config: null,
+    },
+    {
+      id: 3,
+      name: "receipt",
+      caption: "Receipt",
+      type: "file",
+      input_required: 0,
+      default_value: null,
+      config: null,
+    },
+  ];
+
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -96,16 +122,104 @@ function mount(path: string, { fail = false, stock = true, tracking = true } = {
           FEATURE_FLAG_STOCK_PRICE_TRACKING: tracking,
           FEATURE_FLAG_STOCK_BEST_BEFORE_DATE_TRACKING: tracking,
           FEATURE_FLAG_STOCK_PRODUCT_OPENED_TRACKING: tracking,
+          FEATURE_FLAG_LABEL_PRINTER: printer,
+          LABEL_PRINTER_RUN_SERVER: true,
           CURRENCY: "USD",
         });
 
       if (path.endsWith("/api/user/settings"))
         return Response.json({
-          stock_decimal_places_amounts: 2,
+          stock_decimal_places_amounts: precision,
+          stock_decimal_places_prices_input: precision,
           stock_decimal_places_prices_display: 2,
         });
 
       if (path.includes("/shopping-lists/")) return Response.json({ items: [] });
+
+      if (path.endsWith("/api/v2/stock/entries/51/editor")) {
+        if (editRetry && ++editorReads === 1)
+          return Response.json({ detail: "Editor unavailable" }, { status: 503 });
+        const row = rows.find((row) => row.id === 51);
+
+        const response = Response.json({
+          entry: row,
+          locations: [{ id: 2, name: "Cellar" }],
+          stores: [{ id: 1, name: "Roastery" }],
+          fields: editorFields,
+          values: {
+            batch: row?.stock_values.batch ?? null,
+            receipt: row?.stock_values.receipt ?? null,
+          },
+        });
+
+        if (deferSavedRead && editorWrites > 0 && !heldRead) {
+          heldRead = true;
+
+          return new Promise<Response>((resolve) => {
+            releaseSavedRead = () => resolve(response);
+          });
+        }
+
+        return response;
+      }
+
+      if (path.endsWith("/api/stock/entry/mint/printlabel")) {
+        labels.push(path);
+
+        return Response.json({ error_message: "Printer unavailable" }, { status: 500 });
+      }
+
+      if (init?.method === "PUT" && path.includes("/api/files/userfiles/")) {
+        writes.push({ path, body: { upload: true } });
+
+        if (editRetry && ++uploads === 1)
+          return Response.json({ error_message: "Upload unavailable" }, { status: 500 });
+
+        return new Response(null, { status: 204 });
+      }
+
+      if (init?.method === "PUT" && path.endsWith("/api/stock/entry/51")) {
+        const body = JSON.parse(String(init.body));
+        writes.push({ path, body });
+
+        editorWrites += 1;
+
+        if (editRetry && editorWrites === 1)
+          return Response.json({ error_message: "Entry save unavailable" }, { status: 500 });
+        before = rows.map((row) => ({ ...row }));
+        rows = rows.map((row) =>
+          row.id === 51
+            ? {
+                ...row,
+                ...body,
+                amount: Number(body.amount),
+                price: body.price === "" ? null : Number(body.price),
+                location_id: Number(body.location_id),
+                shopping_location_id: body.shopping_location_id
+                  ? Number(body.shopping_location_id)
+                  : null,
+                open: Number(body.open),
+              }
+            : row,
+        );
+
+        return Response.json([
+          { id: 900, product_id: 7, stock_id: "mint", transaction_id: "edit-1" },
+          { id: 901, product_id: 7, stock_id: "mint", transaction_id: "edit-1" },
+        ]);
+      }
+
+      if (init?.method === "PUT" && path.endsWith("/api/userfields/stock/edit-1")) {
+        const body = JSON.parse(String(init.body));
+        writes.push({ path, body });
+        rows = rows.map((row) =>
+          row.stock_id === "mint"
+            ? { ...row, stock_values: { ...row.stock_values, ...body } }
+            : row,
+        );
+
+        return new Response(null, { status: 204 });
+      }
 
       if (path.endsWith("/api/v2/stock/entries")) {
         if (fail && ++reads === 1)
@@ -219,7 +333,10 @@ function mount(path: string, { fail = false, stock = true, tracking = true } = {
   );
   supportProductOptions();
   supportDescriptionEditors();
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+  });
 
   const router = createRouter({
     routeTree,
@@ -237,7 +354,7 @@ function mount(path: string, { fail = false, stock = true, tracking = true } = {
     client.clear();
   });
 
-  return { writes, router };
+  return { writes, router, labels, releaseSavedRead: () => releaseSavedRead() };
 }
 
 test("entry dialog retains the product draft through retry, exact actions, and undo", async () => {
@@ -336,7 +453,130 @@ test("stock entry reads remain available with tracking disabled", async () => {
   expect(screen.queryByRole("combobox", { name: "Location" })).toBeNull();
 });
 
-test("the legacy stock entry route obeys the stock feature flag", async () => {
-  mount("/stockentries", { stock: false });
+test.each(["/stockentries", "/stockentry/51"])("%s obeys the stock feature flag", async (path) => {
+  mount(path, { stock: false });
   await screen.findByRole("heading", { name: "Feature disabled" });
+});
+
+test("entry editing keeps the parent draft and retries an upload on the saved transaction", async () => {
+  const { writes, router, labels } = mount("/product/7", { editRetry: true, printer: true });
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText<HTMLInputElement>("Name");
+  await user.type(name, " draft");
+  await user.click(screen.getByRole("button", { name: "Stock entries" }));
+  const entries = within(await screen.findByRole("dialog", { name: "Stock entries" }));
+  await user.click(await entries.findByRole("button", { name: "Edit stock entry 51" }));
+  const edit = await screen.findByRole("dialog", { name: "Edit stock entry" });
+  const fields = within(edit);
+  await fields.findByText("Editor unavailable");
+  await user.click(fields.getByRole("button", { name: "Retry stock entry" }));
+  const amount = await fields.findByRole<HTMLInputElement>("spinbutton", { name: /^Amount/ });
+  expect(fields.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("");
+  await user.click(fields.getByRole("button", { name: "OK" }));
+  expect(writes).toHaveLength(0);
+  await user.selectOptions(fields.getByRole("combobox", { name: "Location" }), "2");
+  await user.clear(amount);
+  await user.type(amount, "0");
+  await user.click(fields.getByRole("button", { name: "OK" }));
+  expect(amount.validity.rangeUnderflow).toBe(true);
+  expect(writes).toHaveLength(0);
+  await user.clear(amount);
+  await user.type(amount, "3.5");
+  await user.click(fields.getByRole("checkbox", { name: "Never overdue" }));
+  expect(fields.getByLabelText<HTMLInputElement>("Due date").readOnly).toBe(true);
+  expect(
+    fields.getByRole<HTMLInputElement>("checkbox", { name: "Reprint stock entry label" }).checked,
+  ).toBe(true);
+  await user.clear(fields.getByRole("spinbutton", { name: "Price" }));
+  await user.clear(fields.getByRole("textbox", { name: "Note" }));
+  await user.type(fields.getByRole("textbox", { name: "Note" }), "Edited batch");
+  await user.clear(fields.getByLabelText("Batch"));
+  await user.type(fields.getByLabelText("Batch"), "Lime");
+  await user.upload(
+    fields.getByLabelText("Receipt"),
+    new File(["Receipt"], "Receipt.txt", { type: "text/plain" }),
+  );
+  await user.click(fields.getByRole("button", { name: "OK" }));
+  await fields.findByText("Entry save unavailable");
+  expect(amount.value).toBe("3.5");
+  await user.click(fields.getByRole("button", { name: "OK" }));
+  await fields.findByText("Upload unavailable");
+  expect(amount.disabled || amount.closest("fieldset")?.disabled).toBe(true);
+  expect(writes.filter((w) => w.path === "/api/stock/entry/51")).toHaveLength(2);
+  expect(labels).toHaveLength(1);
+  await user.click(fields.getByRole("button", { name: "Retry" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Edit stock entry" })).toBeNull(),
+  );
+  await entries.findByText("Edited batch");
+  expect(writes.filter((w) => w.path === "/api/stock/entry/51").map((w) => w.body)).toEqual(
+    Array(2).fill({
+      amount: "3.5",
+      best_before_date: "2999-12-31",
+      purchased_date: "2026-10-20",
+      price: "",
+      location_id: "2",
+      shopping_location_id: "1",
+      note: "Edited batch",
+      open: false,
+    }),
+  );
+  expect(
+    writes
+      .filter((w) => w.path === "/api/userfields/stock/edit-1" && "batch" in w.body)
+      .map((w) => w.body),
+  ).toEqual([{ batch: "Lime" }]);
+  expect(writes.filter((w) => w.path.includes("/api/files/userfiles/"))).toHaveLength(2);
+  expect(labels).toHaveLength(1);
+  expect(name.value).toBe("Coffee draft");
+  expect(router.state.location.href).toBe("/product/7");
+  await user.click(entries.getByRole("button", { name: "Edit stock entry 51" }));
+  const reopened = await screen.findByRole("dialog", { name: "Edit stock entry" });
+  await within(reopened).findByRole("spinbutton", { name: /^Amount/ });
+  fireEvent(reopened, new Event("cancel", { bubbles: true, cancelable: true }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Edit stock entry" })).toBeNull(),
+  );
+  expect(screen.getByRole("dialog", { name: "Stock entries" })).toBeTruthy();
+  expect(document.activeElement).toBe(entries.getByRole("button", { name: "Edit stock entry 51" }));
+  await user.click(entries.getByRole("button", { name: "Close" }));
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Stock entries" }));
+});
+
+test("the legacy entry editor applies disabled tracking values and reloads saved data", async () => {
+  const { writes, releaseSavedRead } = mount("/stockentry/51", {
+    tracking: false,
+    precision: 0,
+    deferSavedRead: true,
+  });
+
+  const user = userEvent.setup();
+  const amount = await screen.findByRole<HTMLInputElement>("spinbutton", { name: /^Amount/ });
+  expect(amount.value).toBe("3");
+  expect(amount.min).toBe("1");
+  expect(amount.step).toBe("1");
+  const purchased = screen.getByLabelText<HTMLInputElement>("Purchased date");
+  await user.clear(purchased);
+  await user.click(screen.getByRole("button", { name: "OK" }));
+  expect(purchased.validity.valueMissing).toBe(true);
+  expect(writes).toHaveLength(0);
+  fireEvent.change(purchased, { target: { value: "2026-10-22" } });
+  await user.clear(screen.getByRole("textbox", { name: "Note" }));
+  await user.type(screen.getByRole("textbox", { name: "Note" }), "Direct edit");
+  await user.click(screen.getByRole("button", { name: "OK" }));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await act(async () => releaseSavedRead());
+  await screen.findByDisplayValue("Mint batch");
+  expect(screen.getByLabelText<HTMLInputElement>("Purchased date").value).toBe("2026-10-20");
+  expect(writes.filter((w) => w.path === "/api/stock/entry/51").map((w) => w.body)).toEqual([
+    {
+      amount: "3",
+      best_before_date: "2999-12-31",
+      purchased_date: "2026-10-22",
+      price: "0",
+      location_id: 1,
+      note: "Direct edit",
+      open: false,
+    },
+  ]);
 });

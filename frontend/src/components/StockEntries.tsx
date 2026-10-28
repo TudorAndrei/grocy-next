@@ -16,6 +16,7 @@ import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
+import { StockEntryDialog } from "./StockEntryEditor";
 
 export function StockEntries({
   search,
@@ -30,6 +31,7 @@ export function StockEntries({
   const invalidate = useInvalidateStock();
   const notify = useNotify();
   const table = useRef<HTMLDivElement>(null);
+  const [editing, setEditing] = useState<number>();
   const [location, setLocation] = useState("");
   const [refreshedProducts, setRefreshedProducts] = useState<number[]>([]);
   const [sort, setSort] = useState({ key: "product_name", descending: false });
@@ -206,6 +208,27 @@ export function StockEntries({
 
   return (
     <>
+      {editing !== undefined ? (
+        <StockEntryDialog
+          entryId={editing}
+          onCancel={() => setEditing(undefined)}
+          onSaved={(bookings) => {
+            const booking = bookings[0];
+
+            if (booking) {
+              setRefreshedProducts((current) => [...new Set([...current, booking.product_id])]);
+              setLastBooking(booking.id);
+              notify({
+                message: t("Stock entry successfully updated"),
+                undo: () => undoBooking(booking.id),
+              });
+            }
+
+            setEditing(undefined);
+            requestAnimationFrame(() => table.current?.focus());
+          }}
+        />
+      ) : null}
       <div className="toolbar journal-filters">
         {search.embedded === undefined ? (
           <label className="field">
@@ -375,6 +398,15 @@ export function StockEntries({
                               {t("Open")}
                             </button>
                           ) : null}
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={pending}
+                            aria-label={t("Edit stock entry %s", String(row.id))}
+                            onClick={() => setEditing(row.id)}
+                          >
+                            {t("Edit")}
+                          </button>
                           <GrocycodeActions
                             kind="stock-entry"
                             id={row.id}

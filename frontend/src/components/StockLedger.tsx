@@ -5,11 +5,13 @@ import { useState, type FormEvent } from "react";
 import { api, request } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { usePreferences } from "@/lib/preferences";
-import { objectsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
 import { isoDay } from "@/lib/format";
 import { ErrorBlock } from "./ErrorBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
+import { StockEntryDialog } from "./StockEntryEditor";
+import { useNotify } from "./Toaster";
+import { useInvalidateStock } from "@/lib/catalog";
 
 type Entry = {
   id: number;
@@ -54,15 +56,8 @@ export function StockLedger({ productId }: { productId: number }) {
   const [bestBefore, setBestBefore] = useState("");
   const [purchasedDate, setPurchasedDate] = useState(isoDay);
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
-  const [entryAmount, setEntryAmount] = useState("");
-  const [entryExpiry, setEntryExpiry] = useState("");
-  const [entryPrice, setEntryPrice] = useState("");
-  const [entryPurchased, setEntryPurchased] = useState("");
-  const [entryLocation, setEntryLocation] = useState("");
-  const [entryStore, setEntryStore] = useState("");
-  const [entryNote, setEntryNote] = useState("");
-  const [entryOpen, setEntryOpen] = useState(false);
-  const stores = useQuery({ ...objectsQuery("shopping_locations"), enabled: priceEnabled });
+  const notify = useNotify();
+  const invalidate = useInvalidateStock();
 
   const entries = useQuery({
     queryKey: ["stock", "entries", productId],
@@ -116,30 +111,6 @@ export function StockLedger({ productId }: { productId: number }) {
     }
 
     action.mutate(() => api.action(`/api/stock/products/${productId}/${adjust}`, body));
-  }
-
-  function submitEntry(e: FormEvent) {
-    e.preventDefault();
-
-    if (!editEntry) return;
-
-    const body: JsonObject = {
-      amount: Number(entryAmount),
-      best_before_date: entryExpiry || null,
-      purchased_date: entryPurchased || null,
-      price: priceEnabled ? (entryPrice === "" ? null : Number(entryPrice)) : 0,
-      location_id: locationsEnabled ? Number(entryLocation) : 1,
-      note: entryNote || null,
-      open: openingEnabled && entryOpen,
-    };
-
-    if (priceEnabled) body.shopping_location_id = entryStore ? Number(entryStore) : null;
-    action.mutate(() =>
-      request(`/api/stock/entry/${editEntry.id}`, {
-        method: "PUT",
-        body: JSON.stringify(body),
-      }),
-    );
   }
 
   const locationOptions = catalog.locations.map((l) => (
@@ -264,16 +235,6 @@ export function StockLedger({ productId }: { productId: number }) {
                 className="btn btn-ghost"
                 onClick={() => {
                   setEditEntry(entry);
-                  setEntryAmount(String(entry.amount));
-                  setEntryExpiry(entry.best_before_date ?? "");
-                  setEntryPrice(entry.price == null ? "" : String(entry.price));
-                  setEntryPurchased(entry.purchased_date ?? "");
-                  setEntryLocation(String(entry.location_id));
-                  setEntryStore(
-                    entry.shopping_location_id == null ? "" : String(entry.shopping_location_id),
-                  );
-                  setEntryNote(entry.note ?? "");
-                  setEntryOpen(Boolean(entry.open));
                 }}
               >
                 {tr("Edit")}
@@ -283,98 +244,23 @@ export function StockLedger({ productId }: { productId: number }) {
         ))}
       </ol>
       {editEntry ? (
-        <form className="panel-body move-form" onSubmit={submitEntry}>
-          <div className="form-grid">
-            <label className="field">
-              <span>{tr("Entry amount")}</span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                required
-                value={entryAmount}
-                onChange={(e) => setEntryAmount(e.target.value)}
-              />
-            </label>
-            {datesEnabled ? (
-              <label className="field">
-                <span>{tr("Best before")}</span>
-                <input
-                  type="date"
-                  value={entryExpiry}
-                  onChange={(e) => setEntryExpiry(e.target.value)}
-                />
-              </label>
-            ) : null}
-            <label className="field">
-              <span>{tr("Purchase date")}</span>
-              <input
-                type="date"
-                value={entryPurchased}
-                onChange={(e) => setEntryPurchased(e.target.value)}
-              />
-            </label>
-            {priceEnabled ? (
-              <label className="field">
-                <span>{tr("Price per stock unit")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={entryPrice}
-                  onChange={(e) => setEntryPrice(e.target.value)}
-                />
-              </label>
-            ) : null}
-            {locationsEnabled ? (
-              <label className="field">
-                <span>{tr("Location")}</span>
-                <select
-                  required
-                  value={entryLocation}
-                  onChange={(e) => setEntryLocation(e.target.value)}
-                >
-                  {locationOptions}
-                </select>
-              </label>
-            ) : null}
-            {priceEnabled ? (
-              <label className="field">
-                <span>{tr("Store")}</span>
-                <select value={entryStore} onChange={(e) => setEntryStore(e.target.value)}>
-                  <option value="">{tr("No store")}</option>
-                  {(stores.data ?? []).map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <label className="field">
-              <span>{tr("Note")}</span>
-              <textarea value={entryNote} onChange={(e) => setEntryNote(e.target.value)} />
-            </label>
-            {openingEnabled ? (
-              <label className="check-field">
-                <input
-                  type="checkbox"
-                  checked={entryOpen}
-                  onChange={(e) => setEntryOpen(e.target.checked)}
-                />
-                <span>{tr("Opened")}</span>
-              </label>
-            ) : null}
-          </div>
-          <div className="actions">
-            <button type="submit" className="btn btn-primary" disabled={action.isPending}>
-              {tr("Save entry")}
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setEditEntry(null)}>
-              {tr("Cancel")}
-            </button>
-          </div>
-        </form>
+        <StockEntryDialog
+          entryId={editEntry.id}
+          onCancel={() => setEditEntry(null)}
+          onSaved={(bookings) => {
+            const booking = bookings[0];
+            setEditEntry(null);
+            notify({
+              message: tr("Stock entry successfully updated"),
+              undo: booking
+                ? async () => {
+                    await api.action(`/api/stock/bookings/${booking.id}/undo`);
+                    await invalidate();
+                  }
+                : undefined,
+            });
+          }}
+        />
       ) : null}
 
       {priceEnabled ? (

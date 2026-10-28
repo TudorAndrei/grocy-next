@@ -10,6 +10,7 @@ export function NumberPicker({
   disabled,
   min,
   step,
+  autoFocus,
   onChange,
 }: {
   id: string;
@@ -19,6 +20,7 @@ export function NumberPicker({
   disabled?: boolean;
   min?: number | string;
   step: string;
+  autoFocus?: boolean;
   onChange: (value: string) => void;
 }) {
   const { t } = useI18n();
@@ -41,6 +43,7 @@ export function NumberPicker({
         disabled={disabled}
         min={min}
         step={step}
+        autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;

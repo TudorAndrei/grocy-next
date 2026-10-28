@@ -3487,3 +3487,19 @@ a.btn[aria-disabled="true"] {
   flex-wrap: wrap;
   min-inline-size: 12rem;
 }
+
+.stock-entry-dialog {
+  width: min(48rem, calc(100% - 2rem));
+}
+
+.stock-entry-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.stock-entry-form > fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

@@ -51,6 +51,11 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
         read_paths.append(f"/api/v2/products/form-options?product_id={identity}")
         read_paths.append("/api/v2/stock/journal")
         read_paths.append("/api/v2/stock/entries")
+        client.post(
+            f"/api/stock/products/{identity}/add", headers=api_headers, json={"amount": 1}
+        ).raise_for_status()
+        entries = client.get(f"/api/stock/products/{identity}/entries", headers=api_headers).json()
+        read_paths.append(f"/api/v2/stock/entries/{entries[0]['id']}/editor")
     read_paths.append(f"/api/v2/content/{entity}")
     for read_path in read_paths:
         assert client.get(read_path).status_code == 401
@@ -87,6 +92,7 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     if entity == "products":
         assert client.get(read_paths[1], headers=headers).status_code == 200
         assert client.get("/api/v2/stock/journal", headers=headers).status_code == 200
+        assert client.get(read_paths[-2], headers=headers).status_code == 200
     response = client.get(path, headers=headers)
     assert response.status_code == 200, response.text
     rendered_outputs = [response.json()["html"]]

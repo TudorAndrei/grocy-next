@@ -99,7 +99,7 @@ export function initialUserfields(
 
 export async function saveUserfields(
   entity: string,
-  id: number,
+  id: number | string,
   fields: UserfieldDefinition[],
   edits: FieldEdits,
   onSaved: (name: string, edit: FieldEdit) => void,
@@ -108,10 +108,13 @@ export async function saveUserfields(
     const edit = edits[field.name];
 
     if (!edit?.dirty) continue;
-    await request(`/api/userfields/${encodeURIComponent(entity)}/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ [field.name]: edit.value }),
-    });
+    await request(
+      `/api/userfields/${encodeURIComponent(entity)}/${encodeURIComponent(String(id))}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ [field.name]: edit.value }),
+      },
+    );
 
     if (edit.remove) {
       await request(filePath("userfiles", edit.remove), { method: "DELETE" });
