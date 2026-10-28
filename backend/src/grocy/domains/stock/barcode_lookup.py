@@ -174,7 +174,7 @@ async def _download_image(image_url: str, barcode: str) -> str | None:
     path_part = urlparse(image_url).path
     extension = Path(path_part).suffix.lstrip(".")
     file_name = f"{barcode}.{extension}"
-    root = get_settings().files_root.resolve() / "productpictures"
+    root = get_settings().active_files_root() / "productpictures"
     root.mkdir(parents=True, exist_ok=True)
     target = (root / file_name).resolve()
     if not target.is_relative_to(root):

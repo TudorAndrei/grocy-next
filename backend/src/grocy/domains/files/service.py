@@ -79,7 +79,7 @@ class FilesService:
             character in name for character in ("/", "\\", "\x00", "\r", "\n")
         ):
             raise GrocyError("Invalid filename", code=code)
-        root = get_settings().files_root.resolve()
+        root = get_settings().active_files_root()
         path = (root / group / name).resolve()
         if not path.is_relative_to(root):
             raise GrocyError("Invalid file path", code=code)

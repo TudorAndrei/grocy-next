@@ -191,6 +191,13 @@ class Settings(BaseSettings):
             return "sqlite+aiosqlite:///" + str(path)
         return self.database_url
 
+    def active_files_root(self) -> Path:
+        root = self.files_root
+        if self.mode in {"demo", "prerelease"}:
+            suffix = self.default_locale if self.demo_db_suffix is None else self.demo_db_suffix
+            root = Path(str(root) + "/" + suffix)
+        return root.resolve()
+
     def user_defaults(self) -> dict[str, Any]:
         return {**client_defaults()["user_settings"], **self.default_user_settings}
 

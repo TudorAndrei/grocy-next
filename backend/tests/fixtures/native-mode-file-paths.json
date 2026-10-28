@@ -1,0 +1,38 @@
+{
+  "source": {
+    "version": "4.5.0",
+    "sha256": "5e163f6bfbe47c1f8055ae7630f5c59040f3e87559bf25a2b2a6f587939e02b7"
+  },
+  "cases": [
+    {
+      "mode": "production",
+      "suffix": null,
+      "path": "userfiles/manual.txt"
+    },
+    {
+      "mode": "dev",
+      "suffix": "custom",
+      "path": "userfiles/manual.txt"
+    },
+    {
+      "mode": "demo",
+      "suffix": null,
+      "path": "de/userfiles/manual.txt"
+    },
+    {
+      "mode": "prerelease",
+      "suffix": "custom_mode",
+      "path": "custom_mode/userfiles/manual.txt"
+    },
+    {
+      "mode": "demo",
+      "suffix": "0",
+      "path": "0/userfiles/manual.txt"
+    },
+    {
+      "mode": "prerelease",
+      "suffix": "",
+      "path": "/userfiles/manual.txt"
+    }
+  ]
+}
