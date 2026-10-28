@@ -166,6 +166,13 @@ export function StockJournal({
 
   return (
     <>
+      {search.embedded === undefined ? (
+        <div className="actions">
+          <Link to="/stockjournal/summary" className="btn">
+            {t("Journal summary")}
+          </Link>
+        </div>
+      ) : null}
       <div className="toolbar journal-filters">
         <label className="field">
           <span>{t("Search journal")}</span>

@@ -54,6 +54,60 @@ class JournalView(BaseModel):
     transaction_types: list[str]
 
 
+class JournalSummaryRow(BaseModel):
+    product_id: int
+    product_name: str | None
+    transaction_type: str | None
+    user_id: int
+    user_display_name: str | None
+    qu_name: str | None
+    qu_name_plural: str | None
+    amount: float
+
+
+class JournalSummaryView(BaseModel):
+    rows: list[JournalSummaryRow]
+    products: list[JournalChoice]
+    users: list[JournalChoice]
+    transaction_types: list[str]
+
+
+async def journal_summary(
+    session: AsyncSession,
+    product_id: str | None,
+    user_id: str | None,
+    transaction_type: str | None,
+) -> JournalSummaryView:
+    await configure_compatibility_queries(session)
+    parameters = {
+        key: value
+        for key, value in {
+            "product_id": product_id,
+            "user_id": user_id,
+            "transaction_type": transaction_type,
+        }.items()
+        if value is not None
+    }
+    # Unlike the journal window, these native controller limits use the
+    # original query text with SQLite equality, including empty values.
+    where = " AND ".join(f"{key}=:{key}" for key in parameters)
+    result = await session.execute(
+        text("SELECT * FROM uihelper_stock_journal_summary" + (f" WHERE {where}" if where else "")),
+        parameters,
+    )
+    rows = [JournalSummaryRow(**row) for row in result.mappings()]
+    products = await session.execute(
+        text("SELECT id,name FROM products WHERE active=1 ORDER BY name COLLATE NOCASE")
+    )
+    users = await session.execute(text("SELECT id,display_name AS name FROM users_dto"))
+    return JournalSummaryView(
+        rows=rows,
+        products=[JournalChoice(**row) for row in products.mappings()],
+        users=[JournalChoice(**row) for row in users.mappings()],
+        transaction_types=TRANSACTION_TYPES,
+    )
+
+
 async def journal_view(
     session: AsyncSession, product: str | None, months: str | None
 ) -> JournalView:

@@ -185,7 +185,8 @@ function mount(path: string, fail = false, stock = true) {
 
       if (path === "/api/system/config") return Response.json({ FEATURE_FLAG_STOCK: stock });
 
-      if (path === "/api/user/settings") return Response.json({});
+      if (path === "/api/user/settings")
+        return Response.json({ stock_decimal_places_amounts: "2" });
 
       if (path.includes("/shopping-lists/")) return Response.json({ items: [] });
 
@@ -247,6 +248,62 @@ function mount(path: string, fail = false, stock = true) {
               (!url.searchParams.has("product") ||
                 row.product_id === Number(url.searchParams.get("product"))) &&
               (row.id !== 105 || url.searchParams.get("months") === "9999"),
+          ),
+        });
+      }
+
+      if (path === "/api/v2/stock/journal/summary") {
+        if (fail && ++reads === 1)
+          return Response.json({ error_message: "Summary unavailable" }, { status: 503 });
+
+        const summary = [
+          {
+            product_id: 7,
+            product_name: "Coffee",
+            user_id: 1,
+            user_display_name: "Alice",
+            transaction_type: "purchase",
+            amount: 1000.005,
+          },
+          {
+            product_id: 7,
+            product_name: "Coffee",
+            user_id: 2,
+            user_display_name: "Bob",
+            transaction_type: "consume",
+            amount: -1,
+          },
+          {
+            product_id: 8,
+            product_name: "Tea",
+            user_id: 1,
+            user_display_name: "Alice",
+            transaction_type: "purchase",
+            amount: 4,
+          },
+          {
+            product_id: 9,
+            product_name: "Old coffee",
+            user_id: 1,
+            user_display_name: "Alice",
+            transaction_type: "purchase",
+            amount: 2,
+          },
+        ];
+
+        return Response.json({
+          products: products.map(({ id, name }) => ({ id, name })),
+          users: [
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" },
+          ],
+          transaction_types: ["consume", "purchase"],
+          rows: summary.flatMap((row) =>
+            (["product_id", "user_id", "transaction_type"] as const).every(
+              (key) => !url.searchParams.has(key) || String(row[key]) === url.searchParams.get(key),
+            )
+              ? [{ ...row, qu_name: "Piece", qu_name_plural: "Pieces" }]
+              : [],
           ),
         });
       }
@@ -374,7 +431,67 @@ test.each(["/journal", "/stockjournal"])(
   },
 );
 
-test("the legacy journal route obeys the disabled stock feature", async () => {
-  mount("/stockjournal?product=7", false, false);
-  await screen.findByRole("heading", { name: "Feature disabled" });
+test.each(["/stockjournal?product=7", "/stockjournal/summary?product_id=7"])(
+  "%s obeys the disabled stock feature",
+  async (path) => {
+    mount(path, false, false);
+    await screen.findByRole("heading", { name: "Feature disabled" });
+  },
+);
+
+test("journal summary retries, filters visible values, and sorts signed totals", async () => {
+  mount("/stockjournal/summary", true);
+  const user = userEvent.setup();
+  await screen.findByText("Summary unavailable");
+  await user.click(screen.getByRole("button", { name: "Retry summary" }));
+  const table = await screen.findByRole("table", { name: "Stock journal summary" });
+  const view = within(table);
+  await view.findByText("1,000.01 Pieces");
+  expect(view.getAllByRole("row")).toHaveLength(5);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "7");
+  expect(view.getAllByRole("row")).toHaveLength(3);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Transaction type" }), "purchase");
+  await user.selectOptions(screen.getByRole("combobox", { name: "User" }), "1");
+  expect(view.getAllByRole("row")).toHaveLength(2);
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search summary" }),
+    "Alice Coffee 1,000.01",
+  );
+  expect(view.getAllByRole("row")).toHaveLength(2);
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  await user.type(screen.getByRole("searchbox", { name: "Search summary" }), "“Old coffee” Alice");
+  expect(view.getAllByRole("row")).toHaveLength(2);
+  expect(view.getByRole("rowheader").textContent).toBe("Old coffee");
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  await user.click(view.getByRole("button", { name: "Amount" }));
+  expect(view.getAllByRole("row")[1]?.textContent).toBe("CoffeeconsumeBob-1 Piece");
+  await user.click(view.getByRole("button", { name: "Amount" }));
+  expect(view.getAllByRole("row")[1]?.textContent).toBe("CoffeepurchaseAlice1,000.01 Pieces");
+  await user.type(screen.getByRole("searchbox", { name: "Search summary" }), "No such product");
+  expect(view.getByText("No matching records found")).toBeTruthy();
+});
+
+test("summary URL limits survive clearing local filters and the journal links to all totals", async () => {
+  const { router } = mount(
+    "/stockjournal/summary?product_id=9&user_id=1&transaction_type=purchase&embedded=false",
+  );
+
+  const user = userEvent.setup();
+  await screen.findByRole("rowheader", { name: "Old coffee" });
+  expect(screen.queryByRole("combobox", { name: "Product" })).toBeNull();
+  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "User" }).value).toBe("");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Transaction type" }), "consume");
+  await screen.findByText("No matching records found");
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  await screen.findByRole("rowheader", { name: "Old coffee" });
+  expect(router.state.location.search).toEqual({
+    product_id: "9",
+    user_id: "1",
+    transaction_type: "purchase",
+    embedded: "false",
+  });
+  await router.navigate({ to: "/stockjournal", search: { product: "7" } });
+  await user.click(await screen.findByRole("link", { name: "Journal summary" }));
+  await screen.findByRole("rowheader", { name: "Tea" });
+  expect(router.state.location.href).toBe("/stockjournal/summary");
 });

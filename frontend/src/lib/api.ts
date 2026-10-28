@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { stockJournalSchema, type JournalSearch } from "./stock-journal";
+import {
+  stockJournalSchema,
+  stockSummarySchema,
+  type JournalSearch,
+  type SummarySearch,
+} from "./stock-journal";
 import { stockEntriesSchema } from "./stock-entries";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
@@ -180,6 +185,16 @@ export const api = {
       if (search[key] !== undefined) query.set(key, search[key]);
 
     return stockJournalSchema.parse(await request(`/api/v2/stock/journal?${query}`, { signal }));
+  },
+  getStockJournalSummary: async (search: SummarySearch, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+
+    for (const key of ["product_id", "user_id", "transaction_type"] as const)
+      if (search[key] !== undefined) query.set(key, search[key]);
+
+    return stockSummarySchema.parse(
+      await request(`/api/v2/stock/journal/summary?${query}`, { signal }),
+    );
   },
   getMealPlanSections: async () =>
     mealPlanSectionsSchema.parse(
