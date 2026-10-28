@@ -34,6 +34,7 @@ export function configuredFeatures(config: JsonObject | undefined): Features {
       case "locations":
         return enabled("STOCK") && enabled("STOCK_LOCATION_TRACKING");
       case "shopping":
+      case "shoppinglistitem":
         return enabled("SHOPPINGLIST");
       case "recipes":
         return enabled("RECIPES");

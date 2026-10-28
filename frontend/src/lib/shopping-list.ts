@@ -137,3 +137,55 @@ export const shoppingListsQuery = {
   queryKey: ["shopping-lists"] as const,
   queryFn: () => request<ShoppingListSummary[]>("/api/v2/shopping-lists"),
 };
+
+export const shoppingItemEditorSchema = z.object({
+  item: z
+    .object({
+      id: z.number(),
+      shopping_list_id: z.number(),
+      product_id: z.number().nullable(),
+      amount: z.number(),
+      qu_id: z.number().nullable(),
+      note: z.string().nullable(),
+    })
+    .nullable(),
+  lists: z.array(z.object({ id: z.number(), name: z.string() })),
+  products: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      qu_id_stock: z.number(),
+      qu_id_purchase: z.number(),
+    }),
+  ),
+  units: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      name_plural: z.string().nullable(),
+      plural_forms: z.string().nullable().optional(),
+    }),
+  ),
+  conversions: z.array(
+    z.object({
+      product_id: z.number(),
+      from_qu_id: z.number(),
+      to_qu_id: z.number(),
+      factor: z.coerce.number(),
+      to_qu_name: z.string(),
+      to_qu_name_plural: z.string().nullable(),
+    }),
+  ),
+  fields: z.array(fieldSchema),
+  values: z.record(z.string(), z.string().nullable()),
+});
+
+export type ShoppingItemEditor = z.infer<typeof shoppingItemEditorSchema>;
+
+export async function shoppingItemEditor(itemId?: number) {
+  return shoppingItemEditorSchema.parse(
+    await request(
+      `/api/v2/shopping-lists/items/editor${itemId === undefined ? "" : `?item_id=${itemId}`}`,
+    ),
+  );
+}

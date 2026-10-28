@@ -6,6 +6,7 @@ import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
 import { unitLabel } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
+import { ShoppingItemForm } from "@/components/ShoppingItemForm";
 import { ShoppingNotes } from "@/components/ShoppingNotes";
 import { ShoppingListActions } from "@/components/ShoppingListActions";
 import { shoppingListsQuery } from "@/lib/shopping-list";
@@ -45,6 +46,7 @@ export function ShoppingPage({
   const invalidateStock = useInvalidateStock();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [revision, setRevision] = useState(0);
+  const [editing, setEditing] = useState<{ itemId?: number }>();
   const listId = features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedListId : 1;
 
   const [notesDraft, setNotesDraft] = useState<{
@@ -254,6 +256,9 @@ export function ShoppingPage({
         <div className="toolbar">
           <AddItemForm listId={listId} onAdded={refresh} />
           <div className="toolbar-end">
+            <button type="button" className="btn" onClick={() => setEditing({})}>
+              {tr("Create shopping list item")}
+            </button>
             {stockEnabled ? (
               <button
                 type="button"
@@ -327,6 +332,17 @@ export function ShoppingPage({
         </div>
       ) : null}
 
+      {editing ? (
+        <ShoppingItemForm
+          itemId={editing.itemId}
+          listId={listId}
+          onClose={() => setEditing(undefined)}
+          onSaved={(id) => {
+            setEditing(undefined);
+            onListChange(id);
+          }}
+        />
+      ) : null}
       {list.isLoading ? <LoadingBlock label={tr("Loading shopping list…")} /> : null}
       {list.isError ? <ErrorBlock message={list.error.message} /> : null}
       {list.isSuccess && items.length === 0 ? (
@@ -370,6 +386,14 @@ export function ShoppingPage({
                 </button>
                 {mode === "plan" ? (
                   <span className="row-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost"
+                      aria-label={tr("Edit %s", itemName(item))}
+                      onClick={() => setEditing({ itemId: item.id })}
+                    >
+                      {tr("Edit")}
+                    </button>
                     {item.product_id != null ? (
                       <Link
                         to="/products/$productId"
