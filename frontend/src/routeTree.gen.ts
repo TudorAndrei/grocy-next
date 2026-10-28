@@ -36,6 +36,7 @@ import { Route as ProductsProductIdRouteImport } from './routes/products/$produc
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes/$recipeId'
 import { Route as ShoppinglistitemItemIdRouteImport } from './routes/shoppinglistitem/$itemId'
+import { Route as StockentriesIndexRouteImport } from './routes/stockentries/index'
 import { Route as StockjournalIndexRouteImport } from './routes/stockjournal/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -173,6 +174,11 @@ const ShoppinglistitemItemIdRoute = ShoppinglistitemItemIdRouteImport.update({
   path: '/shoppinglistitem/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StockentriesIndexRoute = StockentriesIndexRouteImport.update({
+  id: '/stockentries/',
+  path: '/stockentries/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockjournalIndexRoute = StockjournalIndexRouteImport.update({
   id: '/stockjournal/',
   path: '/stockjournal/',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
+  '/stockentries/': typeof StockentriesIndexRoute
   '/stockjournal/': typeof StockjournalIndexRoute
 }
 export interface FileRoutesByTo {
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
   '/products': typeof ProductsIndexRoute
   '/recipes': typeof RecipesIndexRoute
+  '/stockentries': typeof StockentriesIndexRoute
   '/stockjournal': typeof StockjournalIndexRoute
 }
 export interface FileRoutesById {
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
+  '/stockentries/': typeof StockentriesIndexRoute
   '/stockjournal/': typeof StockjournalIndexRoute
 }
 export interface FileRouteTypes {
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/shoppinglistitem/$itemId'
     | '/products/'
     | '/recipes/'
+    | '/stockentries/'
     | '/stockjournal/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/shoppinglistitem/$itemId'
     | '/products'
     | '/recipes'
+    | '/stockentries'
     | '/stockjournal'
   id:
     | '__root__'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/shoppinglistitem/$itemId'
     | '/products/'
     | '/recipes/'
+    | '/stockentries/'
     | '/stockjournal/'
   fileRoutesById: FileRoutesById
 }
@@ -391,6 +403,7 @@ export interface RootRouteChildren {
   ShoppinglistitemItemIdRoute: typeof ShoppinglistitemItemIdRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   RecipesIndexRoute: typeof RecipesIndexRoute
+  StockentriesIndexRoute: typeof StockentriesIndexRoute
   StockjournalIndexRoute: typeof StockjournalIndexRoute
 }
 
@@ -585,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShoppinglistitemItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stockentries/': {
+      id: '/stockentries/'
+      path: '/stockentries'
+      fullPath: '/stockentries/'
+      preLoaderRoute: typeof StockentriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stockjournal/': {
       id: '/stockjournal/'
       path: '/stockjournal'
@@ -623,6 +643,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShoppinglistitemItemIdRoute: ShoppinglistitemItemIdRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   RecipesIndexRoute: RecipesIndexRoute,
+  StockentriesIndexRoute: StockentriesIndexRoute,
   StockjournalIndexRoute: StockjournalIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -4,6 +4,7 @@ import { useI18n } from "@/lib/i18n";
 import { EntityManager } from "./EntityManager";
 import { ProductRelatedData } from "./ProductRelatedData";
 import { ProductJournal } from "./StockJournal";
+import { ProductEntries } from "./StockEntries";
 
 export function ProductEditor(
   props: Omit<ComponentProps<typeof EntityManager>, "entity" | "related">,
@@ -16,6 +17,7 @@ export function ProductEditor(
       editorActions={(row, pending) => (
         <>
           {props.editorActions?.(row, pending)}
+          <ProductEntries productId={row.id} name={row.name ?? ""} disabled={pending} />
           <ProductJournal productId={row.id} name={row.name ?? ""} disabled={pending} />
         </>
       )}

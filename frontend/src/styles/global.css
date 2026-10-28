@@ -3470,3 +3470,20 @@ a.btn[aria-disabled="true"] {
   text-transform: none;
   background: transparent;
 }
+
+.entries-table tr[data-due="soon"] {
+  background: var(--mustard-soft);
+}
+
+.entries-table tr[data-due="expired"] {
+  background: var(--tomato-soft);
+}
+
+.entries-table tr[data-due="best-before"] {
+  background: var(--surface-sunk);
+}
+
+.entries-table .row-actions {
+  flex-wrap: wrap;
+  min-inline-size: 12rem;
+}

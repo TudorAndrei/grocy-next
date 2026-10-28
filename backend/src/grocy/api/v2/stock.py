@@ -2,9 +2,16 @@ from fastapi import APIRouter
 
 from grocy.core.auth import AuthenticatedActor
 from grocy.core.deps import DbSession
+from grocy.domains.stock.entries import EntriesView, entries_view
 from grocy.domains.stock.journal import JournalView, journal_view
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/entries")
+async def get_stock_entries(actor: AuthenticatedActor, session: DbSession) -> EntriesView:
+    actor.require("STOCK")
+    return await entries_view(session)
 
 
 @router.get("/stock/journal")

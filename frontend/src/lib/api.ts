@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { stockJournalSchema, type JournalSearch } from "./stock-journal";
+import { stockEntriesSchema } from "./stock-entries";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
 import { localizationSchema } from "./localization";
@@ -170,6 +171,8 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getStockEntries: async (signal?: AbortSignal) =>
+    stockEntriesSchema.parse(await request("/api/v2/stock/entries", { signal })),
   getStockJournal: async (search: JournalSearch, signal?: AbortSignal) => {
     const query = new URLSearchParams();
 

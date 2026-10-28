@@ -156,6 +156,9 @@ function StockPage() {
             <Link to="/journal" className="btn btn-ghost">
               {tr("Journal")}
             </Link>
+            <Link to="/stockentries" className="btn btn-ghost">
+              {tr("Stock entries")}
+            </Link>
             <Link to="/barcode" className="btn btn-ghost">
               {tr("Barcode")}
             </Link>

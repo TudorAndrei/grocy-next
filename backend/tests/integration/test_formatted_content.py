@@ -50,6 +50,7 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     if entity == "products":
         read_paths.append(f"/api/v2/products/form-options?product_id={identity}")
         read_paths.append("/api/v2/stock/journal")
+        read_paths.append("/api/v2/stock/entries")
     read_paths.append(f"/api/v2/content/{entity}")
     for read_path in read_paths:
         assert client.get(read_path).status_code == 401
