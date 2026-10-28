@@ -1176,7 +1176,8 @@ def test_reference_parent_stock_and_volatile_records(
                     json={
                         "amount": amount,
                         "price": 2.5,
-                        "best_before_date": (date.today() - timedelta(days=1)).isoformat(),
+                        # Aggregation is checked here; date-boundary rules have separate cases.
+                        "best_before_date": (date.today() - timedelta(days=2)).isoformat(),
                     },
                 ).status_code
                 == 200
