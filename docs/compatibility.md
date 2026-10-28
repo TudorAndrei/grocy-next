@@ -91,9 +91,11 @@ Shopping lists now have create, edit, and delete controls. The selector shows al
 
 The list form includes the fourteen native custom field types. It retains the native blank defaults, local date initialization, required checkbox acknowledgement, dirty-field writes, file names, and save order. Creation saves the list before its custom fields. Editing saves custom fields before the name. A failed upload can be repeated on the created list. File and picture uploads also work on local HTTP pages. Python paper output can resolve custom image files.
 
+Python serves legacy named file links for all five native file groups. The first encoded name selects the stored file. The second sets the displayed name. GET and HEAD retain the native content type, inline file name, cache, and image-size rules. File links from printed shopping lists pass through the release web server and the development proxy, including a configured path prefix. Session cookies and API keys can authorize them. Missing files use the translated page message and five-second return. File preflight requests need no login and retain the native cross-origin headers.
+
 The Python input filter also retains the native closing form for breaks and images. It supplies missing image text, checks the supported image data types, and corrects the declared type when the native reference does so. Encoded literal tag text retains the separate decoding rule.
 
-Full Python parity is not complete. Open work includes further configuration options, translated web text, remaining form and meal-plan behavior, code previews in edit forms, custom recipe columns, and saved table options. Direct legacy edit-form routes and custom-file links in printed documents also remain open. More saved preferences still need their web effects. Physical camera, torch, and printer checks remain open. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes further configuration options, translated web text, remaining form and meal-plan behavior, code previews in edit forms, custom recipe columns, and saved table options. Direct legacy edit-form routes and remaining web error behavior also remain open. More saved preferences still need their web effects. Physical camera, torch, and printer checks remain open. Test results must identify the runtime and selected cases.
 
 ## Verification
 
@@ -184,6 +186,10 @@ The shopping list control changes passed all 213 frontend tests and 19 selected 
 The release browser checks used `/house` on a local HTTP origin. List names, order, notes, and counts matched the native controller query. Clear done items left the same three open rows in both databases. The native and release forms saved the same text, explicit false checkbox, selected choice, and empty date values. Both uploaded files had the same displayed names and bytes. The HTTP check found that secure-page-only file name generation blocked uploads. The corrected file name code passed the browser check and the web retry test without that browser function.
 
 The 390-pixel checks covered the list form, saved files, rename, delete confirmation, cancellation, and the default list delete rule. The form scrolled within the screen. Escape closed the confirmation and returned focus to List actions. Confirmed deletion selected list `1`. The phone page had no horizontal overflow. These checks used an isolated browser and disposable databases. Neither release image had PHP. The task browser, four test containers, and their network were removed.
+
+The named-file changes passed 78 selected comparisons on Python and the pinned PHP server. A further 85 Python integration cases covered file storage, access, shopping paper, and code images. Formatting, lint, type checks, and both release builds passed. The 13 initial local cases failed on the previous source because the named file route was absent. The added preflight case also failed on the previous source.
+
+The final release checks used `/house`. Both links from a generated shopping document returned their files through the web server. Text bytes, displayed names, and resized PNG bytes matched the native output. The native and release browsers opened the same text and 20-by-10 image with test session cookies. The release missing-file page returned to the default page after five seconds. Final cache, cross-origin, and unauthenticated preflight responses passed through the web proxy. The development proxy returned the file through both root and prefixed paths. Neither release image had PHP. The task browser, development server, four test containers, and their network were removed.
 
 Run the normal tests without PHP:
 
