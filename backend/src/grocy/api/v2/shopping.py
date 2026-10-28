@@ -1,12 +1,42 @@
 from decimal import Decimal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from grocy.core.auth import AuthenticatedActor, CurrentActor
-from grocy.core.deps import ShoppingSvc
+from grocy.core.deps import DbSession, ShoppingSvc
+from grocy.domains.shopping.paper import ShoppingPaper
+from grocy.domains.system.service import SystemService
 
 router = APIRouter(tags=["shopping"])
+
+
+@router.get("/shopping-lists/{shopping_list_id}/print", response_class=HTMLResponse)
+async def shopping_paper(
+    shopping_list_id: int,
+    request: Request,
+    actor: AuthenticatedActor,
+    session: DbSession,
+    header: bool = True,
+    grouped: bool = True,
+    layout: str = "table",
+) -> HTMLResponse:
+    actor.require("SHOPPINGLIST")
+    locale = await SystemService(session).locale(
+        actor.user_id, request.headers.get("accept-language", "")
+    )
+    return HTMLResponse(
+        await ShoppingPaper(session).document(
+            shopping_list_id,
+            actor.user_id,
+            locale,
+            header=header,
+            grouped=grouped,
+            layout=layout,
+            base_url=str(request.base_url).rstrip("/"),
+        )
+    )
 
 
 class ShoppingAddBody(BaseModel):

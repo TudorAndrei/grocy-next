@@ -1,10 +1,7 @@
 """Stock-entry paper labels from the pinned template, with embedded print assets."""
 
 import base64
-import re
-from functools import lru_cache
 from html import escape
-from pathlib import Path
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,28 +10,11 @@ from starlette.concurrency import run_in_threadpool
 from grocy.compatibility.php import php_string
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
+from grocy.domains.print_assets import print_font_styles
 from grocy.domains.printing import stock_entry
 from grocy.domains.system.service import localization
 
 from .image import grocycode_png
-
-_FONTS = Path(__file__).parents[2] / "_vendor" / "roboto"
-
-
-@lru_cache
-def _font_styles() -> str:
-    def embed(match: re.Match[str]) -> str:
-        data = base64.b64encode((_FONTS / match[1]).read_bytes()).decode()
-        return f"src: url(data:font/woff2;base64,{data}) format('woff2');"
-
-    return "\n".join(
-        re.sub(
-            r"src: url\(\./files/([^()]+\.woff2)\)[^;]+;",
-            embed,
-            (_FONTS / f"{weight}.css").read_text(),
-        )
-        for weight in (400, 700)
-    )
 
 
 async def stock_entry_label(
@@ -67,7 +47,7 @@ async def stock_entry_label(
         if get_settings().feature_enabled("STOCK_BEST_BEFORE_DATE_TRACKING")
         else ""
     )
-    fonts = await run_in_threadpool(_font_styles)
+    fonts = await run_in_threadpool(print_font_styles)
     return f"""<html>
 <head><meta charset="utf-8"><title>{escape(name)}</title>
 <style>{fonts}
