@@ -10,7 +10,10 @@ export function DatabaseRefresh() {
     if (!autoReload) return;
 
     const refresh = () => {
-      if (document.visibilityState === "visible") {
+      if (
+        document.visibilityState === "visible" &&
+        !document.body.classList.contains("fullscreen-card")
+      ) {
         void client.refetchQueries({ type: "active" });
       }
     };

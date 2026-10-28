@@ -92,6 +92,7 @@ const errorBodySchema = z.object({
 });
 
 const configuredLocaleSchema = z.string().optional().catch(undefined);
+const contentSchema = z.object({ html: z.string() });
 
 function errorMessage(body: JsonValue, fallback: string): string {
   const result = errorBodySchema.safeParse(body);
@@ -156,6 +157,8 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getContent: async (entity: "recipes" | "equipment", id: number) =>
+    contentSchema.parse(await request<JsonValue>(`/api/v2/content/${entity}/${id}`)),
   getLocalization: async (locale?: string) =>
     localizationSchema.parse(
       await request<JsonValue>(
@@ -404,6 +407,7 @@ export const api = {
 };
 
 export const queryKeys = {
+  content: (entity: string, id: number) => ["content", entity, id] as const,
   localization: (locale?: string) => ["localization", locale ?? "default"] as const,
   products: ["products"] as const,
   locations: ["locations"] as const,

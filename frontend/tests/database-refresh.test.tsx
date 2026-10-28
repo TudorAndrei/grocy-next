@@ -36,7 +36,15 @@ test("automatic refresh shows a stock change made outside the page", async () =>
     amount = 3;
     await act(() => vi.advanceTimersByTimeAsync(5000));
     expect(screen.getByLabelText("Stock amount").textContent).toBe("3");
+    document.body.classList.add("fullscreen-card");
+    amount = 5;
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(screen.getByLabelText("Stock amount").textContent).toBe("3");
+    document.body.classList.remove("fullscreen-card");
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(screen.getByLabelText("Stock amount").textContent).toBe("5");
   } finally {
+    document.body.classList.remove("fullscreen-card");
     vi.useRealTimers();
   }
 });

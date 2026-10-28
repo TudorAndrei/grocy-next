@@ -120,10 +120,7 @@ function RecipesPage() {
                   params={{ recipeId: String(recipe.id) }}
                   className="recipe-row"
                 >
-                  <span className="recipe-name">
-                    {recipe.name}
-                    {recipe.description ? <small>{recipe.description}</small> : null}
-                  </span>
+                  <span className="recipe-name">{recipe.name}</span>
                   <span className="recipe-meta">
                     {f ? tr("%s ingredients · ", String(f.positions.length)) : null}
                     {recipe.desired_servings} {tr("serving")}

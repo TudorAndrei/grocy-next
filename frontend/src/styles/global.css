@@ -378,6 +378,76 @@ kbd {
   max-width: calc(var(--rail) + 1440px);
 }
 
+.fullscreen-surface[data-expanded] {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding: clamp(16px, 3vw, 40px);
+  overflow: auto;
+  background: var(--enamel);
+  outline: none;
+}
+
+.fullscreen-surface[data-expanded] .page-header {
+  position: sticky;
+  top: calc(-1 * clamp(16px, 3vw, 40px));
+  z-index: 1;
+  background: var(--enamel);
+}
+
+.rich-content {
+  contain: layout paint;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.rich-content > * + * {
+  margin-top: 0.75em;
+}
+
+.rich-content img,
+.rich-content iframe,
+.rich-content table {
+  max-width: 100%;
+}
+
+.rich-content ul,
+.rich-content ol {
+  padding-inline-start: 1.5em;
+}
+
+.recipe-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.recipe-content > :only-child {
+  grid-column: 1 / -1;
+}
+
+.equipment-detail {
+  display: grid;
+  gap: 28px;
+  margin-block: 24px;
+}
+
+.equipment-manual {
+  width: 100%;
+  height: 70vh;
+  min-height: 300px;
+}
+
+.fullscreen-surface[data-expanded] .equipment-manual {
+  height: calc(100dvh - 180px);
+}
+
+@media (min-width: 900px) {
+  .fullscreen-surface[data-expanded] .recipe-content {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 .header-clock {
   display: flex;
   align-items: baseline;
