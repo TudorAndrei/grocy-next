@@ -7,10 +7,22 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import { useI18n } from "@/lib/i18n";
 import { Icon } from "./Icon";
 
-const FullscreenContext = createContext({ expanded: false, toggle: () => {} });
+const FullscreenContext = createContext({ expanded: false, toggle: () => {}, print: () => {} });
+
+export function FullscreenPrint() {
+  const { print } = useContext(FullscreenContext);
+  const { t } = useI18n();
+
+  return (
+    <button type="button" className="btn btn-ghost" onClick={print}>
+      {t("Print")}
+    </button>
+  );
+}
 
 export function FullscreenToggle() {
   const { expanded, toggle } = useContext(FullscreenContext);
@@ -30,12 +42,14 @@ export function FullscreenCard({
   hash = false,
   defaultExpanded = false,
   onClose,
+  className,
 }: {
   label: string;
   children: ReactNode;
   hash?: boolean;
   defaultExpanded?: boolean;
   onClose?: () => void;
+  className?: string;
 }) {
   const [expanded, setExpanded] = useState(
     () => defaultExpanded || (hash && window.location.hash === "#fullscreen"),
@@ -149,10 +163,26 @@ export function FullscreenCard({
   }, [expanded, change]);
 
   return (
-    <FullscreenContext.Provider value={{ expanded, toggle: () => change(!expanded) }}>
+    <FullscreenContext.Provider
+      value={{
+        expanded,
+        toggle: () => change(!expanded),
+        print: () => {
+          flushSync(() => setExpanded(defaultExpanded));
+
+          if (hash) {
+            const url = new URL(window.location.href);
+            url.hash = "";
+            window.history.replaceState(window.history.state, "", url);
+          }
+
+          window.print();
+        },
+      }}
+    >
       <section
         ref={root}
-        className="fullscreen-surface"
+        className={className ? `fullscreen-surface ${className}` : "fullscreen-surface"}
         data-expanded={expanded || undefined}
         aria-label={label}
         role={expanded ? "dialog" : undefined}

@@ -51,6 +51,13 @@ export function RecipeOverview({
 
   const [showServings, setShowServings] = useState(false);
   const [chosen, setChosen] = useState<number | undefined>();
+  const [previousRecipe, setPreviousRecipe] = useState(search.recipe);
+
+  if (previousRecipe !== search.recipe) {
+    setPreviousRecipe(search.recipe);
+    setChosen(undefined);
+  }
+
   const [overlay, setOverlay] = useState<number | undefined>();
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
   const selected = search.recipe ?? overview.data?.[0]?.id;

@@ -2,10 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
 import { pictureBytes } from "./fixtures/picture";
+
+afterEach(() => window.history.replaceState(null, "", "/"));
 
 beforeEach(() => {
   for (const method of ["showModal", "close"] as const) {
@@ -124,6 +126,7 @@ function mount(
   );
   let finish: (() => void) | undefined;
   let finishView: (() => void) | undefined;
+  let copiedView: RecipeView | undefined;
 
   const overview: RecipeListItem[] = [
     {
@@ -167,6 +170,17 @@ function mount(
         const body = String(init.body ?? "");
         writes.push({ path, body });
 
+        if (path.endsWith("/copy")) {
+          const source = view.cards.find((card) => path === `/api/recipes/${card.id}/copy`)!;
+          copiedView = {
+            ...view,
+            recipe_id: 7,
+            cards: [{ ...source, id: 7, name: `Copy of ${source.name}` }],
+          };
+
+          return Response.json({ created_object_id: "7" });
+        }
+
         if (path === "/api/objects/recipes/1") {
           const value: { desired_servings: number } = JSON.parse(body);
 
@@ -196,7 +210,12 @@ function mount(
         });
 
       if (path === "/api/v2/recipes/overview")
-        return Response.json(options.overviewRows ?? overview);
+        return Response.json(
+          options.overviewRows ??
+            (copiedView
+              ? [...overview, { ...overview[1]!, id: 7, name: copiedView.cards[0].name }]
+              : overview),
+        );
 
       if (path === "/api/v2/recipes/1/view") {
         if (options.holdRecipeView)
@@ -209,6 +228,8 @@ function mount(
 
       if (path === "/api/v2/recipes/2/view")
         return Response.json({ ...view, recipe_id: 2, cards: [view.cards[1]] });
+
+      if (path === "/api/v2/recipes/7/view") return Response.json(copiedView);
 
       if (path.startsWith("/api/files/recipepictures/"))
         return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
@@ -382,6 +403,50 @@ test("legacy recipe query parameters restore gallery, selected recipe, status, a
 test("an empty embedded recipe view shows the empty message", async () => {
   const app = mount(fixture(), [], false, { path: "/recipes?embedded", overviewRows: [] });
   expect(await screen.findByText("No recipes yet.")).toBeTruthy();
+  app.unmount();
+  app.client.clear();
+});
+
+test.each([true, false])(
+  "copying an included recipe selects its returned ID with side-by-side %s",
+  async (sideBySide) => {
+    const writes: Array<{ path: string; body: string }> = [];
+    const app = mount(fixture(), writes, false, { path: "/recipes?search=Main", sideBySide });
+    const user = userEvent.setup();
+
+    if (!sideBySide) await user.click(await screen.findByRole("link", { name: "Main dish" }));
+    await user.click(await screen.findByRole("tab", { name: "Sauce" }));
+    await user.click(screen.getByRole("button", { name: "Copy recipe" }));
+
+    if (sideBySide)
+      expect(await screen.findByRole("heading", { level: 1, name: "Copy of Sauce" })).toBeTruthy();
+    const copy = await screen.findByRole("link", { name: "Copy of Sauce" });
+    await waitFor(() => expect(copy.getAttribute("aria-current")).toBe("true"));
+    expect(app.router.history.location.pathname).toBe("/recipes");
+    expect(new URLSearchParams(app.router.history.location.search).get("recipe")).toBe("7");
+    expect(new URLSearchParams(app.router.history.location.search).has("search")).toBe(false);
+    expect(writes).toEqual([{ path: "/api/recipes/2/copy", body: "{}" }]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    app.unmount();
+    app.client.clear();
+  },
+);
+
+test("recipe printing leaves full-screen mode before it calls the browser printer", async () => {
+  const app = mount(fixture(), []);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Expand to fullscreen" }));
+  expect(document.body.classList.contains("fullscreen-card")).toBe(true);
+
+  const print = vi.spyOn(window, "print").mockImplementation(() => {
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+    expect(window.location.hash).toBe("");
+    expect(screen.getByRole("navigation", { name: "Primary" }).closest("[inert]")).toBeNull();
+  });
+
+  await user.click(screen.getByRole("button", { name: "Print" }));
+  expect(print).toHaveBeenCalledTimes(1);
   app.unmount();
   app.client.clear();
 });

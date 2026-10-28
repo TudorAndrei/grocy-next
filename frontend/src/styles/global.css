@@ -3049,6 +3049,11 @@ a.btn[aria-disabled="true"] {
 }
 
 @media print {
+  html:has(.recipe-reader) {
+    color-scheme: light !important;
+    background: #fff;
+  }
+
   body {
     background: #fff;
   }
@@ -3066,5 +3071,59 @@ a.btn[aria-disabled="true"] {
 
   .app-shell {
     display: block;
+  }
+
+  body:has(.recipe-reader) {
+    --ink: #000;
+    --ink-2: #333;
+    --ink-3: #555;
+    --cobalt: #000;
+    --enamel: #fff;
+    --surface: #fff;
+    overflow: visible !important;
+    color: #000;
+  }
+
+  .site-main:has(.recipe-reader) {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+
+  .site-main:has(.recipe-reader) > :not(.recipe-reader, :has(.recipe-reader)),
+  .recipes-layout:has(.recipe-reader) > :not(:has(.recipe-reader)),
+  .recipe-reader > .page-header,
+  .recipe-reader .recipe-stock-status,
+  .toasts {
+    display: none !important;
+  }
+
+  .recipes-layout:has(.recipe-reader),
+  .recipe-reader .recipe-content {
+    display: block;
+  }
+
+  .recipe-reader[data-expanded] {
+    position: static;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .recipe-reader .recipe-card,
+  .recipe-reader .recipe-print-title {
+    display: block !important;
+  }
+
+  .recipe-reader .recipe-card + .recipe-card {
+    break-before: page;
+  }
+
+  .recipe-reader .rich-content {
+    contain: none;
+  }
+
+  .recipe-reader .entity-picture {
+    width: 100%;
+    max-height: none;
   }
 }

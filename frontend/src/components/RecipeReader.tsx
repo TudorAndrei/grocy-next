@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
@@ -10,7 +10,7 @@ import { usePreferences } from "@/lib/preferences";
 import type { RecipeCard, RecipeView } from "@/lib/recipe-view";
 import { EntityPicture } from "./EntityPicture";
 import { ErrorBlock } from "./ErrorBlock";
-import { FullscreenCard, FullscreenToggle } from "./FullscreenCard";
+import { FullscreenCard, FullscreenPrint, FullscreenToggle } from "./FullscreenCard";
 import { Icon } from "./Icon";
 import { PageHeader } from "./PageHeader";
 import { RichText } from "./RichDescription";
@@ -26,6 +26,7 @@ export function RecipeReader({
   onClose?: () => void;
 }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const client = useQueryClient();
   const features = useFeatures();
   const preferences = usePreferences();
@@ -96,10 +97,11 @@ export function RecipeReader({
   });
 
   const copy = useMutation({
-    mutationFn: () => api.action(`/api/recipes/${card.id}/copy`),
-    onSuccess: async () => {
+    mutationFn: () => api.copyRecipe(card.id),
+    onSuccess: async (id) => {
       await client.invalidateQueries();
-      notify({ message: t("Recipe copied") });
+      onClose?.();
+      await navigate({ to: "/recipes", search: { recipe: id }, hash: "" });
     },
     onError: (error: Error) => notify({ message: error.message, tone: "error" }),
   });
@@ -122,7 +124,13 @@ export function RecipeReader({
   }
 
   return (
-    <FullscreenCard label={card.name} hash={!overlay} defaultExpanded={overlay} onClose={onClose}>
+    <FullscreenCard
+      className="recipe-reader"
+      label={card.name}
+      hash={!overlay}
+      defaultExpanded={overlay}
+      onClose={onClose}
+    >
       <PageHeader
         title={card.name}
         lead={`${t("Servings")}: ${card.desired_servings}`}
@@ -176,6 +184,7 @@ export function RecipeReader({
         actions={
           <>
             <FullscreenToggle />
+            <FullscreenPrint />
             {card.id === view.recipe_id ? (
               <label className="field servings-field">
                 <span>{t("Desired servings")}</span>
@@ -237,11 +246,15 @@ export function RecipeReader({
       {view.cards.map((item) => (
         <section
           key={item.id}
+          className="recipe-card"
           id={`${prefix}-panel-${item.id}`}
           role={view.cards.length > 1 ? "tabpanel" : undefined}
           aria-labelledby={view.cards.length > 1 ? `${prefix}-tab-${item.id}` : undefined}
           hidden={item.id !== card.id}
         >
+          <h1 className="recipe-print-title" hidden>
+            {item.name}
+          </h1>
           {item.picture_file_name ? (
             <EntityPicture
               group="recipepictures"
@@ -488,7 +501,7 @@ function RecipeIngredients({ card }: { card: RecipeCard }) {
                   </Link>
                   {features.enabled("STOCK") ? (
                     <p
-                      className="muted"
+                      className="muted recipe-stock-status"
                       data-fulfilled={
                         ingredient.fulfilled || ingredient.fulfilled_with_shopping_list
                       }
@@ -507,7 +520,9 @@ function RecipeIngredients({ card }: { card: RecipeCard }) {
                   ) : null}
                   {features.enabled("STOCK") &&
                   ingredient.product_id_effective !== ingredient.product_id ? (
-                    <p className="muted">{catalog.productName(ingredient.product_id_effective)}</p>
+                    <p className="muted recipe-stock-status">
+                      {catalog.productName(ingredient.product_id_effective)}
+                    </p>
                   ) : null}
                   <p className="muted">
                     {features.enabled("STOCK_PRICE_TRACKING")
