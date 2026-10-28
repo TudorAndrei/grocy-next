@@ -43,6 +43,8 @@ export function FullscreenCard({
   defaultExpanded = false,
   onClose,
   className,
+  expanded: controlledExpanded,
+  onExpandedChange,
 }: {
   label: string;
   children: ReactNode;
@@ -50,9 +52,21 @@ export function FullscreenCard({
   defaultExpanded?: boolean;
   onClose?: () => void;
   className?: string;
+  expanded?: boolean;
+  onExpandedChange?: (value: boolean) => void;
 }) {
-  const [expanded, setExpanded] = useState(
+  const [internalExpanded, setInternalExpanded] = useState(
     () => defaultExpanded || (hash && window.location.hash === "#fullscreen"),
+  );
+
+  const expanded = controlledExpanded ?? internalExpanded;
+
+  const setExpanded = useCallback(
+    (value: boolean) => {
+      setInternalExpanded(value);
+      onExpandedChange?.(value);
+    },
+    [onExpandedChange],
   );
 
   const root = useRef<HTMLElement>(null);
@@ -75,7 +89,7 @@ export function FullscreenCard({
         window.history.replaceState(window.history.state, "", url);
       }
     },
-    [hash, onClose],
+    [hash, onClose, setExpanded],
   );
 
   useEffect(() => {
@@ -84,7 +98,7 @@ export function FullscreenCard({
     window.addEventListener("hashchange", onHashChange);
 
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [hash]);
+  }, [hash, setExpanded]);
 
   useEffect(() => {
     const card = root.current;

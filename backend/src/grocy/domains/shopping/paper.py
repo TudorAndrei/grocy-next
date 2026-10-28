@@ -139,6 +139,7 @@ class ShoppingPaper:
         grouped: bool,
         layout: str,
         base_url: str,
+        notes: tuple[str, bool] | None = None,
     ) -> str:
         lists = await self._rows("SELECT * FROM shopping_lists_view WHERE id=:id", id=list_id)
         if not lists:
@@ -277,10 +278,15 @@ class ShoppingPaper:
                 "<span data-print-timestamp></span></h6>"
             )
         description = ""
-        if not empty(shopping["description"]):
+        note_html, visible = (
+            notes
+            if notes is not None
+            else (php_string(shopping["description"]), bool(php_string(shopping["description"])))
+        )
+        if visible:
             description = (
                 f'<div class="w-75 pt-3"><h5>{escape(tr("Notes"))}</h5>'
-                f"<div>{render_html(php_string(shopping['description']))}</div></div>"
+                f"<div>{render_html(note_html)}</div></div>"
             )
         styles = await run_in_threadpool(_styles)
         return (

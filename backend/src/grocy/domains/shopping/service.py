@@ -29,6 +29,7 @@ class ShoppingService:
         return {
             "id": shopping_list.id,
             "name": shopping_list.name,
+            "description": shopping_list.description,
             "items": [
                 {
                     "id": item.id,

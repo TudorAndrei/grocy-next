@@ -15,9 +15,11 @@ import { useNotify } from "./Toaster";
 export function ShoppingPrintAction({
   listId,
   paper = false,
+  notes,
 }: {
   listId: number;
   paper?: boolean;
+  notes?: { html: string; visible: boolean };
 }) {
   const { t, pluralIndex } = useI18n();
   const preferences = usePreferences();
@@ -54,6 +56,7 @@ export function ShoppingPrintAction({
               beforePrint: () => flushSync(() => setOpen(false)),
               returnFocus: trigger.current,
               signal: controller.signal,
+              notes,
             },
           )
         : request(`/api/print/shoppinglist/thermal?list=${list}&printHeader=${header}`);

@@ -3171,3 +3171,61 @@ a.btn[aria-disabled="true"] {
     max-height: none;
   }
 }
+
+.shopping-notes {
+  margin-block: 1.5rem;
+  padding: 1rem;
+}
+.shopping-notes-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.shopping-notes-heading h2 {
+  margin: 0;
+}
+.shopping-notes-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+.shopping-notes[data-expanded] {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.shopping-notes[data-expanded] .shopping-notes-frame {
+  flex: 1;
+  min-height: 0;
+  height: 100% !important;
+}
+
+.shopping .toolbar-end {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .shopping[data-mode="plan"] .shop-item {
+    flex-direction: column;
+    align-items: stretch;
+    padding-inline-end: 0;
+  }
+
+  .shopping[data-mode="plan"] .shop-check {
+    min-width: 0;
+  }
+
+  .shopping[data-mode="plan"] .row-actions {
+    padding: 0 16px 8px;
+  }
+}
+
+.shopping-notes + .basket-bar {
+  margin-top: 0;
+}

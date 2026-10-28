@@ -23,9 +23,19 @@ export async function printShoppingDocument(
     beforePrint: () => void;
     returnFocus: HTMLElement | null;
     signal: AbortSignal;
+    notes?: { html: string; visible: boolean };
   },
 ) {
-  const html = await (await fetchApiDocument(path, options.signal)).text();
+  const html = await (
+    await fetchApiDocument(
+      path,
+      options.signal,
+      options.notes
+        ? JSON.stringify({ html: options.notes.html, visible: options.notes.visible })
+        : undefined,
+    )
+  ).text();
+
   activeFrame?.remove();
   const frame = document.createElement("iframe");
   activeFrame = frame;

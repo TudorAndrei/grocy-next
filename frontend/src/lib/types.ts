@@ -220,6 +220,7 @@ export type ShoppingListItem = {
 export type ShoppingList = {
   id: number;
   name: string;
+  description?: string | null;
   items: ShoppingListItem[];
 };
 

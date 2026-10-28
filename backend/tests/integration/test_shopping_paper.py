@@ -147,7 +147,10 @@ def test_shopping_paper_contains_all_items_notes_and_custom_fields(
 
 def test_shopping_paper_requires_shopping_permission(client, api_headers, monkeypatch):
     path = "/api/v2/shopping-lists/1/print"
+    editor = "/api/v2/shopping-lists/1/notes/editor"
     assert client.get(path).status_code == 401
+    assert client.get(editor).status_code == 401
+    assert client.post(path, json={"html": "Notes", "visible": True}).status_code == 401
     monkeypatch.setattr(get_settings(), "default_permissions", [])
     assert (
         client.post(
@@ -167,6 +170,11 @@ def test_shopping_paper_requires_shopping_permission(client, api_headers, monkey
     ]
     headers = {"GROCY-API-KEY": key}
     assert client.get(path, headers=headers).status_code == 403
+    assert client.get(editor, headers=headers).status_code == 403
+    assert (
+        client.post(path, headers=headers, json={"html": "Notes", "visible": True}).status_code
+        == 403
+    )
     assert (
         client.put(
             f"/api/users/{identity}/permissions", headers=api_headers, json={"permissions": [8]}
@@ -174,4 +182,84 @@ def test_shopping_paper_requires_shopping_permission(client, api_headers, monkey
         == 204
     )
     assert client.get(path, headers=headers).status_code == 200
+    assert client.get(editor, headers=headers).status_code == 200
+    assert (
+        client.post(path, headers=headers, json={"html": "Notes", "visible": True}).status_code
+        == 200
+    )
     assert client.get("/api/v2/shopping-lists/999999/print", headers=headers).status_code == 404
+
+
+@pytest.mark.parametrize(
+    "initial,visible", [("<p>Saved notes</p>", True), ("", False), ("0", True)]
+)
+def test_shopping_paper_prints_current_notes_without_saving_them(
+    client, api_headers, initial, visible
+):
+    path = "/api/objects/shopping_lists/1"
+    assert client.put(path, headers=api_headers, json={"description": initial}).status_code == 204
+    saved = client.get(path, headers=api_headers).json()["description"]
+    assert (
+        client.get("/api/v2/shopping-lists/1", headers=api_headers).json()["description"] == saved
+    )
+    response = client.post(
+        "/api/v2/shopping-lists/1/print?header=false&layout=list",
+        headers=api_headers,
+        json={"html": "<p>Draft <strong>bags</strong></p>", "visible": visible},
+    )
+    assert response.status_code == 200, response.text
+    assert ("<strong>bags</strong>" in response.text) == visible
+    assert client.get(path, headers=api_headers).json()["description"] == saved
+    default = client.get(
+        "/api/v2/shopping-lists/1/print?header=false&layout=list", headers=api_headers
+    )
+    assert default.status_code == 200
+    assert ("<h5>Notes</h5>" in default.text) == visible
+
+
+def test_shopping_editor_keeps_imported_markup_in_data_and_authorizes_its_scripts(
+    client, api_headers
+):
+    import json
+    import re
+
+    imported = '</textarea></script><script id="imported">parent.document.body.remove()</script>'
+
+    async def seed():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text("UPDATE shopping_lists SET description=:html WHERE id=1"), {"html": imported}
+            )
+            await session.commit()
+
+    assert client.portal is not None
+    client.portal.call(seed)
+    assert (
+        client.put(
+            "/api/user/settings/locale", headers=api_headers, json={"value": "de"}
+        ).status_code
+        == 204
+    )
+    response = client.get("/api/v2/shopping-lists/1/notes/editor", headers=api_headers)
+    assert response.status_code == 200
+    html = response.text
+    setup = re.search(r"window.initializeShoppingNotes\((\{[^\n]+\})\);", html)
+    assert setup is not None
+    options = json.loads(setup[1])
+    assert options == {
+        "initial": imported,
+        "locale": "de-DE",
+        "notesLabel": "Notizen",
+        "sourceLabel": "Code view",
+    }
+    policy = re.search(r"script-src &#39;nonce-([^&]+)&#39;", html)
+    assert policy is not None
+    nonce = policy[1]
+    scripts = re.findall(r"<script([^>]*)>", html)
+    assert len(scripts) == 5
+    assert all(f'nonce="{nonce}"' in attributes for attributes in scripts)
+    assert '<script id="imported">' not in html
+    assert (
+        client.get("/api/v2/shopping-lists/1", headers=api_headers).json()["description"]
+        == imported
+    )

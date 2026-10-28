@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
+import { writeApiConfig } from "@/lib/config";
 import { Route } from "@/routes/shopping";
 
 test("an imported shopping quantity displays its saved unit", async () => {
@@ -110,4 +111,115 @@ test("a failed purchase leaves only unfinished shopping items for retry", async 
   await user.click(await screen.findByRole("button", { name: "Put 1 in stock" }));
   await screen.findByText(/The list is empty/);
   expect(secondAttempts).toBe(2);
+});
+
+test("notes save only trusted editor changes and retain the draft after a failed request", async () => {
+  writeApiConfig({ baseUrl: "/house", apiKey: "notes-key" });
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+  let writes = 0;
+
+  const transport = vi.fn<typeof fetch>(async (input, init) => {
+    const path = String(input).replace(/^\/house/, "");
+
+    if (path === "/api/system/config")
+      return Response.json({ FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS: true });
+
+    if (path === "/api/objects/shopping_lists")
+      return Response.json([
+        { id: 1, name: "Groceries" },
+        { id: 7, name: "Weekend" },
+      ]);
+
+    if (path.startsWith("/api/v2/shopping-lists/") && path.endsWith("/notes/editor"))
+      return new Response("<!doctype html><title>Notes</title>");
+
+    if (path.startsWith("/api/v2/shopping-lists/"))
+      return Response.json({
+        id: Number(path.split("/").at(-1)),
+        name: "Weekend",
+        description: "<p>Saved</p>",
+        items: [],
+      });
+
+    if (path === "/api/objects/shopping_lists/7" && init?.method === "PUT") {
+      writes++;
+
+      return writes === 1
+        ? Response.json({ error_message: "Notes could not be saved" }, { status: 503 })
+        : new Response(null, { status: 204 });
+    }
+
+    return Response.json([]);
+  });
+
+  vi.stubGlobal("fetch", transport);
+  const Shopping = Route.options.component;
+
+  if (!Shopping) throw new Error("The shopping route has no page.");
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+  const app = render(
+    <QueryClientProvider client={client}>
+      <Shopping />
+    </QueryClientProvider>,
+  );
+
+  onTestFinished(() => {
+    app.unmount();
+    client.clear();
+  });
+  const user = userEvent.setup();
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Shopping list" }), "7");
+  const notes = await screen.findByRole("region", { name: "Notes" });
+  const frame = within(notes).getByTitle<HTMLIFrameElement>("Notes");
+  await waitFor(() => expect(frame.srcdoc).toContain("<title>Notes</title>"));
+  const save = within(notes).getByRole<HTMLButtonElement>("button", { name: "Save" });
+  const draft = "<p>Bring <strong>bread</strong> &amp; milk.</p>";
+
+  const change = {
+    channel: "grocy-shopping-notes",
+    kind: "change",
+    html: draft,
+    empty: false,
+    height: 390,
+    fullscreen: false,
+  };
+
+  await act(async () => {
+    window.dispatchEvent(
+      new MessageEvent("message", { source: window, origin: "null", data: change }),
+    );
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: frame.contentWindow,
+        origin: "https://example.org",
+        data: change,
+      }),
+    );
+  });
+  expect(save.disabled).toBe(true);
+  await act(async () =>
+    window.dispatchEvent(
+      new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: change }),
+    ),
+  );
+  expect(save.disabled).toBe(false);
+  await user.click(save);
+  expect((await screen.findByRole("alert")).textContent).toBe("Notes could not be saved");
+  expect(save.disabled).toBe(false);
+  await user.click(save);
+  await waitFor(() => expect(save.disabled).toBe(true));
+
+  const saved = transport.mock.calls.filter(
+    ([path, init]) =>
+      String(path).endsWith("/api/objects/shopping_lists/7") && init?.method === "PUT",
+  );
+
+  expect(saved).toHaveLength(2);
+
+  for (const [path, init] of saved) {
+    expect(path).toBe("/house/api/objects/shopping_lists/7");
+    expect(JSON.parse(String(init?.body))).toEqual({ description: draft });
+    expect(new Headers(init?.headers).get("GROCY-API-KEY")).toBe("notes-key");
+  }
 });

@@ -10,12 +10,24 @@ function resolveUrl(path: string): string {
   return `${baseUrl.replace(/\/$/, "")}${normalized}`;
 }
 
-export async function fetchApiDocument(path: string, signal?: AbortSignal): Promise<Blob> {
+export async function fetchApiDocument(
+  path: string,
+  signal?: AbortSignal,
+  body?: string,
+): Promise<Blob> {
   const { apiKey } = readApiConfig();
   const headers: HeadersInit = {};
 
   if (apiKey) headers["GROCY-API-KEY"] = apiKey;
-  const response = await fetch(resolveUrl(path), { headers, signal });
+
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  const response = await fetch(resolveUrl(path), {
+    headers,
+    signal,
+    method: body === undefined ? "GET" : "POST",
+    body,
+  });
 
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText || "Could not open document.", null);

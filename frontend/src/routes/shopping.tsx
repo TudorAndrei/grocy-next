@@ -1,11 +1,12 @@
 import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
 import { unitLabel } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
+import { ShoppingNotes } from "@/components/ShoppingNotes";
 import { ShoppingPrintAction } from "@/components/ShoppingPrintAction";
 import type { ShoppingList, ShoppingListItem } from "@/lib/types";
 import { ErrorBlock } from "@/components/ErrorBlock";
@@ -28,7 +29,7 @@ function initialMode(): Mode {
 }
 
 function ShoppingPage() {
-  const { t: tr } = useI18n();
+  const { t: tr, locale } = useI18n();
 
   const features = useFeatures();
   const stockEnabled = features.enabled("STOCK");
@@ -41,6 +42,19 @@ function ShoppingPage() {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [selectedListId, setListId] = useState(1);
   const listId = features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedListId : 1;
+
+  const [notesDraft, setNotesDraft] = useState<{
+    listId: number;
+    html: string;
+    visible: boolean;
+  }>();
+
+  const updateNotes = useCallback(
+    (notes: { html: string; visible: boolean }) => {
+      setNotesDraft({ listId, ...notes });
+    },
+    [listId],
+  );
 
   const lists = useQuery({
     queryKey: queryKeys.objects("shopping_lists"),
@@ -180,7 +194,13 @@ function ShoppingPage() {
             {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") && (lists.data?.length ?? 0) > 1 ? (
               <label className="select-field">
                 <span className="sr-only">{tr("Shopping list")}</span>
-                <select value={listId} onChange={(e) => setListId(Number(e.target.value))}>
+                <select
+                  value={listId}
+                  onChange={(e) => {
+                    setNotesDraft(undefined);
+                    setListId(Number(e.target.value));
+                  }}
+                >
                   {lists.data?.map((row) => (
                     <option key={row.id} value={row.id}>
                       {String(row.name ?? `List ${row.id}`)}
@@ -245,7 +265,11 @@ function ShoppingPage() {
                 {tr("Add expired")}
               </button>
             ) : null}
-            <ShoppingPrintAction listId={listId} paper />
+            <ShoppingPrintAction
+              listId={listId}
+              paper
+              notes={notesDraft?.listId === listId ? notesDraft : undefined}
+            />
             <ShoppingPrintAction listId={listId} />
             {features.enabled("LABEL_PRINTER") ? (
               <Link to="/labels" className="btn btn-ghost">
@@ -333,6 +357,15 @@ function ShoppingPage() {
             );
           })}
         </ul>
+      ) : null}
+
+      {list.isSuccess ? (
+        <ShoppingNotes
+          key={`${listId}:${locale}`}
+          listId={listId}
+          description={list.data.description}
+          onDraft={updateNotes}
+        />
       ) : null}
 
       {checked.length > 0 ? (
