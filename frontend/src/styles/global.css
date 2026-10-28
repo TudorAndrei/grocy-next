@@ -488,7 +488,7 @@ kbd {
   padding: 12px 10px;
   text-align: start;
   border-bottom: 1px solid var(--line);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .recipe-overview-table td.num {
   text-align: end;
