@@ -2,9 +2,19 @@ from fastapi import APIRouter
 
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
-from grocy.domains.recipes.presentation import RecipeView, recipe_view
+from grocy.domains.recipes.presentation import (
+    RecipeListItem,
+    RecipeView,
+    recipe_overview,
+    recipe_view,
+)
 
 router = APIRouter(tags=["recipes"])
+
+
+@router.get("/recipes/overview")
+async def get_recipe_overview(_actor: CurrentActor, session: DbSession) -> list[RecipeListItem]:
+    return await recipe_overview(session)
 
 
 @router.get("/recipes/{recipe_id}/view")

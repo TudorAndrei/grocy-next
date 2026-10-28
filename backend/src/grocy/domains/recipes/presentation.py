@@ -1,7 +1,7 @@
 """Recipe cards from the pinned controller's read rules."""
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -54,6 +54,43 @@ class RecipeView(BaseModel):
     need_fulfilled_with_shopping_list: bool
     missing_products_count: int
     cards: list[RecipeCard]
+
+
+class RecipeListItem(BaseModel):
+    id: int
+    name: str
+    picture_file_name: str | None
+    desired_servings: float
+    due_score: int | None
+    missing_products_count: int
+    product_names: str
+    stock_status: Literal["Xenoughinstock", "enoughinstockwithshoppinglist", "notenoughinstock"]
+
+
+async def recipe_overview(session: AsyncSession) -> list[RecipeListItem]:
+    await configure_compatibility_queries(session)
+    rows = await session.execute(
+        text(
+            "SELECT r.id, r.name, r.picture_file_name, r.desired_servings, "
+            "rr.due_score, rr.missing_products_count, "
+            "rr.product_names_comma_separated AS product_names, "
+            "CASE WHEN rr.need_fulfilled=1 THEN 'Xenoughinstock' "
+            "WHEN rr.need_fulfilled_with_shopping_list=1 THEN 'enoughinstockwithshoppinglist' "
+            "ELSE 'notenoughinstock' END AS stock_status "
+            "FROM recipes r JOIN recipes_resolved rr ON rr.recipe_id=r.id "
+            "WHERE r.type='normal' ORDER BY r.name COLLATE NOCASE"
+        )
+    )
+    return [
+        RecipeListItem.model_validate(
+            {
+                **row,
+                "name": row["name"] or "",
+                "product_names": row["product_names"] or "",
+            }
+        )
+        for row in rows.mappings()
+    ]
 
 
 async def recipe_view(session: AsyncSession, recipe_id: int) -> RecipeView:
@@ -139,7 +176,7 @@ async def recipe_view(session: AsyncSession, recipe_id: int) -> RecipeView:
         cards.append(
             RecipeCard(
                 id=recipe["id"],
-                name=recipe["name"],
+                name=recipe["name"] or "",
                 desired_servings=recipe["desired_servings"],
                 picture_file_name=recipe["picture_file_name"],
                 preparation_html=render_html(recipe["description"] or ""),

@@ -37,6 +37,7 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     read_paths = [path]
     if entity == "recipes":
         read_paths.append(f"/api/v2/recipes/{identity}/view")
+        read_paths.append("/api/v2/recipes/overview")
     for read_path in read_paths:
         assert client.get(read_path).status_code == 401
 
@@ -77,6 +78,9 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
         assert view.status_code == 200, view.text
         assert view.json()["cards"][0]["id"] == identity
         rendered_outputs.append(view.json()["cards"][0]["preparation_html"])
+        overview = client.get(read_paths[2], headers=headers)
+        assert overview.status_code == 200, overview.text
+        assert identity in {row["id"] for row in overview.json()}
 
     class Tags(HTMLParser):
         def __init__(self):
