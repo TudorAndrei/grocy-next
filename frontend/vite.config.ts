@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, import.meta.dirname);
   const base = environment.VITE_BASE_PATH?.trim() || "/";
   const apiPrefix = `${base.replace(/\/$/, "")}/api`;
+  const filesPrefix = `${base.replace(/\/$/, "")}/files`;
 
   const apiProxy = {
     target: process.env.GROCY_API_PROXY || "http://127.0.0.1:8000",
@@ -32,6 +33,8 @@ export default defineConfig(({ mode }) => {
       proxy: {
         "/api": apiProxy,
         [apiPrefix]: apiProxy,
+        "/files": apiProxy,
+        [filesPrefix]: apiProxy,
       },
     },
   };
