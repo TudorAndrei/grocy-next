@@ -35,7 +35,7 @@ The current repair work covers these confirmed differences:
 - API key and session checks preserve the checked expiry, byte value, credential order, and use-record rules.
 - HEAD, OPTIONS, method errors, and CORS headers use the legacy API response rules.
 - A configured API base path supports the checked route, authentication, error page, and encoded file rules. Python extension routes keep their JSON errors and CORS rules under the prefix.
-- Demo and prerelease modes use their own database files. The tests check reads, writes, missing schemas, return to production data, and initialization at startup.
+- Demo and prerelease modes use their own database files. The tests check reads, writes, missing schemas, return to production data, and initialization at startup. File access, image caches, and barcode image downloads also use the selected mode directory. The directory uses the default locale or explicit demo suffix. An explicit empty suffix retains the native shared directory rule.
 - The API specification includes current custom entities and uses the configured URL rules for server and key management links.
 - Locale selection uses the saved locale, request language preferences, and configured default. Translation output preserves empty entries and plural forms. Recipe copies use the selected translation.
 - User profile errors and self-edit ID checks follow the checked legacy rules. The web profile form retains the saved photo.
@@ -190,6 +190,10 @@ The 390-pixel checks covered the list form, saved files, rename, delete confirma
 The named-file changes passed 78 selected comparisons on Python and the pinned PHP server. A further 85 Python integration cases covered file storage, access, shopping paper, and code images. Formatting, lint, type checks, and both release builds passed. The 13 initial local cases failed on the previous source because the named file route was absent. The added preflight case also failed on the previous source.
 
 The final release checks used `/house`. Both links from a generated shopping document returned their files through the web server. Text bytes, displayed names, and resized PNG bytes matched the native output. The native and release browsers opened the same text and 20-by-10 image with test session cookies. The release missing-file page returned to the default page after five seconds. Final cache, cross-origin, and unauthenticated preflight responses passed through the web proxy. The development proxy returned the file through both root and prefixed paths. Neither release image had PHP. The task browser, development server, four test containers, and their network were removed.
+
+The mode-file changes passed 34 selected Python tests, formatting, lint, and type checks. Six captured paths from the pinned native FilesService cover production, development, locale-based demo storage, a custom prerelease suffix, the suffix `0`, and an empty suffix. Five new checks failed on the previous source. The corrected checks confirm that a demo upload and cache deletion retain production files, and that downloaded barcode pictures are served from the selected mode directory.
+
+The Python release image built without PHP. Real HTTP checks saved and downloaded a demo file in the `de` directory and a prerelease file in `custom_mode`. The demo named-file route returned the same bytes. Both disposable containers were removed. Files saved by older Python builds in the shared directory are not moved automatically; copy needed demo or prerelease files to the selected mode directory when upgrading those builds.
 
 Run the normal tests without PHP:
 
