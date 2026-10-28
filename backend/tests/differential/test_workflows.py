@@ -2368,6 +2368,13 @@ def test_chore_date_precision_survives_reads_and_recurrence(api):
             '<p style="color:#FF0000;">Hello</p>',
         ),
         ('<a href="javascript:alert(1)">Link</a>', "<a>Link</a>"),
+        *[
+            (
+                f'<a href="https://example.com" title="Read" target="{target}">Link</a>',
+                '<a href="https://example.com" title="Read">Link</a>',
+            )
+            for target in ("_blank", "_self", "_parent", "named-window")
+        ],
         ("Tom &amp; Jerry &lt;food&gt;", "Tom & Jerry <food>"),
         ("", None),
         (None, None),

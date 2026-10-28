@@ -173,7 +173,8 @@ def clean(value: str) -> str:
     sanitized = nh3.clean(
         _ImageMarkup(value, output=False).result(),
         tags=_TAGS,
-        attributes=_ATTRIBUTES,
+        # The native purifier has no allowed frame targets for saved links.
+        attributes=_ATTRIBUTES | {"a": {"href", "title"}},
         clean_content_tags={"script", "style"},
         filter_style_properties=_STYLES,
         url_schemes={"http", "https", "data"},
