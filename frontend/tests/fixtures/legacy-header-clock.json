@@ -1,0 +1,467 @@
+{
+  "baseline": "Grocy 4.5.0, bundled Moment 2.30.1, RefreshHeaderClock",
+  "cases": [
+    {
+      "locale": "bg_BG",
+      "momentLocale": "bg",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "сряда, 28 октомври 2026 21:05"
+    },
+    {
+      "locale": "bg_BG",
+      "momentLocale": "bg",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 0:03",
+      "big": "петък, 2 януари 2026 0:03"
+    },
+    {
+      "locale": "ca",
+      "momentLocale": "ca",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "dimecres 28 d'octubre de 2026 a les 21:05"
+    },
+    {
+      "locale": "ca",
+      "momentLocale": "ca",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 0:03",
+      "big": "divendres 2 de gener de 2026 a les 0:03"
+    },
+    {
+      "locale": "cs",
+      "momentLocale": "cs",
+      "at": "2026-10-28T21:05:06",
+      "small": "28. 10. 2026 21:05",
+      "big": "středa 28. října 2026 21:05"
+    },
+    {
+      "locale": "cs",
+      "momentLocale": "cs",
+      "at": "2026-01-02T00:03:00",
+      "small": "2. 1. 2026 0:03",
+      "big": "pátek 2. ledna 2026 0:03"
+    },
+    {
+      "locale": "da",
+      "momentLocale": "da",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "onsdag d. 28. oktober 2026 kl. 21:05"
+    },
+    {
+      "locale": "da",
+      "momentLocale": "da",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00:03",
+      "big": "fredag d. 2. januar 2026 kl. 00:03"
+    },
+    {
+      "locale": "de",
+      "momentLocale": "de",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "Mittwoch, 28. Oktober 2026 21:05"
+    },
+    {
+      "locale": "de",
+      "momentLocale": "de",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00:03",
+      "big": "Freitag, 2. Januar 2026 00:03"
+    },
+    {
+      "locale": "el_GR",
+      "momentLocale": "el",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 9:05 ΜΜ",
+      "big": "Τετάρτη, 28 Οκτωβρίου 2026 9:05 ΜΜ"
+    },
+    {
+      "locale": "el_GR",
+      "momentLocale": "el",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 12:03 ΠΜ",
+      "big": "Παρασκευή, 2 Ιανουαρίου 2026 12:03 ΠΜ"
+    },
+    {
+      "locale": "en",
+      "momentLocale": "x",
+      "at": "2026-10-28T21:05:06",
+      "small": "10/28/2026 9:05 PM",
+      "big": "Wednesday, October 28, 2026 9:05 PM"
+    },
+    {
+      "locale": "en",
+      "momentLocale": "x",
+      "at": "2026-01-02T00:03:00",
+      "small": "1/2/2026 12:03 AM",
+      "big": "Friday, January 2, 2026 12:03 AM"
+    },
+    {
+      "locale": "en_GB",
+      "momentLocale": "x",
+      "at": "2026-10-28T21:05:06",
+      "small": "10/28/2026 9:05 PM",
+      "big": "Wednesday, October 28, 2026 9:05 PM"
+    },
+    {
+      "locale": "en_GB",
+      "momentLocale": "x",
+      "at": "2026-01-02T00:03:00",
+      "small": "1/2/2026 12:03 AM",
+      "big": "Friday, January 2, 2026 12:03 AM"
+    },
+    {
+      "locale": "es",
+      "momentLocale": "es",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "miércoles, 28 de octubre de 2026 21:05"
+    },
+    {
+      "locale": "es",
+      "momentLocale": "es",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 0:03",
+      "big": "viernes, 2 de enero de 2026 0:03"
+    },
+    {
+      "locale": "et_EE",
+      "momentLocale": "et",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "kolmapäev, 28. oktoober 2026 21:05"
+    },
+    {
+      "locale": "et_EE",
+      "momentLocale": "et",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 0:03",
+      "big": "reede, 2. jaanuar 2026 0:03"
+    },
+    {
+      "locale": "fi",
+      "momentLocale": "fi",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21.05",
+      "big": "keskiviikko, 28. lokakuuta 2026, klo 21.05"
+    },
+    {
+      "locale": "fi",
+      "momentLocale": "fi",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00.03",
+      "big": "perjantai, 2. tammikuuta 2026, klo 00.03"
+    },
+    {
+      "locale": "fr",
+      "momentLocale": "fr",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "mercredi 28 octobre 2026 21:05"
+    },
+    {
+      "locale": "fr",
+      "momentLocale": "fr",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 00:03",
+      "big": "vendredi 2 janvier 2026 00:03"
+    },
+    {
+      "locale": "he_IL",
+      "momentLocale": "he",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "רביעי, 28 באוקטובר 2026 21:05"
+    },
+    {
+      "locale": "he_IL",
+      "momentLocale": "he",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 00:03",
+      "big": "שישי, 2 בינואר 2026 00:03"
+    },
+    {
+      "locale": "hu",
+      "momentLocale": "hu",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026.10.28. 21:05",
+      "big": "2026. október 28., szerda 21:05"
+    },
+    {
+      "locale": "hu",
+      "momentLocale": "hu",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026.1.2. 0:03",
+      "big": "2026. január 2., péntek 0:03"
+    },
+    {
+      "locale": "it",
+      "momentLocale": "it",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "mercoledì 28 ottobre 2026 21:05"
+    },
+    {
+      "locale": "it",
+      "momentLocale": "it",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 00:03",
+      "big": "venerdì 2 gennaio 2026 00:03"
+    },
+    {
+      "locale": "ja",
+      "momentLocale": "ja",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026/10/28 21:05",
+      "big": "2026年10月28日 水曜日 21:05"
+    },
+    {
+      "locale": "ja",
+      "momentLocale": "ja",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026/01/02 00:03",
+      "big": "2026年1月2日 金曜日 00:03"
+    },
+    {
+      "locale": "ko_KR",
+      "momentLocale": "ko",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026.10.28. 오후 9:05",
+      "big": "2026년 10월 28일 수요일 오후 9:05"
+    },
+    {
+      "locale": "ko_KR",
+      "momentLocale": "ko",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026.01.02. 오전 12:03",
+      "big": "2026년 1월 2일 금요일 오전 12:03"
+    },
+    {
+      "locale": "lt",
+      "momentLocale": "lt",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026-10-28 21:05",
+      "big": "2026 m. spalio 28 d., trečiadienis, 21:05 val."
+    },
+    {
+      "locale": "lt",
+      "momentLocale": "lt",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026-01-02 00:03",
+      "big": "2026 m. sausio 2 d., penktadienis, 00:03 val."
+    },
+    {
+      "locale": "nl",
+      "momentLocale": "nl",
+      "at": "2026-10-28T21:05:06",
+      "small": "28-10-2026 21:05",
+      "big": "woensdag 28 oktober 2026 21:05"
+    },
+    {
+      "locale": "nl",
+      "momentLocale": "nl",
+      "at": "2026-01-02T00:03:00",
+      "small": "2-1-2026 00:03",
+      "big": "vrijdag 2 januari 2026 00:03"
+    },
+    {
+      "locale": "no",
+      "momentLocale": "nb",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "onsdag 28. oktober 2026 kl. 21:05"
+    },
+    {
+      "locale": "no",
+      "momentLocale": "nb",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00:03",
+      "big": "fredag 2. januar 2026 kl. 00:03"
+    },
+    {
+      "locale": "pl",
+      "momentLocale": "pl",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "środa, 28 października 2026 21:05"
+    },
+    {
+      "locale": "pl",
+      "momentLocale": "pl",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00:03",
+      "big": "piątek, 2 stycznia 2026 00:03"
+    },
+    {
+      "locale": "pt_BR",
+      "momentLocale": "pt-br",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "quarta-feira, 28 de outubro de 2026 às 21:05"
+    },
+    {
+      "locale": "pt_BR",
+      "momentLocale": "pt-br",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 00:03",
+      "big": "sexta-feira, 2 de janeiro de 2026 às 00:03"
+    },
+    {
+      "locale": "pt_PT",
+      "momentLocale": "pt",
+      "at": "2026-10-28T21:05:06",
+      "small": "28/10/2026 21:05",
+      "big": "Quarta-feira, 28 de outubro de 2026 21:05"
+    },
+    {
+      "locale": "pt_PT",
+      "momentLocale": "pt",
+      "at": "2026-01-02T00:03:00",
+      "small": "2/1/2026 00:03",
+      "big": "Sexta-feira, 2 de janeiro de 2026 00:03"
+    },
+    {
+      "locale": "ro_RO",
+      "momentLocale": "ro",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "miercuri, 28 octombrie 2026 21:05"
+    },
+    {
+      "locale": "ro_RO",
+      "momentLocale": "ro",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 0:03",
+      "big": "vineri, 2 ianuarie 2026 0:03"
+    },
+    {
+      "locale": "ru",
+      "momentLocale": "ru",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "среда, 28 октября 2026 г., 21:05"
+    },
+    {
+      "locale": "ru",
+      "momentLocale": "ru",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 0:03",
+      "big": "пятница, 2 января 2026 г., 0:03"
+    },
+    {
+      "locale": "sk_SK",
+      "momentLocale": "sk",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "streda 28. október 2026 21:05"
+    },
+    {
+      "locale": "sk_SK",
+      "momentLocale": "sk",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 0:03",
+      "big": "piatok 2. január 2026 0:03"
+    },
+    {
+      "locale": "sl",
+      "momentLocale": "sl",
+      "at": "2026-10-28T21:05:06",
+      "small": "28. 10. 2026 21:05",
+      "big": "sreda, 28. oktober 2026 21:05"
+    },
+    {
+      "locale": "sl",
+      "momentLocale": "sl",
+      "at": "2026-01-02T00:03:00",
+      "small": "2. 1. 2026 0:03",
+      "big": "petek, 2. januar 2026 0:03"
+    },
+    {
+      "locale": "sv_SE",
+      "momentLocale": "sv",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026-10-28 21:05",
+      "big": "onsdag 28 oktober 2026 kl. 21:05"
+    },
+    {
+      "locale": "sv_SE",
+      "momentLocale": "sv",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026-1-2 00:03",
+      "big": "fredag 2 januari 2026 kl. 00:03"
+    },
+    {
+      "locale": "ta",
+      "momentLocale": "ta",
+      "at": "2026-10-28T21:05:06",
+      "small": "௨௮/௧௦/௨௦௨௬ ௨௧:௦௫",
+      "big": "புதன்கிழமை, ௨௮ அக்டோபர் ௨௦௨௬, ௨௧:௦௫"
+    },
+    {
+      "locale": "ta",
+      "momentLocale": "ta",
+      "at": "2026-01-02T00:03:00",
+      "small": "௨/௧/௨௦௨௬ ௦௦:௦௩",
+      "big": "வெள்ளிக்கிழமை, ௨ ஜனவரி ௨௦௨௬, ௦௦:௦௩"
+    },
+    {
+      "locale": "tr",
+      "momentLocale": "tr",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "Çarşamba, 28 Ekim 2026 21:05"
+    },
+    {
+      "locale": "tr",
+      "momentLocale": "tr",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00:03",
+      "big": "Cuma, 2 Ocak 2026 00:03"
+    },
+    {
+      "locale": "uk",
+      "momentLocale": "uk",
+      "at": "2026-10-28T21:05:06",
+      "small": "28.10.2026 21:05",
+      "big": "середа, 28 жовтня 2026 р., 21:05"
+    },
+    {
+      "locale": "uk",
+      "momentLocale": "uk",
+      "at": "2026-01-02T00:03:00",
+      "small": "2.1.2026 00:03",
+      "big": "п’ятниця, 2 січня 2026 р., 00:03"
+    },
+    {
+      "locale": "zh_CN",
+      "momentLocale": "zh-cn",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026/10/28 21:05",
+      "big": "2026年10月28日星期三晚上9点05分"
+    },
+    {
+      "locale": "zh_CN",
+      "momentLocale": "zh-cn",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026/1/2 00:03",
+      "big": "2026年1月2日星期五凌晨12点03分"
+    },
+    {
+      "locale": "zh_TW",
+      "momentLocale": "zh-tw",
+      "at": "2026-10-28T21:05:06",
+      "small": "2026/10/28 21:05",
+      "big": "2026年10月28日星期三 21:05"
+    },
+    {
+      "locale": "zh_TW",
+      "momentLocale": "zh-tw",
+      "at": "2026-01-02T00:03:00",
+      "small": "2026/1/2 00:03",
+      "big": "2026年1月2日星期五 00:03"
+    }
+  ]
+}

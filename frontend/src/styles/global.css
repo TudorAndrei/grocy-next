@@ -378,6 +378,39 @@ kbd {
   max-width: calc(var(--rail) + 1440px);
 }
 
+.header-clock {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.header-clock .icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  align-self: center;
+}
+
+.clock-small {
+  display: none;
+}
+
+@media (max-width: 575px) {
+  .clock-small {
+    display: inline;
+  }
+
+  .clock-big {
+    display: none;
+  }
+}
+
 .tabbar,
 .rail-scrim {
   display: none;

@@ -1,14 +1,19 @@
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { useFeatures } from "@/lib/features";
+import { usePreferences } from "@/lib/preferences";
 import { forgetKey } from "@/lib/session";
 import { useCommandBar } from "./CommandBar";
 import { Icon } from "./Icon";
 import { SiteNav, useNavCounts, usePathname } from "./SiteNav";
 import { Wordmark } from "./Wordmark";
+
+const HeaderClock = lazy(() =>
+  import("./HeaderClock").then(({ HeaderClock }) => ({ default: HeaderClock })),
+);
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { t: tr } = useI18n();
@@ -17,6 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const counts = useNavCounts();
   const features = useFeatures();
+  const { showClock } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
   const [previousPath, setPreviousPath] = useState(pathname);
   const queryClient = useQueryClient();
@@ -62,6 +68,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       {menuOpen ? <div className="rail-scrim" onClick={() => setMenuOpen(false)} /> : null}
 
       <main className="site-main" id="main-content">
+        {showClock ? (
+          <Suspense fallback={null}>
+            <HeaderClock />
+          </Suspense>
+        ) : null}
         {children}
       </main>
 

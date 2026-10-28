@@ -46,6 +46,12 @@ const preferenceFields: Array<{
 }> = [
   { key: "locale", label: "Language", type: "select" },
   {
+    key: "show_clock_in_header",
+    label: "Show clock in header",
+    type: "checkbox",
+    section: "appearance",
+  },
+  {
     key: "product_presets_location_id",
     label: "Location",
     type: "select",

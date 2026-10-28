@@ -50,6 +50,7 @@ export function usePreferences() {
     scanPurchase: enabled("scan_mode_purchase_enabled"),
     scanConsume: enabled("scan_mode_consume_enabled"),
     autoReload: enabled("auto_reload_on_db_change"),
+    showClock: enabled("show_clock_in_header"),
     formatAmount: (value: number | string | null | undefined) =>
       formatAmount(value, amountPrecision),
     formatPrice: (value: number) =>

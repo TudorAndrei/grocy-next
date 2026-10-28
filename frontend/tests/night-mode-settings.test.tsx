@@ -9,6 +9,7 @@ import type { UserSettings } from "@/lib/types";
 test("appearance settings control the whole app and save the legacy schedule", async () => {
   const settings: UserSettings = {
     night_mode: "off",
+    show_clock_in_header: false,
     night_mode_enabled_internal: false,
     auto_night_mode_enabled: false,
     auto_night_mode_time_range_from: "20:00",
@@ -71,12 +72,16 @@ test("appearance settings control the whole app and save the legacy schedule", a
   const user = userEvent.setup();
   const mode = await screen.findByRole("combobox", { name: "Night mode" });
   expect(screen.getByLabelText<HTMLInputElement>("From").readOnly).toBe(true);
+  await user.click(screen.getByRole("checkbox", { name: "Show clock in header" }));
   await user.selectOptions(mode, "on");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+  await waitFor(() => expect(view.container.querySelector("time")?.dateTime).toBeTruthy());
+  expect(settings.show_clock_in_header).toBe(true);
   await user.click(screen.getByRole("link", { name: "Products" }));
   await screen.findByRole("heading", { name: "Products", level: 1 });
   expect(document.documentElement.dataset.theme).toBe("dark");
+  expect(view.container.querySelector("time")?.dateTime).toBeTruthy();
   await user.click(screen.getByRole("link", { name: "Settings" }));
   await user.click(await screen.findByRole("tab", { name: "Appearance" }));
   await user.click(await screen.findByRole("checkbox", { name: "Auto enable in time range" }));
