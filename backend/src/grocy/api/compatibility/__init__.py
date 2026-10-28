@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from grocy.api.compatibility import (
     calendar,
     files,
+    grocycode,
     health,
     household,
     objects,
@@ -29,3 +30,4 @@ router.include_router(userfields.router)
 router.include_router(files.router)
 router.include_router(calendar.router)
 router.include_router(print_api.router)
+router.include_router(grocycode.router)

@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, Response
 
+from grocy.api.compatibility.grocycode import code_response
 from grocy.core.auth import CurrentActor
 from grocy.core.deps import DbSession
 from grocy.domains.recipes.presentation import (
@@ -10,6 +11,11 @@ from grocy.domains.recipes.presentation import (
 )
 
 router = APIRouter(tags=["recipes"])
+
+
+@router.get("/recipes/{recipe_id}/grocycode")
+async def get_recipe_code(recipe_id: str, request: Request, _actor: CurrentActor) -> Response:
+    return await code_response(request, f"grcy:r:{recipe_id}")
 
 
 @router.get("/recipes/overview")

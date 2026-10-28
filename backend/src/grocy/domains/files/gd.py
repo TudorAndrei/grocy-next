@@ -2,12 +2,42 @@
 
 import ctypes as c
 import math
+from collections.abc import Iterable
 from ctypes.util import find_library
 from functools import lru_cache
 from pathlib import Path
 
 from grocy.compatibility.php import php_error
 from grocy.core.errors import GrocyError
+
+
+def black_white_png(
+    width: int, height: int, rectangles: Iterable[tuple[int, int, int, int]], *, palette: bool
+) -> bytes | None:
+    """Render barcode rectangles with the same PNG defaults as imagepng()."""
+    library = _library()
+    if library is None:
+        return None
+    create = library.gdImageCreate if palette else library.gdImageCreateTrueColor
+    image = create(width, height)
+    if not image:
+        raise php_error("Unable to create barcode image")
+    encoded = None
+    try:
+        white = library.gdImageColorAllocateAlpha(image, 255, 255, 255, 0)
+        black = library.gdImageColorAllocateAlpha(image, 0, 0, 0, 0)
+        library.gdImageFilledRectangle(image, 0, 0, width - 1, height - 1, white)
+        for x1, y1, x2, y2 in rectangles:
+            library.gdImageFilledRectangle(image, x1, y1, x2, y2, black)
+        size = c.c_int()
+        encoded = library.gdImagePngPtrEx(image, c.byref(size), -1)
+        if not encoded:
+            raise php_error("Unable to encode barcode image")
+        return c.string_at(encoded, size.value)
+    finally:
+        if encoded:
+            library.gdFree(encoded)
+        library.gdImageDestroy(image)
 
 
 class _ImageHeader(c.Structure):
