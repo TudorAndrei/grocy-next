@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
@@ -27,6 +28,8 @@ function initialMode(): Mode {
 }
 
 function ShoppingPage() {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
   const stockEnabled = features.enabled("STOCK");
   const datesEnabled = stockEnabled && features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
@@ -87,7 +90,7 @@ function ShoppingPage() {
       await refresh();
       const productId = item.product_id;
       notify({
-        message: `Removed ${itemName(item)}`,
+        message: tr("Removed %s", String(itemName(item))),
         undo:
           productId != null
             ? async () => {
@@ -104,7 +107,7 @@ function ShoppingPage() {
     mutationFn: () => api.clearShoppingList(listId),
     onSuccess: async () => {
       await refresh();
-      notify({ message: "Shopping list cleared" });
+      notify({ message: tr("Shopping list cleared") });
     },
     onError,
   });
@@ -113,7 +116,7 @@ function ShoppingPage() {
     mutationFn: () => api.addMissingToShoppingList(listId),
     onSuccess: async () => {
       await refresh();
-      notify({ message: "Added every product below its minimum" });
+      notify({ message: tr("Added every product below its minimum") });
     },
     onError,
   });
@@ -125,7 +128,7 @@ function ShoppingPage() {
         : api.addExpiredToShoppingList(listId),
     onSuccess: async (_data, kind) => {
       await refresh();
-      notify({ message: `Added every ${kind} product` });
+      notify({ message: tr("Added every %s product", String(kind)) });
     },
     onError,
   });
@@ -145,7 +148,13 @@ function ShoppingPage() {
     },
     onSuccess: async (count) => {
       await Promise.all([refresh(), invalidateStock()]);
-      notify({ message: `Booked ${count} ${count === 1 ? "purchase" : "purchases"} into stock` });
+      notify({
+        message: tr(
+          "Booked %1$s %2$s into stock",
+          String(count),
+          String(count === 1 ? "purchase" : "purchases"),
+        ),
+      });
     },
     onError: async (err: Error) => {
       await Promise.all([refresh(), invalidateStock()]);
@@ -156,17 +165,21 @@ function ShoppingPage() {
   return (
     <div className="shopping" data-mode={mode}>
       <PageHeader
-        title={list.data?.name ?? "Shopping list"}
+        title={list.data?.name ?? tr("Shopping list")}
         lead={
           list.isSuccess
-            ? `${open.length} to buy${checked.length ? ` · ${checked.length} in the basket` : ""}`
-            : "Build the list for the next run, then check items off in the shop."
+            ? tr(
+                "%1$s to buy%2$s",
+                String(open.length),
+                String(checked.length ? ` · ${checked.length} in the basket` : ""),
+              )
+            : tr("Build the list for the next run, then check items off in the shop.")
         }
         actions={
           <>
             {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") && (lists.data?.length ?? 0) > 1 ? (
               <label className="select-field">
-                <span className="sr-only">Shopping list</span>
+                <span className="sr-only">{tr("Shopping list")}</span>
                 <select value={listId} onChange={(e) => setListId(Number(e.target.value))}>
                   {lists.data?.map((row) => (
                     <option key={row.id} value={row.id}>
@@ -176,14 +189,14 @@ function ShoppingPage() {
                 </select>
               </label>
             ) : null}
-            <div className="seg-group" role="group" aria-label="Mode">
+            <div className="seg-group" role="group" aria-label={tr("Mode")}>
               <button
                 type="button"
                 className="seg"
                 aria-pressed={mode === "plan"}
                 onClick={() => setMode("plan")}
               >
-                Plan
+                {tr("Plan")}
               </button>
               <button
                 type="button"
@@ -191,7 +204,7 @@ function ShoppingPage() {
                 aria-pressed={mode === "shop"}
                 onClick={() => setMode("shop")}
               >
-                In the shop
+                {tr("In the shop")}
               </button>
             </div>
           </>
@@ -209,7 +222,7 @@ function ShoppingPage() {
                 disabled={addMissing.isPending}
                 onClick={() => addMissing.mutate()}
               >
-                Add missing
+                {tr("Add missing")}
               </button>
             ) : null}
             {datesEnabled ? (
@@ -219,7 +232,7 @@ function ShoppingPage() {
                 disabled={addDue.isPending}
                 onClick={() => addDue.mutate("overdue")}
               >
-                Add overdue
+                {tr("Add overdue")}
               </button>
             ) : null}
             {datesEnabled ? (
@@ -229,11 +242,11 @@ function ShoppingPage() {
                 disabled={addDue.isPending}
                 onClick={() => addDue.mutate("expired")}
               >
-                Add expired
+                {tr("Add expired")}
               </button>
             ) : null}
             <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
-              Print
+              {tr("Print")}
             </button>
             {features.enabled("THERMAL_PRINTER") ? (
               <button
@@ -241,12 +254,12 @@ function ShoppingPage() {
                 className="btn btn-ghost"
                 onClick={() => openApiDocument(`/api/print/shoppinglist/thermal?list=${listId}`)}
               >
-                Thermal print
+                {tr("Thermal print")}
               </button>
             ) : null}
             {features.enabled("LABEL_PRINTER") ? (
               <Link to="/labels" className="btn btn-ghost">
-                Labels
+                {tr("Labels")}
               </Link>
             ) : null}
             <button
@@ -258,18 +271,19 @@ function ShoppingPage() {
                   clear.mutate();
               }}
             >
-              Clear list
+              {tr("Clear list")}
             </button>
           </div>
         </div>
       ) : null}
 
-      {list.isLoading ? <LoadingBlock label="Loading shopping list…" /> : null}
+      {list.isLoading ? <LoadingBlock label={tr("Loading shopping list…")} /> : null}
       {list.isError ? <ErrorBlock message={list.error.message} /> : null}
       {list.isSuccess && items.length === 0 ? (
         <p className="empty-state">
-          The list is empty. Add a product above, press ⌘K and type “list coffee”, or pull in
-          everything below its minimum with Add missing.
+          {tr(
+            "The list is empty. Add a product above, press ⌘K and type “list coffee”, or pull in everything below its minimum with Add missing.",
+          )}
         </p>
       ) : null}
 
@@ -285,7 +299,7 @@ function ShoppingPage() {
                   className="shop-check"
                   role="checkbox"
                   aria-checked={item.done}
-                  aria-label={`${itemName(item)} in the basket`}
+                  aria-label={tr("%s in the basket", String(itemName(item)))}
                   onClick={() => toggle.mutate(item)}
                 >
                   <span className="shop-box">{item.done ? <Icon name="check" /> : null}</span>
@@ -293,8 +307,8 @@ function ShoppingPage() {
                     {itemName(item)}
                     <small>
                       {product
-                        ? (catalog.location(product.location_id)?.name ?? "No location")
-                        : "Note"}
+                        ? (catalog.location(product.location_id)?.name ?? tr("No location"))
+                        : tr("Note")}
                       {item.product_id != null && item.note ? ` · ${item.note}` : ""}
                     </small>
                   </span>
@@ -312,7 +326,7 @@ function ShoppingPage() {
                         params={{ productId: String(item.product_id) }}
                         className="btn btn-sm btn-ghost"
                       >
-                        Product
+                        {tr("Product")}
                       </Link>
                     ) : null}
                     <button
@@ -321,7 +335,7 @@ function ShoppingPage() {
                       disabled={remove.isPending}
                       onClick={() => remove.mutate(item)}
                     >
-                      Remove
+                      {tr("Remove")}
                     </button>
                   </span>
                 ) : null}
@@ -334,7 +348,7 @@ function ShoppingPage() {
       {checked.length > 0 ? (
         <div className="basket-bar">
           <span>
-            <b>{checked.length}</b> in the basket
+            <b>{checked.length}</b> {tr("in the basket")}
           </span>
           <button
             type="button"
@@ -342,7 +356,7 @@ function ShoppingPage() {
             disabled={putAway.isPending}
             onClick={() => putAway.mutate(checked)}
           >
-            {putAway.isPending ? "Booking…" : `Put ${checked.length} in stock`}
+            {putAway.isPending ? tr("Booking…") : tr("Put %s in stock", String(checked.length))}
           </button>
         </div>
       ) : null}
@@ -351,6 +365,8 @@ function ShoppingPage() {
 }
 
 function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promise<void> }) {
+  const { t: tr } = useI18n();
+
   const catalog = useCatalog();
   const notify = useNotify();
   const [productId, setProductId] = useState("");
@@ -379,7 +395,10 @@ function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promi
     onSuccess: async () => {
       await onAdded();
       notify({
-        message: `Added ${productId ? catalog.productName(Number(productId)) : note.trim()}`,
+        message: tr(
+          "Added %s",
+          String(productId ? catalog.productName(Number(productId)) : note.trim()),
+        ),
       });
       setAmount("1");
       setNote("");
@@ -400,9 +419,9 @@ function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promi
   return (
     <form className="add-form" onSubmit={onSubmit}>
       <label className="select-field grow">
-        <span className="sr-only">Product</span>
+        <span className="sr-only">{tr("Product")}</span>
         <select value={productId} onChange={(e) => setProductId(e.target.value)}>
-          <option value="">Note only (no product)</option>
+          <option value="">{tr("Note only (no product)")}</option>
           {catalog.products.map((product) => (
             <option key={product.id} value={product.id}>
               {product.name}
@@ -411,16 +430,16 @@ function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promi
         </select>
       </label>
       <label className="amount-field">
-        <span className="sr-only">Amount</span>
+        <span className="sr-only">{tr("Amount")}</span>
         <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
         {unit ? <span className="unit">{unit}</span> : null}
       </label>
       <label className="note-field">
-        <span className="sr-only">Note</span>
+        <span className="sr-only">{tr("Note")}</span>
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder={productId ? "Note (optional)" : "Note"}
+          placeholder={productId ? tr("Note (optional)") : tr("Note")}
           required={!productId}
         />
       </label>
@@ -430,7 +449,7 @@ function AddItemForm({ listId, onAdded }: { listId: number; onAdded: () => Promi
         disabled={add.isPending || (!productId && !note.trim())}
       >
         <Icon name="plus" />
-        Add
+        {tr("Add")}
       </button>
     </form>
   );

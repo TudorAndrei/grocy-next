@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -6,6 +7,8 @@ import { AuthCard } from "./AuthCard";
 import { ErrorBlock } from "./ErrorBlock";
 
 export function LoginPage() {
+  const { t: tr } = useI18n();
+
   const queryClient = useQueryClient();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,17 +24,17 @@ export function LoginPage() {
       const result = await api.login({ username: username.trim(), password });
       await signInWithKey(queryClient, result.api_key);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Sign-in failed.");
+      setError(cause instanceof Error ? cause.message : tr("Sign-in failed."));
       setBusy(false);
     }
   };
 
   return (
-    <AuthCard title="Sign in" lead="Sign in with your Grocy Next account.">
+    <AuthCard title={tr("Sign in")} lead={tr("Sign in with your Grocy Next account.")}>
       {error ? <ErrorBlock message={error} /> : null}
       <form onSubmit={submit}>
         <div className="field">
-          <label htmlFor="login-username">Username</label>
+          <label htmlFor="login-username">{tr("Username")}</label>
           <input
             id="login-username"
             type="text"
@@ -42,7 +45,7 @@ export function LoginPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="login-password">Password</label>
+          <label htmlFor="login-password">{tr("Password")}</label>
           <input
             id="login-password"
             type="password"
@@ -53,7 +56,7 @@ export function LoginPage() {
           />
         </div>
         <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? tr("Signing in…") : tr("Sign in")}
         </button>
       </form>
     </AuthCard>

@@ -4,6 +4,7 @@ import { api, queryKeys } from "./api";
 import { formatAmount, unitLabel } from "./format";
 import type { Location, ProductSummary, QuantityUnit, StockOverviewItem } from "./types";
 import { preferenceEnabled, usePreferences } from "./preferences";
+import { useI18n } from "./i18n";
 
 export function stockAmount(stock: StockOverviewItem): number {
   return stock.is_aggregated_amount ? stock.amount_aggregated : stock.amount;
@@ -46,6 +47,7 @@ export type Catalog = {
 
 /** Products, locations and quantity units, joined for display. */
 export function useCatalog(enabled = true): Catalog {
+  const { t, pluralIndex } = useI18n();
   const { amountPrecision } = usePreferences();
   const products = useQuery({ queryKey: queryKeys.products, queryFn: api.listProducts, enabled });
 
@@ -67,12 +69,12 @@ export function useCatalog(enabled = true): Catalog {
     const unitMap = new Map((units.data ?? []).map((u) => [u.id, u]));
 
     const stockUnitText = (productId: number, amount: number) =>
-      unitLabel(unitMap.get(productMap.get(productId)?.qu_id_stock ?? -1), amount);
+      unitLabel(unitMap.get(productMap.get(productId)?.qu_id_stock ?? -1), amount, pluralIndex);
 
     return {
       products: products.data ?? [],
       product: (id) => productMap.get(id),
-      productName: (id) => productMap.get(id)?.name ?? `Product #${id}`,
+      productName: (id) => productMap.get(id)?.name ?? t("Product #%s", id),
       location: (id) => (id == null ? undefined : locationMap.get(id)),
       locations: locations.data ?? [],
       unit: (id) => (id == null ? undefined : unitMap.get(id)),
@@ -85,7 +87,7 @@ export function useCatalog(enabled = true): Catalog {
       amountText: (productId, amount) =>
         `${formatAmount(amount, amountPrecision)} ${stockUnitText(productId, amount)}`.trim(),
     };
-  }, [products.data, locations.data, units.data, amountPrecision]);
+  }, [products.data, locations.data, units.data, amountPrecision, t, pluralIndex]);
 }
 
 /** Refresh everything a stock movement can change. */

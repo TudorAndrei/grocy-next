@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
+import { localizationSchema } from "./localization";
 import type {
   BarcodeProduct,
   Battery,
@@ -90,6 +91,8 @@ const errorBodySchema = z.object({
   detail: z.string().optional().catch(undefined),
 });
 
+const configuredLocaleSchema = z.string().optional().catch(undefined);
+
 function errorMessage(body: JsonValue, fallback: string): string {
   const result = errorBodySchema.safeParse(body);
 
@@ -153,6 +156,12 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getLocalization: async (locale?: string) =>
+    localizationSchema.parse(
+      await request<JsonValue>(
+        `/api/v2/localization${locale ? `?locale=${encodeURIComponent(locale)}` : ""}`,
+      ),
+    ),
   objects: (entity: string) => request<import("./entities").EntityRow[]>(`/api/objects/${entity}`),
   createObject: (entity: string, body: JsonObject) =>
     request<{ created_object_id: string }>(`/api/objects/${entity}`, {
@@ -320,7 +329,11 @@ export const api = {
     ),
 
   getSystemInfo: () => request<SystemInfo>("/api/system/info"),
-  getSystemConfig: () => request<JsonObject>("/api/system/config"),
+  getSystemConfig: async (): Promise<JsonObject & { LOCALE?: string }> => {
+    const data = await request<JsonObject>("/api/system/config");
+
+    return { ...data, LOCALE: configuredLocaleSchema.parse(data.LOCALE) };
+  },
   setupStatus: () => request<{ needs_setup: boolean }>("/api/v2/setup"),
   runSetup: (body: { setup_token: string; username: string; password: string }) =>
     request<AuthResult>("/api/v2/setup", {
@@ -391,6 +404,7 @@ export const api = {
 };
 
 export const queryKeys = {
+  localization: (locale?: string) => ["localization", locale ?? "default"] as const,
   products: ["products"] as const,
   locations: ["locations"] as const,
   quantityUnits: ["quantity-units"] as const,

@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import type { JsonObject } from "@/lib/json";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
@@ -34,6 +35,8 @@ type Adjust = "transfer" | "inventory";
 
 /** Entry-level stock work: transfer, count, entry edits, prices and booking undo. */
 export function StockLedger({ productId }: { productId: number }) {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
   const priceEnabled = features.enabled("STOCK_PRICE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
@@ -147,12 +150,12 @@ export function StockLedger({ productId }: { productId: number }) {
   return (
     <section className="panel" aria-labelledby="ledger-heading">
       <h2 className="panel-head" id="ledger-heading">
-        Entries and bookings
+        {tr("Entries and bookings")}
       </h2>
       {error ? <ErrorBlock message={error.message} /> : null}
 
       <form className="panel-body move-form" onSubmit={submitAdjust}>
-        <div className="seg-group" role="group" aria-label="Stock adjustment">
+        <div className="seg-group" role="group" aria-label={tr("Stock adjustment")}>
           {(["transfer", "inventory"] as const).flatMap((id) =>
             id === "transfer" && !locationsEnabled
               ? []
@@ -167,14 +170,14 @@ export function StockLedger({ productId }: { productId: number }) {
                       action.reset();
                     }}
                   >
-                    {{ transfer: "Transfer", inventory: "Count" }[id]}
+                    {tr({ transfer: "Transfer", inventory: "Count" }[id])}
                   </button>,
                 ],
           )}
         </div>
         <div className="field-row">
           <label className="field">
-            <span>{adjust === "inventory" ? "New stock count" : "Amount"}</span>
+            <span>{adjust === "inventory" ? tr("New stock count") : tr("Amount")}</span>
             <input
               type="number"
               step="any"
@@ -186,14 +189,14 @@ export function StockLedger({ productId }: { productId: number }) {
           </label>
           {locationsEnabled ? (
             <label className="field">
-              <span>{adjust === "transfer" ? "From" : "Location"}</span>
+              <span>{adjust === "transfer" ? tr("From") : tr("Location")}</span>
               <select
                 required={adjust === "transfer"}
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               >
                 <option value="">
-                  {adjust === "transfer" ? "Select location" : "All locations"}
+                  {adjust === "transfer" ? tr("Select location") : tr("All locations")}
                 </option>
                 {locationOptions}
               </select>
@@ -201,15 +204,15 @@ export function StockLedger({ productId }: { productId: number }) {
           ) : null}
           {adjust === "transfer" ? (
             <label className="field">
-              <span>To</span>
+              <span>{tr("To")}</span>
               <select required value={to} onChange={(e) => setTo(e.target.value)}>
-                <option value="">Select location</option>
+                <option value="">{tr("Select location")}</option>
                 {locationOptions}
               </select>
             </label>
           ) : datesEnabled ? (
             <label className="field">
-              <span>Best before</span>
+              <span>{tr("Best before")}</span>
               <input
                 type="date"
                 value={bestBefore}
@@ -219,7 +222,7 @@ export function StockLedger({ productId }: { productId: number }) {
           ) : null}
           {adjust === "inventory" && showPurchaseDate ? (
             <label className="field">
-              <span>Purchase date</span>
+              <span>{tr("Purchase date")}</span>
               <input
                 type="date"
                 value={purchasedDate}
@@ -229,23 +232,23 @@ export function StockLedger({ productId }: { productId: number }) {
           ) : null}
         </div>
         <button type="submit" className="btn btn-primary" disabled={action.isPending}>
-          {adjust === "transfer" ? "Transfer" : "Save count"}
+          {adjust === "transfer" ? tr("Transfer") : tr("Save count")}
         </button>
       </form>
 
-      <h3 className="panel-sub">Stock entries</h3>
+      <h3 className="panel-sub">{tr("Stock entries")}</h3>
       {entries.isSuccess && entries.data.length === 0 ? (
-        <p className="panel-empty">No stock entries.</p>
+        <p className="panel-empty">{tr("No stock entries.")}</p>
       ) : null}
       <ol className="ledger">
         {entries.data?.map((entry) => (
           <li key={entry.id}>
             <span>
               {formatAmount(entry.amount)}
-              {locationsEnabled ? ` at ${locationName(entry.location_id)}` : ""}
-              {openingEnabled && entry.open ? ", opened" : ""}
+              {locationsEnabled ? tr(" at %s", String(locationName(entry.location_id))) : ""}
+              {openingEnabled && entry.open ? tr(", opened") : ""}
               {datesEnabled && entry.best_before_date
-                ? `, best before ${entry.best_before_date}`
+                ? tr(", best before %s", String(entry.best_before_date))
                 : ""}
             </span>
             <button
@@ -265,7 +268,7 @@ export function StockLedger({ productId }: { productId: number }) {
                 setEntryOpen(Boolean(entry.open));
               }}
             >
-              Edit
+              {tr("Edit")}
             </button>
           </li>
         ))}
@@ -274,7 +277,7 @@ export function StockLedger({ productId }: { productId: number }) {
         <form className="panel-body move-form" onSubmit={submitEntry}>
           <div className="form-grid">
             <label className="field">
-              <span>Entry amount</span>
+              <span>{tr("Entry amount")}</span>
               <input
                 type="number"
                 min="0"
@@ -286,7 +289,7 @@ export function StockLedger({ productId }: { productId: number }) {
             </label>
             {datesEnabled ? (
               <label className="field">
-                <span>Best before</span>
+                <span>{tr("Best before")}</span>
                 <input
                   type="date"
                   value={entryExpiry}
@@ -295,7 +298,7 @@ export function StockLedger({ productId }: { productId: number }) {
               </label>
             ) : null}
             <label className="field">
-              <span>Purchase date</span>
+              <span>{tr("Purchase date")}</span>
               <input
                 type="date"
                 value={entryPurchased}
@@ -304,7 +307,7 @@ export function StockLedger({ productId }: { productId: number }) {
             </label>
             {priceEnabled ? (
               <label className="field">
-                <span>Price per stock unit</span>
+                <span>{tr("Price per stock unit")}</span>
                 <input
                   type="number"
                   min="0"
@@ -316,7 +319,7 @@ export function StockLedger({ productId }: { productId: number }) {
             ) : null}
             {locationsEnabled ? (
               <label className="field">
-                <span>Location</span>
+                <span>{tr("Location")}</span>
                 <select
                   required
                   value={entryLocation}
@@ -328,9 +331,9 @@ export function StockLedger({ productId }: { productId: number }) {
             ) : null}
             {priceEnabled ? (
               <label className="field">
-                <span>Store</span>
+                <span>{tr("Store")}</span>
                 <select value={entryStore} onChange={(e) => setEntryStore(e.target.value)}>
-                  <option value="">No store</option>
+                  <option value="">{tr("No store")}</option>
                   {(stores.data ?? []).map((store) => (
                     <option key={store.id} value={store.id}>
                       {store.name}
@@ -340,7 +343,7 @@ export function StockLedger({ productId }: { productId: number }) {
               </label>
             ) : null}
             <label className="field">
-              <span>Note</span>
+              <span>{tr("Note")}</span>
               <textarea value={entryNote} onChange={(e) => setEntryNote(e.target.value)} />
             </label>
             {openingEnabled ? (
@@ -350,16 +353,16 @@ export function StockLedger({ productId }: { productId: number }) {
                   checked={entryOpen}
                   onChange={(e) => setEntryOpen(e.target.checked)}
                 />
-                <span>Opened</span>
+                <span>{tr("Opened")}</span>
               </label>
             ) : null}
           </div>
           <div className="actions">
             <button type="submit" className="btn btn-primary" disabled={action.isPending}>
-              Save entry
+              {tr("Save entry")}
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => setEditEntry(null)}>
-              Cancel
+              {tr("Cancel")}
             </button>
           </div>
         </form>
@@ -367,9 +370,9 @@ export function StockLedger({ productId }: { productId: number }) {
 
       {priceEnabled ? (
         <>
-          <h3 className="panel-sub">Price history</h3>
+          <h3 className="panel-sub">{tr("Price history")}</h3>
           {prices.isSuccess && prices.data.length === 0 ? (
-            <p className="panel-empty">No purchase prices recorded yet.</p>
+            <p className="panel-empty">{tr("No purchase prices recorded yet.")}</p>
           ) : null}
           <ol className="ledger">
             {prices.data?.slice(0, 8).map((row, index) => (
@@ -382,13 +385,13 @@ export function StockLedger({ productId }: { productId: number }) {
         </>
       ) : null}
 
-      <h3 className="panel-sub">Recent bookings</h3>
+      <h3 className="panel-sub">{tr("Recent bookings")}</h3>
       <ol className="ledger">
         {bookings.data?.map((log) => (
           <li key={log.id}>
             <span>
               {log.transaction_type.replace(/_/g, " ")}: {formatAmount(log.amount)}
-              {log.undone ? " (undone)" : ""}
+              {log.undone ? tr(" (undone)") : ""}
             </span>
             {!log.undone ? (
               <button
@@ -399,7 +402,7 @@ export function StockLedger({ productId }: { productId: number }) {
                   action.mutate(() => api.action(`/api/stock/bookings/${log.id}/undo`))
                 }
               >
-                Undo
+                {tr("Undo")}
               </button>
             ) : null}
           </li>

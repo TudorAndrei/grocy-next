@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -14,6 +15,8 @@ export const Route = createFileRoute("/recipes/")({
 type ReadyFilter = "all" | "ready" | "missing";
 
 function RecipesPage() {
+  const { t: tr } = useI18n();
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ReadyFilter>("all");
   const [editing, setEditing] = useState(false);
@@ -53,8 +56,8 @@ function RecipesPage() {
   return (
     <>
       <PageHeader
-        title="Recipes"
-        lead="Checked against live stock. Cook a ready recipe to consume its ingredients."
+        title={tr("Recipes")}
+        lead={tr("Checked against live stock. Cook a ready recipe to consume its ingredients.")}
         actions={
           <button
             type="button"
@@ -62,22 +65,22 @@ function RecipesPage() {
             aria-pressed={editing}
             onClick={() => setEditing((on) => !on)}
           >
-            {editing ? "Close editor" : "Edit recipes"}
+            {editing ? tr("Close editor") : tr("Edit recipes")}
           </button>
         }
       />
       {editing ? <EntityManager entity="recipes" /> : null}
       <div className="toolbar">
         <label className="search-field">
-          <span className="sr-only">Search recipes</span>
+          <span className="sr-only">{tr("Search recipes")}</span>
           <input
             type="search"
-            placeholder="Search recipes"
+            placeholder={tr("Search recipes")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
-        <div className="chips" role="group" aria-label="Recipe filter">
+        <div className="chips" role="group" aria-label={tr("Recipe filter")}>
           {(
             [
               ["all", "All"],
@@ -98,11 +101,11 @@ function RecipesPage() {
           ))}
         </div>
       </div>
-      {recipes.isLoading ? <LoadingBlock label="Loading recipes…" /> : null}
+      {recipes.isLoading ? <LoadingBlock label={tr("Loading recipes…")} /> : null}
       {recipes.isError ? <ErrorBlock message={recipes.error.message} /> : null}
       {recipes.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
-          {recipes.data.length === 0 ? "No recipes yet." : "No recipe matches this filter."}
+          {recipes.data.length === 0 ? tr("No recipes yet.") : tr("No recipe matches this filter.")}
         </p>
       ) : null}
       {visible.length > 0 ? (
@@ -122,13 +125,15 @@ function RecipesPage() {
                     {recipe.description ? <small>{recipe.description}</small> : null}
                   </span>
                   <span className="recipe-meta">
-                    {f ? `${f.positions.length} ingredients · ` : null}
-                    {recipe.desired_servings} serving
-                    {recipe.desired_servings === 1 ? "" : "s"}
+                    {f ? tr("%s ingredients · ", String(f.positions.length)) : null}
+                    {recipe.desired_servings} {tr("serving")}
+                    {recipe.desired_servings === 1 ? "" : tr("s")}
                   </span>
                   {f ? (
                     <span className="badge" data-tone={f.need_fulfilled ? "ok" : "warn"}>
-                      {f.need_fulfilled ? "Ready to cook" : `${f.missing_products_count} missing`}
+                      {f.need_fulfilled
+                        ? tr("Ready to cook")
+                        : tr("%s missing", String(f.missing_products_count))}
                     </span>
                   ) : (
                     <span className="faint">—</span>

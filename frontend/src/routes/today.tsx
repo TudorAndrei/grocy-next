@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -35,6 +36,8 @@ type DueItem = {
 };
 
 function TodayPage() {
+  const { t: tr } = useI18n();
+
   const { dueSoonDays } = usePreferences();
   const features = useFeatures();
   const stockEnabled = features.enabled("STOCK");
@@ -95,7 +98,7 @@ function TodayPage() {
     mutationFn: () => api.addMissingToShoppingList(1),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["shopping"] });
-      notify({ message: "Added every product below its minimum to the shopping list" });
+      notify({ message: tr("Added every product below its minimum to the shopping list") });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -135,11 +138,11 @@ function TodayPage() {
         key: `s${entry.product_id}`,
         domain: "stock",
         name: entry.product.name,
-        detail: `${catalog.amountText(entry.product_id, entry.amount)} · ${days < 0 ? "expired" : "best before"}`,
+        detail: `${catalog.amountText(entry.product_id, entry.amount)} · ${days < 0 ? tr("expired") : tr("best before")}`,
         days,
         link: { to: "/products/$productId", productId: entry.product_id },
         action: {
-          label: "Consume",
+          label: tr("Consume"),
           busy: consume.isPending && consume.variables?.productId === entry.product_id,
           run: () => consume.mutate({ productId: entry.product_id, amount: 1 }),
         },
@@ -154,10 +157,10 @@ function TodayPage() {
         key: `c${chore.id}`,
         domain: "home",
         name: chore.name,
-        detail: chore.period_type ? `Chore · ${chore.period_type}` : "Chore",
+        detail: chore.period_type ? `${tr("Chore")} · ${tr(chore.period_type)}` : tr("Chore"),
         days,
         action: {
-          label: "Done",
+          label: tr("Done"),
           busy: executeChore.isPending && executeChore.variables === chore.id,
           run: () => executeChore.mutate(chore.id),
         },
@@ -172,10 +175,10 @@ function TodayPage() {
         key: `t${task.id}`,
         domain: "home",
         name: task.name,
-        detail: "Task",
+        detail: tr("Task"),
         days,
         action: {
-          label: "Complete",
+          label: tr("Complete"),
           busy: completeTask.isPending && completeTask.variables === task.id,
           run: () => completeTask.mutate(task.id),
         },
@@ -194,6 +197,7 @@ function TodayPage() {
     datesEnabled,
     choresEnabled,
     tasksEnabled,
+    tr,
   ]);
 
   const recent = useMemo(
@@ -212,7 +216,7 @@ function TodayPage() {
     mutationFn: (transactionId: string) => api.undoTransaction(transactionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["stock"] });
-      notify({ message: "Booking undone" });
+      notify({ message: tr("Booking undone") });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -224,15 +228,15 @@ function TodayPage() {
   return (
     <>
       <PageHeader
-        title="Today"
+        title={tr("Today")}
         lead={
           <>
             {todayLine()}
             {loading
               ? null
               : needsYou === 0
-                ? " · nothing needs you"
-                : ` · ${needsYou} things need you`}
+                ? tr(" · nothing needs you")
+                : tr(" · %s things need you", String(needsYou))}
           </>
         }
         actions={
@@ -244,7 +248,7 @@ function TodayPage() {
                 disabled={addMissing.isPending || low.length === 0}
                 onClick={() => addMissing.mutate()}
               >
-                Add missing to list
+                {tr("Add missing to list")}
               </button>
             ) : null}
             {stockEnabled ? (
@@ -253,7 +257,7 @@ function TodayPage() {
                 className="btn btn-primary"
                 onClick={() => command.open("purchase")}
               >
-                Purchase
+                {tr("Purchase")}
               </button>
             ) : null}
           </>
@@ -267,14 +271,18 @@ function TodayPage() {
           {stockEnabled ? (
             <section className="panel today-low" aria-labelledby="low-heading">
               <h2 className="panel-head" id="low-heading">
-                Running low
+                {tr("Running low")}
                 <span>
-                  {low.length === 0 ? "all above minimum" : `${low.length} below minimum`}
+                  {low.length === 0
+                    ? tr("all above minimum")
+                    : tr("%s below minimum", String(low.length))}
                 </span>
               </h2>
-              {loading ? <LoadingBlock label="Checking stock…" /> : null}
+              {loading ? <LoadingBlock label={tr("Checking stock…")} /> : null}
               {!loading && low.length === 0 ? (
-                <p className="panel-empty">Every product with a minimum has enough on hand.</p>
+                <p className="panel-empty">
+                  {tr("Every product with a minimum has enough on hand.")}
+                </p>
               ) : null}
               <ul className="stock-rows">
                 {low.map((item) => (
@@ -289,7 +297,7 @@ function TodayPage() {
                         {features.enabled("STOCK_LOCATION_TRACKING")
                           ? `${item.location ?? "No location"} · `
                           : ""}
-                        min {catalog.amountText(item.id, item.min)} · missing{" "}
+                        {tr("min")} {catalog.amountText(item.id, item.min)} {tr("· missing")}{" "}
                         {catalog.amountText(item.id, item.missing)}
                       </small>
                     </Link>
@@ -307,11 +315,15 @@ function TodayPage() {
           {datesEnabled || choresEnabled || tasksEnabled ? (
             <section className="panel" aria-labelledby="due-heading">
               <h2 className="panel-head" id="due-heading">
-                Use first
-                <span>next {DUE_WINDOW_DAYS} days</span>
+                {tr("Use first")}
+                <span>
+                  {tr("next")} {DUE_WINDOW_DAYS} {tr("days")}
+                </span>
               </h2>
               {!loading && due.length === 0 ? (
-                <p className="panel-empty">Nothing expires or falls due in the next two weeks.</p>
+                <p className="panel-empty">
+                  {tr("Nothing expires or falls due in the next two weeks.")}
+                </p>
               ) : null}
               <ul className="due-rows">
                 {due.map((item) => (
@@ -348,8 +360,10 @@ function TodayPage() {
           {shoppingEnabled ? (
             <section className="panel" aria-labelledby="list-heading" data-domain="shopping">
               <h2 className="panel-head" id="list-heading">
-                Shopping list
-                <span>{toBuy.length === 0 ? "empty" : `${toBuy.length} to buy`}</span>
+                {tr("Shopping list")}
+                <span>
+                  {toBuy.length === 0 ? tr("empty") : tr("%s to buy", String(toBuy.length))}
+                </span>
               </h2>
               {toBuy.length > 0 ? (
                 <ul className="list-preview">
@@ -365,20 +379,24 @@ function TodayPage() {
                       )}
                     </li>
                   ))}
-                  {toBuy.length > 8 ? <li>+{toBuy.length - 8} more</li> : null}
+                  {toBuy.length > 8 ? (
+                    <li>
+                      +{toBuy.length - 8} {tr("more")}
+                    </li>
+                  ) : null}
                 </ul>
               ) : (
                 <p className="panel-empty">
-                  Nothing on the list. Add missing pulls in everything below its minimum.
+                  {tr("Nothing on the list. Add missing pulls in everything below its minimum.")}
                 </p>
               )}
               <div className="panel-actions">
                 <Link to="/shopping" className="btn btn-sm btn-primary">
-                  Go shopping
+                  {tr("Go shopping")}
                 </Link>
                 {stockEnabled ? (
                   <button type="button" className="btn btn-sm" onClick={() => command.open("list")}>
-                    Add to list
+                    {tr("Add to list")}
                   </button>
                 ) : null}
               </div>
@@ -388,9 +406,11 @@ function TodayPage() {
           {stockEnabled ? (
             <section className="panel" aria-labelledby="review-heading">
               <h2 className="panel-head" id="review-heading">
-                Review and undo
+                {tr("Review and undo")}
                 <span>
-                  {pendingCount === 0 ? "no proposals waiting" : `${pendingCount} waiting`}
+                  {pendingCount === 0
+                    ? tr("no proposals waiting")
+                    : tr("%s waiting", String(pendingCount))}
                 </span>
               </h2>
               {pendingCount > 0 ? (
@@ -401,16 +421,21 @@ function TodayPage() {
                     return (
                       <li key={proposal.id}>
                         <span className="tag" data-domain={fromAgent ? "agent" : undefined}>
-                          {fromAgent ? "Agent" : "Web"}
+                          {fromAgent ? tr("Agent") : tr("Web")}
                         </span>
                         <span className="review-what">
-                          <b>{catalog.productName(proposal.product_id)}</b> nutrition
+                          <b>{catalog.productName(proposal.product_id)}</b> {tr("nutrition")}
                           {proposal.payload.nutrients.energy_kcal != null
-                            ? ` · ${proposal.payload.nutrients.energy_kcal} kcal / ${proposal.payload.basis.quantity} ${proposal.payload.basis.unit}`
+                            ? tr(
+                                " · %1$s kcal / %2$s %3$s",
+                                String(proposal.payload.nutrients.energy_kcal),
+                                String(proposal.payload.basis.quantity),
+                                String(proposal.payload.basis.unit),
+                              )
                             : ""}
                         </span>
                         <Link to="/reviews" className="btn btn-sm btn-primary">
-                          Review
+                          {tr("Review")}
                         </Link>
                       </li>
                     );
@@ -419,7 +444,7 @@ function TodayPage() {
               ) : null}
               {recent.length > 0 ? (
                 <>
-                  <h3 className="panel-sub">Recent bookings</h3>
+                  <h3 className="panel-sub">{tr("Recent bookings")}</h3>
                   <ul className="review-rows">
                     {recent.map((entry) => (
                       <li key={entry.id}>
@@ -436,7 +461,7 @@ function TodayPage() {
                           disabled={undo.isPending}
                           onClick={() => undo.mutate(entry.transaction_id)}
                         >
-                          Undo
+                          {tr("Undo")}
                         </button>
                       </li>
                     ))}
@@ -444,10 +469,10 @@ function TodayPage() {
                 </>
               ) : null}
               {pendingCount === 0 && recent.length === 0 ? (
-                <p className="panel-empty">No proposals and no bookings yet.</p>
+                <p className="panel-empty">{tr("No proposals and no bookings yet.")}</p>
               ) : (
                 <Link to="/activity" className="panel-more">
-                  All activity
+                  {tr("All activity")}
                 </Link>
               )}
             </section>

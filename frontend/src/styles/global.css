@@ -189,7 +189,8 @@ kbd {
 
 .site-rail {
   position: fixed;
-  inset: 0 auto 0 0;
+  inset-block: 0;
+  inset-inline-start: 0;
   width: var(--rail);
   display: flex;
   flex-direction: column;
@@ -253,7 +254,7 @@ kbd {
   background: var(--cobalt-fill-deep);
   color: #c5d0ef;
   font-size: 13px;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition:
     border-color 160ms var(--ease),
@@ -343,7 +344,7 @@ kbd {
 
 .site-nav em,
 .tabbar em {
-  margin-left: auto;
+  margin-inline-start: auto;
   min-width: 20px;
   padding: 1px 6px;
   border-radius: 999px;
@@ -372,7 +373,7 @@ kbd {
 }
 
 .site-main {
-  margin-left: var(--rail);
+  margin-inline-start: var(--rail);
   padding: 28px clamp(20px, 3vw, 44px) 64px;
   max-width: calc(var(--rail) + 1440px);
 }
@@ -571,7 +572,7 @@ kbd {
 .toolbar-end {
   display: flex;
   gap: 8px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .toolbar-note {
@@ -613,7 +614,7 @@ textarea:focus {
 
 select {
   appearance: none;
-  padding-right: 36px;
+  padding-inline-end: 36px;
   background: var(--surface)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d3a8a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
     no-repeat right 12px center / 16px;
@@ -648,7 +649,7 @@ input[type="checkbox"] {
 }
 
 .search-field input {
-  padding-left: 36px;
+  padding-inline-start: 36px;
   background: var(--surface)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23676d7d' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E")
     no-repeat 11px 50% / 16px;
@@ -709,15 +710,15 @@ input[type="checkbox"] {
 }
 
 .amount-field input {
-  padding-right: 44px;
-  text-align: right;
+  padding-inline-end: 44px;
+  text-align: end;
   font-weight: 700;
   color: var(--ink);
 }
 
 .amount-field .unit {
   position: absolute;
-  right: 12px;
+  inset-inline-end: 12px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink-2);
@@ -725,7 +726,7 @@ input[type="checkbox"] {
 }
 
 .amount-field[data-unit-select] input {
-  padding-right: 12px;
+  padding-inline-end: 12px;
 }
 
 .check-field {
@@ -800,7 +801,7 @@ input[type="checkbox"] {
 }
 
 .tag + .tag {
-  margin-left: 4px;
+  margin-inline-start: 4px;
 }
 
 .tag[data-domain="agent"] {
@@ -971,7 +972,8 @@ a.btn[aria-disabled="true"] {
 
 .gauge-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset-block: 0;
+  inset-inline-start: 0;
   background: var(--cobalt-fill);
   transition: width 600ms var(--ease);
 }
@@ -980,7 +982,7 @@ a.btn[aria-disabled="true"] {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(50% - 1px);
+  inset-inline-start: calc(50% - 1px);
   width: 2px;
   background: var(--ink);
   mix-blend-mode: difference;
@@ -1053,13 +1055,14 @@ a.btn[aria-disabled="true"] {
 
 .due-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset-block: 0;
+  inset-inline-start: 0;
   background: var(--due);
   border-radius: 3px;
 }
 
 .due-days {
-  text-align: right;
+  text-align: end;
   font-weight: 700;
   font-size: 14px;
 }
@@ -1129,7 +1132,7 @@ a.btn[aria-disabled="true"] {
 }
 
 .amount {
-  text-align: right;
+  text-align: end;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1155,7 +1158,7 @@ a.btn[aria-disabled="true"] {
 
 .due-name {
   position: relative;
-  padding-left: 14px;
+  padding-inline-start: 14px;
   font-weight: 700;
   min-width: 0;
 }
@@ -1163,7 +1166,7 @@ a.btn[aria-disabled="true"] {
 .due-name::before {
   content: "";
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   top: 0.45em;
   width: 7px;
   height: 7px;
@@ -1236,7 +1239,7 @@ a.btn[aria-disabled="true"] {
 
 .stock-table th {
   padding: 10px 14px;
-  text-align: left;
+  text-align: start;
   font-stretch: 125%;
   font-size: 10.5px;
   font-weight: 700;
@@ -1264,26 +1267,26 @@ a.btn[aria-disabled="true"] {
 
 .stock-table th:first-child,
 .stock-table td:first-child {
-  padding-left: 18px;
+  padding-inline-start: 18px;
 }
 
 .stock-table th:last-child,
 .stock-table td:last-child {
-  padding-right: 18px;
+  padding-inline-end: 18px;
 }
 
 .stock-table td.row-actions {
   display: table-cell;
-  text-align: right;
+  text-align: end;
   white-space: nowrap;
 }
 
 .stock-table td.row-actions > * + * {
-  margin-left: 6px;
+  margin-inline-start: 6px;
 }
 
 .stock-table .num {
-  text-align: right;
+  text-align: end;
   white-space: nowrap;
 }
 
@@ -1339,7 +1342,7 @@ a.btn[aria-disabled="true"] {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-right: 14px;
+  padding-inline-end: 14px;
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -1357,7 +1360,7 @@ a.btn[aria-disabled="true"] {
   padding: 10px 6px 10px 18px;
   border: 0;
   background: none;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -1542,7 +1545,7 @@ a.btn[aria-disabled="true"] {
 }
 
 .facts div[data-indent="true"] dt {
-  padding-left: 16px;
+  padding-inline-start: 16px;
   color: var(--ink-2);
 }
 
@@ -1574,7 +1577,7 @@ a.btn[aria-disabled="true"] {
 }
 
 .nutrient-input[data-indent="true"] > span:first-child {
-  padding-left: 12px;
+  padding-inline-start: 12px;
   color: var(--ink-2);
 }
 
@@ -1692,7 +1695,7 @@ a.btn[aria-disabled="true"] {
 .diff-table td {
   padding: 6px 0;
   border-bottom: 1px solid var(--line-soft);
-  text-align: left;
+  text-align: start;
 }
 
 .diff-table thead th {
@@ -1704,12 +1707,12 @@ a.btn[aria-disabled="true"] {
 }
 
 .diff-table .num {
-  text-align: right;
+  text-align: end;
   width: 30%;
 }
 
 .diff-table th[data-indent="true"] {
-  padding-left: 14px;
+  padding-inline-start: 14px;
   font-weight: 400;
   color: var(--ink-2);
 }
@@ -1903,14 +1906,14 @@ a.btn[aria-disabled="true"] {
 }
 
 .command-foot kbd {
-  margin-right: 3px;
+  margin-inline-end: 3px;
 }
 
 /* ---------- Toasts ---------- */
 
 .toasts {
   position: fixed;
-  right: 20px;
+  inset-inline-end: 20px;
   bottom: 20px;
   z-index: 60;
   display: flex;
@@ -1975,6 +1978,15 @@ a.btn[aria-disabled="true"] {
   stroke-linecap: round;
 }
 
+/* Match the selected language's writing direction. */
+[dir="rtl"] select {
+  background-position: left 12px center;
+}
+
+[dir="rtl"] .search-field input {
+  background-position: right 11px center;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1180px) {
@@ -1993,7 +2005,12 @@ a.btn[aria-disabled="true"] {
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
-  .site-rail[data-open="true"] {
+  [dir="rtl"] .site-rail {
+    transform: translateX(100%);
+  }
+
+  .site-rail[data-open="true"],
+  [dir="rtl"] .site-rail[data-open="true"] {
     transform: none;
     box-shadow: 12px 0 40px rgb(16 37 94 / 0.3);
   }
@@ -2011,7 +2028,7 @@ a.btn[aria-disabled="true"] {
   }
 
   .site-main {
-    margin-left: 0;
+    margin-inline-start: 0;
     padding: 20px 16px calc(var(--tabbar) + 32px + env(safe-area-inset-bottom));
   }
 
@@ -2066,7 +2083,7 @@ a.btn[aria-disabled="true"] {
   .tabbar em {
     position: absolute;
     top: 2px;
-    left: calc(50% + 6px);
+    inset-inline-start: calc(50% + 6px);
     margin: 0;
     font-size: 10.5px;
   }
@@ -2082,8 +2099,8 @@ a.btn[aria-disabled="true"] {
   }
 
   .toasts {
-    right: 12px;
-    left: 12px;
+    inset-inline-end: 12px;
+    inset-inline-start: 12px;
     bottom: calc(var(--tabbar) + 12px + env(safe-area-inset-bottom));
     align-items: stretch;
   }
@@ -2119,7 +2136,7 @@ a.btn[aria-disabled="true"] {
   }
 
   .toolbar-end {
-    margin-left: 0;
+    margin-inline-start: 0;
     width: 100%;
   }
 
@@ -2222,7 +2239,7 @@ a.btn[aria-disabled="true"] {
   }
 
   .stock-table td.row-actions > * + * {
-    margin-left: 0;
+    margin-inline-start: 0;
   }
 
   .household-table td.date,
@@ -2235,7 +2252,7 @@ a.btn[aria-disabled="true"] {
   }
 
   .shop-check {
-    padding-left: 16px;
+    padding-inline-start: 16px;
   }
 
   .shopping .page-actions .seg-group {
@@ -2277,7 +2294,7 @@ a.btn[aria-disabled="true"] {
 
 .skip-link {
   position: absolute;
-  left: 1rem;
+  inset-inline-start: 1rem;
   top: -5rem;
   z-index: 50;
   padding: 8px 14px;
@@ -2464,7 +2481,7 @@ a.btn[aria-disabled="true"] {
 
 .data-table th {
   padding: 10px 14px;
-  text-align: left;
+  text-align: start;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;

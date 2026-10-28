@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +11,8 @@ export const Route = createFileRoute("/equipment")({
 });
 
 function EquipmentPage() {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
   const [equipmentId, setEquipmentId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -21,7 +24,7 @@ function EquipmentPage() {
 
   const upload = useMutation({
     mutationFn: async () => {
-      if (!file || !equipmentId) throw new Error("Select equipment and a file.");
+      if (!file || !equipmentId) throw new Error(tr("Select equipment and a file."));
       const filename = `${equipmentId}-${file.name}`;
       await request(filePath("equipmentmanuals", filename), {
         method: "PUT",
@@ -47,8 +50,8 @@ function EquipmentPage() {
 
   return (
     <>
-      <h1 className="page-title">Equipment</h1>
-      <p className="page-lead">Keep equipment records and instruction manuals together.</p>
+      <h1 className="page-title">{tr("Equipment")}</h1>
+      <p className="page-lead">{tr("Keep equipment records and instruction manuals together.")}</p>
       <EntityManager
         entity="equipment"
         actions={(row) =>
@@ -58,23 +61,23 @@ function EquipmentPage() {
               disabled={download.isPending}
               onClick={() => download.mutate(row.instruction_manual_file_name ?? "")}
             >
-              Download manual
+              {tr("Download manual")}
             </button>
           ) : null
         }
       />
       <form className="panel panel-inner" onSubmit={submit}>
-        <h2>Attach a manual</h2>
+        <h2>{tr("Attach a manual")}</h2>
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="manual-equipment">Equipment</label>
+            <label htmlFor="manual-equipment">{tr("Equipment")}</label>
             <select
               id="manual-equipment"
               required
               value={equipmentId}
               onChange={(e) => setEquipmentId(e.target.value)}
             >
-              <option value="">Select equipment</option>
+              <option value="">{tr("Select equipment")}</option>
               {query.data?.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name}
@@ -83,7 +86,7 @@ function EquipmentPage() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="manual-file">Manual file</label>
+            <label htmlFor="manual-file">{tr("Manual file")}</label>
             <input
               id="manual-file"
               type="file"
@@ -93,9 +96,9 @@ function EquipmentPage() {
           </div>
         </div>
         <button className="btn btn-primary" disabled={upload.isPending}>
-          Upload manual
+          {tr("Upload manual")}
         </button>
-        {upload.isSuccess && <p role="status">Manual saved.</p>}
+        {upload.isSuccess && <p role="status">{tr("Manual saved.")}</p>}
         {(upload.error || download.error) && (
           <ErrorBlock message={(upload.error || download.error)!.message} />
         )}

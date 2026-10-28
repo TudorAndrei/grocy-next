@@ -4,6 +4,7 @@ from grocy.api.v2 import (
     access,
     calendar,
     files,
+    localization,
     mcp_http,
     mealplan,
     nutrition,
@@ -22,3 +23,4 @@ router.include_router(files.router)
 router.include_router(settings.router)
 router.include_router(setup.router)
 router.include_router(calendar.router)
+router.include_router(localization.router)

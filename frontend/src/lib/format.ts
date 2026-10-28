@@ -122,17 +122,28 @@ const UNIT_SHORT = new Map<string, string>(
 );
 
 export function unitLabel(
-  unit: { name: string; name_plural?: string | null } | undefined,
+  unit:
+    | { name: string; name_plural?: string | null; plural_forms?: string | null; active?: number }
+    | undefined,
   amount: number,
+  pluralIndex: (count: number) => number = (count) => (Math.abs(count) === 1 ? 0 : 1),
 ): string {
   if (!unit) return "";
+  const index = pluralIndex(Math.abs(amount));
+
+  if (unit.plural_forms && unit.active !== 0) {
+    const forms = [unit.name, ...unit.plural_forms.split(/\r\n|\r|\n/)];
+
+    return forms[index] || (index === 0 ? unit.name : unit.name_plural || unit.name);
+  }
+
   const short = UNIT_SHORT.get(unit.name.toLowerCase());
 
   if (short) return short;
 
-  if (unit.name.toLowerCase() === "piece") return amount === 1 ? "pc" : "pcs";
+  if (unit.name.toLowerCase() === "piece") return index === 0 ? "pc" : "pcs";
 
-  return amount === 1 ? unit.name : unit.name_plural || unit.name;
+  return index === 0 ? unit.name : unit.name_plural || unit.name;
 }
 
 /** Today's date as yyyy-mm-dd plus an offset, for date inputs. */

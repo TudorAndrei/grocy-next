@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { currentUserQuery } from "@/hooks/queries";
@@ -7,9 +8,11 @@ import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 
 export function OwnProfile() {
+  const { t: tr } = useI18n();
+
   const user = useQuery(currentUserQuery());
 
-  if (user.isLoading) return <LoadingBlock label="Loading profile…" />;
+  if (user.isLoading) return <LoadingBlock label={tr("Loading profile…")} />;
 
   if (user.error) return <ErrorBlock message={user.error.message} />;
 
@@ -17,6 +20,8 @@ export function OwnProfile() {
 }
 
 function ProfileForm({ user }: { user: CurrentUser }) {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
   const [username, setUsername] = useState(user.username);
   const [firstName, setFirstName] = useState(user.first_name ?? "");
@@ -84,7 +89,7 @@ function ProfileForm({ user }: { user: CurrentUser }) {
     >
       <div className="form-grid">
         <div className="field">
-          <label htmlFor="profile-username">Username</label>
+          <label htmlFor="profile-username">{tr("Username")}</label>
           <input
             disabled={save.isPending}
             id="profile-username"
@@ -95,7 +100,7 @@ function ProfileForm({ user }: { user: CurrentUser }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="profile-first">First name</label>
+          <label htmlFor="profile-first">{tr("First name")}</label>
           <input
             disabled={save.isPending}
             id="profile-first"
@@ -105,7 +110,7 @@ function ProfileForm({ user }: { user: CurrentUser }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="profile-last">Last name</label>
+          <label htmlFor="profile-last">{tr("Last name")}</label>
           <input
             disabled={save.isPending}
             id="profile-last"
@@ -115,7 +120,7 @@ function ProfileForm({ user }: { user: CurrentUser }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="profile-password">New password</label>
+          <label htmlFor="profile-password">{tr("New password")}</label>
           <input
             disabled={save.isPending}
             id="profile-password"
@@ -126,11 +131,11 @@ function ProfileForm({ user }: { user: CurrentUser }) {
             aria-describedby="profile-password-help"
           />
           <p id="profile-password-help" className="muted">
-            Leave blank to keep your password.
+            {tr("Leave blank to keep your password.")}
           </p>
         </div>
         <div className="field">
-          <label htmlFor="profile-photo">Profile photo</label>
+          <label htmlFor="profile-photo">{tr("Profile photo")}</label>
           <input
             ref={photoInput}
             disabled={save.isPending}
@@ -153,16 +158,16 @@ function ProfileForm({ user }: { user: CurrentUser }) {
                 save.reset();
               }}
             >
-              Remove photo
+              {tr("Remove photo")}
             </button>
           ) : null}
         </div>
       </div>
       {save.error ? <ErrorBlock message={save.error.message} /> : null}
       <button className="btn btn-primary" disabled={save.isPending}>
-        Save profile
+        {tr("Save profile")}
       </button>
-      {save.isSuccess ? <p role="status">Profile saved.</p> : null}
+      {save.isSuccess ? <p role="status">{tr("Profile saved.")}</p> : null}
     </form>
   );
 }

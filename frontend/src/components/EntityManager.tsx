@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useId, useState, type ReactNode, type FormEvent } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonObject } from "@/lib/json";
@@ -58,13 +59,29 @@ function customField(row: EntityRow): EntityField {
 }
 
 export function EntityManager({ entity, detail, actions, fixed, title }: Props) {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
-  const baseSpec = getEntitySpec(entity);
+  const definition = getEntitySpec(entity);
+
+  const baseSpec = {
+    ...definition,
+    label: tr(definition.label),
+    singular: tr(definition.singular),
+    fields: definition.fields.map((field) => ({
+      ...field,
+      label: tr(field.label),
+      choiceLabels: Object.fromEntries(
+        (field.choices ?? []).map((choice) => [choice, tr(field.choiceLabels?.[choice] ?? choice)]),
+      ),
+    })),
+  };
+
   const energyUnit = String(features.query.data?.ENERGY_UNIT ?? "kcal");
 
   const labeledFields = baseSpec.fields.map((field) =>
     entity === "products" && field.key === "calories"
-      ? { ...field, label: `Energy per stock unit (${energyUnit})` }
+      ? { ...field, label: tr("Energy per stock unit (%s)", energyUnit) }
       : field,
   );
 
@@ -110,7 +127,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
           ? {
               ...field,
               choiceLabels: Object.fromEntries([
-                ...(field.choices ?? []).map((key) => [key, entities.get(key)?.label ?? key]),
+                ...(field.choices ?? []).map((key) => [key, tr(entities.get(key)?.label ?? key)]),
                 ...(recordTypes.data ?? []).map((type) => [
                   `userentity-${type.name}`,
                   String(type.caption ?? type.name),
@@ -396,16 +413,24 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
       <div className="section-heading">
         <h2>{title ?? spec.label}</h2>
         <button className="btn btn-primary" onClick={() => start()}>
-          Add {spec.singular}
+          {tr("Add")} {spec.singular}
         </button>
       </div>
       {editing !== undefined && (
         <form
           onSubmit={save}
           className="panel panel-inner"
-          aria-label={editing === null ? `Add ${spec.singular}` : `Edit ${spec.singular}`}
+          aria-label={
+            editing === null
+              ? tr("Add %s", String(spec.singular))
+              : tr("Edit %s", String(spec.singular))
+          }
         >
-          <h3>{editing === null ? `New ${spec.singular}` : `Edit ${spec.singular}`}</h3>
+          <h3>
+            {editing === null
+              ? tr("New %s", String(spec.singular))
+              : tr("Edit %s", String(spec.singular))}
+          </h3>
           <div className="form-grid">
             {pictureGroup ? (
               <EntityPictureField
@@ -413,7 +438,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                 value={picture}
                 onChange={setPicture}
                 disabled={mutate.isPending}
-                label={`${entity === "products" ? "Product" : "Recipe"} picture`}
+                label={tr("%s picture", entity === "products" ? tr("Product") : tr("Recipe"))}
               />
             ) : null}
             {spec.fields
@@ -468,7 +493,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                         })}
                         {optionsQuery?.isSuccess && !optionsQuery.data.length && (
                           <span className="muted">
-                            Create a user in Manage to assign this chore.
+                            {tr("Create a user in Manage to assign this chore.")}
                           </span>
                         )}
                       </div>
@@ -500,7 +525,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                                   })
                                 }
                               />{" "}
-                              {day[0].toUpperCase() + day.slice(1)}
+                              {tr(day[0].toUpperCase() + day.slice(1))}
                             </label>
                           );
                         })}
@@ -523,7 +548,9 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                           })
                         }
                       >
-                        <option value="">{field.required ? "Select an option" : "None"}</option>
+                        <option value="">
+                          {field.required ? tr("Select an option") : tr("None")}
+                        </option>
                         {field.choices?.map((choice) => (
                           <option key={choice} value={choice}>
                             {field.choiceLabels?.[choice] ?? choice}
@@ -590,7 +617,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
               className="btn btn-primary"
               disabled={mutate.isPending || options.some((q) => q.isPending)}
             >
-              Save {spec.singular}
+              {tr("Save")} {spec.singular}
             </button>
             <button
               type="button"
@@ -598,17 +625,21 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
               disabled={mutate.isPending}
               onClick={() => setEditing(undefined)}
             >
-              Cancel
+              {tr("Cancel")}
             </button>
           </div>
         </form>
       )}
       {error && <ErrorBlock message={error.message} />}
       {mutate.error && <ErrorBlock message={mutate.error.message} />}
-      {query.isPending && <LoadingBlock label={`Loading ${spec.label.toLowerCase()}...`} />}
+      {query.isPending && (
+        <LoadingBlock label={tr("Loading %s...", String(spec.label.toLowerCase()))} />
+      )}
       {(query.data?.length ?? 0) > 5 && (
         <div className="field">
-          <label htmlFor={`${prefix}-search`}>Search {spec.label.toLowerCase()}</label>
+          <label htmlFor={`${prefix}-search`}>
+            {tr("Search")} {spec.label.toLowerCase()}
+          </label>
           <input
             id={`${prefix}-search`}
             type="search"
@@ -619,7 +650,8 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
       )}
       {query.isSuccess && rows.length === 0 && (
         <p className="empty-state">
-          No {spec.label.toLowerCase()} to show. Use Add {spec.singular} to create one.
+          {tr("No")} {spec.label.toLowerCase()} {tr("to show. Use Add")} {spec.singular}{" "}
+          {tr("to create one.")}
         </p>
       )}
       <ul className="product-list">
@@ -630,7 +662,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                 <EntityPictureDetails
                   group={pictureGroup}
                   name={row.picture_file_name}
-                  label={`${row.name ?? spec.singular} picture`}
+                  label={tr("%s picture", String(row.name ?? spec.singular))}
                 />
               ) : null}
               {detail ? (
@@ -663,7 +695,8 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
             <div className="actions">
               {actions?.(row)}
               <button className="btn btn-ghost" onClick={() => start(row)}>
-                Edit<span className="sr-only"> {row.name ?? row.id}</span>
+                {tr("Edit")}
+                <span className="sr-only"> {row.name ?? row.id}</span>
               </button>
               <button
                 className="btn btn-ghost"
@@ -674,12 +707,12 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                     : setDeleteId(row.id)
                 }
               >
-                {deleteId === row.id ? "Confirm delete" : "Delete"}
+                {deleteId === row.id ? tr("Confirm delete") : tr("Delete")}
                 <span className="sr-only"> {row.name ?? row.id}</span>
               </button>
               {deleteId === row.id && (
                 <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>
-                  Cancel delete
+                  {tr("Cancel delete")}
                 </button>
               )}
             </div>

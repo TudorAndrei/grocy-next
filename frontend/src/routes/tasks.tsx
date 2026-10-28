@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
@@ -12,26 +13,28 @@ export const Route = createFileRoute("/tasks")({
 });
 
 function TasksPage() {
+  const { t: tr } = useI18n();
+
   const tasks = useQuery({ queryKey: queryKeys.tasks, queryFn: () => api.listTasks(false) });
   const { complete } = useChoreActions();
 
   return (
     <>
-      <PageHeader title="Tasks" lead="One-off jobs with an optional due date." />
-      {tasks.isLoading ? <LoadingBlock label="Loading tasks…" /> : null}
+      <PageHeader title={tr("Tasks")} lead={tr("One-off jobs with an optional due date.")} />
+      {tasks.isLoading ? <LoadingBlock label={tr("Loading tasks…")} /> : null}
       {tasks.isError ? <ErrorBlock message={tasks.error.message} /> : null}
       {tasks.isSuccess && tasks.data.length === 0 ? (
-        <p className="empty-state">No open tasks.</p>
+        <p className="empty-state">{tr("No open tasks.")}</p>
       ) : null}
       {tasks.data?.length ? (
         <HouseholdTable
-          dueLabel="Due"
+          dueLabel={tr("Due")}
           rows={tasks.data.map((task) => ({
             id: task.id,
             name: task.name,
             detail: task.description,
             due: task.due_date,
-            dueEmpty: "No due date",
+            dueEmpty: tr("No due date"),
             action: (
               <button
                 type="button"
@@ -39,7 +42,7 @@ function TasksPage() {
                 disabled={complete.isPending && complete.variables === task.id}
                 onClick={() => complete.mutate(task.id)}
               >
-                Complete
+                {tr("Complete")}
               </button>
             ),
           }))}

@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/recipes/$recipeId")({
 });
 
 function RecipeDetailPage() {
+  const { t: tr } = useI18n();
+
   const { recipeId } = Route.useParams();
   const id = Number(recipeId);
   const catalog = useCatalog();
@@ -40,7 +43,7 @@ function RecipeDetailPage() {
     mutationFn: () => api.action(`/api/v2/recipes/${id}/consume?servings=${servings}`, {}),
     onSuccess: async () => {
       await invalidateStock();
-      notify({ message: "Ingredients consumed from stock" });
+      notify({ message: tr("Ingredients consumed from stock") });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -53,7 +56,7 @@ function RecipeDetailPage() {
       ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["shopping"] });
-      notify({ message: "Missing ingredients added to the shopping list" });
+      notify({ message: tr("Missing ingredients added to the shopping list") });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -62,7 +65,7 @@ function RecipeDetailPage() {
     mutationFn: () => api.action(`/api/recipes/${id}/copy`, {}),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.recipes });
-      notify({ message: "Recipe copied" });
+      notify({ message: tr("Recipe copied") });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -76,19 +79,24 @@ function RecipeDetailPage() {
         back={
           <Link to="/recipes" className="back-link">
             <Icon name="back" />
-            Recipes
+            {tr("Recipes")}
           </Link>
         }
-        title={recipe?.name ?? `Recipe #${recipeId}`}
+        title={recipe?.name ?? tr("Recipe #%s", String(recipeId))}
         lead={
           recipe
-            ? `${recipe.description ? `${recipe.description} · ` : ""}${recipe.desired_servings} serving${recipe.desired_servings === 1 ? "" : "s"}`
+            ? tr(
+                "%1$s%2$s serving%3$s",
+                String(recipe.description ? `${recipe.description} · ` : ""),
+                String(recipe.desired_servings),
+                String(recipe.desired_servings === 1 ? "" : "s"),
+              )
             : undefined
         }
         actions={
           <>
             <label className="field servings-field">
-              <span>Servings</span>
+              <span>{tr("Servings")}</span>
               <input
                 type="number"
                 min="0.000001"
@@ -103,7 +111,7 @@ function RecipeDetailPage() {
               disabled={copy.isPending}
               onClick={() => copy.mutate()}
             >
-              Copy recipe
+              {tr("Copy recipe")}
             </button>
             {f ? (
               <>
@@ -114,7 +122,7 @@ function RecipeDetailPage() {
                     disabled={addMissing.isPending}
                     onClick={() => addMissing.mutate()}
                   >
-                    Add missing to list
+                    {tr("Add missing to list")}
                   </button>
                 ) : null}
                 <button
@@ -123,7 +131,7 @@ function RecipeDetailPage() {
                   disabled={cook.isPending || !f.need_fulfilled}
                   onClick={() => cook.mutate()}
                 >
-                  {cook.isPending ? "Cooking…" : "Cook and consume"}
+                  {cook.isPending ? tr("Cooking…") : tr("Cook and consume")}
                 </button>
               </>
             ) : null}
@@ -135,33 +143,35 @@ function RecipeDetailPage() {
         <EntityPicture
           group="recipepictures"
           source={recipe.picture_file_name}
-          label={`${recipe.name} picture`}
+          label={tr("%s picture", String(recipe.name))}
         />
       ) : null}
 
-      {fulfillment.isLoading ? <LoadingBlock label="Checking stock…" /> : null}
+      {fulfillment.isLoading ? <LoadingBlock label={tr("Checking stock…")} /> : null}
       {fulfillment.isError ? <ErrorBlock message={fulfillment.error.message} /> : null}
 
       {f ? (
         <div className="panel">
           <h2 className="panel-head">
-            Ingredients
+            {tr("Ingredients")}
             <span>
-              {f.need_fulfilled ? "everything is in stock" : `${f.missing_products_count} short`}
+              {f.need_fulfilled
+                ? tr("everything is in stock")
+                : tr("%s short", String(f.missing_products_count))}
             </span>
           </h2>
           <table className="stock-table">
             <thead>
               <tr>
-                <th scope="col">Ingredient</th>
-                <th scope="col">Cover</th>
+                <th scope="col">{tr("Ingredient")}</th>
+                <th scope="col">{tr("Cover")}</th>
                 <th scope="col" className="num">
-                  Needed
+                  {tr("Needed")}
                 </th>
                 <th scope="col" className="num">
-                  On hand
+                  {tr("On hand")}
                 </th>
-                <th scope="col">Status</th>
+                <th scope="col">{tr("Status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -188,7 +198,7 @@ function RecipeDetailPage() {
                   </td>
                   <td>
                     <span className="badge" data-tone={pos.fulfilled ? "ok" : "warn"}>
-                      {pos.fulfilled ? "In stock" : "Short"}
+                      {pos.fulfilled ? tr("In stock") : tr("Short")}
                     </span>
                   </td>
                 </tr>
@@ -198,8 +208,16 @@ function RecipeDetailPage() {
         </div>
       ) : null}
 
-      <EntityManager entity="recipes_pos" fixed={{ recipe_id: id }} title="Edit ingredients" />
-      <EntityManager entity="recipes_nestings" fixed={{ recipe_id: id }} title="Included recipes" />
+      <EntityManager
+        entity="recipes_pos"
+        fixed={{ recipe_id: id }}
+        title={tr("Edit ingredients")}
+      />
+      <EntityManager
+        entity="recipes_nestings"
+        fixed={{ recipe_id: id }}
+        title={tr("Included recipes")}
+      />
     </>
   );
 }

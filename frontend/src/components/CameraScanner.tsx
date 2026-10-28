@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useEffect, useId, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { IScannerControls } from "@zxing/browser";
@@ -17,6 +18,8 @@ export function CameraScanner({
   onScan: (code: string) => void;
   disabled?: boolean;
 }) {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
@@ -32,7 +35,7 @@ export function CameraScanner({
         disabled={disabled}
         onClick={() => setOpen(true)}
       >
-        <Icon name="camera" /> Scan with camera
+        <Icon name="camera" /> {tr("Scan with camera")}
       </button>
       {open
         ? createPortal(
@@ -57,6 +60,8 @@ function CameraDialog({
   onClose: () => void;
   autoTorch: boolean;
 }) {
+  const { t: tr } = useI18n();
+
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocusRef = useRef(document.activeElement);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -121,7 +126,7 @@ function CameraDialog({
       if (cancelled) return;
 
       if (!navigator.mediaDevices?.getUserMedia)
-        throw new Error("Use HTTPS or localhost and a browser with camera support.");
+        throw new Error(tr("Use HTTPS or localhost and a browser with camera support."));
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
@@ -186,7 +191,7 @@ function CameraDialog({
 
           if (!cancelled) setTorchOn(true);
         } catch {
-          if (!cancelled) setTorchError("The camera torch could not be turned on.");
+          if (!cancelled) setTorchError(tr("The camera torch could not be turned on."));
         }
       }
     }
@@ -197,12 +202,15 @@ function CameraDialog({
       localStorage.removeItem("cameraId");
       setRunning(false);
       setError(
-        `Camera access failed: ${failure.message || "Allow camera access and use HTTPS or localhost."}`,
+        tr(
+          "Camera access failed: %s",
+          String(failure.message || "Allow camera access and use HTTPS or localhost."),
+        ),
       );
     });
 
     return stop;
-  }, [cameraId, attempt, autoTorch, onClose]);
+  }, [cameraId, attempt, autoTorch, onClose, tr]);
 
   function toggleTorch() {
     const track = trackRef.current;
@@ -215,7 +223,7 @@ function CameraDialog({
         if (trackRef.current === track) setTorchOn(next);
       })
       .catch(() => {
-        if (trackRef.current === track) setTorchError("The camera torch could not be changed.");
+        if (trackRef.current === track) setTorchError(tr("The camera torch could not be changed."));
       });
   }
 
@@ -234,8 +242,13 @@ function CameraDialog({
       }}
     >
       <div className="camera-head">
-        <h2 id={titleId}>Scan a barcode</h2>
-        <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close camera">
+        <h2 id={titleId}>{tr("Scan a barcode")}</h2>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={onClose}
+          aria-label={tr("Close camera")}
+        >
           <Icon name="close" />
         </button>
       </div>
@@ -245,24 +258,24 @@ function CameraDialog({
         playsInline
         muted
         hidden={Boolean(error)}
-        aria-label="Camera preview"
+        aria-label={tr("Camera preview")}
       />
       {error ? (
         <>
           <ErrorBlock message={error} />
-          <p className="field-hint">Allow camera access and use HTTPS or localhost.</p>
+          <p className="field-hint">{tr("Allow camera access and use HTTPS or localhost.")}</p>
         </>
       ) : (
         <p className="field-hint" role="status">
           {running
-            ? "Point the camera at a barcode. Scanning stops after the first result."
-            : "Starting camera…"}
+            ? tr("Point the camera at a barcode. Scanning stops after the first result.")
+            : tr("Starting camera…")}
         </p>
       )}
       {torchError ? <ErrorBlock message={torchError} /> : null}
       {cameras.length > 1 && !error ? (
         <label className="field" htmlFor={cameraSelectId}>
-          Camera
+          {tr("Camera")}
           <select
             id={cameraSelectId}
             value={cameraId || activeCameraId}
@@ -273,7 +286,7 @@ function CameraDialog({
           >
             {cameras.map((camera, index) => (
               <option key={camera.deviceId} value={camera.deviceId}>
-                {camera.label || `Camera ${index + 1}`}
+                {camera.label || tr("Camera %s", String(index + 1))}
               </option>
             ))}
           </select>
@@ -287,7 +300,7 @@ function CameraDialog({
             aria-pressed={torchOn}
             onClick={toggleTorch}
           >
-            {torchOn ? "Turn torch off" : "Turn torch on"}
+            {torchOn ? tr("Turn torch off") : tr("Turn torch on")}
           </button>
         ) : null}
         {error ? (
@@ -299,7 +312,7 @@ function CameraDialog({
               setAttempt((value) => value + 1);
             }}
           >
-            Try camera again
+            {tr("Try camera again")}
           </button>
         ) : null}
       </div>

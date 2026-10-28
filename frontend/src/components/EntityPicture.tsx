@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useEffect, useId, useRef, useState } from "react";
 import { filePath } from "@/lib/api";
 import { fetchApiDocument } from "@/lib/open-document";
@@ -28,6 +29,8 @@ export function EntityPicture({
   source: File | string;
   label: string;
 }) {
+  const { t: tr } = useI18n();
+
   const [result, setResult] = useState<PictureResult | null>(null);
 
   useEffect(() => {
@@ -65,7 +68,7 @@ export function EntityPicture({
   }, [group, source]);
 
   if (!result || result.source !== source || result.group !== group)
-    return <LoadingBlock label="Loading picture…" />;
+    return <LoadingBlock label={tr("Loading picture…")} />;
 
   if ("error" in result) return <ErrorBlock message={result.error} />;
 
@@ -81,11 +84,13 @@ export function EntityPictureDetails({
   name: string;
   label: string;
 }) {
+  const { t: tr } = useI18n();
+
   const [open, setOpen] = useState(false);
 
   return (
     <details onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>View picture</summary>
+      <summary>{tr("View picture")}</summary>
       {open ? <EntityPicture group={group} source={name} label={label} /> : null}
     </details>
   );
@@ -104,6 +109,8 @@ export function EntityPictureField({
   disabled: boolean;
   label: string;
 }) {
+  const { t: tr } = useI18n();
+
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const source = value.upload?.file ?? (value.remove ? null : value.original);
@@ -130,7 +137,11 @@ export function EntityPictureField({
           onChange({ ...value, upload, remove: file ? false : value.remove });
         }}
       />
-      {value.upload ? <p className="field-hint">New picture: {value.upload.file.name}</p> : null}
+      {value.upload ? (
+        <p className="field-hint">
+          {tr("New picture:")} {value.upload.file.name}
+        </p>
+      ) : null}
       {source ? (
         <button
           type="button"
@@ -138,7 +149,7 @@ export function EntityPictureField({
           disabled={disabled}
           onClick={() => onChange({ ...value, upload: null, remove: true })}
         >
-          Remove picture
+          {tr("Remove picture")}
         </button>
       ) : null}
     </div>

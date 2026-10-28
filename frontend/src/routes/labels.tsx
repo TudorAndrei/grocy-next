@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -16,14 +17,16 @@ export const Route = createFileRoute("/labels")({
 type LabelTab = "products" | "recipes" | "chores" | "batteries" | "shopping";
 
 function LabelsPage() {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
 
   const tabs: Array<{ id: LabelTab; label: string }> = [
-    { id: "products", label: "Products" },
-    { id: "recipes", label: "Recipes" },
-    { id: "chores", label: "Chores" },
-    { id: "batteries", label: "Batteries" },
-    { id: "shopping", label: "Shopping" },
+    { id: "products", label: tr("Products") },
+    { id: "recipes", label: tr("Recipes") },
+    { id: "chores", label: tr("Chores") },
+    { id: "batteries", label: tr("Batteries") },
+    { id: "shopping", label: tr("Shopping") },
   ];
 
   const enabledTabs = tabs.filter((item) => features.routeEnabled(`/${item.id}`));
@@ -50,15 +53,17 @@ function LabelsPage() {
   return (
     <>
       <PageHeader
-        title="Labels & printouts"
-        lead="Open Grocy label and list layouts in a new tab. Your API key is sent with each request."
+        title={tr("Labels & printouts")}
+        lead={tr(
+          "Open Grocy label and list layouts in a new tab. Your API key is sent with each request.",
+        )}
       />
-      <Tabs ariaLabel="Label types" value={tab ?? ""} onChange={setTab} tabs={enabledTabs} />
+      <Tabs ariaLabel={tr("Label types")} value={tab ?? ""} onChange={setTab} tabs={enabledTabs} />
       {error ? (
-        <ErrorBlock message={error instanceof Error ? error.message : "Could not load data."} />
+        <ErrorBlock message={error instanceof Error ? error.message : tr("Could not load data.")} />
       ) : null}
       <TabPanel id="panel-products" labelledBy="tab-products" hidden={tab !== "products"}>
-        {products.isLoading ? <LoadingBlock label="Loading products…" /> : null}
+        {products.isLoading ? <LoadingBlock label={tr("Loading products…")} /> : null}
         <ul className="product-list">
           {(products.data ?? []).map((product) => (
             <li className="product-row management-row" key={product.id}>
@@ -72,7 +77,7 @@ function LabelsPage() {
                     open(`p-${product.id}`, `/api/stock/products/${product.id}/printlabel`)
                   }
                 >
-                  Stock label
+                  {tr("Stock label")}
                 </button>
               </div>
             </li>
@@ -80,7 +85,7 @@ function LabelsPage() {
         </ul>
       </TabPanel>
       <TabPanel id="panel-recipes" labelledBy="tab-recipes" hidden={tab !== "recipes"}>
-        {recipes.isLoading ? <LoadingBlock label="Loading recipes…" /> : null}
+        {recipes.isLoading ? <LoadingBlock label={tr("Loading recipes…")} /> : null}
         <ul className="product-list">
           {(recipes.data ?? []).map((recipe) => (
             <li className="product-row management-row" key={recipe.id}>
@@ -91,43 +96,45 @@ function LabelsPage() {
                 disabled={busy === `r-${recipe.id}`}
                 onClick={() => open(`r-${recipe.id}`, `/api/recipes/${recipe.id}/printlabel`)}
               >
-                Recipe label
+                {tr("Recipe label")}
               </button>
             </li>
           ))}
         </ul>
       </TabPanel>
       <TabPanel id="panel-chores" labelledBy="tab-chores" hidden={tab !== "chores"}>
-        {chores.isLoading ? <LoadingBlock label="Loading chores…" /> : null}
+        {chores.isLoading ? <LoadingBlock label={tr("Loading chores…")} /> : null}
         <ul className="product-list">
           {(chores.data ?? []).map((chore) => (
             <li className="product-row management-row" key={chore.id}>
-              <span>{chore.chore_name ?? chore.name ?? `Chore ${chore.id}`}</span>
+              <span>{chore.chore_name ?? chore.name ?? tr("Chore %s", String(chore.id))}</span>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 disabled={busy === `c-${chore.id}`}
                 onClick={() => open(`c-${chore.id}`, `/api/chores/${chore.id}/printlabel`)}
               >
-                Chore label
+                {tr("Chore label")}
               </button>
             </li>
           ))}
         </ul>
       </TabPanel>
       <TabPanel id="panel-batteries" labelledBy="tab-batteries" hidden={tab !== "batteries"}>
-        {batteries.isLoading ? <LoadingBlock label="Loading batteries…" /> : null}
+        {batteries.isLoading ? <LoadingBlock label={tr("Loading batteries…")} /> : null}
         <ul className="product-list">
           {(batteries.data ?? []).map((battery) => (
             <li className="product-row management-row" key={battery.id}>
-              <span>{battery.battery?.name ?? battery.name ?? `Battery ${battery.id}`}</span>
+              <span>
+                {battery.battery?.name ?? battery.name ?? tr("Battery %s", String(battery.id))}
+              </span>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 disabled={busy === `b-${battery.id}`}
                 onClick={() => open(`b-${battery.id}`, `/api/batteries/${battery.id}/printlabel`)}
               >
-                Battery label
+                {tr("Battery label")}
               </button>
             </li>
           ))}
@@ -135,14 +142,14 @@ function LabelsPage() {
       </TabPanel>
       <TabPanel id="panel-shopping" labelledBy="tab-shopping" hidden={tab !== "shopping"}>
         <div className="panel panel-inner">
-          <p className="page-lead">Thermal shopping list layout for receipt printers.</p>
+          <p className="page-lead">{tr("Thermal shopping list layout for receipt printers.")}</p>
           <button
             type="button"
             className="btn btn-primary"
             disabled={busy === "shopping-thermal"}
             onClick={() => open("shopping-thermal", "/api/print/shoppinglist/thermal")}
           >
-            Open thermal list
+            {tr("Open thermal list")}
           </button>
         </div>
       </TabPanel>

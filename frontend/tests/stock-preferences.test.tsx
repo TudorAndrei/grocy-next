@@ -63,7 +63,7 @@ test("stock preference controls read legacy booleans and save typed values", asy
   const user = userEvent.setup();
 
   const quick = await screen.findByRole<HTMLInputElement>("checkbox", {
-    name: "Use the product quick consume amount",
+    name: 'Use the products "Quick consume amount"',
   });
 
   expect(quick.checked).toBe(true);
@@ -72,14 +72,18 @@ test("stock preference controls read legacy booleans and save typed values", asy
       .checked,
   ).toBe(true);
   await user.click(quick);
-  await user.click(screen.getByRole("checkbox", { name: "Show purchase date" }));
-  const inputPrecision = screen.getByLabelText("Decimal places for price inputs");
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: "Show purchased date on purchase and inventory page (otherwise the purchased date defaults to today)",
+    }),
+  );
+  const inputPrecision = screen.getByLabelText("Decimal places allowed for prices (input)");
   await user.clear(inputPrecision);
   await user.type(inputPrecision, "3");
-  const displayPrecision = screen.getByLabelText("Decimal places for price display");
+  const displayPrecision = screen.getByLabelText("Decimal places allowed for prices (display)");
   await user.clear(displayPrecision);
   await user.type(displayPrecision, "4");
-  await user.click(screen.getByRole("button", { name: "Save preferences" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() =>
     expect(saved).toEqual({
       stock_default_consume_amount_use_quick_consume_amount: false,

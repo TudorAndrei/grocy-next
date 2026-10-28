@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { z } from "zod";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +30,8 @@ export const Route = createFileRoute("/products/$productId")({
 });
 
 function ProductDetailPage() {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
   const { productId } = Route.useParams();
   const { move } = Route.useSearch();
@@ -59,10 +62,10 @@ function ProductDetailPage() {
         back={
           <Link to="/products" className="back-link">
             <Icon name="back" />
-            Products
+            {tr("Products")}
           </Link>
         }
-        title={product?.name ?? `Product #${productId}`}
+        title={product?.name ?? tr("Product #%s", String(productId))}
         lead={facts.length ? facts.join(" · ") : product?.description}
         actions={
           features.enabled("LABEL_PRINTER") ? (
@@ -71,7 +74,7 @@ function ProductDetailPage() {
               className="btn btn-ghost btn-sm"
               onClick={() => openApiDocument(`/api/stock/products/${id}/printlabel`)}
             >
-              Print label
+              {tr("Print label")}
             </button>
           ) : null
         }
@@ -84,18 +87,20 @@ function ProductDetailPage() {
             <EntityPicture
               group="productpictures"
               source={product.picture_file_name}
-              label={`${product.name} picture`}
+              label={tr("%s picture", String(product.name))}
             />
           ) : null}
-          {nutrition.isLoading ? <LoadingBlock label="Loading nutrition…" /> : null}
+          {nutrition.isLoading ? <LoadingBlock label={tr("Loading nutrition…")} /> : null}
           {nutrition.isError && !nutritionMissing ? (
             <ErrorBlock message={nutrition.error.message} />
           ) : null}
           {nutritionMissing ? (
             <section className="panel">
-              <h2 className="panel-head">Nutrition</h2>
+              <h2 className="panel-head">{tr("Nutrition")}</h2>
               <p className="panel-empty">
-                No nutrition saved yet. Propose values below, or ask your agent to read the label.
+                {tr(
+                  "No nutrition saved yet. Propose values below, or ask your agent to read the label.",
+                )}
               </p>
             </section>
           ) : null}

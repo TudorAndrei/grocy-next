@@ -14,6 +14,7 @@ import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { api } from "@/lib/api";
 import { preferenceEnabled } from "@/lib/preferences";
 import { useFeatures } from "@/lib/features";
+import { useI18n } from "@/lib/i18n";
 
 type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "about";
 
@@ -35,55 +36,58 @@ const preferenceFields: Array<{
   label: string;
   type: "number" | "checkbox" | "select";
   options?: string[];
+  optionLabels?: Record<string, string>;
   feature?: string;
   max?: number;
   step?: string;
 }> = [
+  { key: "locale", label: "Language", type: "select" },
   {
     key: "stock_due_soon_days",
-    label: "Due soon window (days)",
+    label: "Due soon days",
     type: "number",
   },
   {
     key: "stock_decimal_places_prices_input",
-    label: "Decimal places for price inputs",
+    label: "Decimal places allowed for prices (input)",
     type: "number",
     feature: "STOCK_PRICE_TRACKING",
     max: 10,
   },
   {
     key: "stock_decimal_places_prices_display",
-    label: "Decimal places for price display",
+    label: "Decimal places allowed for prices (display)",
     type: "number",
     feature: "STOCK_PRICE_TRACKING",
     max: 10,
   },
   {
     key: "stock_decimal_places_amounts",
-    label: "Decimal places for amounts",
+    label: "Decimal places allowed for amounts",
     type: "number",
     max: 10,
   },
   {
     key: "stock_default_purchase_amount",
-    label: "Default purchase amount",
+    label: "Default amount for purchase",
     type: "number",
     step: "any",
   },
   {
     key: "stock_default_consume_amount",
-    label: "Default consume amount",
+    label: "Default amount for consume",
     type: "number",
     step: "any",
   },
   {
     key: "stock_default_consume_amount_use_quick_consume_amount",
-    label: "Use the product quick consume amount",
+    label: 'Use the products "Quick consume amount"',
     type: "checkbox",
   },
   {
     key: "show_purchased_date_on_purchase",
-    label: "Show purchase date",
+    label:
+      "Show purchased date on purchase and inventory page (otherwise the purchased date defaults to today)",
     type: "checkbox",
   },
   {
@@ -98,18 +102,20 @@ const preferenceFields: Array<{
   },
   {
     key: "auto_reload_on_db_change",
-    label: "Reload when the database changes",
+    label: "Auto reload on external changes",
     type: "checkbox",
   },
   {
     key: "night_mode",
-    label: "Grocy night mode (server UI setting)",
+    label: "Night mode",
     type: "select",
     options: ["follow-system", "on", "off"],
+    optionLabels: { "follow-system": "Use system setting" },
   },
 ];
 
 function SettingsPage() {
+  const { t, languages } = useI18n();
   const features = useFeatures();
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -154,7 +160,7 @@ function SettingsPage() {
       return api.putUserSettings(body);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["user", "settings"] });
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -180,34 +186,34 @@ function SettingsPage() {
   return (
     <>
       <PageHeader
-        title="Settings"
-        lead="Connection, appearance, and Grocy user preferences for this API key."
+        title={t("Settings")}
+        lead={t("Connection, appearance, and Grocy user preferences for this API key.")}
       />
       <Tabs
-        ariaLabel="Settings sections"
+        ariaLabel={t("Settings sections")}
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: "connection", label: "Connection" },
-          { id: "profile", label: "Profile" },
-          { id: "appearance", label: "Appearance" },
-          { id: "preferences", label: "Preferences" },
-          { id: "about", label: "About" },
+          { id: "connection", label: t("Connection") },
+          { id: "profile", label: t("Profile") },
+          { id: "appearance", label: t("Appearance") },
+          { id: "preferences", label: t("Preferences") },
+          { id: "about", label: t("About") },
         ]}
       />
       {error ? (
-        <ErrorBlock message={error instanceof Error ? error.message : "Settings error."} />
+        <ErrorBlock message={error instanceof Error ? error.message : t("Settings error.")} />
       ) : null}
       <TabPanel id="settings-connection" labelledBy="tab-connection" hidden={tab !== "connection"}>
         <section className="panel" style={{ maxWidth: "32rem" }}>
           <div className="panel-inner">
             <form onSubmit={saveConnection}>
               <div className="field">
-                <label htmlFor="api-base">API base URL</label>
+                <label htmlFor="api-base">{t("API base URL")}</label>
                 <input
                   id="api-base"
                   type="text"
-                  placeholder="Leave blank when UI and API share a host"
+                  placeholder={t("Leave blank when UI and API share a host")}
                   value={baseUrl}
                   onChange={(e) => {
                     setConnectionSaved(false);
@@ -216,7 +222,7 @@ function SettingsPage() {
                 />
               </div>
               <div className="field">
-                <label htmlFor="api-key">API key</label>
+                <label htmlFor="api-key">{t("API key")}</label>
                 <input
                   id="api-key"
                   type="password"
@@ -229,11 +235,11 @@ function SettingsPage() {
                 />
               </div>
               <button type="submit" className="btn btn-primary">
-                Save connection
+                {t("Save connection")}
               </button>
               {connectionSaved ? (
                 <p className="muted" role="status">
-                  Connection saved.
+                  {t("Connection saved.")}
                 </p>
               ) : null}
             </form>
@@ -247,19 +253,21 @@ function SettingsPage() {
         <section className="panel" style={{ maxWidth: "32rem" }}>
           <div className="panel-inner">
             <div className="field">
-              <label htmlFor="theme-pref">App theme</label>
+              <label htmlFor="theme-pref">{t("App theme")}</label>
               <select
                 id="theme-pref"
                 value={preference}
                 onChange={(e) => setPreference(themePreferenceSchema.parse(e.target.value))}
               >
-                <option value="system">Match system</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
+                <option value="system">{t("Match system")}</option>
+                <option value="light">{t("Light")}</option>
+                <option value="dark">{t("Dark")}</option>
               </select>
             </div>
             <p className="muted">
-              This theme applies to Grocy Next only. Server-side night mode is under Preferences.
+              {t(
+                "This theme applies to Grocy Next only. Server-side night mode is under Preferences.",
+              )}
             </p>
           </div>
         </section>
@@ -269,7 +277,7 @@ function SettingsPage() {
         labelledBy="tab-preferences"
         hidden={tab !== "preferences"}
       >
-        {settings.isLoading ? <LoadingBlock label="Loading preferences…" /> : null}
+        {settings.isLoading ? <LoadingBlock label={t("Loading preferences…")} /> : null}
         {settings.isSuccess ? (
           <form
             className="panel panel-inner"
@@ -282,7 +290,7 @@ function SettingsPage() {
               {preferenceFields.map((field) =>
                 field.feature && !features.enabled(field.feature) ? null : (
                   <div className="field" key={field.key}>
-                    <label htmlFor={`pref-${field.key}`}>{field.label}</label>
+                    <label htmlFor={`pref-${field.key}`}>{t(field.label)}</label>
                     {field.type === "checkbox" ? (
                       <input
                         id={`pref-${field.key}`}
@@ -301,11 +309,13 @@ function SettingsPage() {
                         value={settingsValue(field.key)}
                         onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
                       >
-                        {(field.options ?? []).map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
+                        {(field.key === "locale" ? ["", ...languages] : (field.options ?? [])).map(
+                          (opt) => (
+                            <option key={opt} value={opt}>
+                              {t(field.optionLabels?.[opt] ?? (opt || "Default"))}
+                            </option>
+                          ),
+                        )}
                       </select>
                     ) : (
                       <input
@@ -323,47 +333,49 @@ function SettingsPage() {
               )}
             </div>
             <button type="submit" className="btn btn-primary" disabled={savePreferences.isPending}>
-              Save preferences
+              {t("Save")}
             </button>
             {savePreferences.isSuccess ? (
               <p className="muted" role="status">
-                Preferences saved.
+                {t("Preferences saved.")}
               </p>
             ) : null}
           </form>
         ) : null}
       </TabPanel>
       <TabPanel id="settings-about" labelledBy="tab-about" hidden={tab !== "about"}>
-        {system.isLoading || user.isLoading ? <LoadingBlock label="Loading system info…" /> : null}
+        {system.isLoading || user.isLoading ? (
+          <LoadingBlock label={t("Loading system info…")} />
+        ) : null}
         {system.data ? (
           <section className="panel">
             <div className="panel-inner">
               <dl className="meta-list">
                 <div>
-                  <dt>Grocy</dt>
+                  <dt>{t("Grocy")}</dt>
                   <dd>
                     {system.data.grocy_version.Version} ({system.data.grocy_version.ReleaseDate})
                   </dd>
                 </div>
                 <div>
-                  <dt>Database version</dt>
+                  <dt>{t("Database version")}</dt>
                   <dd>{system.data.db_version}</dd>
                 </div>
                 <div>
-                  <dt>Python</dt>
+                  <dt>{t("Python")}</dt>
                   <dd>{system.data.python_version}</dd>
                 </div>
                 <div>
-                  <dt>SQLite</dt>
+                  <dt>{t("SQLite")}</dt>
                   <dd>{system.data.sqlite_version}</dd>
                 </div>
                 <div>
-                  <dt>Server</dt>
+                  <dt>{t("Server")}</dt>
                   <dd>{system.data.os}</dd>
                 </div>
                 {user.data ? (
                   <div>
-                    <dt>Signed in as</dt>
+                    <dt>{t("Signed in as")}</dt>
                     <dd>
                       {user.data.first_name} {user.data.last_name} ({user.data.username})
                     </dd>

@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
@@ -23,23 +24,25 @@ function nextCharge(battery: Battery): string | null {
 }
 
 function BatteriesPage() {
+  const { t: tr } = useI18n();
+
   const batteries = useQuery({ queryKey: queryKeys.batteries, queryFn: api.listBatteries });
   const { charge } = useChoreActions();
 
   return (
     <>
       <PageHeader
-        title="Batteries"
-        lead="Rechargeable and replaceable batteries, with their charge cycle."
+        title={tr("Batteries")}
+        lead={tr("Rechargeable and replaceable batteries, with their charge cycle.")}
       />
-      {batteries.isLoading ? <LoadingBlock label="Loading batteries…" /> : null}
+      {batteries.isLoading ? <LoadingBlock label={tr("Loading batteries…")} /> : null}
       {batteries.isError ? <ErrorBlock message={batteries.error.message} /> : null}
       {batteries.isSuccess && batteries.data.length === 0 ? (
-        <p className="empty-state">No batteries tracked.</p>
+        <p className="empty-state">{tr("No batteries tracked.")}</p>
       ) : null}
       {batteries.data?.length ? (
         <HouseholdTable
-          dueLabel="Next charge"
+          dueLabel={tr("Next charge")}
           rows={batteries.data.map((battery) => ({
             id: battery.id,
             name: battery.name,
@@ -59,7 +62,7 @@ function BatteriesPage() {
                 disabled={charge.isPending && charge.variables === battery.id}
                 onClick={() => charge.mutate(battery.id)}
               >
-                Charged
+                {tr("Charged")}
               </button>
             ),
           }))}

@@ -10,9 +10,14 @@ import { CommandProvider } from "@/components/CommandBar";
 import { Toaster } from "@/components/Toaster";
 import { DatabaseRefresh } from "@/components/DatabaseRefresh";
 import { FeatureRoute } from "@/components/FeatureRoute";
+import { LocalizationProvider } from "@/lib/i18n";
 
 export const Route = createRootRoute({
-  component: RootLayout,
+  component: () => (
+    <LocalizationProvider>
+      <RootLayout />
+    </LocalizationProvider>
+  ),
 });
 
 function RootLayout() {

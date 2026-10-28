@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
@@ -10,6 +11,8 @@ import { SiteNav, useNavCounts, usePathname } from "./SiteNav";
 import { Wordmark } from "./Wordmark";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { t: tr } = useI18n();
+
   const command = useCommandBar();
   const pathname = usePathname();
   const counts = useNavCounts();
@@ -32,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
-        Skip to content
+        {tr("Skip to content")}
       </a>
       <aside className="site-rail" data-open={menuOpen ? "true" : "false"}>
         <div className="rail-head">
@@ -40,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             className="rail-close"
-            aria-label="Close menu"
+            aria-label={tr("Close menu")}
             onClick={() => setMenuOpen(false)}
           >
             <Icon name="close" />
@@ -48,12 +51,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <button type="button" className="command-trigger" onClick={() => command.open()}>
           <Icon name="search" />
-          <span>Quick actions</span>
+          <span>{tr("Quick actions")}</span>
           <kbd>⌘K</kbd>
         </button>
         <SiteNav onNavigate={() => setMenuOpen(false)} />
         <button type="button" className="btn sign-out" onClick={signOut}>
-          Sign out
+          {tr("Sign out")}
         </button>
       </aside>
       {menuOpen ? <div className="rail-scrim" onClick={() => setMenuOpen(false)} /> : null}
@@ -62,35 +65,35 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="tabbar" aria-label="Quick">
+      <nav className="tabbar" aria-label={tr("Quick")}>
         <Link to="/today" aria-current={pathname === "/today" ? "page" : undefined}>
           <Icon name="today" />
-          Today
+          {tr("Today")}
         </Link>
         {features.enabled("STOCK") ? (
           <Link to="/stock" aria-current={pathname.startsWith("/stock") ? "page" : undefined}>
             <Icon name="stock" />
-            Stock
+            {tr("Stock")}
           </Link>
         ) : null}
         <button
           type="button"
           className="tabbar-act"
           onClick={() => command.open()}
-          aria-label="Quick actions"
+          aria-label={tr("Quick actions")}
         >
           <Icon name="search" />
         </button>
         {features.enabled("SHOPPINGLIST") ? (
           <Link to="/shopping" aria-current={pathname.startsWith("/shopping") ? "page" : undefined}>
             <Icon name="shopping" />
-            List
+            {tr("List")}
             {counts.shopping > 0 ? <em data-domain="shopping">{counts.shopping}</em> : null}
           </Link>
         ) : null}
         <button type="button" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen}>
           <Icon name="menu" />
-          More
+          {tr("More")}
           {counts.review > 0 ? <em data-domain="agent">{counts.review}</em> : null}
         </button>
       </nav>

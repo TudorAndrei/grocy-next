@@ -312,7 +312,12 @@ export const entities = new Map<string, EntitySpec>(
     quantity_units: {
       label: "Units",
       singular: "unit",
-      fields: [...named, { key: "name_plural", label: "Plural name" }, active],
+      fields: [
+        ...named,
+        { key: "name_plural", label: "Plural name" },
+        { key: "plural_forms", label: "Plural forms", type: "textarea" },
+        active,
+      ],
     },
     quantity_unit_conversions: {
       label: "Unit conversions",

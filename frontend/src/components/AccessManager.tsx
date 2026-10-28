@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
@@ -52,6 +53,8 @@ const permissionNames = [
 ];
 
 export function AccessManager() {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
   const [selected, setSelected] = useState(0);
   const [username, setUsername] = useState("");
@@ -124,16 +127,16 @@ export function AccessManager() {
   return (
     <div className="stack">
       <section>
-        <h2>Users</h2>
+        <h2>{tr("Users")}</h2>
         {error && <ErrorBlock message={error.message} />}
         <div className="field">
-          <label htmlFor="access-user">User</label>
+          <label htmlFor="access-user">{tr("User")}</label>
           <select
             id="access-user"
             value={selected}
             onChange={(e) => choose(Number(e.target.value))}
           >
-            <option value="0">Create a user</option>
+            <option value="0">{tr("Create a user")}</option>
             {users.data?.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.username}
@@ -144,7 +147,7 @@ export function AccessManager() {
         <form onSubmit={save} className="panel panel-inner">
           <div className="form-grid">
             <div className="field">
-              <label htmlFor="user-name">Username</label>
+              <label htmlFor="user-name">{tr("Username")}</label>
               <input
                 id="user-name"
                 required
@@ -153,7 +156,7 @@ export function AccessManager() {
               />
             </div>
             <div className="field">
-              <label htmlFor="user-first">First name</label>
+              <label htmlFor="user-first">{tr("First name")}</label>
               <input
                 id="user-first"
                 value={firstName}
@@ -161,7 +164,7 @@ export function AccessManager() {
               />
             </div>
             <div className="field">
-              <label htmlFor="user-last">Last name</label>
+              <label htmlFor="user-last">{tr("Last name")}</label>
               <input
                 id="user-last"
                 value={lastName}
@@ -169,7 +172,7 @@ export function AccessManager() {
               />
             </div>
             <div className="field">
-              <label htmlFor="user-password">Password</label>
+              <label htmlFor="user-password">{tr("Password")}</label>
               <input
                 id="user-password"
                 type="password"
@@ -181,7 +184,7 @@ export function AccessManager() {
           </div>
           <div className="actions">
             <button className="btn btn-primary" disabled={mutate.isPending}>
-              {selected ? "Save user" : "Create user"}
+              {selected ? tr("Save user") : tr("Create user")}
             </button>
             {selected > 0 && (
               <button
@@ -199,7 +202,7 @@ export function AccessManager() {
                     : setDeleteId(selected)
                 }
               >
-                {deleteId === selected ? "Confirm delete user" : "Delete user"}
+                {deleteId === selected ? tr("Confirm delete user") : tr("Delete user")}
               </button>
             )}
           </div>
@@ -208,7 +211,7 @@ export function AccessManager() {
       {selected > 0 && (
         <>
           <section>
-            <h2>Permissions</h2>
+            <h2>{tr("Permissions")}</h2>
             <div className="permission-grid">
               {permissionNames.map((label, i) => (
                 <label key={label}>
@@ -221,7 +224,7 @@ export function AccessManager() {
                       )
                     }
                   />{" "}
-                  {label}
+                  {tr(label)}
                 </label>
               ))}
             </div>
@@ -238,13 +241,13 @@ export function AccessManager() {
                 })
               }
             >
-              Save permissions
+              {tr("Save permissions")}
             </button>
           </section>
           <section>
-            <h2>API keys</h2>
+            <h2>{tr("API keys")}</h2>
             <div className="field">
-              <label htmlFor="key-description">Key description</label>
+              <label htmlFor="key-description">{tr("Key description")}</label>
               <input
                 id="key-description"
                 value={description}
@@ -265,11 +268,11 @@ export function AccessManager() {
                 })
               }
             >
-              Create API key
+              {tr("Create API key")}
             </button>
             {keyValue && (
               <div className="field">
-                <label htmlFor="created-key">New API key. Save this value now.</label>
+                <label htmlFor="created-key">{tr("New API key. Save this value now.")}</label>
                 <input
                   id="created-key"
                   readOnly
@@ -284,8 +287,8 @@ export function AccessManager() {
                 .map((k) => (
                   <li className="product-row" key={k.id}>
                     <span>
-                      {k.description || `Key #${k.id}`}
-                      {k.expires ? `, expires ${k.expires}` : ""}
+                      {k.description || tr("Key #%s", String(k.id))}
+                      {k.expires ? tr(", expires %s", String(k.expires)) : ""}
                     </span>
                     <button
                       className="btn btn-ghost"
@@ -298,7 +301,7 @@ export function AccessManager() {
                         )
                       }
                     >
-                      Revoke
+                      {tr("Revoke")}
                     </button>
                   </li>
                 ))}

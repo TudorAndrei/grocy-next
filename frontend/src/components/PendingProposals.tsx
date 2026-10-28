@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, queryKeys } from "@/lib/api";
@@ -9,12 +10,14 @@ import { LoadingBlock } from "./LoadingBlock";
 import { useNotify } from "./Toaster";
 
 export function PendingProposals() {
+  const { t: tr } = useI18n();
+
   const query = useQuery({
     queryKey: queryKeys.proposalsPending,
     queryFn: api.listPendingProposals,
   });
 
-  if (query.isLoading) return <LoadingBlock label="Loading proposals…" />;
+  if (query.isLoading) return <LoadingBlock label={tr("Loading proposals…")} />;
 
   if (query.isError) return <ErrorBlock message={query.error.message} />;
 
@@ -23,8 +26,9 @@ export function PendingProposals() {
   if (items.length === 0) {
     return (
       <p className="empty-state">
-        Nothing waiting. Proposals from your agent, or from a product page, appear here before they
-        change the record.
+        {tr(
+          "Nothing waiting. Proposals from your agent, or from a product page, appear here before they change the record.",
+        )}
       </p>
     );
   }
@@ -39,6 +43,8 @@ export function PendingProposals() {
 }
 
 function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
+  const { t: tr } = useI18n();
+
   const catalog = useCatalog();
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -63,7 +69,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
     mutationFn: () => api.approveProposal(proposal.id),
     onSuccess: async () => {
       await settle();
-      notify({ message: `Approved nutrition for ${name}` });
+      notify({ message: tr("Approved nutrition for %s", String(name)) });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -72,7 +78,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
     mutationFn: () => api.rejectProposal(proposal.id),
     onSuccess: async () => {
       await settle();
-      notify({ message: `Rejected proposal for ${name}` });
+      notify({ message: tr("Rejected proposal for %s", String(name)) });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -87,7 +93,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
     <li className="panel proposal">
       <header className="proposal-head">
         <span className="tag" data-domain={fromAgent ? "agent" : undefined}>
-          {fromAgent ? "Agent" : "Web"}
+          {fromAgent ? tr("Agent") : tr("Web")}
         </span>
         <h2>
           <Link to="/products/$productId" params={{ productId: String(proposal.product_id) }}>
@@ -95,8 +101,11 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
           </Link>
         </h2>
         <span className="proposal-meta">
-          #{proposal.id} · per {proposal.payload.basis.quantity} {proposal.payload.basis.unit}
-          {current.data ? ` · replaces revision ${current.data.revision}` : " · first record"}
+          #{proposal.id} {tr("· per")} {proposal.payload.basis.quantity}{" "}
+          {proposal.payload.basis.unit}
+          {current.data
+            ? tr(" · replaces revision %s", String(current.data.revision))
+            : tr(" · first record")}
         </span>
       </header>
       {proposal.conflict_reason ? (
@@ -108,12 +117,12 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
       <table className="diff-table">
         <thead>
           <tr>
-            <th scope="col">Nutrient</th>
+            <th scope="col">{tr("Nutrient")}</th>
             <th scope="col" className="num">
-              Now
+              {tr("Now")}
             </th>
             <th scope="col" className="num">
-              Proposed
+              {tr("Proposed")}
             </th>
           </tr>
         </thead>
@@ -124,7 +133,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
             return (
               <tr key={n.key} data-changed={changed ? "true" : undefined}>
                 <th scope="row" data-indent={n.indent ? "true" : undefined}>
-                  {n.label}
+                  {tr(n.label)}
                 </th>
                 <td className="num">{formatNutrient(before[n.key], n.unit)}</td>
                 <td className="num">{formatNutrient(proposed[n.key], n.unit)}</td>
@@ -140,7 +149,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
           disabled={busy}
           onClick={() => reject.mutate()}
         >
-          Reject
+          {tr("Reject")}
         </button>
         <button
           type="button"
@@ -148,7 +157,7 @@ function ProposalCard({ proposal }: { proposal: NutritionProposal }) {
           disabled={busy}
           onClick={() => approve.mutate()}
         >
-          {approve.isPending ? "Approving…" : "Approve"}
+          {approve.isPending ? tr("Approving…") : tr("Approve")}
         </button>
       </footer>
     </li>

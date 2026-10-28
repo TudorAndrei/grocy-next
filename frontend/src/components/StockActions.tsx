@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, queryKeys, type ConsumeOptions, type PurchaseOptions } from "@/lib/api";
@@ -19,6 +20,8 @@ type StockActionsProps = {
 };
 
 export function StockActions({ productId, initialMove = "purchase" }: StockActionsProps) {
+  const { t: tr, pluralIndex } = useI18n();
+
   const features = useFeatures();
   const priceEnabled = features.enabled("STOCK_PRICE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
@@ -195,31 +198,39 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
     }
   }
 
-  const unit = unitLabel(selectedUnit, value || 1);
-  const verb = { purchase: "Purchase", consume: "Consume", open: "Mark opened" }[move];
+  const unit = unitLabel(selectedUnit, value || 1, pluralIndex);
+  const verb = tr({ purchase: "Purchase", consume: "Consume", open: "Mark opened" }[move]);
 
   return (
     <section className="panel stock-panel" aria-labelledby="stock-heading">
       <h2 className="panel-head" id="stock-heading">
-        Stock
-        <span>{min > 0 ? `minimum ${catalog.amountText(productId, min)}` : "no minimum set"}</span>
+        {tr("Stock")}
+        <span>
+          {min > 0
+            ? tr("minimum %s", String(catalog.amountText(productId, min)))
+            : tr("no minimum set")}
+        </span>
       </h2>
-      {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
+      {stock.isLoading ? <LoadingBlock label={tr("Loading stock…")} /> : null}
       {stock.isError ? <ErrorBlock message={stock.error.message} /> : null}
       {conversions.isError ? <ErrorBlock message={conversions.error.message} /> : null}
       <div className="stock-level">
         <div className="stock-figure">
           <span className="stock-amount">{formatAmount(onHand)}</span>
-          <span className="stock-unit">{catalog.stockUnitText(productId, onHand)} on hand</span>
+          <span className="stock-unit">
+            {catalog.stockUnitText(productId, onHand)} {tr("on hand")}
+          </span>
           {openingEnabled && opened > 0 ? (
-            <span className="stock-opened">{formatAmount(opened)} opened</span>
+            <span className="stock-opened">
+              {formatAmount(opened)} {tr("opened")}
+            </span>
           ) : null}
         </div>
-        <Gauge amount={minimumAmount} min={min} label={product?.name ?? "Product"} />
+        <Gauge amount={minimumAmount} min={min} label={product?.name ?? tr("Product")} />
       </div>
 
       <form className="move-form" onSubmit={onSubmit}>
-        <div className="seg-group" role="group" aria-label="Stock move">
+        <div className="seg-group" role="group" aria-label={tr("Stock move")}>
           {(["purchase", "consume", "open"] as const).flatMap((id) =>
             id === "open" && (!openingEnabled || product?.disable_open || tareEnabled)
               ? []
@@ -236,17 +247,17 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
                       setQuantityUnitId(null);
                     }}
                   >
-                    {{ purchase: "Purchase", consume: "Consume", open: "Open" }[id]}
+                    {tr({ purchase: "Purchase", consume: "Consume", open: "Open" }[id])}
                   </button>,
                 ],
           )}
         </div>
         <div className="field-row">
           <label className="field">
-            <span>{grossWeight ? "Gross weight" : "Amount"}</span>
+            <span>{grossWeight ? tr("Gross weight") : tr("Amount")}</span>
             <span className="amount-field" data-unit-select={unitSelectionEnabled || undefined}>
               <input
-                aria-label={grossWeight ? "Gross weight" : "Amount"}
+                aria-label={grossWeight ? tr("Gross weight") : tr("Amount")}
                 value={amountValue}
                 onChange={(e) => setAmount(e.target.value)}
                 inputMode="decimal"
@@ -258,7 +269,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
           </label>
           {unitSelectionEnabled ? (
             <label className="field">
-              <span>Quantity unit</span>
+              <span>{tr("Quantity unit")}</span>
               <select
                 value={unitId}
                 onChange={(e) => {
@@ -278,7 +289,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
             <>
               {datesEnabled ? (
                 <label className="field">
-                  <span>Best before</span>
+                  <span>{tr("Best before")}</span>
                   <input
                     type="date"
                     value={bestBeforeValue}
@@ -289,9 +300,9 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
               ) : null}
               {locationsEnabled ? (
                 <label className="field">
-                  <span>Location</span>
+                  <span>{tr("Location")}</span>
                   <select value={locationValue} onChange={(e) => setLocationId(e.target.value)}>
-                    <option value="">Product default</option>
+                    <option value="">{tr("Product default")}</option>
                     {catalog.locations.map((location) => (
                       <option key={location.id} value={location.id}>
                         {location.name}
@@ -309,17 +320,19 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
                 checked={spoiled}
                 onChange={(e) => setSpoiled(e.target.checked)}
               />
-              <span>Spoiled — thrown away, not eaten</span>
+              <span>{tr("Spoiled — thrown away, not eaten")}</span>
             </label>
           ) : null}
         </div>
         {unitId !== stockUnitId && value > 0 ? (
-          <p className="field-hint">This equals {catalog.amountText(productId, stockValue)}.</p>
+          <p className="field-hint">
+            {tr("This equals")} {catalog.amountText(productId, stockValue)}.
+          </p>
         ) : null}
         {grossWeight ? (
           <p className="field-hint">
-            Tare weight: {catalog.amountText(productId, tareWeight)}. Enter the weight including the
-            container.
+            {tr("Tare weight:")} {catalog.amountText(productId, tareWeight)}
+            {tr(". Enter the weight including the container.")}
           </p>
         ) : null}
         {move === "consume" && tareEnabled ? (
@@ -329,21 +342,21 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
               checked={exactAmount}
               onChange={(e) => setExactAmount(e.target.checked)}
             />
-            <span>Consume exact amount</span>
+            <span>{tr("Consume exact amount")}</span>
           </label>
         ) : null}
         {move === "purchase" ? (
           <details>
-            <summary>Purchase details</summary>
+            <summary>{tr("Purchase details")}</summary>
             <div className="form-grid">
               {priceEnabled ? (
                 <label className="field">
                   <span>
                     {priceTypeValue === "total"
-                      ? "Total price"
+                      ? tr("Total price")
                       : unitId === stockUnitId
-                        ? "Price per stock unit"
-                        : `Price per ${selectedUnit?.name ?? "unit"}`}
+                        ? tr("Price per stock unit")
+                        : tr("Price per %s", String(selectedUnit?.name ?? "unit"))}
                   </span>
                   <input
                     type="number"
@@ -356,18 +369,18 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
               ) : null}
               {priceEnabled ? (
                 <label className="field">
-                  <span>Price type</span>
+                  <span>{tr("Price type")}</span>
                   <select value={priceTypeValue} onChange={(e) => setPriceType(e.target.value)}>
-                    <option value="unit">Unit price</option>
-                    <option value="total">Total price</option>
+                    <option value="unit">{tr("Unit price")}</option>
+                    <option value="total">{tr("Total price")}</option>
                   </select>
                 </label>
               ) : null}
               {priceEnabled ? (
                 <label className="field">
-                  <span>Store</span>
+                  <span>{tr("Store")}</span>
                   <select value={storeValue} onChange={(e) => setStoreId(e.target.value)}>
-                    <option value="">No store</option>
+                    <option value="">{tr("No store")}</option>
                     {(stores.data ?? []).map((store) => (
                       <option key={store.id} value={store.id}>
                         {store.name}
@@ -378,7 +391,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
               ) : null}
               {preferences.showPurchaseDate ? (
                 <label className="field">
-                  <span>Purchase date</span>
+                  <span>{tr("Purchase date")}</span>
                   <input
                     type="date"
                     value={purchasedDate}
@@ -387,7 +400,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
                 </label>
               ) : null}
               <label className="field">
-                <span>Note</span>
+                <span>{tr("Note")}</span>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} />
               </label>
             </div>
@@ -402,12 +415,12 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
         </button>
         {stockValue < minimumValue ? (
           <p className="field-hint" role="status">
-            Minimum gross weight: {catalog.amountText(productId, minimumValue)}.
+            {tr("Minimum gross weight:")} {catalog.amountText(productId, minimumValue)}.
           </p>
         ) : null}
         {move !== "purchase" && stockValue > maximumValue ? (
           <p className="field-hint" role="status">
-            Only {catalog.amountText(productId, onHand)} on hand.
+            {tr("Only")} {catalog.amountText(productId, onHand)} {tr("on hand.")}
           </p>
         ) : null}
       </form>

@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -67,6 +68,8 @@ type Result =
   | { kind: "product"; key: string; productId: number };
 
 export function CommandProvider({ children }: { children: ReactNode }) {
+  const { t: tr } = useI18n();
+
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [initialVerb, setInitialVerb] = useState<Verb>("find");
@@ -113,7 +116,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       <dialog
         ref={dialogRef}
         className="command"
-        aria-label="Quick actions"
+        aria-label={tr("Quick actions")}
         onClose={() => setIsOpen(false)}
         onClick={(e) => {
           if (e.target === dialogRef.current) setIsOpen(false);
@@ -128,6 +131,8 @@ export function CommandProvider({ children }: { children: ReactNode }) {
 }
 
 function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: () => void }) {
+  const { t: tr } = useI18n();
+
   const { formatAmount } = usePreferences();
   const navigate = useNavigate();
   const notify = useNotify();
@@ -166,7 +171,11 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
     onSuccess: async (_data, productId) => {
       await queryClient.invalidateQueries({ queryKey: ["shopping"] });
       notify({
-        message: `Added ${catalog.amountText(productId, amount)} ${catalog.productName(productId)} to the list`,
+        message: tr(
+          "Added %1$s %2$s to the list",
+          String(catalog.amountText(productId, amount)),
+          String(catalog.productName(productId)),
+        ),
         undo: async () => {
           await api.removeShoppingProduct(productId, amount);
           await queryClient.invalidateQueries({ queryKey: ["shopping"] });
@@ -197,11 +206,13 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
     if (verb !== "find") return products;
 
     const pages: Result[] = NAV_GROUPS.flatMap((group) => group.links)
-      .filter((link) => features.routeEnabled(link.to) && q && link.label.toLowerCase().includes(q))
+      .filter(
+        (link) => features.routeEnabled(link.to) && q && tr(link.label).toLowerCase().includes(q),
+      )
       .map((link) => ({
         kind: "page",
         key: `n${link.to}`,
-        label: link.label,
+        label: tr(link.label),
         to: link.to,
         icon: link.icon,
       }));
@@ -253,7 +264,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
     }
   }
 
-  const verbLabel = VERBS.find((v) => v.id === verb)?.label ?? "Find";
+  const verbLabel = tr(VERBS.find((v) => v.id === verb)?.label ?? "Find");
 
   return (
     <div className="command-panel">
@@ -267,8 +278,8 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
             setActive(0);
           }}
           onKeyDown={onKeyDown}
-          placeholder={stockEnabled ? "buy 2 milk · use oats · or search" : "Search pages"}
-          aria-label="Command"
+          placeholder={stockEnabled ? tr("buy 2 milk · use oats · or search") : tr("Search pages")}
+          aria-label={tr("Command")}
           aria-controls="command-results"
           aria-activedescendant={results[active] ? `cmd-${results[active].key}` : undefined}
           role="combobox"
@@ -278,7 +289,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
         />
         <kbd>esc</kbd>
       </div>
-      <div className="command-verbs" role="group" aria-label="Action">
+      <div className="command-verbs" role="group" aria-label={tr("Action")}>
         {verbs.map((v) => (
           <button
             key={v.id}
@@ -292,7 +303,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
               if (parsed.verb) setText(text.trim().split(/\s+/).slice(1).join(" "));
             }}
           >
-            {v.label}
+            {tr(v.label)}
           </button>
         ))}
       </div>
@@ -300,8 +311,8 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
         {results.length === 0 ? (
           <li className="command-empty">
             {verbEnabled
-              ? `No results for “${parsed.query}”.`
-              : "This action is disabled in the server configuration."}
+              ? tr("No results for “%s”.", String(parsed.query))
+              : tr("This action is disabled in the server configuration.")}
           </li>
         ) : null}
         {results.map((result, index) => (
@@ -318,7 +329,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
               <>
                 <Icon name={result.icon} />
                 <span className="command-name">{result.label}</span>
-                <span className="command-hint">Go to</span>
+                <span className="command-hint">{tr("Go to")}</span>
               </>
             ) : (
               <>
@@ -326,15 +337,15 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
                   {catalog.productName(result.productId)}
                   <small>
                     {catalog.location(catalog.product(result.productId)?.location_id)?.name ??
-                      "No location"}
+                      tr("No location")}
                     {" · "}
-                    {catalog.amountText(result.productId, onHand.get(result.productId) ?? 0)} on
-                    hand
+                    {catalog.amountText(result.productId, onHand.get(result.productId) ?? 0)}{" "}
+                    {tr("on hand")}
                   </small>
                 </span>
                 <span className="command-hint">
                   {verb === "find"
-                    ? "Open"
+                    ? tr("Open")
                     : `${verbLabel} ${formatAmount(amount)} ${catalog.stockUnitText(result.productId, amount)}`}
                 </span>
               </>
@@ -345,13 +356,14 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
       <p className="command-foot">
         <span>
           <kbd>↑</kbd>
-          <kbd>↓</kbd> choose
+          <kbd>↓</kbd> {tr("choose")}
         </span>
         <span>
           <kbd>↵</kbd> {verbLabel.toLowerCase()}
         </span>
         <span>
-          Start with <b>buy</b>, <b>use</b> or <b>list</b>, then an amount
+          {tr("Start with")} <b>{tr("buy")}</b>, <b>{tr("use")}</b> {tr("or")} <b>{tr("list")}</b>
+          {tr(", then an amount")}
         </span>
       </p>
     </div>

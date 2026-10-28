@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
 import { useFeatures } from "@/lib/features";
+import { useI18n } from "@/lib/i18n";
 import { Icon, type IconName } from "./Icon";
 
 /** Each domain keeps one marker colour across the nav and the Today board. */
@@ -36,10 +37,16 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Kitchen",
     links: [
-      { to: "/stock", label: "Stock", icon: "stock", domain: "stock", match: starts("/stock") },
+      {
+        to: "/stock",
+        label: "Stock overview",
+        icon: "stock",
+        domain: "stock",
+        match: starts("/stock"),
+      },
       {
         to: "/shopping",
-        label: "Shopping",
+        label: "Shopping list",
         icon: "shopping",
         domain: "shopping",
         match: starts("/shopping"),
@@ -205,12 +212,13 @@ export function usePathname() {
 }
 
 export function SiteNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useI18n();
   const features = useFeatures();
   const pathname = usePathname();
   const counts = useNavCounts();
 
   return (
-    <nav className="site-nav" aria-label="Primary">
+    <nav className="site-nav" aria-label={t("Primary")}>
       {NAV_GROUPS.flatMap((group, index) => {
         const links = group.links.filter((link) => features.routeEnabled(link.to));
 
@@ -218,7 +226,7 @@ export function SiteNav({ onNavigate }: { onNavigate?: () => void }) {
 
         return [
           <div key={group.label ?? index} className="nav-group">
-            {group.label ? <div className="nav-group-label">{group.label}</div> : null}
+            {group.label ? <div className="nav-group-label">{t(group.label)}</div> : null}
             {links.map((link) => {
               const count = link.count && link.count !== "today" ? counts[link.count] : 0;
               const active = link.match(pathname);
@@ -232,8 +240,8 @@ export function SiteNav({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                 >
                   <Icon name={link.icon} />
-                  <span>{link.label}</span>
-                  {count > 0 ? <em aria-label={`${count} open`}>{count}</em> : null}
+                  <span>{t(link.label)}</span>
+                  {count > 0 ? <em aria-label={t("%s open", String(count))}>{count}</em> : null}
                 </Link>
               );
             })}

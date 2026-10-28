@@ -70,6 +70,17 @@ def _po_messages(path: Path) -> tuple[dict[str, dict[str, list[str]]], str | Non
 
 
 @lru_cache
+def available_locales() -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            folder.name
+            for folder in (_CORE / "localization").iterdir()
+            if folder.is_dir() and re.fullmatch(r"[A-Za-z0-9_@-]+", folder.name)
+        )
+    )
+
+
+@lru_cache
 def localization(locale: str, mode: str) -> dict[str, Any]:
     defaults = client_defaults()["localization"]
     folder = _CORE / "localization" / locale

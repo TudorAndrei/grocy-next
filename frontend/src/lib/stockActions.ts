@@ -4,6 +4,7 @@ import { api, type ConsumeOptions, type PurchaseOptions } from "./api";
 import { useCatalog, useInvalidateStock } from "./catalog";
 import { useFeatures } from "./features";
 import { preferenceEnabled } from "./preferences";
+import { useI18n } from "./i18n";
 
 type Move = {
   productId: number;
@@ -16,6 +17,7 @@ const VERB = { purchase: "Purchased", consume: "Consumed", open: "Opened" } as c
 
 /** Purchase / consume / open with an undo toast. */
 export function useStockMove(kind: keyof typeof VERB, enabled = true) {
+  const { t } = useI18n();
   const features = useFeatures();
   const notify = useNotify();
   const catalog = useCatalog(enabled);
@@ -53,7 +55,7 @@ export function useStockMove(kind: keyof typeof VERB, enabled = true) {
           : amount;
 
       notify({
-        message: `${VERB[kind]} ${catalog.amountText(productId, movedAmount)} ${catalog.productName(productId)}`,
+        message: `${t(VERB[kind])} ${catalog.amountText(productId, movedAmount)} ${catalog.productName(productId)}`,
         undo: transactionId
           ? async () => {
               await api.undoTransaction(transactionId);

@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { EntityManager } from "@/components/EntityManager";
@@ -8,6 +9,8 @@ import { useFeatures } from "@/lib/features";
 export const Route = createFileRoute("/manage")({ component: ManagePage });
 
 function ManagePage() {
+  const { t: tr } = useI18n();
+
   const [selection, setEntity] = useState("locations");
   const features = useFeatures();
 
@@ -47,17 +50,17 @@ function ManagePage() {
 
   return (
     <>
-      <h1 className="page-title">Manage household data</h1>
-      <p className="page-lead">Set up locations, units, groups, and household access.</p>
+      <h1 className="page-title">{tr("Manage household data")}</h1>
+      <p className="page-lead">{tr("Set up locations, units, groups, and household access.")}</p>
       <div className="field">
-        <label htmlFor="manage-entity">Data type</label>
+        <label htmlFor="manage-entity">{tr("Data type")}</label>
         <select id="manage-entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
           {choices.map((value) => (
             <option key={value} value={value}>
-              {entities.get(value)?.label ?? value}
+              {tr(entities.get(value)?.label ?? value)}
             </option>
           ))}
-          <option value="access">Users and API keys</option>
+          <option value="access">{tr("Users and API keys")}</option>
         </select>
       </div>
       {entity === "access" ? <AccessManager /> : <EntityManager key={entity} entity={entity} />}

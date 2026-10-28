@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { api, queryKeys, request } from "@/lib/api";
@@ -22,6 +23,8 @@ function initialValues(nutrition: NutritionRecord | null) {
 }
 
 export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
+  const { t: tr } = useI18n();
+
   const queryClient = useQueryClient();
   const notify = useNotify();
   const [basisQuantity, setBasisQuantity] = useState(String(nutrition?.basis_quantity ?? "100"));
@@ -64,7 +67,7 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
       });
     },
     onSuccess: async () => {
-      notify({ message: "Proposal sent to the review queue" });
+      notify({ message: tr("Proposal sent to the review queue") });
       setNote("");
       setPhoto(null);
 
@@ -82,16 +85,16 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
   return (
     <section className="panel" aria-labelledby="propose-heading">
       <h2 className="panel-head" id="propose-heading">
-        Propose nutrition
-        <span>staged until approved</span>
+        {tr("Propose nutrition")}
+        <span>{tr("staged until approved")}</span>
       </h2>
       <form className="panel-body proposal-form" onSubmit={onSubmit}>
         <p className="field-hint">
-          Leave unknown values blank. Blank is stored as unknown, never as zero.
+          {tr("Leave unknown values blank. Blank is stored as unknown, never as zero.")}
         </p>
         <div className="field-row">
           <label className="field">
-            <span>Per</span>
+            <span>{tr("Per")}</span>
             <input
               value={basisQuantity}
               onChange={(e) => setBasisQuantity(e.target.value)}
@@ -100,11 +103,11 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
             />
           </label>
           <label className="field">
-            <span>Unit</span>
+            <span>{tr("Unit")}</span>
             <select value={basisUnit} onChange={(e) => setBasisUnit(e.target.value)}>
-              <option value="g">g</option>
-              <option value="ml">ml</option>
-              <option value="serving">serving</option>
+              <option value="g">{tr("g")}</option>
+              <option value="ml">{tr("ml")}</option>
+              <option value="serving">{tr("serving")}</option>
             </select>
           </label>
         </div>
@@ -115,7 +118,7 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
               className="nutrient-input"
               data-indent={n.indent ? "true" : undefined}
             >
-              <span>{n.label}</span>
+              <span>{tr(n.label)}</span>
               <span className="amount-field">
                 <input
                   value={values[n.key]}
@@ -129,15 +132,15 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
           ))}
         </div>
         <label className="field">
-          <span>Note</span>
+          <span>{tr("Note")}</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Where the values come from"
+            placeholder={tr("Where the values come from")}
           />
         </label>
         <label className="field">
-          <span>Label photo</span>
+          <span>{tr("Label photo")}</span>
           <input
             ref={photoInput}
             type="file"
@@ -146,7 +149,7 @@ export function ProposalForm({ productId, nutrition }: ProposalFormProps) {
           />
         </label>
         <button type="submit" className="btn btn-primary" disabled={mutation.isPending}>
-          {mutation.isPending ? "Sending…" : "Send for review"}
+          {mutation.isPending ? tr("Sending…") : tr("Send for review")}
         </button>
       </form>
     </section>

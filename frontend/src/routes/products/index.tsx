@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -15,6 +16,8 @@ export const Route = createFileRoute("/products/")({
 });
 
 function ProductsPage() {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
   const catalog = useCatalog();
   const [search, setSearch] = useState("");
@@ -44,8 +47,10 @@ function ProductsPage() {
   return (
     <>
       <PageHeader
-        title="Products"
-        lead="The master catalog. Open a product for stock moves, nutrition and its revision history."
+        title={tr("Products")}
+        lead={tr(
+          "The master catalog. Open a product for stock moves, nutrition and its revision history.",
+        )}
         actions={
           <button
             type="button"
@@ -53,32 +58,34 @@ function ProductsPage() {
             aria-pressed={editing}
             onClick={() => setEditing((on) => !on)}
           >
-            {editing ? "Close editor" : "Edit catalog"}
+            {editing ? tr("Close editor") : tr("Edit catalog")}
           </button>
         }
       />
       {editing ? <EntityManager entity="products" /> : null}
       <div className="toolbar">
         <label className="search-field">
-          <span className="sr-only">Search products</span>
+          <span className="sr-only">{tr("Search products")}</span>
           <input
             type="search"
-            placeholder="Search by name, description or barcode"
+            placeholder={tr("Search by name, description or barcode")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
         <span className="toolbar-note">
-          {products.isSuccess ? `${visible.length} of ${products.data.length}` : null}
+          {products.isSuccess
+            ? tr("%1$s of %2$s", String(visible.length), String(products.data.length))
+            : null}
         </span>
       </div>
-      {products.isLoading ? <LoadingBlock label="Loading products…" /> : null}
+      {products.isLoading ? <LoadingBlock label={tr("Loading products…")} /> : null}
       {products.isError ? <ErrorBlock message={products.error.message} /> : null}
       {products.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
           {search
-            ? "No product matches that search."
-            : "No products yet. Seed the backend, or check the API key under Settings."}
+            ? tr("No product matches that search.")
+            : tr("No products yet. Seed the backend, or check the API key under Settings.")}
         </p>
       ) : null}
       {visible.length > 0 ? (
@@ -86,15 +93,15 @@ function ProductsPage() {
           <table className="stock-table products-table">
             <thead>
               <tr>
-                <th scope="col">Product</th>
-                <th scope="col">Level</th>
+                <th scope="col">{tr("Product")}</th>
+                <th scope="col">{tr("Level")}</th>
                 <th scope="col" className="num">
-                  On hand
+                  {tr("On hand")}
                 </th>
                 <th scope="col" className="num">
-                  Minimum
+                  {tr("Minimum")}
                 </th>
-                <th scope="col">Barcode</th>
+                <th scope="col">{tr("Barcode")}</th>
               </tr>
             </thead>
             <tbody>

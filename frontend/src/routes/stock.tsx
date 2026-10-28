@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -32,6 +33,8 @@ type Row = {
 };
 
 function StockPage() {
+  const { t: tr } = useI18n();
+
   const features = useFeatures();
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
@@ -143,25 +146,27 @@ function StockPage() {
   return (
     <>
       <PageHeader
-        title="Stock"
-        lead="What is on hand, how full each product is against its minimum, and what to use first."
+        title={tr("Stock overview")}
+        lead={tr(
+          "What is on hand, how full each product is against its minimum, and what to use first.",
+        )}
         actions={
           <>
             <Link to="/journal" className="btn btn-ghost">
-              Journal
+              {tr("Journal")}
             </Link>
             <Link to="/barcode" className="btn btn-ghost">
-              Barcode
+              {tr("Barcode")}
             </Link>
             <button type="button" className="btn" onClick={() => command.open("consume")}>
-              Consume
+              {tr("Consume")}
             </button>
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => command.open("purchase")}
             >
-              Purchase
+              {tr("Purchase")}
             </button>
           </>
         }
@@ -169,15 +174,15 @@ function StockPage() {
 
       <div className="toolbar">
         <label className="search-field">
-          <span className="sr-only">Search stock</span>
+          <span className="sr-only">{tr("Search stock")}</span>
           <input
             type="search"
-            placeholder="Search products"
+            placeholder={tr("Search products")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
-        <div className="chips" role="group" aria-label="Stock filter">
+        <div className="chips" role="group" aria-label={tr("Stock filter")}>
           {filters.flatMap(([id, label]) =>
             !datesEnabled && (id === "due" || id === "expired")
               ? []
@@ -190,7 +195,7 @@ function StockPage() {
                     aria-pressed={filter === id}
                     onClick={() => setFilter(id)}
                   >
-                    {label}
+                    {tr(label)}
                     <span className="chip-count">{counts[id]}</span>
                   </button>,
                 ],
@@ -198,9 +203,9 @@ function StockPage() {
         </div>
         {locationsEnabled ? (
           <label className="select-field">
-            <span className="sr-only">Location</span>
+            <span className="sr-only">{tr("Location")}</span>
             <select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
-              <option value="">All locations</option>
+              <option value="">{tr("All locations")}</option>
               {catalog.locations.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
@@ -211,14 +216,14 @@ function StockPage() {
         ) : null}
       </div>
 
-      {stock.isLoading ? <LoadingBlock label="Loading stock…" /> : null}
+      {stock.isLoading ? <LoadingBlock label={tr("Loading stock…")} /> : null}
       {stock.isError ? <ErrorBlock message={stock.error.message} /> : null}
 
       {stock.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
           {rows.length === 0
-            ? "Stock is empty. Press Purchase or ⌘K to book what you bought."
-            : "No product matches this filter."}
+            ? tr("Stock is empty. Press Purchase or ⌘K to book what you bought.")
+            : tr("No product matches this filter.")}
         </p>
       ) : null}
 
@@ -227,19 +232,19 @@ function StockPage() {
           <table className="stock-table">
             <thead>
               <tr>
-                <th scope="col">Product</th>
-                <th scope="col">Level</th>
+                <th scope="col">{tr("Product")}</th>
+                <th scope="col">{tr("Level")}</th>
                 <th scope="col" className="num">
-                  Amount
+                  {tr("Amount")}
                 </th>
                 {anyOpened ? (
                   <th scope="col" className="num">
-                    Opened
+                    {tr("Opened")}
                   </th>
                 ) : null}
-                {datesEnabled ? <th scope="col">Best before</th> : null}
+                {datesEnabled ? <th scope="col">{tr("Best before")}</th> : null}
                 <th scope="col">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{tr("Actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -255,10 +260,14 @@ function StockPage() {
                       </Link>
                       <small>
                         {locationsEnabled
-                          ? (catalog.location(row.locationId)?.name ?? "No location")
+                          ? (catalog.location(row.locationId)?.name ?? tr("No location"))
                           : null}
                         {row.min > 0
-                          ? `${locationsEnabled ? " · " : ""}min ${catalog.amountText(row.productId, row.min)}`
+                          ? tr(
+                              "%1$smin %2$s",
+                              String(locationsEnabled ? " · " : ""),
+                              String(catalog.amountText(row.productId, row.min)),
+                            )
                           : ""}
                       </small>
                     </td>

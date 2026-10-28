@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -15,6 +16,8 @@ export const Route = createFileRoute("/activity")({
 });
 
 function ActivityPage() {
+  const { t: tr } = useI18n();
+
   const catalog = useCatalog();
   const notify = useNotify();
   const invalidate = useInvalidateStock();
@@ -26,7 +29,7 @@ function ActivityPage() {
     mutationFn: (transactionId: string) => api.undoTransaction(transactionId),
     onSuccess: async () => {
       await invalidate();
-      notify({ message: "Booking undone" });
+      notify({ message: tr("Booking undone") });
     },
     onError: (err: Error) => notify({ message: err.message, tone: "error" }),
   });
@@ -42,8 +45,10 @@ function ActivityPage() {
   return (
     <>
       <PageHeader
-        title="Activity"
-        lead="Every stock booking, from you or your agent. Undo reverses the whole transaction."
+        title={tr("Activity")}
+        lead={tr(
+          "Every stock booking, from you or your agent. Undo reverses the whole transaction.",
+        )}
       />
       <div className="toolbar">
         <label className="check-field">
@@ -52,29 +57,31 @@ function ActivityPage() {
             checked={showUndone}
             onChange={(e) => setShowUndone(e.target.checked)}
           />
-          <span>Show undone bookings</span>
+          <span>{tr("Show undone bookings")}</span>
         </label>
       </div>
-      {log.isLoading ? <LoadingBlock label="Loading activity…" /> : null}
+      {log.isLoading ? <LoadingBlock label={tr("Loading activity…")} /> : null}
       {log.isError ? <ErrorBlock message={log.error.message} /> : null}
       {log.isSuccess && entries.length === 0 ? (
-        <p className="empty-state">No bookings yet. Purchases, consumes and moves appear here.</p>
+        <p className="empty-state">
+          {tr("No bookings yet. Purchases, consumes and moves appear here.")}
+        </p>
       ) : null}
       {entries.length > 0 ? (
         <div className="panel">
           <table className="stock-table activity-table">
             <thead>
               <tr>
-                <th scope="col">When</th>
-                <th scope="col">By</th>
-                <th scope="col">Booking</th>
-                <th scope="col">Product</th>
+                <th scope="col">{tr("When")}</th>
+                <th scope="col">{tr("By")}</th>
+                <th scope="col">{tr("Booking")}</th>
+                <th scope="col">{tr("Product")}</th>
                 <th scope="col" className="num">
-                  Amount
+                  {tr("Amount")}
                 </th>
-                <th scope="col">Best before</th>
+                <th scope="col">{tr("Best before")}</th>
                 <th scope="col">
-                  <span className="sr-only">Undo</span>
+                  <span className="sr-only">{tr("Undo")}</span>
                 </th>
               </tr>
             </thead>
@@ -89,7 +96,7 @@ function ActivityPage() {
                     <span className="booking">{bookingVerb(entry.transaction_type)}</span>
                     {entry.spoiled ? (
                       <span className="tag" data-tone="danger">
-                        spoiled
+                        {tr("spoiled")}
                       </span>
                     ) : null}
                   </td>
@@ -110,7 +117,7 @@ function ActivityPage() {
                   <td className="date">{formatDate(entry.best_before_date) ?? "—"}</td>
                   <td className="row-actions">
                     {entry.undone ? (
-                      <span className="faint">Undone</span>
+                      <span className="faint">{tr("Undone")}</span>
                     ) : (
                       <button
                         type="button"
@@ -118,7 +125,7 @@ function ActivityPage() {
                         disabled={undo.isPending}
                         onClick={() => undo.mutate(entry.transaction_id)}
                       >
-                        Undo
+                        {tr("Undo")}
                       </button>
                     )}
                   </td>

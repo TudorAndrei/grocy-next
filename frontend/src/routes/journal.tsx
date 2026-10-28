@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/journal")({
 });
 
 function JournalPage() {
+  const { t: tr } = useI18n();
+
   const { formatAmount } = usePreferences();
   const client = useQueryClient();
   const [search, setSearch] = useState("");
@@ -47,25 +50,25 @@ function JournalPage() {
   return (
     <>
       <PageHeader
-        title="Stock journal"
-        lead="Recent stock bookings across all products. Undo mistaken moves here."
+        title={tr("Stock journal")}
+        lead={tr("Recent stock bookings across all products. Undo mistaken moves here.")}
       />
       <div className="toolbar">
         <div className="search-field">
           <label className="sr-only" htmlFor="journal-search">
-            Search journal
+            {tr("Search journal")}
           </label>
           <input
             id="journal-search"
             type="search"
-            placeholder="Filter by product name"
+            placeholder={tr("Filter by product name")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="field" style={{ maxWidth: "8rem" }}>
           <label className="sr-only" htmlFor="journal-limit">
-            Row limit
+            {tr("Row limit")}
           </label>
           <select
             id="journal-limit"
@@ -74,18 +77,20 @@ function JournalPage() {
           >
             {[50, 150, 300].map((n) => (
               <option key={n} value={n}>
-                {n} rows
+                {n} {tr("rows")}
               </option>
             ))}
           </select>
         </div>
       </div>
       {error ? (
-        <ErrorBlock message={error instanceof Error ? error.message : "Could not load journal."} />
+        <ErrorBlock
+          message={error instanceof Error ? error.message : tr("Could not load journal.")}
+        />
       ) : null}
-      {journal.isLoading ? <LoadingBlock label="Loading journal…" /> : null}
+      {journal.isLoading ? <LoadingBlock label={tr("Loading journal…")} /> : null}
       {journal.isSuccess && rows.length === 0 ? (
-        <p className="empty-state">No stock bookings match this filter.</p>
+        <p className="empty-state">{tr("No stock bookings match this filter.")}</p>
       ) : null}
       {journal.isSuccess && rows.length > 0 ? (
         <section className="panel">
@@ -93,10 +98,10 @@ function JournalPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>When</th>
-                  <th>Product</th>
-                  <th>Type</th>
-                  <th>Amount</th>
+                  <th>{tr("When")}</th>
+                  <th>{tr("Product")}</th>
+                  <th>{tr("Type")}</th>
+                  <th>{tr("Amount")}</th>
                   <th />
                 </tr>
               </thead>
@@ -116,7 +121,7 @@ function JournalPage() {
                     <td>{row.transaction_type}</td>
                     <td className="amount-cell">
                       {formatAmount(row.amount)}
-                      {row.undone ? " (undone)" : ""}
+                      {row.undone ? tr(" (undone)") : ""}
                     </td>
                     <td>
                       {!row.undone ? (
@@ -126,7 +131,7 @@ function JournalPage() {
                           disabled={undo.isPending}
                           onClick={() => undo.mutate(row.id)}
                         >
-                          Undo
+                          {tr("Undo")}
                         </button>
                       ) : null}
                     </td>

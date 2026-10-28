@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -8,6 +9,8 @@ import { ErrorBlock } from "./ErrorBlock";
 const MIN_PASSWORD = 8;
 
 export function SetupWizard() {
+  const { t: tr } = useI18n();
+
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const [username, setUsername] = useState("admin");
@@ -20,13 +23,13 @@ export function SetupWizard() {
     event.preventDefault();
 
     if (password.length < MIN_PASSWORD) {
-      setError(`Password must have at least ${MIN_PASSWORD} characters.`);
+      setError(tr("Password must have at least %s characters.", String(MIN_PASSWORD)));
 
       return;
     }
 
     if (password !== confirm) {
-      setError("The passwords do not match.");
+      setError(tr("The passwords do not match."));
 
       return;
     }
@@ -43,20 +46,22 @@ export function SetupWizard() {
 
       await signInWithKey(queryClient, result.api_key);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Setup failed.");
+      setError(cause instanceof Error ? cause.message : tr("Setup failed."));
       setBusy(false);
     }
   };
 
   return (
     <AuthCard
-      title="Create the administrator"
-      lead="This server has no users yet. Enter the setup token from the server log. The first account gets full access."
+      title={tr("Create the administrator")}
+      lead={tr(
+        "This server has no users yet. Enter the setup token from the server log. The first account gets full access.",
+      )}
     >
       {error ? <ErrorBlock message={error} /> : null}
       <form onSubmit={submit}>
         <div className="field">
-          <label htmlFor="setup-token">Setup token</label>
+          <label htmlFor="setup-token">{tr("Setup token")}</label>
           <input
             id="setup-token"
             type="password"
@@ -67,7 +72,7 @@ export function SetupWizard() {
           />
         </div>
         <div className="field">
-          <label htmlFor="setup-username">Username</label>
+          <label htmlFor="setup-username">{tr("Username")}</label>
           <input
             id="setup-username"
             type="text"
@@ -78,7 +83,7 @@ export function SetupWizard() {
           />
         </div>
         <div className="field">
-          <label htmlFor="setup-password">Password</label>
+          <label htmlFor="setup-password">{tr("Password")}</label>
           <input
             id="setup-password"
             type="password"
@@ -90,7 +95,7 @@ export function SetupWizard() {
           />
         </div>
         <div className="field">
-          <label htmlFor="setup-confirm">Confirm password</label>
+          <label htmlFor="setup-confirm">{tr("Confirm password")}</label>
           <input
             id="setup-confirm"
             type="password"
@@ -101,7 +106,7 @@ export function SetupWizard() {
           />
         </div>
         <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? "Creating…" : "Create administrator"}
+          {busy ? tr("Creating…") : tr("Create administrator")}
         </button>
       </form>
     </AuthCard>

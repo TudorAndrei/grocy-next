@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -35,6 +36,8 @@ function parseWhen(value: string | null | undefined): string | null {
 }
 
 function CalendarPage() {
+  const { t: tr } = useI18n();
+
   const [tab, setTab] = useState<CalendarTab>("agenda");
   const [showLink, setShowLink] = useState(false);
 
@@ -75,23 +78,23 @@ function CalendarPage() {
   return (
     <>
       <PageHeader
-        title="Calendar"
-        lead="Stock due dates, meals, tasks, chores, and battery charges."
+        title={tr("Calendar")}
+        lead={tr("Stock due dates, meals, tasks, chores, and battery charges.")}
       />
       <Tabs
-        ariaLabel="Calendar views"
+        ariaLabel={tr("Calendar views")}
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: "agenda", label: "Agenda" },
-          { id: "export", label: "Export" },
+          { id: "agenda", label: tr("Agenda") },
+          { id: "export", label: tr("Export") },
         ]}
       />
       {error ? <ErrorBlock message={error.message} /> : null}
       <TabPanel id="cal-agenda" labelledBy="tab-agenda" hidden={tab !== "agenda"}>
-        {loading ? <LoadingBlock label="Loading agenda…" /> : null}
+        {loading ? <LoadingBlock label={tr("Loading agenda…")} /> : null}
         {agenda.length === 0 && !loading && !events.error ? (
-          <p className="empty-state">Nothing scheduled with a due date yet.</p>
+          <p className="empty-state">{tr("Nothing scheduled with a due date yet.")}</p>
         ) : (
           <ul className="agenda-list">
             {agenda.map((item) => (
@@ -101,7 +104,7 @@ function CalendarPage() {
                     ? new Date(item.when.slice(0, 10) + "T00:00:00").toLocaleDateString()
                     : new Date(item.when).toLocaleString()}
                 </time>
-                <span className="badge">{item.allDay ? "All day" : "Timed"}</span>
+                <span className="badge">{item.allDay ? tr("All day") : tr("Timed")}</span>
                 <span>{item.label}</span>
               </li>
             ))}
@@ -115,15 +118,15 @@ function CalendarPage() {
             disabled={download.isPending}
             onClick={() => download.mutate()}
           >
-            Download calendar
+            {tr("Download calendar")}
           </button>
           <button className="btn btn-ghost" onClick={() => setShowLink(true)}>
-            Show subscription link
+            {tr("Show subscription link")}
           </button>
         </div>
         {sharing.data ? (
           <div className="field">
-            <label htmlFor="calendar-url">Subscription URL</label>
+            <label htmlFor="calendar-url">{tr("Subscription URL")}</label>
             <input id="calendar-url" readOnly value={sharing.data.url} />
           </div>
         ) : null}

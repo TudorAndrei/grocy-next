@@ -34,6 +34,8 @@ export type QuantityUnit = {
   id: number;
   name: string;
   name_plural?: string | null;
+  plural_forms?: string | null;
+  active?: number;
   description?: string | null;
 };
 
