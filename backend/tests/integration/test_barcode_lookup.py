@@ -109,6 +109,12 @@ def test_external_barcode_lookup_requires_plugin(
     from grocy.core.config import get_settings
 
     monkeypatch.setattr(get_settings(), "stock_barcode_lookup_plugin", "")
+    assert (
+        client.get("/api/v2/shopping-lists/items/editor", headers=api_headers).json()[
+            "barcode_lookup_plugin_name"
+        ]
+        == ""
+    )
     response = client.get(
         "/api/stock/barcodes/external-lookup/123",
         headers=api_headers,
@@ -123,6 +129,12 @@ def test_external_barcode_lookup_unknown_plugin(
     from grocy.core.config import get_settings
 
     monkeypatch.setattr(get_settings(), "stock_barcode_lookup_plugin", "MissingPlugin")
+    assert (
+        client.get("/api/v2/shopping-lists/items/editor", headers=api_headers).json()[
+            "barcode_lookup_plugin_name"
+        ]
+        == ""
+    )
     response = client.get(
         "/api/stock/barcodes/external-lookup/123",
         headers=api_headers,
@@ -156,6 +168,12 @@ class AsyncLookup(BaseBarcodeLookupPlugin):
 """)
     monkeypatch.setattr(get_settings(), "datapath", tmp_path)
     monkeypatch.setattr(get_settings(), "stock_barcode_lookup_plugin", "AsyncLookup")
+    assert (
+        client.get("/api/v2/shopping-lists/items/editor", headers=api_headers).json()[
+            "barcode_lookup_plugin_name"
+        ]
+        == "Async example"
+    )
     inactive = client.post(
         "/api/objects/locations",
         json={"name": "Inactive lookup location", "active": 0},

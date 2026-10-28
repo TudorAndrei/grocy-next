@@ -178,6 +178,7 @@ def test_shopping_item_editor_loads_native_fields_units_and_row(client, api_head
     assert data["values"] == {"0": "First"}
     assert data["fields"][0]["id"] == field
     assert data["products"] and data["units"] and data["conversions"]
+    assert data["barcode_lookup_plugin_name"] == "Open Food Facts"
     assert next(row for row in data["barcodes"] if row["product_id"] == 1)["barcodes"] == (
         "4006381333931,Form-123"
     )

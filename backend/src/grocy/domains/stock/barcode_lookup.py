@@ -306,6 +306,22 @@ async def _plugin_output(
     raise GrocyError(f"Plugin {name} was not found", code=None)
 
 
+async def barcode_lookup_plugin_name() -> str:
+    settings = get_settings()
+    name = settings.stock_barcode_lookup_plugin
+    path = settings.datapath / "plugins" / (name + ".py")
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and path.is_file():
+        try:
+            plugin = await run_in_threadpool(_load_plugin, path, name)
+            return php_string(plugin.plugin_name)
+        except Exception:
+            return ""
+    return {
+        _OPEN_FOOD_FACTS: "Open Food Facts",
+        "DemoBarcodeLookupPlugin": "Demo",
+    }.get(name, "")
+
+
 async def external_barcode_lookup(
     session: AsyncSession,
     actor: Actor,

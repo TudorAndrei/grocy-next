@@ -53,6 +53,7 @@ class ShoppingService:
 
     async def item_editor(self, item_id: int | None = None) -> dict:
         from grocy.domains.catalog.objects import GenericObjectsService
+        from grocy.domains.stock.barcode_lookup import barcode_lookup_plugin_name
 
         item = None
         if item_id is not None:
@@ -74,6 +75,7 @@ class ShoppingService:
 
         return {
             "item": item,
+            "barcode_lookup_plugin_name": await barcode_lookup_plugin_name(),
             "lists": await self.lists(),
             "products": await rows(
                 "SELECT id,name,qu_id_stock,qu_id_purchase FROM products "
