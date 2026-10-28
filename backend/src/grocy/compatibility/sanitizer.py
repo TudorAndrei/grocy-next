@@ -86,3 +86,18 @@ def clean(value: str) -> str:
     )
     sanitized = re.sub(r' style="([^"]*)"', _style, sanitized)
     return sanitized.replace("&amp;", "&").replace("&gt;", ">").replace("&lt;", "<")
+
+
+def render_html(value: str) -> str:
+    """Prepare a display copy without the compatibility API's entity decoding."""
+    sanitized = nh3.clean(
+        value,
+        tags=_TAGS,
+        attributes=_ATTRIBUTES,
+        clean_content_tags={"script", "style"},
+        filter_style_properties=_STYLES,
+        url_schemes={"http", "https", "data"},
+        link_rel="noopener noreferrer",
+        set_tag_attribute_values={"iframe": {"sandbox": "allow-scripts allow-presentation"}},
+    )
+    return re.sub(r' style="([^"]*)"', _style, sanitized)
