@@ -150,6 +150,8 @@ def test_shopping_paper_requires_shopping_permission(client, api_headers, monkey
     editor = "/api/v2/shopping-lists/1/notes/editor"
     assert client.get(path).status_code == 401
     assert client.get(editor).status_code == 401
+    for read_path in ("/api/v2/shopping-lists", "/api/v2/shopping-lists/editor"):
+        assert client.get(read_path).status_code == 401
     assert client.post(path, json={"html": "Notes", "visible": True}).status_code == 401
     monkeypatch.setattr(get_settings(), "default_permissions", [])
     assert (
@@ -171,6 +173,8 @@ def test_shopping_paper_requires_shopping_permission(client, api_headers, monkey
     headers = {"GROCY-API-KEY": key}
     assert client.get(path, headers=headers).status_code == 403
     assert client.get(editor, headers=headers).status_code == 403
+    for read_path in ("/api/v2/shopping-lists", "/api/v2/shopping-lists/editor"):
+        assert client.get(read_path, headers=headers).status_code == 403
     assert (
         client.post(path, headers=headers, json={"html": "Notes", "visible": True}).status_code
         == 403
@@ -183,6 +187,8 @@ def test_shopping_paper_requires_shopping_permission(client, api_headers, monkey
     )
     assert client.get(path, headers=headers).status_code == 200
     assert client.get(editor, headers=headers).status_code == 200
+    for read_path in ("/api/v2/shopping-lists", "/api/v2/shopping-lists/editor"):
+        assert client.get(read_path, headers=headers).status_code == 200
     assert (
         client.post(path, headers=headers, json={"html": "Notes", "visible": True}).status_code
         == 200

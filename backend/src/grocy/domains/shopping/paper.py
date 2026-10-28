@@ -96,7 +96,7 @@ async def _field_html(field: dict, value: Any, base_url: str) -> str:
         try:
             response = await FilesService(compatibility=True).get(
                 "userfiles",
-                base64.b64encode(raw.encode()).decode(),
+                raw.split("_", 1)[0],
                 picture=True,
                 width="32",
                 height="32",

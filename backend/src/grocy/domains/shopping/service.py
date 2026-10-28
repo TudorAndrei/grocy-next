@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.core.actor import Actor
@@ -15,6 +15,41 @@ class ShoppingService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.products = ProductsService(session)
+
+    async def lists(self) -> list[dict]:
+        result = await self.session.execute(
+            text(
+                "SELECT id,name,description,item_count FROM shopping_lists_view "
+                "ORDER BY name COLLATE NOCASE"
+            )
+        )
+        return [dict(row) for row in result.mappings()]
+
+    async def editor(self, list_id: int | None = None) -> dict:
+        from grocy.domains.catalog.objects import GenericObjectsService
+
+        shopping = None
+        if list_id is not None:
+            row = await self.session.get(ShoppingList, list_id)
+            if row is None:
+                raise NotFoundError(f"Shopping list {list_id} not found")
+            shopping = {"id": row.id, "name": row.name}
+        result = await self.session.execute(
+            text(
+                "SELECT id,name,caption,type,input_required,default_value,config "
+                "FROM userfields WHERE entity='shopping_lists' "
+                "ORDER BY sort_number,name COLLATE NOCASE"
+            )
+        )
+        return {
+            "list": shopping,
+            "fields": [dict(row) for row in result.mappings()],
+            "values": await GenericObjectsService(self.session).get_userfields(
+                "shopping_lists", list_id
+            )
+            if list_id is not None
+            else {},
+        }
 
     async def get_list(self, shopping_list_id: int = 1) -> dict:
         shopping_list = await self.session.get(ShoppingList, shopping_list_id)

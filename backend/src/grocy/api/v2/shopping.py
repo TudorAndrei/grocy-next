@@ -16,6 +16,18 @@ from grocy.domains.system.service import SystemService
 router = APIRouter(tags=["shopping"])
 
 
+@router.get("/shopping-lists")
+async def shopping_lists(_actor: CurrentActor, shopping: ShoppingSvc) -> list[dict]:
+    return await shopping.lists()
+
+
+@router.get("/shopping-lists/editor")
+async def shopping_list_editor(
+    _actor: CurrentActor, shopping: ShoppingSvc, list_id: int | None = None
+) -> dict:
+    return await shopping.editor(list_id)
+
+
 @router.get("/shopping-lists/{shopping_list_id}/print", response_class=HTMLResponse)
 async def shopping_paper(
     shopping_list_id: int,
