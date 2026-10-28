@@ -23,6 +23,7 @@ from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.domains.files.service import FilesService
 from grocy.domains.print_assets import print_font_styles
+from grocy.domains.shopping.service import ShoppingService
 from grocy.domains.system.service import localization
 
 _ASSETS = Path(__file__).parents[2] / "_vendor" / "shopping-print"
@@ -184,11 +185,13 @@ class ShoppingPaper:
                         entity=entity,
                     )
                 )
+        factors = await ShoppingService(self.session).display_factors(list_id)
         rows = []
         for item in items:
             amount = numeric_value(item["amount"])
             if truthy(preferences.get("shopping_list_round_up")):
                 amount = ceil(amount)
+            amount *= factors[item["id"]]
             amount_html = f'<span data-number="quantity">{escape(php_string(amount))}</span>'
             if not empty(item["product_id"]):
                 unit = next((row for row in units if loose_equals(row["id"], item["qu_id"])), None)

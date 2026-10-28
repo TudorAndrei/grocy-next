@@ -40,7 +40,7 @@ def test_legacy_shopping_actions_check_credentials_before_input_and_keep_saved_i
     assert client.get("/api/objects/shopping_list", headers=api_headers).json() == before
 
 
-def test_checked_shopping_purchase_converts_units_and_retries_once(client, api_headers):
+def test_checked_legacy_shopping_amount_is_displayed_and_purchased_once(client, api_headers):
     client.headers.update(api_headers)
     case = client.post("/api/objects/quantity_units", json={"name": "Case"}).json()[
         "created_object_id"
@@ -54,8 +54,11 @@ def test_checked_shopping_purchase_converts_units_and_retries_once(client, api_h
     )
     item = client.post(
         "/api/objects/shopping_list",
-        json={"shopping_list_id": 1, "product_id": 1, "amount": 2, "qu_id": case, "done": 1},
+        json={"shopping_list_id": 1, "product_id": 1, "amount": 12, "qu_id": case, "done": 1},
     ).json()["created_object_id"]
+    assert client.get("/api/v2/shopping-lists/1").json()["items"][0]["amount"] == 2
+    paper = client.get("/api/v2/shopping-lists/1/print")
+    assert '<span data-number="quantity">2</span>' in paper.text
     path = f"/api/v2/shopping-lists/1/items/{item}/purchase"
     response = client.post(path)
     assert response.status_code == 200, response.text
@@ -137,3 +140,29 @@ def test_shopping_purchase_requires_purchase_and_delete_permissions(
     )
     assert client.get("/api/stock/products/1").json()["stock_amount"] == 0
     assert len(client.get("/api/v2/shopping-lists/1").json()["items"]) == 1
+
+
+def test_extension_shopping_add_stores_stock_quantity_for_native_consumers(client, api_headers):
+    client.headers.update(api_headers)
+    case = client.post("/api/objects/quantity_units", json={"name": "Case"}).json()[
+        "created_object_id"
+    ]
+    assert (
+        client.post(
+            "/api/objects/quantity_unit_conversions",
+            json={"product_id": 1, "from_qu_id": case, "to_qu_id": 1, "factor": 6},
+        ).status_code
+        == 200
+    )
+    created = client.post(
+        "/api/v2/shopping-lists/items", json={"product_id": 1, "amount": 2, "qu_id": int(case)}
+    )
+    assert created.status_code == 200, created.text
+    item = created.json()["id"]
+    assert created.json()["amount"] == 2
+    saved = client.get(f"/api/objects/shopping_list/{item}").json()
+    assert saved["amount"] == 12 and saved["qu_id"] == int(case)
+    assert client.get("/api/v2/shopping-lists/1").json()["items"][0]["amount"] == 2
+    client.put(f"/api/objects/shopping_list/{item}", json={"done": 1})
+    assert client.post(f"/api/v2/shopping-lists/1/items/{item}/purchase").status_code == 200
+    assert client.get("/api/stock/products/1").json()["stock_amount"] == 12

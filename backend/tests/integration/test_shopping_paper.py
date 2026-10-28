@@ -269,3 +269,36 @@ def test_shopping_editor_keeps_imported_markup_in_data_and_authorizes_its_script
         client.get("/api/v2/shopping-lists/1", headers=api_headers).json()["description"]
         == imported
     )
+
+
+def test_shopping_paper_rounds_stock_amount_before_display_conversion(client, api_headers):
+    client.headers.update(api_headers)
+    case = client.post("/api/objects/quantity_units", json={"name": "Case"}).json()[
+        "created_object_id"
+    ]
+    assert (
+        client.post(
+            "/api/objects/quantity_unit_conversions",
+            json={"product_id": 1, "from_qu_id": case, "to_qu_id": 1, "factor": 6},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/api/objects/shopping_list", json={"product_id": 1, "amount": 6.1, "qu_id": case}
+        ).status_code
+        == 200
+    )
+    for rounding, expected in [("0", 6.1 / 6), ("1", 7 / 6)]:
+        assert (
+            client.put(
+                "/api/user/settings/shopping_list_round_up", json={"value": rounding}
+            ).status_code
+            == 204
+        )
+        response = client.get("/api/v2/shopping-lists/1/print")
+        assert response.status_code == 200, response.text
+        document = ShoppingDocument()
+        document.feed(response.text)
+        assert len(document.amounts) == 1
+        assert float(document.amounts[0]) == pytest.approx(expected)

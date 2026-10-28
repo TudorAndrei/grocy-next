@@ -51,6 +51,20 @@ class ShoppingService:
             else {},
         }
 
+    async def display_factors(self, shopping_list_id: int) -> dict[int, float]:
+        rows = await self.session.execute(
+            text(
+                "SELECT sl.id, COALESCE((SELECT c.factor "
+                "FROM cache__quantity_unit_conversions_resolved c "
+                "WHERE c.product_id=sl.product_id AND c.from_qu_id=p.qu_id_stock "
+                "AND c.to_qu_id=sl.qu_id LIMIT 1), 1) AS factor "
+                "FROM shopping_list sl LEFT JOIN products p ON p.id=sl.product_id "
+                "WHERE sl.shopping_list_id=:list_id"
+            ),
+            {"list_id": shopping_list_id},
+        )
+        return {row.id: float(row.factor) for row in rows}
+
     async def get_list(self, shopping_list_id: int = 1) -> dict:
         shopping_list = await self.session.get(ShoppingList, shopping_list_id)
         if shopping_list is None:
@@ -61,6 +75,7 @@ class ShoppingService:
             .order_by(ShoppingListItem.id)
         )
         items = (await self.session.execute(stmt)).scalars().all()
+        factors = await self.display_factors(shopping_list_id)
         return {
             "id": shopping_list.id,
             "name": shopping_list.name,
@@ -69,7 +84,7 @@ class ShoppingService:
                 {
                     "id": item.id,
                     "product_id": item.product_id,
-                    "amount": float(item.amount),
+                    "amount": float(item.amount) * factors[item.id],
                     "note": item.note,
                     "done": bool(item.done),
                     "qu_id": item.qu_id,
@@ -93,7 +108,7 @@ class ShoppingService:
             raise GrocyError("Amount must be positive", code="invalid_amount")
         product = await self.products.get(product_id)
         unit_id = qu_id or product.qu_id_purchase
-        await UnitsService(self.session).convert(
+        stock_amount = await UnitsService(self.session).convert(
             amount, unit_id, product.qu_id_stock, product_id=product_id
         )
         shopping_list = await self.session.get(ShoppingList, shopping_list_id)
@@ -101,7 +116,7 @@ class ShoppingService:
             raise NotFoundError(f"Shopping list {shopping_list_id} not found")
         item = ShoppingListItem(
             product_id=product_id,
-            amount=amount,
+            amount=stock_amount,
             shopping_list_id=shopping_list_id,
             note=note,
             qu_id=unit_id,
@@ -112,7 +127,7 @@ class ShoppingService:
         return {
             "id": item.id,
             "product_id": item.product_id,
-            "amount": float(item.amount),
+            "amount": float(amount),
             "note": item.note,
             "done": bool(item.done),
             "qu_id": item.qu_id,
@@ -120,7 +135,6 @@ class ShoppingService:
 
     async def purchase_item(self, actor: Actor, shopping_list_id: int, item_id: int) -> dict:
         from grocy.domains.stock.service import StockService
-        from grocy.domains.units.service import UnitsService
 
         await self._ensure_list(shopping_list_id)
         item = await self.session.get(ShoppingListItem, item_id)
@@ -134,14 +148,8 @@ class ShoppingService:
         purchased = item.product_id is not None
         if item.product_id is not None:
             product = await self.products.get(item.product_id)
-            amount = await UnitsService(self.session).convert(
-                item.amount,
-                item.qu_id or product.qu_id_stock,
-                product.qu_id_stock,
-                product_id=product.id,
-            )
             bookings = await StockService(self.session).purchase(
-                actor, product.id, amount, note=item.note, commit=False
+                actor, product.id, item.amount, note=item.note, commit=False
             )
         await self.session.delete(item)
         await self.session.commit()
@@ -155,10 +163,8 @@ class ShoppingService:
         shopping_list_id: int = 1,
         note: str | None = None,
     ) -> Decimal:
-        from grocy.domains.units.service import UnitsService
-
         await self._ensure_list(shopping_list_id)
-        product = await self.products.get(product_id)
+        await self.products.get(product_id)
         rows = (
             (
                 await self.session.execute(
@@ -172,15 +178,7 @@ class ShoppingService:
             .scalars()
             .all()
         )
-        present = Decimal("0")
-        units = UnitsService(self.session)
-        for row in rows:
-            present += await units.convert(
-                row.amount,
-                row.qu_id or product.qu_id_stock,
-                product.qu_id_stock,
-                product_id=product_id,
-            )
+        present = sum((row.amount for row in rows), Decimal("0"))
         missing = max(Decimal("0"), amount - present)
         if missing:
             await self._upsert_item(
@@ -384,13 +382,6 @@ class ShoppingService:
             )
             self.session.add(item)
         else:
-            if item.qu_id:
-                from grocy.domains.units.service import UnitsService
-
-                product = await self.products.get(product_id)
-                amount = await UnitsService(self.session).convert(
-                    amount, product.qu_id_stock, item.qu_id, product_id=product_id
-                )
             item.amount += amount
             if note is not None:
                 item.note = note
