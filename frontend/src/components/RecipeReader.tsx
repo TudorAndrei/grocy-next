@@ -16,7 +16,7 @@ import { PageHeader } from "./PageHeader";
 import { RichText } from "./RichDescription";
 import { useNotify } from "./Toaster";
 import { RecipeMealPlanAction } from "./RecipeMealPlan";
-import { RecipeCodeActions } from "./RecipeCodeActions";
+import { GrocycodeActions } from "./GrocycodeActions";
 import { useModalDialog } from "@/hooks/useModalDialog";
 
 export function RecipeReader({
@@ -189,7 +189,7 @@ export function RecipeReader({
             <FullscreenToggle />
             <FullscreenPrint />
             <RecipeMealPlanAction id={card.id} name={card.name} />
-            <RecipeCodeActions id={card.id} name={card.name} />
+            <GrocycodeActions kind="recipe" id={card.id} name={card.name} />
             {card.id === view.recipe_id ? (
               <label className="field servings-field">
                 <span>{t("Desired servings")}</span>

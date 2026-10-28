@@ -8,6 +8,7 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { api } from "@/lib/api";
 import { usePreferences } from "@/lib/preferences";
 import { productsQuery, stockJournalQuery } from "@/hooks/queries";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 
 export const Route = createFileRoute("/journal")({
   component: JournalPage,
@@ -123,7 +124,13 @@ function JournalPage() {
                       {formatAmount(row.amount)}
                       {row.undone ? tr(" (undone)") : ""}
                     </td>
-                    <td>
+                    <td className="row-actions">
+                      <GrocycodeActions
+                        kind="product"
+                        id={row.product_id}
+                        name={productName(row.product_id)}
+                        compact
+                      />
                       {!row.undone ? (
                         <button
                           type="button"

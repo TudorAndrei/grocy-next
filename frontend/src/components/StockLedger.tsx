@@ -9,6 +9,7 @@ import { objectsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
 import { isoDay } from "@/lib/format";
 import { ErrorBlock } from "./ErrorBlock";
+import { GrocycodeActions } from "./GrocycodeActions";
 
 type Entry = {
   id: number;
@@ -251,25 +252,33 @@ export function StockLedger({ productId }: { productId: number }) {
                 ? tr(", best before %s", String(entry.best_before_date))
                 : ""}
             </span>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setEditEntry(entry);
-                setEntryAmount(String(entry.amount));
-                setEntryExpiry(entry.best_before_date ?? "");
-                setEntryPrice(entry.price == null ? "" : String(entry.price));
-                setEntryPurchased(entry.purchased_date ?? "");
-                setEntryLocation(String(entry.location_id));
-                setEntryStore(
-                  entry.shopping_location_id == null ? "" : String(entry.shopping_location_id),
-                );
-                setEntryNote(entry.note ?? "");
-                setEntryOpen(Boolean(entry.open));
-              }}
-            >
-              {tr("Edit")}
-            </button>
+            <div className="actions">
+              <GrocycodeActions
+                kind="stock-entry"
+                id={entry.id}
+                name={tr("Stock entry %s", String(entry.id))}
+                compact
+              />
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setEditEntry(entry);
+                  setEntryAmount(String(entry.amount));
+                  setEntryExpiry(entry.best_before_date ?? "");
+                  setEntryPrice(entry.price == null ? "" : String(entry.price));
+                  setEntryPurchased(entry.purchased_date ?? "");
+                  setEntryLocation(String(entry.location_id));
+                  setEntryStore(
+                    entry.shopping_location_id == null ? "" : String(entry.shopping_location_id),
+                  );
+                  setEntryNote(entry.note ?? "");
+                  setEntryOpen(Boolean(entry.open));
+                }}
+              >
+                {tr("Edit")}
+              </button>
+            </div>
           </li>
         ))}
       </ol>

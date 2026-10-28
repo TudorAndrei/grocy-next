@@ -23,7 +23,7 @@ import { LoadingBlock } from "./LoadingBlock";
 import { PageHeader } from "./PageHeader";
 import { RecipeReader } from "./RecipeReader";
 import { RecipeMealPlanAction } from "./RecipeMealPlan";
-import { RecipeCodeActions } from "./RecipeCodeActions";
+import { GrocycodeActions } from "./GrocycodeActions";
 
 type SortKey = "name" | "desired_servings" | "due_score" | "stock_status";
 
@@ -341,7 +341,12 @@ export function RecipeOverview({
                           <td className="recipe-plan-cell">
                             <div className="recipe-row-actions">
                               <RecipeMealPlanAction id={recipe.id} name={recipe.name} compact />
-                              <RecipeCodeActions id={recipe.id} name={recipe.name} compact />
+                              <GrocycodeActions
+                                kind="recipe"
+                                id={recipe.id}
+                                name={recipe.name}
+                                compact
+                              />
                             </div>
                           </td>
                         </tr>
@@ -374,7 +379,7 @@ export function RecipeOverview({
                     </Link>
                     <div className="recipe-gallery-actions">
                       <RecipeMealPlanAction id={recipe.id} name={recipe.name} />
-                      <RecipeCodeActions id={recipe.id} name={recipe.name} />
+                      <GrocycodeActions kind="recipe" id={recipe.id} name={recipe.name} />
                     </div>
                   </li>
                 ))}

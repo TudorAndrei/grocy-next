@@ -1,4 +1,5 @@
 import { useI18n } from "@/lib/i18n";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -102,6 +103,9 @@ function ProductsPage() {
                   {tr("Minimum")}
                 </th>
                 <th scope="col">{tr("Barcode")}</th>
+                <th scope="col">
+                  <span className="sr-only">{tr("Actions")}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -137,6 +141,14 @@ function ProductsPage() {
                     <td className="num amount">{catalog.amountText(product.id, amount)}</td>
                     <td className="num">{min > 0 ? catalog.amountText(product.id, min) : "—"}</td>
                     <td className="code">{product.barcode ?? "—"}</td>
+                    <td className="row-actions">
+                      <GrocycodeActions
+                        kind="product"
+                        id={product.id}
+                        name={product.name}
+                        compact
+                      />
+                    </td>
                   </tr>
                 );
               })}

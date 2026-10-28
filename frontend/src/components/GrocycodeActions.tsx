@@ -7,15 +7,46 @@ import { printLabel } from "@/lib/printing";
 import { Icon } from "./Icon";
 import { useNotify } from "./Toaster";
 
-export function RecipeCodeActions({
+export function GrocycodeActions({
   id,
+  kind,
   name,
   compact = false,
 }: {
   id: number;
+  kind: "product" | "recipe" | "chore" | "battery" | "stock-entry";
   name: string;
   compact?: boolean;
 }) {
+  const targets = {
+    product: {
+      label: "Product",
+      code: `/api/v2/products/${id}/grocycode`,
+      print: `/api/stock/products/${id}/printlabel`,
+    },
+    recipe: {
+      label: "Recipe",
+      code: `/api/v2/recipes/${id}/grocycode`,
+      print: `/api/recipes/${id}/printlabel`,
+    },
+    chore: {
+      label: "Chore",
+      code: `/api/v2/chores/${id}/grocycode`,
+      print: `/api/chores/${id}/printlabel`,
+    },
+    battery: {
+      label: "Battery",
+      code: `/api/v2/batteries/${id}/grocycode`,
+      print: `/api/batteries/${id}/printlabel`,
+    },
+    "stock-entry": {
+      label: "Stock entry",
+      code: `/api/v2/stock/entries/${id}/grocycode`,
+      print: `/api/stock/entry/${id}/printlabel`,
+    },
+  };
+
+  const target = targets[kind];
   const { t } = useI18n();
   const features = useFeatures();
   const notify = useNotify();
@@ -26,14 +57,13 @@ export function RecipeCodeActions({
   const error = (failure: Error) => notify({ message: t(failure.message), tone: "error" });
 
   const download = useMutation({
-    mutationFn: () =>
-      downloadApiDocument(`/api/v2/recipes/${id}/grocycode?download=true`, "Grocycode.png"),
+    mutationFn: () => downloadApiDocument(`${target.code}?download=true`, "Grocycode.png"),
     onSuccess: () => popover.current?.hidePopover(),
     onError: error,
   });
 
   const label = useMutation({
-    mutationFn: () => printLabel(`/api/recipes/${id}/printlabel`, features.query.data ?? {}),
+    mutationFn: () => printLabel(target.print, features.query.data ?? {}),
     onSuccess: () => {
       popover.current?.hidePopover();
       notify({ message: t("Label request sent") });
@@ -42,7 +72,7 @@ export function RecipeCodeActions({
   });
 
   return (
-    <div className="recipe-code-control">
+    <div className="grocycode-control">
       <button
         type="button"
         className={compact ? "btn btn-ghost btn-sm" : "btn btn-ghost"}
@@ -58,7 +88,7 @@ export function RecipeCodeActions({
         id={prefix}
         ref={popover}
         popover="auto"
-        className="recipe-code-popover"
+        className="grocycode-popover"
         data-expanded={expanded || undefined}
         role="group"
         aria-label={t("Grocycode")}
@@ -76,7 +106,7 @@ export function RecipeCodeActions({
           disabled={download.isPending || label.isPending}
           onClick={() => download.mutate()}
         >
-          {t("Download %s Grocycode", t("Recipe"))}
+          {t("Download %s Grocycode", t(target.label))}
         </button>
         {features.enabled("LABEL_PRINTER") ? (
           <button
@@ -85,7 +115,7 @@ export function RecipeCodeActions({
             disabled={download.isPending || label.isPending}
             onClick={() => label.mutate()}
           >
-            {t("Print %s Grocycode on label printer", t("Recipe"))}
+            {t("Print %s Grocycode on label printer", t(target.label))}
           </button>
         ) : null}
       </div>

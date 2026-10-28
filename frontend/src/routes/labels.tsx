@@ -1,14 +1,16 @@
 import { useI18n } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { openApiDocument } from "@/lib/open-document";
-import { batteriesQuery, choresQuery, productsQuery, recipesQuery } from "@/hooks/queries";
+import { batteriesQuery, choresQuery, productsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
+import { api, queryKeys } from "@/lib/api";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 
 export const Route = createFileRoute("/labels")({
   component: LabelsPage,
@@ -32,31 +34,28 @@ function LabelsPage() {
   const enabledTabs = tabs.filter((item) => features.routeEnabled(`/${item.id}`));
   const [selection, setTab] = useState<LabelTab>("products");
   const tab = enabledTabs.some((item) => item.id === selection) ? selection : enabledTabs[0]?.id;
-  const [busy, setBusy] = useState<string | null>(null);
   const products = useQuery({ ...productsQuery(), enabled: features.enabled("STOCK") });
-  const recipes = useQuery({ ...recipesQuery(), enabled: features.enabled("RECIPES") });
+
+  const recipes = useQuery({
+    queryKey: queryKeys.recipeOverview,
+    queryFn: api.getRecipeOverview,
+    enabled: features.enabled("RECIPES"),
+  });
+
   const chores = useQuery({ ...choresQuery(), enabled: features.enabled("CHORES") });
   const batteries = useQuery({ ...batteriesQuery(), enabled: features.enabled("BATTERIES") });
 
-  const open = async (key: string, path: string) => {
-    setBusy(key);
+  const thermal = useMutation({
+    mutationFn: () => openApiDocument("/api/print/shoppinglist/thermal"),
+  });
 
-    try {
-      await openApiDocument(path);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const error = products.error || recipes.error || chores.error || batteries.error;
+  const error = products.error || recipes.error || chores.error || batteries.error || thermal.error;
 
   return (
     <>
       <PageHeader
         title={tr("Labels & printouts")}
-        lead={tr(
-          "Open Grocy label and list layouts in a new tab. Your API key is sent with each request.",
-        )}
+        lead={tr("Download codes or send labels to the configured printer.")}
       />
       <Tabs ariaLabel={tr("Label types")} value={tab ?? ""} onChange={setTab} tabs={enabledTabs} />
       {error ? (
@@ -68,18 +67,7 @@ function LabelsPage() {
           {(products.data ?? []).map((product) => (
             <li className="product-row management-row" key={product.id}>
               <span>{product.name}</span>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  disabled={busy === `p-${product.id}`}
-                  onClick={() =>
-                    open(`p-${product.id}`, `/api/stock/products/${product.id}/printlabel`)
-                  }
-                >
-                  {tr("Stock label")}
-                </button>
-              </div>
+              <GrocycodeActions kind="product" id={product.id} name={product.name} />
             </li>
           ))}
         </ul>
@@ -90,14 +78,7 @@ function LabelsPage() {
           {(recipes.data ?? []).map((recipe) => (
             <li className="product-row management-row" key={recipe.id}>
               <span>{recipe.name}</span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={busy === `r-${recipe.id}`}
-                onClick={() => open(`r-${recipe.id}`, `/api/recipes/${recipe.id}/printlabel`)}
-              >
-                {tr("Recipe label")}
-              </button>
+              <GrocycodeActions kind="recipe" id={recipe.id} name={recipe.name} />
             </li>
           ))}
         </ul>
@@ -108,14 +89,11 @@ function LabelsPage() {
           {(chores.data ?? []).map((chore) => (
             <li className="product-row management-row" key={chore.id}>
               <span>{chore.chore_name ?? chore.name ?? tr("Chore %s", String(chore.id))}</span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={busy === `c-${chore.id}`}
-                onClick={() => open(`c-${chore.id}`, `/api/chores/${chore.id}/printlabel`)}
-              >
-                {tr("Chore label")}
-              </button>
+              <GrocycodeActions
+                kind="chore"
+                id={chore.id}
+                name={chore.chore_name ?? chore.name ?? tr("Chore %s", String(chore.id))}
+              />
             </li>
           ))}
         </ul>
@@ -128,14 +106,11 @@ function LabelsPage() {
               <span>
                 {battery.battery?.name ?? battery.name ?? tr("Battery %s", String(battery.id))}
               </span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={busy === `b-${battery.id}`}
-                onClick={() => open(`b-${battery.id}`, `/api/batteries/${battery.id}/printlabel`)}
-              >
-                {tr("Battery label")}
-              </button>
+              <GrocycodeActions
+                kind="battery"
+                id={battery.id}
+                name={battery.battery?.name ?? battery.name ?? tr("Battery %s", String(battery.id))}
+              />
             </li>
           ))}
         </ul>
@@ -146,8 +121,8 @@ function LabelsPage() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={busy === "shopping-thermal"}
-            onClick={() => open("shopping-thermal", "/api/print/shoppinglist/thermal")}
+            disabled={thermal.isPending}
+            onClick={() => thermal.mutate()}
           >
             {tr("Open thermal list")}
           </button>

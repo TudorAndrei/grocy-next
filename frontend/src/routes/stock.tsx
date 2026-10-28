@@ -14,6 +14,7 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { QuickMoves } from "@/components/QuickMoves";
 import { useFeatures } from "@/lib/features";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
@@ -297,6 +298,7 @@ function StockPage() {
                     ) : null}
                     <td className="row-actions">
                       <QuickMoves productId={row.productId} name={row.name} amount={row.amount} />
+                      <GrocycodeActions kind="product" id={row.productId} name={row.name} compact />
                     </td>
                   </tr>
                 );

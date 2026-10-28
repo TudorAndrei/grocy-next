@@ -486,10 +486,10 @@ kbd {
   align-items: center;
   gap: 4px;
 }
-.recipe-code-control {
+.grocycode-control {
   display: inline-flex;
 }
-.recipe-code-popover {
+.grocycode-popover {
   position: fixed;
   inset: auto;
   margin: 0;
@@ -502,7 +502,8 @@ kbd {
   background: var(--surface);
   color: var(--ink);
 }
-.recipe-code-popover .btn {
+.grocycode-popover .btn {
+  display: flex;
   width: 100%;
   justify-content: start;
   text-align: start;
@@ -3089,7 +3090,7 @@ a.btn[aria-disabled="true"] {
 }
 
 @media print {
-  .recipe-code-popover {
+  .grocycode-popover {
     display: none !important;
   }
   html:has(.recipe-reader) {

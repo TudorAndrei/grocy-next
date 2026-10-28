@@ -8,6 +8,7 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { HouseholdTable } from "@/components/HouseholdTable";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 
 export const Route = createFileRoute("/batteries")({
   component: BatteriesPage,
@@ -56,14 +57,17 @@ function BatteriesPage() {
             due: nextCharge(battery),
             dueEmpty: battery.last_tracked_time ? "No interval" : "Never charged",
             action: (
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={charge.isPending && charge.variables === battery.id}
-                onClick={() => charge.mutate(battery.id)}
-              >
-                {tr("Charged")}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={charge.isPending && charge.variables === battery.id}
+                  onClick={() => charge.mutate(battery.id)}
+                >
+                  {tr("Charged")}
+                </button>
+                <GrocycodeActions kind="battery" id={battery.id} name={battery.name} compact />
+              </>
             ),
           }))}
         />

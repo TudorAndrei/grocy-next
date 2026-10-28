@@ -14,7 +14,7 @@ import { RevisionHistory } from "@/components/RevisionHistory";
 import { ProductMerge } from "@/components/ProductMerge";
 import { StockActions } from "@/components/StockActions";
 import { StockLedger } from "@/components/StockLedger";
-import { openApiDocument } from "@/lib/open-document";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { useFeatures } from "@/lib/features";
 import { EntityPicture } from "@/components/EntityPicture";
 
@@ -67,17 +67,7 @@ function ProductDetailPage() {
         }
         title={product?.name ?? tr("Product #%s", String(productId))}
         lead={facts.length ? facts.join(" · ") : product?.description}
-        actions={
-          features.enabled("LABEL_PRINTER") ? (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => openApiDocument(`/api/stock/products/${id}/printlabel`)}
-            >
-              {tr("Print label")}
-            </button>
-          ) : null
-        }
+        actions={product ? <GrocycodeActions kind="product" id={id} name={product.name} /> : null}
       />
 
       <div className="detail">

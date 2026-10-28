@@ -7,6 +7,7 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { HouseholdTable } from "@/components/HouseholdTable";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 
 export const Route = createFileRoute("/chores")({
   component: ChoresPage,
@@ -43,14 +44,17 @@ function ChoresPage() {
             due: chore.next_estimated_execution_time,
             dueEmpty: tr("No schedule"),
             action: (
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={execute.isPending && execute.variables === chore.id}
-                onClick={() => execute.mutate(chore.id)}
-              >
-                {tr("Done")}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={execute.isPending && execute.variables === chore.id}
+                  onClick={() => execute.mutate(chore.id)}
+                >
+                  {tr("Done")}
+                </button>
+                <GrocycodeActions kind="chore" id={chore.id} name={chore.name} compact />
+              </>
             ),
           }))}
         />
