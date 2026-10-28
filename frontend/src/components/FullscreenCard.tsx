@@ -114,6 +114,7 @@ export function FullscreenCard({
 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        if (document.querySelector("[popover][data-expanded]")) return;
         event.preventDefault();
         change(false);
 
@@ -126,7 +127,7 @@ export function FullscreenCard({
         ...card!.querySelectorAll<HTMLElement>(
           'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), summary, iframe, object, [tabindex]:not([tabindex="-1"])',
         ),
-      ].filter((element) => !element.closest("[hidden], [inert]"));
+      ].filter((element) => !element.closest("[hidden], [inert], [popover]:not([data-expanded])"));
 
       const first = controls[0];
       const last = controls.at(-1);

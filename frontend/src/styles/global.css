@@ -481,6 +481,33 @@ kbd {
 .recipe-plan-cell {
   width: 1%;
 }
+.recipe-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.recipe-code-control {
+  display: inline-flex;
+}
+.recipe-code-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  position-area: block-end span-inline-start;
+  position-try-fallbacks: flip-block, flip-inline;
+  width: min(320px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.recipe-code-popover .btn {
+  width: 100%;
+  justify-content: start;
+  text-align: start;
+  white-space: normal;
+}
 .recipe-gallery-actions {
   padding: 0 16px 16px;
 }
@@ -3062,6 +3089,9 @@ a.btn[aria-disabled="true"] {
 }
 
 @media print {
+  .recipe-code-popover {
+    display: none !important;
+  }
   html:has(.recipe-reader) {
     color-scheme: light !important;
     background: #fff;

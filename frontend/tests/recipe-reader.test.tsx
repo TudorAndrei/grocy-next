@@ -5,11 +5,24 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
+import { writeApiConfig } from "@/lib/config";
 import { pictureBytes } from "./fixtures/picture";
 
 afterEach(() => window.history.replaceState(null, "", "/"));
 
 beforeEach(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hidePopover");
+  Object.defineProperty(HTMLElement.prototype, "hidePopover", {
+    configurable: true,
+    value: function (this: HTMLElement) {
+      this.dispatchEvent(new Event("toggle"));
+    },
+  });
+  onTestFinished(() => {
+    if (descriptor) Object.defineProperty(HTMLElement.prototype, "hidePopover", descriptor);
+    else Reflect.deleteProperty(HTMLElement.prototype, "hidePopover");
+  });
+
   for (const method of ["showModal", "close"] as const) {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, method);
     Object.defineProperty(HTMLDialogElement.prototype, method, {
@@ -253,7 +266,10 @@ function mount(
 
       if (path === "/api/v2/recipes/7/view") return Response.json(copiedView);
 
-      if (path.startsWith("/api/files/recipepictures/"))
+      if (
+        path.startsWith("/api/files/recipepictures/") ||
+        path.includes("/grocycode?download=true")
+      )
         return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
 
       if (path === "/api/objects/products")
@@ -725,6 +741,46 @@ test("the meal-plan feature flag controls recipe planning actions", async () => 
   await screen.findByRole("heading", { level: 1, name: "Main dish" });
   expect(screen.queryByRole("button", { name: "Add to meal plan" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Add Main dish to meal plan" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Main dish Grocycode" })).toBeTruthy();
+  app.unmount();
+  app.client.clear();
+});
+
+test("recipe code downloads use the selected recipe and authenticated PNG transport", async () => {
+  writeApiConfig({ baseUrl: "/", apiKey: "download-key" });
+  const app = mount(fixture(), []);
+  const user = userEvent.setup();
+  const downloads: Array<{ href: string; name: string }> = [];
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    downloads.push({ href: this.href, name: this.download });
+  });
+  const create = vi.spyOn(URL, "createObjectURL");
+  await screen.findByRole("heading", { level: 1, name: "Main dish" });
+  await user.click(screen.getByRole("tab", { name: "Sauce" }));
+  const reader = screen.getByRole("region", { name: "Sauce" });
+  const group = within(reader).getByRole("group", { hidden: true });
+  await user.click(
+    within(group).getByRole("button", { name: "Download Recipe Grocycode", hidden: true }),
+  );
+  await waitFor(() => expect(downloads).toEqual([{ href: "blob:gallery", name: "Grocycode.png" }]));
+
+  const call = vi
+    .mocked(fetch)
+    .mock.calls.find(([path]) =>
+      String(path).endsWith("/api/v2/recipes/2/grocycode?download=true"),
+    );
+
+  expect(call?.[0]).toBe("/api/v2/recipes/2/grocycode?download=true");
+  expect(new Headers(call?.[1]?.headers).get("GROCY-API-KEY")).toBe("download-key");
+  expect(create.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ type: "image/png" }));
+  expect(
+    within(group).queryByRole("button", {
+      name: "Print Recipe Grocycode on label printer",
+      hidden: true,
+    }),
+  ).toBeNull();
   app.unmount();
   app.client.clear();
 });
