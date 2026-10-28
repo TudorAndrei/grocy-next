@@ -1095,6 +1095,45 @@ input[type="checkbox"] {
   font-size: 15px;
 }
 
+.number-picker {
+  display: flex;
+  min-width: 0;
+}
+
+.number-picker > input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink);
+  appearance: textfield;
+}
+
+.number-picker > input::-webkit-inner-spin-button,
+.number-picker > input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.number-picker-step.btn {
+  flex: 0 0 44px;
+  min-height: 44px;
+  padding: 0;
+  border-color: var(--line);
+  border-inline-start-width: 0;
+  border-radius: 0;
+  background: var(--surface-sunk);
+  color: var(--ink-2);
+}
+
+.number-picker-step:last-child {
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm);
+}
+
 .field-row {
   display: flex;
   flex-wrap: wrap;

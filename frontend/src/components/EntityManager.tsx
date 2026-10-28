@@ -23,6 +23,7 @@ import {
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { DescriptionEditor } from "./DescriptionEditor";
+import { NumberPicker } from "./NumberPicker";
 import { RichText } from "./RichDescription";
 import { useFeatures } from "@/lib/features";
 import { userSettingsQuery } from "@/hooks/queries";
@@ -1237,15 +1238,24 @@ export function EntityManager({
                         required={field.required}
                         onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
                       />
+                    ) : field.precision ? (
+                      <NumberPicker
+                        id={id}
+                        label={field.label}
+                        value={values[field.key] ?? field.value ?? ""}
+                        required={field.required}
+                        disabled={
+                          (field.key === "tare_weight" && !tareEditable) ||
+                          (field.key === "min_stock_amount" && minimumStockDisabled)
+                        }
+                        min={field.min === "step" ? amountStep : field.min}
+                        step={field.precision === "amount" ? amountStep : "1"}
+                        onChange={(value) => selectValue(field, value, true)}
+                      />
                     ) : (
                       <input
                         id={id}
                         autoFocus={!!editor && field.key === "name"}
-                        disabled={
-                          entity === "products" &&
-                          ((field.key === "tare_weight" && !tareEditable) ||
-                            (field.key === "min_stock_amount" && minimumStockDisabled))
-                        }
                         type={field.type ?? "text"}
                         value={
                           field.type === "checkbox"
@@ -1271,11 +1281,7 @@ export function EntityManager({
                             ? (entity === "quantity_unit_conversions" && field.key === "factor") ||
                               (entity === "product_barcodes" && field.key === "amount")
                               ? amountStep
-                              : field.precision === "amount"
-                                ? amountStep
-                                : field.precision === "integer"
-                                  ? "1"
-                                  : "any"
+                              : "any"
                             : undefined
                         }
                         onChange={(e) => {
@@ -1290,19 +1296,6 @@ export function EntityManager({
                               : e.target.value,
                             field.type !== "checkbox",
                           );
-                        }}
-                        onKeyDown={(e) => {
-                          if (!field.precision || !["ArrowUp", "ArrowDown"].includes(e.key)) return;
-
-                          e.preventDefault();
-
-                          const delta = e.key === "ArrowUp" ? 1 : -1;
-
-                          const value = Number.parseFloat(
-                            e.currentTarget.value || (delta === 1 ? "0" : "1"),
-                          );
-
-                          selectValue(field, String(value + delta), true);
                         }}
                       />
                     )}

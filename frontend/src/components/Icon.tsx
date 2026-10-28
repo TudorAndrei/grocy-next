@@ -1,5 +1,7 @@
 const PATHS = {
   sort: ["m8 8 4-4 4 4", "M12 4v16"],
+  up: ["M12 20V4", "m6 10 6-6 6 6"],
+  down: ["M12 4v16", "m6 14 6 6 6-6"],
   expand: ["M9 3H3v6M15 3h6v6M21 15v6h-6M9 21H3v-6"],
   clock: ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z", "M12 7v5l3 2"],
   today: ["M4 5h16v15H4z", "M4 9h16", "M8 3v4M16 3v4", "M8 13h3v3H8z"],

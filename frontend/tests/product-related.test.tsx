@@ -644,6 +644,9 @@ test("disabled product tare weight retains its stored value until the user enabl
   const weight = await screen.findByLabelText<HTMLInputElement>("Container weight");
   expect(weight.disabled).toBe(true);
   expect(weight.value).toBe("120");
+  await user.click(screen.getByRole("button", { name: "Increase Container weight" }));
+  expect(weight.value).toBe("121");
+  expect(weight.disabled).toBe(true);
   await user.click(await availableButton("Save & continue"));
   await waitFor(() =>
     expect(writes.some((write) => write.path === "/api/objects/products/7")).toBe(true),

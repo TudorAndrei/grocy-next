@@ -309,16 +309,46 @@ test.each([0, 2])(
     }
 
     const minimum = screen.getByLabelText<HTMLInputElement>("Minimum stock");
+    const increase = screen.getByRole("button", { name: "Increase Minimum stock" });
+    const decrease = screen.getByRole("button", { name: "Decrease Minimum stock" });
+    await user.clear(minimum);
+    await user.click(decrease);
+    expect(minimum.value).toBe("0");
+    await user.click(decrease);
+    expect(minimum.value).toBe("-1");
+    await user.click(save);
+    expect(writes).toEqual([]);
+    await user.click(increase);
+    expect(minimum.value).toBe("0");
+    await user.click(minimum);
     await user.clear(minimum);
     await user.keyboard("{ArrowDown}");
     expect(minimum.value).toBe("0");
     await user.keyboard("{ArrowUp}");
     expect(minimum.value).toBe("1");
+    await user.click(increase);
+    expect(minimum.value).toBe("2");
+    await user.click(decrease);
+    expect(minimum.value).toBe("1");
+    await user.click(minimum);
+    await user.tab();
+    expect(document.activeElement).toBe(increase);
+    await user.keyboard("{Enter}");
+    expect(minimum.value).toBe("2");
+    await user.tab();
+    expect(document.activeElement).toBe(decrease);
+    await user.keyboard(" ");
+    expect(minimum.value).toBe("1");
+    expect(writes).toEqual([]);
 
     if (precision === 2) {
       await user.clear(minimum);
       await user.type(minimum, "0.25");
       await user.keyboard("{ArrowUp}");
+      expect(minimum.value).toBe("1.25");
+      await user.click(decrease);
+      expect(minimum.value).toBe("0.25");
+      await user.click(increase);
       expect(minimum.value).toBe("1.25");
       await user.clear(minimum);
       await user.type(minimum, "1");
@@ -418,6 +448,9 @@ test("parent minimum rules retain disabled values and refresh when the selected 
   let minimum = screen.getByLabelText<HTMLInputElement>("Minimum stock");
   await waitFor(() => expect(minimum.disabled).toBe(true));
   expect(minimum.value).toBe("7");
+  await user.click(screen.getByRole("button", { name: "Increase Minimum stock" }));
+  expect(minimum.value).toBe("8");
+  expect(minimum.disabled).toBe(true);
   await user.selectOptions(screen.getByLabelText("Default location"), "3");
   await user.click(screen.getByRole("button", { name: "Save product" }));
   await waitFor(() => expect(writes).toHaveLength(1));
