@@ -20,7 +20,7 @@ The current repair work covers these confirmed differences:
 
 - Stock undo reads booking arrays and refreshes the entry list.
 - Stock forms save price, store, purchase date, note, location, and open state.
-- Shopping purchases preserve saved units and use one database transaction per item. A retry does not purchase a removed item again.
+- Shopping rows store stock-unit quantities. The web response and paper output convert them to the selected display unit. The Python add extension converts incoming display quantities before storage. Shopping purchases use the stored stock quantity and one database transaction per item. A retry does not purchase a removed item again.
 - Calendar export downloads the authenticated calendar document.
 - Chore and battery forms send the legacy date and time format.
 - Stock list filters use the same query rules as generic lists.
@@ -194,6 +194,10 @@ The final release checks used `/house`. Both links from a generated shopping doc
 The mode-file changes passed 34 selected Python tests, formatting, lint, and type checks. Six captured paths from the pinned native FilesService cover production, development, locale-based demo storage, a custom prerelease suffix, the suffix `0`, and an empty suffix. Five new checks failed on the previous source. The corrected checks confirm that a demo upload and cache deletion retain production files, and that downloaded barcode pictures are served from the selected mode directory.
 
 The Python release image built without PHP. Real HTTP checks saved and downloaded a demo file in the `de` directory and a prerelease file in `custom_mode`. The demo named-file route returned the same bytes. Both disposable containers were removed. Files saved by older Python builds in the shared directory are not moved automatically; copy needed demo or prerelease files to the selected mode directory when upgrading those builds.
+
+The shopping quantity repair passed 20 selected Python tests, formatting, lint, and type checks. The checks cover native stock-unit rows, new extension rows, single purchases, retry, paper conversion, and rounding before display conversion. All three quantity regression cases failed on the previous source. Related recipe and shopping cases passed. The Python release image built without PHP.
+
+A real HTTP comparison confirmed that the pinned native page displays 12 stored pieces as 2 cases when a case contains six pieces. The Python release displayed and printed the same quantity, booked 12 pieces once, and stored a new two-case row as 12 pieces. SQLite conversion factors can give the JSON display amount a small floating-point remainder; the normal display formatter removes it. Both disposable servers were removed. Rows made through the add extension in older Python builds can contain display-unit amounts and need quantity review; imported legacy rows already use stock-unit amounts and must not be multiplied again. Shopping item edit controls remain open work.
 
 Run the normal tests without PHP:
 
