@@ -16,7 +16,7 @@ beforeEach(() => {
   });
 });
 
-function mount(path: string) {
+function mount(path: string, labelPrinter = true) {
   writeApiConfig({ baseUrl: "/house", apiKey: "code-key" });
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal(
@@ -42,7 +42,7 @@ function mount(path: string) {
 
     if (path === "/api/system/config")
       return Response.json({
-        FEATURE_FLAG_LABEL_PRINTER: true,
+        FEATURE_FLAG_LABEL_PRINTER: labelPrinter,
         LABEL_PRINTER_RUN_SERVER: false,
         LABEL_PRINTER_WEBHOOK: "http://printer.test/label",
       });
@@ -98,6 +98,11 @@ function mount(path: string) {
       return Response.json({ items: [] });
 
     if (path.endsWith("/printlabel")) return Response.json({ grocycode: "test-label" });
+
+    if (path === "/api/v2/stock/entries/991/label")
+      return new Response("<html><title>Stock label</title><body>Stock label</body></html>", {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
 
     if (path.includes("/grocycode?download=true"))
       return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
@@ -185,4 +190,30 @@ test.each([
 
   expect(request).toBeTruthy();
   expect(new Headers(request?.[1]?.headers).get("GROCY-API-KEY")).toBe("code-key");
+});
+
+test("stock paper labels open as authenticated HTML with the printer flag off", async () => {
+  const fetchMock = mount("/products/17", false);
+  const open = vi.spyOn(window, "open").mockReturnValue(null);
+  const create = vi.spyOn(URL, "createObjectURL");
+  const control = await screen.findByRole("button", { name: "Stock entry 991 Grocycode" });
+  const menu = document.getElementById(control.getAttribute("aria-controls")!)!;
+  await userEvent.setup().click(
+    within(menu).getByRole("button", {
+      name: "Open stock entry label in new window",
+      hidden: true,
+    }),
+  );
+  await waitFor(() =>
+    expect(open).toHaveBeenCalledWith("blob:code", "_blank", "noopener,noreferrer"),
+  );
+
+  const request = fetchMock.mock.calls.find(
+    ([url]) => String(url) === "/house/api/v2/stock/entries/991/label",
+  );
+
+  expect(new Headers(request?.[1]?.headers).get("GROCY-API-KEY")).toBe("code-key");
+  expect(create.mock.calls.at(-1)?.[0]).toEqual(
+    expect.objectContaining({ type: "text/html;charset=utf-8" }),
+  );
 });

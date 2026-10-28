@@ -6,7 +6,7 @@ import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
 import { unitLabel } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
-import { openApiDocument } from "@/lib/open-document";
+import { ThermalPrintAction } from "@/components/ThermalPrintAction";
 import type { ShoppingList, ShoppingListItem } from "@/lib/types";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Icon } from "@/components/Icon";
@@ -248,15 +248,7 @@ function ShoppingPage() {
             <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
               {tr("Print")}
             </button>
-            {features.enabled("THERMAL_PRINTER") ? (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => openApiDocument(`/api/print/shoppinglist/thermal?list=${listId}`)}
-              >
-                {tr("Thermal print")}
-              </button>
-            ) : null}
+            <ThermalPrintAction listId={listId} />
             {features.enabled("LABEL_PRINTER") ? (
               <Link to="/labels" className="btn btn-ghost">
                 {tr("Labels")}

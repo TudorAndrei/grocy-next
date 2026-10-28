@@ -1,12 +1,12 @@
 import { useI18n } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
-import { openApiDocument } from "@/lib/open-document";
+import { ThermalPrintAction } from "@/components/ThermalPrintAction";
 import { batteriesQuery, choresQuery, productsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
 import { api, queryKeys } from "@/lib/api";
@@ -31,7 +31,12 @@ function LabelsPage() {
     { id: "shopping", label: tr("Shopping") },
   ];
 
-  const enabledTabs = tabs.filter((item) => features.routeEnabled(`/${item.id}`));
+  const enabledTabs = tabs.filter(
+    (item) =>
+      features.routeEnabled(`/${item.id}`) &&
+      (item.id !== "shopping" || features.enabled("THERMAL_PRINTER")),
+  );
+
   const [selection, setTab] = useState<LabelTab>("products");
   const tab = enabledTabs.some((item) => item.id === selection) ? selection : enabledTabs[0]?.id;
   const products = useQuery({ ...productsQuery(), enabled: features.enabled("STOCK") });
@@ -45,11 +50,7 @@ function LabelsPage() {
   const chores = useQuery({ ...choresQuery(), enabled: features.enabled("CHORES") });
   const batteries = useQuery({ ...batteriesQuery(), enabled: features.enabled("BATTERIES") });
 
-  const thermal = useMutation({
-    mutationFn: () => openApiDocument("/api/print/shoppinglist/thermal"),
-  });
-
-  const error = products.error || recipes.error || chores.error || batteries.error || thermal.error;
+  const error = products.error || recipes.error || chores.error || batteries.error;
 
   return (
     <>
@@ -118,14 +119,7 @@ function LabelsPage() {
       <TabPanel id="panel-shopping" labelledBy="tab-shopping" hidden={tab !== "shopping"}>
         <div className="panel panel-inner">
           <p className="page-lead">{tr("Thermal shopping list layout for receipt printers.")}</p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={thermal.isPending}
-            onClick={() => thermal.mutate()}
-          >
-            {tr("Open thermal list")}
-          </button>
+          <ThermalPrintAction listId={1} />
         </div>
       </TabPanel>
     </>

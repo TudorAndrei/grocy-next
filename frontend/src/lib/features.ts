@@ -52,7 +52,7 @@ export function configuredFeatures(config: JsonObject | undefined): Features {
       case "calendar":
         return enabled("CALENDAR");
       case "labels":
-        return enabled("LABEL_PRINTER");
+        return enabled("LABEL_PRINTER") || enabled("THERMAL_PRINTER");
       default:
         return true;
     }

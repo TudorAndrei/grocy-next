@@ -2,7 +2,7 @@ import { useId, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
-import { downloadApiDocument } from "@/lib/open-document";
+import { downloadApiDocument, openApiDocument } from "@/lib/open-document";
 import { printLabel } from "@/lib/printing";
 import { Icon } from "./Icon";
 import { useNotify } from "./Toaster";
@@ -71,6 +71,14 @@ export function GrocycodeActions({
     onError: error,
   });
 
+  const paper = useMutation({
+    mutationFn: () => openApiDocument(`/api/v2/stock/entries/${id}/label`),
+    onSuccess: () => popover.current?.hidePopover(),
+    onError: error,
+  });
+
+  const pending = download.isPending || label.isPending || paper.isPending;
+
   return (
     <div className="grocycode-control">
       <button
@@ -103,7 +111,7 @@ export function GrocycodeActions({
           ref={first}
           type="button"
           className="btn btn-ghost"
-          disabled={download.isPending || label.isPending}
+          disabled={pending}
           onClick={() => download.mutate()}
         >
           {t("Download %s Grocycode", t(target.label))}
@@ -112,10 +120,20 @@ export function GrocycodeActions({
           <button
             type="button"
             className="btn btn-ghost"
-            disabled={download.isPending || label.isPending}
+            disabled={pending}
             onClick={() => label.mutate()}
           >
             {t("Print %s Grocycode on label printer", t(target.label))}
+          </button>
+        ) : null}
+        {kind === "stock-entry" ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={pending}
+            onClick={() => paper.mutate()}
+          >
+            {t("Open stock entry label in new window")}
           </button>
         ) : null}
       </div>
