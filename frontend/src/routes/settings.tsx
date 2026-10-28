@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { JsonObject } from "@/lib/json";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
@@ -16,12 +16,14 @@ import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { isNightModeTime } from "@/lib/theme";
 
-type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "about";
+type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "products" | "about";
 
 type SettingsSearch = { tab: SettingsTab };
 
 const settingsSearchSchema = z.object({
-  tab: z.enum(["connection", "profile", "appearance", "preferences", "about"]).catch("connection"),
+  tab: z
+    .enum(["connection", "profile", "appearance", "preferences", "products", "about"])
+    .catch("connection"),
 });
 
 export const Route = createFileRoute("/settings")({
@@ -33,14 +35,61 @@ const preferenceFields: Array<{
   key: string;
   label: string;
   type: "number" | "checkbox" | "select" | "text";
-  section?: "appearance";
+  section?: "appearance" | "products";
+  ref?: string;
   options?: string[];
   optionLabels?: Record<string, string>;
   feature?: string;
   max?: number;
+  min?: number;
   step?: string;
 }> = [
   { key: "locale", label: "Language", type: "select" },
+  {
+    key: "product_presets_location_id",
+    label: "Location",
+    type: "select",
+    section: "products",
+    ref: "locations",
+    feature: "STOCK_LOCATION_TRACKING",
+  },
+  {
+    key: "product_presets_product_group_id",
+    label: "Product group",
+    type: "select",
+    section: "products",
+    ref: "product_groups",
+  },
+  {
+    key: "product_presets_qu_id",
+    label: "Quantity unit",
+    type: "select",
+    section: "products",
+    ref: "quantity_units",
+  },
+  {
+    key: "product_presets_default_due_days",
+    label: "Default due days",
+    type: "number",
+    section: "products",
+    min: -1,
+  },
+  {
+    key: "product_presets_treat_opened_as_out_of_stock",
+    label: "Treat opened as out of stock",
+    type: "checkbox",
+    section: "products",
+    feature: "STOCK_PRODUCT_OPENED_TRACKING",
+  },
+  {
+    key: "product_presets_default_stock_label_type",
+    label: "Default stock entry label",
+    type: "select",
+    section: "products",
+    feature: "LABEL_PRINTER",
+    options: ["0", "1", "2"],
+    optionLabels: { "0": "No label", "1": "Single label", "2": "Label per unit" },
+  },
   {
     key: "stock_due_soon_days",
     label: "Due soon days",
@@ -152,6 +201,18 @@ function SettingsPage() {
   const system = useQuery(systemInfoQuery());
   const user = useQuery(currentUserQuery());
   const settings = useQuery(userSettingsQuery());
+  const references = ["locations", "product_groups", "quantity_units"];
+
+  const options = useQueries({
+    queries: references.map((entity) => ({
+      queryKey: ["objects", entity],
+      queryFn: () => api.objects(entity),
+      enabled:
+        tab === "products" &&
+        (entity !== "locations" || features.enabled("STOCK_LOCATION_TRACKING")),
+    })),
+  });
+
   const [draft, setDraft] = useState<Record<string, string>>({});
 
   const saveConnection = async (event: FormEvent) => {
@@ -173,7 +234,7 @@ function SettingsPage() {
 
         if (field.type === "checkbox") {
           body[field.key] = raw === "1";
-        } else if (field.type === "number") {
+        } else if (field.type === "number" || field.ref) {
           body[field.key] = Number(raw);
         } else {
           body[field.key] = raw;
@@ -204,7 +265,7 @@ function SettingsPage() {
     return String(value);
   };
 
-  const renderPreferences = (section: "appearance" | "preferences") => (
+  const renderPreferences = (section: "appearance" | "preferences" | "products") => (
     <>
       {settings.isLoading ? <LoadingBlock label={t("Loading preferences…")} /> : null}
       {settings.isSuccess ? (
@@ -239,19 +300,30 @@ function SettingsPage() {
                       value={settingsValue(field.key)}
                       onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
                     >
-                      {(field.key === "locale" ? ["", ...languages] : (field.options ?? [])).map(
-                        (opt) => (
-                          <option key={opt} value={opt}>
-                            {t(field.optionLabels?.[opt] ?? (opt || "Default"))}
-                          </option>
-                        ),
+                      {field.ref ? (
+                        <>
+                          <option value="-1">{t("None")}</option>
+                          {options[references.indexOf(field.ref)]?.data?.map((row) => (
+                            <option key={row.id} value={row.id}>
+                              {row.name}
+                            </option>
+                          ))}
+                        </>
+                      ) : (
+                        (field.key === "locale" ? ["", ...languages] : (field.options ?? [])).map(
+                          (opt) => (
+                            <option key={opt} value={opt}>
+                              {t(field.optionLabels?.[opt] ?? (opt || "Default"))}
+                            </option>
+                          ),
+                        )
                       )}
                     </select>
                   ) : (
                     <input
                       id={`pref-${field.key}`}
                       type={field.type === "text" ? "text" : "number"}
-                      min={field.type === "number" ? "0" : undefined}
+                      min={field.type === "number" ? (field.min ?? 0) : undefined}
                       placeholder={field.type === "text" ? "HH:mm" : undefined}
                       aria-invalid={
                         field.type === "text" && !isNightModeTime(settingsValue(field.key))
@@ -283,7 +355,12 @@ function SettingsPage() {
     </>
   );
 
-  const error = system.error || user.error || settings.error || savePreferences.error;
+  const error =
+    system.error ||
+    user.error ||
+    settings.error ||
+    savePreferences.error ||
+    options.find((query) => query.error)?.error;
 
   return (
     <>
@@ -300,6 +377,7 @@ function SettingsPage() {
           { id: "profile", label: t("Profile") },
           { id: "appearance", label: t("Appearance") },
           { id: "preferences", label: t("Preferences") },
+          { id: "products", label: t("Presets for new products") },
           { id: "about", label: t("About") },
         ]}
       />
@@ -360,6 +438,9 @@ function SettingsPage() {
         hidden={tab !== "preferences"}
       >
         {tab === "preferences" ? renderPreferences("preferences") : null}
+      </TabPanel>
+      <TabPanel id="settings-products" labelledBy="tab-products" hidden={tab !== "products"}>
+        {tab === "products" ? renderPreferences("products") : null}
       </TabPanel>
       <TabPanel id="settings-about" labelledBy="tab-about" hidden={tab !== "about"}>
         {system.isLoading || user.isLoading ? (

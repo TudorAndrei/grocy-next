@@ -60,6 +60,7 @@ The current repair work covers these confirmed differences:
 - Calendar export retains the legacy error when a time-zone transition falls outside UTC years 0000 through 9999. Boundary comparisons cover the historical Bucharest offset and valid year-zero exports. Date-list tests remove their year-zero tasks so later calendar checks use their own data.
 - The web app provides the 33 legacy languages. It reads the saved language, loads the pinned translation catalog, and applies its plural rules and text direction. Navigation, screen labels, form labels, and action messages use the translation helper. User names, product names, custom captions, and saved field values retain their original text. Quantity units support saved plural forms. Text without a legacy translation keeps its English fallback; remaining wording and date displays still need review.
 - The saved night-mode settings control all web pages. The appearance form supports system, on, off, automatic time ranges, and ranges across midnight. It retains the native exclusive time limits, strict `HH:mm` parser, `24:00` value, and invalid-input rules. Checks run every 60 seconds in production and every four seconds in other modes. The internal enabled flag is saved when it changes. Before login, the app uses the system color scheme. Twenty recorded results from the pinned legacy JavaScript check the schedule rules.
+- New-product presets expose location, group, quantity unit, due days, opened-stock treatment, and stock label type. The editor applies them only to new records and uses the preset unit for all four unit fields. A stock-unit choice fills other empty unit choices and retains an existing choice. Existing records keep their saved values, and disabled tracking fields retain their submission rules.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 
@@ -74,6 +75,8 @@ The latest full comparisons on Python commit `e9a1b62` passed in both `Europe/Bu
 Language checks passed 70 frontend tests and five Python endpoint tests. Formatting, lint, type checks, and the web build passed. Browser checks covered German and Hebrew settings, saved numeric values, desktop text direction, and the Hebrew mobile menu. These checks do not establish complete translation coverage.
 
 The appearance changes passed 93 frontend tests. Browser checks covered saved light and dark modes, the `24:00` schedule value, and a 390-pixel phone view. The language check also passed in that phone view. The menu stays outside the closed view after a direction change and opens from the correct side. Test settings were restored after these checks.
+
+The product-preset changes passed 95 frontend tests, formatting, lint, type checks, and the web build. Browser checks saved all six presets, created a product, and checked the values in the Python database. The saved due-days value remained `-1`. The preset form also fit a 390-pixel phone view. The test product was removed and the prior settings were restored.
 
 Run the normal tests without PHP:
 

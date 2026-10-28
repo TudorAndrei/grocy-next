@@ -13,6 +13,8 @@ import {
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { useFeatures } from "@/lib/features";
+import { userSettingsQuery } from "@/hooks/queries";
+import { preferenceEnabled } from "@/lib/preferences";
 import { CameraScanner } from "./CameraScanner";
 import {
   EntityPictureDetails,
@@ -62,6 +64,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
   const { t: tr } = useI18n();
 
   const features = useFeatures();
+  const productSettings = useQuery({ ...userSettingsQuery(), enabled: entity === "products" });
   const definition = getEntitySpec(entity);
 
   const baseSpec = {
@@ -209,7 +212,10 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
     })),
   });
 
-  const error = query.error || options.find((q) => q.error)?.error;
+  const error =
+    query.error ||
+    options.find((q) => q.error)?.error ||
+    (entity === "products" ? productSettings.error : null);
 
   const mutate = useMutation({
     mutationFn: async (operation: {
@@ -303,6 +309,27 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
     },
   });
 
+  const selectValue = (field: EntityField, value: string) => {
+    setValues((previous) => {
+      const next =
+        field.key === "userentity_id"
+          ? Object.fromEntries(
+              Object.entries(previous).filter(([key]) => !key.startsWith("custom:")),
+            )
+          : { ...previous };
+
+      next[field.key] = value;
+
+      if (entity === "products" && field.key === "qu_id_stock" && value) {
+        for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"]) {
+          if (!next[key]) next[key] = value;
+        }
+      }
+
+      return next;
+    });
+  };
+
   const start = (row?: EntityRow) => {
     mutate.reset();
     setEditing(row?.id ?? null);
@@ -311,35 +338,71 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
       upload: null,
       remove: false,
     });
-    setValues(
-      Object.fromEntries(
-        [
-          ...baseSpec.fields,
-          ...(custom.data ?? [])
-            .filter(
-              (field) =>
-                field.entity === entity ||
-                (entity === "userobjects" &&
-                  field.entity ===
-                    `userentity-${recordTypes.data?.find((type) => type.id === Number(row?.userentity_id))?.name}`),
-            )
-            .map(customField),
-        ].map((f) => [
-          f.key,
-          row
-            ? f.type === "checkbox"
-              ? Number(f.key.startsWith("custom:") ? row.custom_values?.[f.key] : row[f.key])
-                ? "1"
-                : "0"
-              : String(
-                  f.key.startsWith("custom:")
-                    ? (row.custom_values?.[f.key] ?? "")
-                    : (row[f.key] ?? ""),
-                )
-            : (f.value ?? ""),
-        ]),
-      ),
+
+    const initialValues = Object.fromEntries(
+      [
+        ...baseSpec.fields,
+        ...(custom.data ?? [])
+          .filter(
+            (field) =>
+              field.entity === entity ||
+              (entity === "userobjects" &&
+                field.entity ===
+                  `userentity-${recordTypes.data?.find((type) => type.id === Number(row?.userentity_id))?.name}`),
+          )
+          .map(customField),
+      ].map((f) => [
+        f.key,
+        row
+          ? f.type === "checkbox"
+            ? Number(f.key.startsWith("custom:") ? row.custom_values?.[f.key] : row[f.key])
+              ? "1"
+              : "0"
+            : String(
+                f.key.startsWith("custom:")
+                  ? (row.custom_values?.[f.key] ?? "")
+                  : (row[f.key] ?? ""),
+              )
+          : (f.value ?? ""),
+      ]),
     );
+
+    if (!row && entity === "products") {
+      const settings = productSettings.data;
+
+      const references = [
+        ["location_id", "product_presets_location_id", "locations"],
+        ["product_group_id", "product_presets_product_group_id", "product_groups"],
+        ...["qu_id_stock", "qu_id_purchase", "qu_id_consume", "qu_id_price"].map((key) => [
+          key,
+          "product_presets_qu_id",
+          "quantity_units",
+        ]),
+      ];
+
+      for (const [field, setting, reference] of references) {
+        const value = String(settings?.[setting] ?? -1);
+
+        if (value === "-1") continue;
+        const rows = options[refs.indexOf(reference)]?.data ?? [];
+        initialValues[field] = rows.some((row) => String(row.id) === value) ? value : "";
+      }
+
+      initialValues.default_best_before_days = String(
+        settings?.product_presets_default_due_days ?? 0,
+      );
+      const treatOpened = settings?.product_presets_treat_opened_as_out_of_stock;
+      initialValues.treat_opened_as_out_of_stock = preferenceEnabled(
+        treatOpened === undefined ? true : treatOpened,
+      )
+        ? "1"
+        : "0";
+      initialValues.default_stock_label_type = String(
+        settings?.product_presets_default_stock_label_type ?? 0,
+      );
+    }
+
+    setValues(initialValues);
   };
 
   const save = (event: FormEvent) => {
@@ -412,7 +475,14 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
     <section className="collection" aria-label={title ?? spec.label}>
       <div className="section-heading">
         <h2>{title ?? spec.label}</h2>
-        <button className="btn btn-primary" onClick={() => start()}>
+        <button
+          className="btn btn-primary"
+          disabled={
+            entity === "products" &&
+            (productSettings.isPending || options.some((query) => query.isPending))
+          }
+          onClick={() => start()}
+        >
           {tr("Add")} {spec.singular}
         </button>
       </div>
@@ -535,18 +605,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                         id={id}
                         value={values[field.key] ?? field.value ?? ""}
                         required={field.required}
-                        onChange={(e) =>
-                          setValues({
-                            ...(field.key === "userentity_id"
-                              ? Object.fromEntries(
-                                  Object.entries(values).filter(
-                                    ([key]) => !key.startsWith("custom:"),
-                                  ),
-                                )
-                              : values),
-                            [field.key]: e.target.value,
-                          })
-                        }
+                        onChange={(e) => selectValue(field, e.target.value)}
                       >
                         <option value="">
                           {field.required ? tr("Select an option") : tr("None")}

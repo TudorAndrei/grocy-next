@@ -58,6 +58,15 @@ test.each([
 
       if (path === "/api/objects/products") return Response.json([product]);
 
+      if (path === "/api/user/settings")
+        return Response.json({
+          product_presets_location_id: 99,
+          product_presets_qu_id: 99,
+          product_presets_default_due_days: -1,
+          product_presets_treat_opened_as_out_of_stock: false,
+          product_presets_default_stock_label_type: 0,
+        });
+
       if (path === "/api/objects/quantity_units") return Response.json([{ id: 1, name: "Bottle" }]);
 
       if (path === "/api/objects/locations") return Response.json([{ id: 2, name: "Fridge" }]);
