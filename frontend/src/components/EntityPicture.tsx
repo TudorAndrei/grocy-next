@@ -1,3 +1,4 @@
+import { uploadId } from "@/lib/upload-id";
 import { useI18n } from "@/lib/i18n";
 import { useEffect, useId, useRef, useState } from "react";
 import { filePath } from "@/lib/api";
@@ -13,7 +14,7 @@ export type PictureSelection = {
   remove: boolean;
 };
 
-type PictureGroup = "productpictures" | "recipepictures";
+type PictureGroup = "productpictures" | "recipepictures" | "userfiles";
 
 type PictureResult = { source: File | string; group: PictureGroup } & (
   | { url: string }
@@ -24,10 +25,14 @@ export function EntityPicture({
   group,
   source,
   label,
+  width = 400,
+  height,
 }: {
   group: PictureGroup;
   source: File | string;
   label: string;
+  width?: number;
+  height?: number;
 }) {
   const { t: tr } = useI18n();
 
@@ -41,7 +46,7 @@ export function EntityPicture({
       source instanceof File
         ? Promise.resolve(source)
         : fetchApiDocument(
-            `${filePath(group, source)}?force_serve_as=picture&best_fit_width=400`,
+            `${filePath(group, source)}?force_serve_as=picture&best_fit_width=${width}${height === undefined ? "" : `&best_fit_height=${height}`}`,
             controller.signal,
           );
 
@@ -65,7 +70,7 @@ export function EntityPicture({
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [group, source]);
+  }, [group, source, width, height]);
 
   if (!result || result.source !== source || result.group !== group)
     return <LoadingBlock label={tr("Loading picture…")} />;
@@ -132,7 +137,7 @@ export function EntityPictureField({
         onChange={(event) => {
           const file = event.target.files?.[0];
           const extension = file?.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? "png";
-          const upload = file ? { file, name: `${crypto.randomUUID()}.${extension}` } : null;
+          const upload = file ? { file, name: `${uploadId()}.${extension}` } : null;
 
           onChange({ ...value, upload, remove: file ? false : value.remove });
         }}

@@ -1,3 +1,4 @@
+import { uploadId } from "@/lib/upload-id";
 import { useI18n } from "@/lib/i18n";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,7 +42,7 @@ function ProfileForm({ user }: { user: CurrentUser }) {
       let picture = pictureName;
 
       if (photo) {
-        picture = uploaded?.file === photo ? uploaded.name : `${crypto.randomUUID()}-${photo.name}`;
+        picture = uploaded?.file === photo ? uploaded.name : `${uploadId()}-${photo.name}`;
 
         if (uploaded?.file !== photo) {
           await request(filePath("userpictures", picture), {
