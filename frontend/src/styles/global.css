@@ -426,6 +426,85 @@ kbd {
   grid-column: 1 / -1;
 }
 
+.recipe-tabs {
+  margin-block: 12px;
+  overflow-x: auto;
+}
+
+.recipe-tabs button {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recipe-tabs button[aria-selected="true"] {
+  border-color: var(--cobalt);
+}
+
+.recipe-tabs button:hover:not([aria-selected="true"]) {
+  background: var(--cobalt-soft);
+  color: var(--cobalt);
+}
+
+.recipe-ingredients {
+  list-style: none;
+  padding: 0;
+}
+
+.recipe-ingredient-group h3,
+.recipe-product-group h4 {
+  margin-block: 20px 8px;
+}
+
+.recipe-ingredient {
+  display: flex;
+  gap: 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.recipe-ingredient input {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.recipe-ingredient-body {
+  min-width: 0;
+}
+
+.recipe-ingredient-body > p {
+  margin-block: 4px;
+  font-size: 13px;
+}
+
+.recipe-ingredient[data-done] .recipe-ingredient-body {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+
+.recipe-ingredient a[data-due-score="20"] {
+  color: var(--tomato);
+}
+.recipe-ingredient a[data-due-score="10"] {
+  color: var(--ink-2);
+}
+.recipe-ingredient a[data-due-score="1"] {
+  color: var(--mustard);
+}
+
+.recipe-totals {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-block: 12px;
+  color: var(--ink-2);
+}
+
 .equipment-detail {
   display: grid;
   gap: 28px;

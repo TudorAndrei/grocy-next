@@ -127,6 +127,7 @@ export function unitLabel(
     | undefined,
   amount: number,
   pluralIndex: (count: number) => number = (count) => (Math.abs(count) === 1 ? 0 : 1),
+  abbreviate = true,
 ): string {
   if (!unit) return "";
   const index = pluralIndex(Math.abs(amount));
@@ -136,6 +137,8 @@ export function unitLabel(
 
     return forms[index] || (index === 0 ? unit.name : unit.name_plural || unit.name);
   }
+
+  if (!abbreviate) return index === 0 ? unit.name : unit.name_plural || unit.name;
 
   const short = UNIT_SHORT.get(unit.name.toLowerCase());
 

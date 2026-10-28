@@ -23,6 +23,10 @@ export function RichDescription({
 
   if (content.error) return <ErrorBlock message={content.error.message} />;
 
-  // The content endpoint prepares this HTML for display in Python.
-  return <div className="rich-content" dangerouslySetInnerHTML={{ __html: content.data.html }} />;
+  return <RichText html={content.data.html} />;
+}
+
+export function RichText({ html }: { html: string }) {
+  // The content and recipe-view endpoints prepare this HTML for display in Python.
+  return <div className="rich-content" dangerouslySetInnerHTML={{ __html: html }} />;
 }

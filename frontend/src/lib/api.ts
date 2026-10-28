@@ -2,6 +2,7 @@ import { z } from "zod";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
 import { localizationSchema } from "./localization";
+import { recipeViewSchema } from "./recipe-view";
 import type {
   BarcodeProduct,
   Battery,
@@ -157,6 +158,8 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getRecipeView: async (id: number) =>
+    recipeViewSchema.parse(await request<JsonValue>(`/api/v2/recipes/${id}/view`)),
   getContent: async (entity: "recipes" | "equipment", id: number) =>
     contentSchema.parse(await request<JsonValue>(`/api/v2/content/${entity}/${id}`)),
   getLocalization: async (locale?: string) =>
@@ -431,6 +434,7 @@ export const queryKeys = {
   systemConfig: ["system", "config"] as const,
   setup: ["setup"] as const,
   userSettings: ["user", "settings"] as const,
+  recipeView: (id: number) => ["recipe-view", id] as const,
   currentUser: ["user", "current"] as const,
   objects: (entity: string) => ["objects", entity] as const,
   calendarAgenda: ["calendar", "agenda"] as const,

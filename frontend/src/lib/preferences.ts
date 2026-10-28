@@ -53,10 +53,19 @@ export function usePreferences() {
     showClock: enabled("show_clock_in_header"),
     keepScreenOn: enabled("keep_screen_on"),
     keepScreenOnWhenFullscreen: enabled("keep_screen_on_when_fullscreen_card"),
+    showIngredientCheckbox: enabled("recipes_show_ingredient_checkbox"),
+    groupIngredientsByProductGroup: enabled("recipe_ingredients_group_by_product_group"),
     formatAmount: (value: number | string | null | undefined) =>
       formatAmount(value, amountPrecision),
     formatPrice: (value: number) =>
       value.toLocaleString(undefined, {
+        minimumFractionDigits: priceDisplayPrecision,
+        maximumFractionDigits: priceDisplayPrecision,
+      }),
+    formatCurrency: (value: number, currency: string) =>
+      value.toLocaleString(undefined, {
+        style: "currency",
+        currency,
         minimumFractionDigits: priceDisplayPrecision,
         maximumFractionDigits: priceDisplayPrecision,
       }),

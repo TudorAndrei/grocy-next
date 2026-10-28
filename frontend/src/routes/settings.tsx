@@ -46,6 +46,18 @@ const preferenceFields: Array<{
 }> = [
   { key: "locale", label: "Language", type: "select" },
   {
+    key: "recipes_show_ingredient_checkbox",
+    label: "Show a little checkbox next to each ingredient to mark it as done",
+    type: "checkbox",
+    feature: "RECIPES",
+  },
+  {
+    key: "recipe_ingredients_group_by_product_group",
+    label: "Group ingredients by their product group",
+    type: "checkbox",
+    feature: "RECIPES",
+  },
+  {
     key: "keep_screen_on",
     label: "Keep screen on",
     type: "checkbox",
