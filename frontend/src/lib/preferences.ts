@@ -51,6 +51,8 @@ export function usePreferences() {
     scanConsume: enabled("scan_mode_consume_enabled"),
     autoReload: enabled("auto_reload_on_db_change"),
     showClock: enabled("show_clock_in_header"),
+    keepScreenOn: enabled("keep_screen_on"),
+    keepScreenOnWhenFullscreen: enabled("keep_screen_on_when_fullscreen_card"),
     formatAmount: (value: number | string | null | undefined) =>
       formatAmount(value, amountPrecision),
     formatPrice: (value: number) =>

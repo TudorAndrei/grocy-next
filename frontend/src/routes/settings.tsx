@@ -46,6 +46,18 @@ const preferenceFields: Array<{
 }> = [
   { key: "locale", label: "Language", type: "select" },
   {
+    key: "keep_screen_on",
+    label: "Keep screen on",
+    type: "checkbox",
+    section: "appearance",
+  },
+  {
+    key: "keep_screen_on_when_fullscreen_card",
+    label: 'Keep screen on while displaying a "fullscreen-card"',
+    type: "checkbox",
+    section: "appearance",
+  },
+  {
     key: "show_clock_in_header",
     label: "Show clock in header",
     type: "checkbox",

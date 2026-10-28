@@ -13,6 +13,7 @@ import { DatabaseRefresh } from "@/components/DatabaseRefresh";
 import { FeatureRoute } from "@/components/FeatureRoute";
 import { LocalizationProvider } from "@/lib/i18n";
 import { NightMode } from "@/components/NightMode";
+import { ScreenOn } from "@/components/ScreenOn";
 
 export const Route = createRootRoute({
   component: () => (
@@ -53,6 +54,7 @@ function RootLayout() {
     content = (
       <Toaster>
         <DatabaseRefresh />
+        <ScreenOn />
         <CommandProvider>
           <AppShell>
             <FeatureRoute />
