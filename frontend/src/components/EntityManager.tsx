@@ -825,11 +825,35 @@ export function EntityManager({
           "treat_opened_as_out_of_stock",
         ]) {
           if (source[key] != null) initialValues[key] = String(source[key]);
+          else if (
+            source[key] === null &&
+            key !== "calories" &&
+            baseSpec.fields.some((field) => field.key === key && field.precision)
+          )
+            initialValues[key] = "";
         }
       }
     }
 
-    if (row && entity === "products" && row.calories == null) initialValues.calories = "1";
+    if (entity === "products")
+      for (const field of baseSpec.fields) {
+        if (!field.precision) continue;
+        let value = row && row[field.key] == null ? "1" : initialValues[field.key];
+
+        if (
+          value &&
+          (!/^-?(?:\d+|\d*\.\d+)(?:e[+-]?\d+)?$/i.test(value) || !Number.isFinite(Number(value)))
+        )
+          value = "";
+
+        if (row && value && field.precision === "amount")
+          value = Number(value).toLocaleString("en", {
+            maximumFractionDigits: preferences.amountPrecision,
+            useGrouping: false,
+          });
+
+        initialValues[field.key] = value;
+      }
 
     if (["product_barcodes", "quantity_unit_conversions"].includes(entity)) {
       const productId = Number(fixed?.product_id ?? row?.product_id);
@@ -924,7 +948,8 @@ export function EntityManager({
       else if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
         if (
-          (entity === "product_barcodes" || (entity === "products" && field.ref)) &&
+          (entity === "product_barcodes" ||
+            (entity === "products" && (field.ref || field.key === "calories"))) &&
           !field.required
         )
           body[field.key] = "";
@@ -1237,14 +1262,20 @@ export function EntityManager({
                           (entity === "quantity_unit_conversions" && field.key === "factor") ||
                           (entity === "product_barcodes" && field.key === "amount")
                             ? amountStep
-                            : field.min
+                            : field.min === "step"
+                              ? amountStep
+                              : field.min
                         }
                         step={
                           field.type === "number"
                             ? (entity === "quantity_unit_conversions" && field.key === "factor") ||
                               (entity === "product_barcodes" && field.key === "amount")
                               ? amountStep
-                              : "any"
+                              : field.precision === "amount"
+                                ? amountStep
+                                : field.precision === "integer"
+                                  ? "1"
+                                  : "any"
                             : undefined
                         }
                         onChange={(e) => {
@@ -1259,6 +1290,19 @@ export function EntityManager({
                               : e.target.value,
                             field.type !== "checkbox",
                           );
+                        }}
+                        onKeyDown={(e) => {
+                          if (!field.precision || !["ArrowUp", "ArrowDown"].includes(e.key)) return;
+
+                          e.preventDefault();
+
+                          const delta = e.key === "ArrowUp" ? 1 : -1;
+
+                          const value = Number.parseFloat(
+                            e.currentTarget.value || (delta === 1 ? "0" : "1"),
+                          );
+
+                          selectValue(field, String(value + delta), true);
                         }}
                       />
                     )}

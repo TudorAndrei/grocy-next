@@ -28,7 +28,7 @@ const matrix = [
   { from_qu_id: 3, to_qu_id: 2, factor: 4 },
 ];
 
-function mount({ child = false } = {}) {
+function mount({ child = false, precision = 4, numeric = false } = {}) {
   const product: EntityRow = {
     id: 7,
     name: "Coffee",
@@ -43,6 +43,16 @@ function mount({ child = false } = {}) {
     parent_product_id: child ? 8 : null,
     min_stock_amount: 7,
   };
+
+  if (numeric)
+    Object.assign(product, {
+      min_stock_amount: 1.125,
+      quick_consume_amount: 0.555,
+      quick_open_amount: 0.555,
+      tare_weight: 0.125,
+      calories: null,
+      default_best_before_days: 0.5,
+    });
 
   const products = [product, { id: 8, name: "Parent" }, { id: 11, name: "Other parent" }];
   const writes: { path: string; body: JsonObject }[] = [];
@@ -115,7 +125,10 @@ function mount({ child = false } = {}) {
         return new Response(null, { status: 204 });
       }
 
-      if (path === "/api/objects/products") return Response.json(products);
+      if (path === "/api/objects/products")
+        return Response.json(
+          products.map((row) => ({ ...row, calories: row.calories === "" ? null : row.calories })),
+        );
 
       if (path === "/api/objects/quantity_units")
         return Response.json([
@@ -150,7 +163,10 @@ function mount({ child = false } = {}) {
           matrix.map((row, index) => ({ ...row, id: index + 1, product_id: 7 })),
         );
 
-      if (path === "/api/system/config" || path === "/api/user/settings") return Response.json({});
+      if (path === "/api/user/settings")
+        return Response.json({ stock_decimal_places_amounts: precision });
+
+      if (path === "/api/system/config") return Response.json({});
 
       return Response.json([]);
     }),
@@ -245,6 +261,117 @@ test("product choices retain drafts on load failure, apply native defaults, and 
   });
   expect(writes[0]?.body).not.toHaveProperty("parent_product_id");
   expect(product.parent_product_id).toBeNull();
+});
+
+test.each([0, 2])(
+  "product number validation follows precision %s and saves an empty optional energy value",
+  async (precision) => {
+    const { writes } = mount({ precision });
+    const user = userEvent.setup();
+    const add = await screen.findByRole<HTMLButtonElement>("button", { name: "Add product" });
+    await waitFor(() => expect(add.disabled).toBe(false));
+    await user.click(add);
+    await user.type(screen.getByLabelText("Name"), "Numeric product");
+    await user.selectOptions(screen.getByLabelText("Default location"), "3");
+    await user.selectOptions(screen.getByLabelText("Stock unit"), "1");
+    await user.click(screen.getByLabelText("Use container weight"));
+    const save = screen.getByRole<HTMLButtonElement>("button", { name: "Save product" });
+    await waitFor(() => expect(save.disabled).toBe(false));
+    const fraction = precision === 0 ? "1.5" : "1.001";
+
+    const fields = [
+      ["Minimum stock", ["", "-1", fraction], "0"],
+      ["Days before expiry", ["", "-2", "0.5"], "-1"],
+      ["Days after opening", ["", "-1", "0.5"], "0"],
+      ["Days after freezing", ["", "-2", "0.5"], "-1"],
+      ["Days after thawing", ["", "-1", "0.5"], "0"],
+      ["Quick consume amount", ["", "0", fraction], "1"],
+      ["Quick open amount", ["", "0", fraction], "1"],
+      ["Container weight", ["", "-1", fraction], "0"],
+      ["Energy per stock unit (kcal)", ["-1", fraction], ""],
+    ] as const;
+
+    for (const [label, invalid, valid] of fields) {
+      const input = screen.getByLabelText<HTMLInputElement>(label);
+
+      for (const value of invalid) {
+        await user.clear(input);
+
+        if (value) await user.type(input, value);
+        await user.click(save);
+        expect(writes, `${label}: ${value}`).toEqual([]);
+        expect(input.checkValidity(), `${label}: ${value}`).toBe(false);
+      }
+
+      await user.clear(input);
+
+      if (valid) await user.type(input, valid);
+    }
+
+    const minimum = screen.getByLabelText<HTMLInputElement>("Minimum stock");
+    await user.clear(minimum);
+    await user.keyboard("{ArrowDown}");
+    expect(minimum.value).toBe("0");
+    await user.keyboard("{ArrowUp}");
+    expect(minimum.value).toBe("1");
+
+    if (precision === 2) {
+      await user.clear(minimum);
+      await user.type(minimum, "0.25");
+      await user.keyboard("{ArrowUp}");
+      expect(minimum.value).toBe("1.25");
+      await user.clear(minimum);
+      await user.type(minimum, "1");
+    }
+
+    await user.click(save);
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]?.body).toMatchObject({
+      name: "Numeric product",
+      calories: "",
+      min_stock_amount: 1,
+      quick_consume_amount: 1,
+      quick_open_amount: 1,
+      tare_weight: 0,
+      default_best_before_days: -1,
+      default_best_before_days_after_freezing: -1,
+    });
+  },
+);
+
+test("product editing rounds saved amounts on load and uses the native empty energy default on reopen", async () => {
+  const { writes, product } = mount({ precision: 2, numeric: true });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /Edit.*Coffee/ }));
+  await screen.findByText("Product choices failed");
+  await user.click(screen.getByRole("button", { name: "Retry product options" }));
+  const save = screen.getByRole<HTMLButtonElement>("button", { name: "Save product" });
+  await waitFor(() => expect(save.disabled).toBe(false));
+  expect(screen.getByLabelText<HTMLInputElement>("Minimum stock").value).toBe("1.13");
+  expect(screen.getByLabelText<HTMLInputElement>("Quick consume amount").value).toBe("0.56");
+  expect(screen.getByLabelText<HTMLInputElement>("Quick open amount").value).toBe("0.56");
+  expect(screen.getByLabelText<HTMLInputElement>("Container weight").value).toBe("0.13");
+  expect(screen.getByLabelText<HTMLInputElement>("Energy per stock unit (kcal)").value).toBe("1");
+  const days = screen.getByLabelText<HTMLInputElement>("Days before expiry");
+  expect(days.value).toBe("0.5");
+  await user.click(save);
+  expect(writes).toEqual([]);
+  await user.clear(days);
+  await user.type(days, "2");
+  await user.selectOptions(screen.getByLabelText("Default location"), "3");
+  await user.clear(screen.getByLabelText("Energy per stock unit (kcal)"));
+  await user.click(save);
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]?.body).toMatchObject({
+    min_stock_amount: 1.13,
+    quick_consume_amount: 0.56,
+    quick_open_amount: 0.56,
+    calories: "",
+    default_best_before_days: 2,
+  });
+  expect(product.tare_weight).toBe(0.125);
+  await user.click(await screen.findByRole("button", { name: /Edit.*Coffee/ }));
+  expect(screen.getByLabelText<HTMLInputElement>("Energy per stock unit (kcal)").value).toBe("1");
 });
 
 test("new product forms send explicit empty optional references with valid required units", async () => {

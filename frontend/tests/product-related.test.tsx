@@ -84,7 +84,8 @@ function mount(
       picture_file_name: "source.png",
       userfields: { Owner: "Source owner" },
       parent_product_id: 9,
-      min_stock_amount: 9,
+      min_stock_amount: 9.12345,
+      quick_open_amount: null,
     });
 
   if (options.tare) Object.assign(product, { enable_tare_weight_handling: 0, tare_weight: 120 });
@@ -586,7 +587,13 @@ test("catalog copy links create a separate product with native copy fields and r
   expect(form.getByLabelText<HTMLInputElement>("Container weight").value).toBe("120");
   expect(form.getByLabelText<HTMLInputElement>("Container weight").disabled).toBe(true);
   expect(form.getByLabelText<HTMLInputElement>("Minimum stock").disabled).toBe(false);
-  expect(form.getByLabelText<HTMLInputElement>("Minimum stock").value).toBe("9");
+  const copiedMinimum = form.getByLabelText<HTMLInputElement>("Minimum stock");
+  expect(copiedMinimum.value).toBe("9.12345");
+  expect(copiedMinimum.checkValidity()).toBe(false);
+  expect(form.getByLabelText<HTMLInputElement>("Quick open amount").value).toBe("");
+  await user.clear(copiedMinimum);
+  await user.type(copiedMinimum, "9.12");
+  await user.type(form.getByLabelText("Quick open amount"), "1");
   await user.type(form.getByLabelText("Name"), "New coffee");
   expect(form.getByLabelText<HTMLSelectElement>("Consume unit").value).toBe("1");
   expect(form.getByLabelText<HTMLSelectElement>("Price unit").value).toBe("1");
@@ -606,7 +613,7 @@ test("catalog copy links create a separate product with native copy fields and r
     tare_weight: 0,
     picture_file_name: null,
     parent_product_id: 9,
-    min_stock_amount: 9,
+    min_stock_amount: 9.12,
   });
   await user.click(await availableButton("Save & continue"));
   await waitFor(() => expect(router.state.location.href).toBe("/product/8"));

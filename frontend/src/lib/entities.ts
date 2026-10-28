@@ -35,7 +35,8 @@ export type EntityField = {
   ref?: string;
   choices?: string[];
   choiceLabels?: Record<string, string>;
-  min?: number;
+  min?: number | "step";
+  precision?: "amount" | "integer";
   value?: string;
   features?: string[];
   disabledValue?: string;
@@ -77,6 +78,14 @@ const numeric = (key: string, label: string, value = "0", min = 0): EntityField 
   value,
   min,
 });
+
+const productNumber = (
+  key: string,
+  label: string,
+  value = "0",
+  min: number | "step" = 0,
+  precision: "amount" | "integer" = "amount",
+): EntityField => ({ key, label, value, min, precision, type: "number", required: true });
 
 const ref = (key: string, label: string, entity: string, required = true): EntityField => ({
   key,
@@ -121,19 +130,15 @@ export const entities = new Map<string, EntitySpec>(
           value: "1",
           min: 0.000001,
         },
-        {
-          key: "min_stock_amount",
-          label: "Minimum stock",
-          type: "number",
-          value: "0",
-          min: 0,
-        },
+        productNumber("min_stock_amount", "Minimum stock"),
         {
           key: "default_best_before_days",
           label: "Days before expiry",
           type: "number",
           value: "0",
           min: -1,
+          required: true,
+          precision: "integer",
           features: ["STOCK_BEST_BEFORE_DATE_TRACKING"],
           disabledValue: "1",
         },
@@ -152,17 +157,35 @@ export const entities = new Map<string, EntitySpec>(
         ),
         ref("qu_id_consume", "Consume unit", "quantity_units"),
         ref("qu_id_price", "Price unit", "quantity_units"),
-        tracked(numeric("default_best_before_days_after_open", "Days after opening"), [
-          "STOCK_BEST_BEFORE_DATE_TRACKING",
-          "STOCK_PRODUCT_OPENED_TRACKING",
-        ]),
         tracked(
-          numeric("default_best_before_days_after_freezing", "Days after freezing", "0", -1),
+          productNumber(
+            "default_best_before_days_after_open",
+            "Days after opening",
+            "0",
+            0,
+            "integer",
+          ),
+          ["STOCK_BEST_BEFORE_DATE_TRACKING", "STOCK_PRODUCT_OPENED_TRACKING"],
+        ),
+        tracked(
+          productNumber(
+            "default_best_before_days_after_freezing",
+            "Days after freezing",
+            "0",
+            -1,
+            "integer",
+          ),
           ["STOCK_PRODUCT_FREEZING"],
           "0",
         ),
         tracked(
-          numeric("default_best_before_days_after_thawing", "Days after thawing"),
+          productNumber(
+            "default_best_before_days_after_thawing",
+            "Days after thawing",
+            "0",
+            0,
+            "integer",
+          ),
           ["STOCK_PRODUCT_FREEZING"],
           "0",
         ),
@@ -180,10 +203,10 @@ export const entities = new Map<string, EntitySpec>(
           features: ["STOCK_BEST_BEFORE_DATE_TRACKING"],
           disabledValue: "1",
         },
-        numeric("quick_consume_amount", "Quick consume amount", "1"),
-        numeric("quick_open_amount", "Quick open amount", "1"),
-        numeric("calories", "Calories per stock unit"),
-        numeric("tare_weight", "Container weight"),
+        productNumber("quick_consume_amount", "Quick consume amount", "1", "step"),
+        productNumber("quick_open_amount", "Quick open amount", "1", "step"),
+        { ...productNumber("calories", "Calories per stock unit"), required: false },
+        productNumber("tare_weight", "Container weight"),
         flag("enable_tare_weight_handling", "Use container weight"),
         tracked(flag("move_on_open", "Move opened stock to the consume location"), [
           "STOCK_LOCATION_TRACKING",
