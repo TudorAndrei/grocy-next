@@ -83,7 +83,7 @@ function mount({
 
     if (path.startsWith("/api/v2/shopping-lists/")) return Response.json({ items: [] });
 
-    if (path === "/api/objects/shopping_lists")
+    if (path === "/api/v2/shopping-lists")
       return Response.json([
         { id: 1, name: "Groceries" },
         { id: 7, name: "Weekend" },
@@ -124,6 +124,7 @@ test("thermal printing saves header choices and sends one job for the selected l
   const { fetchMock, finish } = mount({ hold: true });
   const open = vi.spyOn(window, "open").mockReturnValue(null);
   const user = userEvent.setup();
+  await screen.findByRole("option", { name: /^Weekend/ });
   await user.selectOptions(await screen.findByRole("combobox", { name: "Shopping list" }), "7");
   await user.click(await screen.findByRole("button", { name: "Thermal print" }));
   let dialog = await screen.findByRole("dialog", { name: "Print" });
@@ -207,6 +208,7 @@ test("the labels page permits a thermal printer without a label printer", async 
 test("paper print choices persist and use the selected list with authenticated error feedback", async () => {
   const { fetchMock } = mount();
   const user = userEvent.setup();
+  await screen.findByRole("option", { name: /^Weekend/ });
   await user.selectOptions(await screen.findByRole("combobox", { name: "Shopping list" }), "7");
   await user.click(screen.getByRole("button", { name: "Print" }));
   let dialog = await screen.findByRole("dialog", { name: "Print" });

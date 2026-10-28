@@ -3229,3 +3229,16 @@ a.btn[aria-disabled="true"] {
 .shopping-notes + .basket-bar {
   margin-top: 0;
 }
+
+.userfields-editor {
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+.shopping-list-dialog form {
+  display: grid;
+  gap: 1rem;
+}
+.userfields-editor select[multiple] {
+  min-block-size: 5rem;
+}

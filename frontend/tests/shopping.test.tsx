@@ -3,7 +3,14 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 import { writeApiConfig } from "@/lib/config";
-import { Route } from "@/routes/shopping";
+import { useState } from "react";
+import { ShoppingPage } from "@/components/ShoppingPage";
+
+function Shopping() {
+  const [id, setId] = useState(1);
+
+  return <ShoppingPage selectedListId={id} onListChange={setId} />;
+}
 
 test("an imported shopping quantity displays its saved unit", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: true }));
@@ -34,9 +41,6 @@ test("an imported shopping quantity displays its saved unit", async () => {
       return Response.json([]);
     }),
   );
-  const Shopping = Route.options.component;
-
-  if (!Shopping) throw new Error("The shopping route has no page.");
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
@@ -96,9 +100,6 @@ test("a failed purchase leaves only unfinished shopping items for retry", async 
       return Response.json([]);
     }),
   );
-  const Shopping = Route.options.component;
-
-  if (!Shopping) throw new Error("The shopping route has no page.");
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
@@ -124,7 +125,7 @@ test("notes save only trusted editor changes and retain the draft after a failed
     if (path === "/api/system/config")
       return Response.json({ FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS: true });
 
-    if (path === "/api/objects/shopping_lists")
+    if (path === "/api/v2/shopping-lists")
       return Response.json([
         { id: 1, name: "Groceries" },
         { id: 7, name: "Weekend" },
@@ -153,9 +154,6 @@ test("notes save only trusted editor changes and retain the draft after a failed
   });
 
   vi.stubGlobal("fetch", transport);
-  const Shopping = Route.options.component;
-
-  if (!Shopping) throw new Error("The shopping route has no page.");
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   const app = render(
@@ -169,6 +167,7 @@ test("notes save only trusted editor changes and retain the draft after a failed
     client.clear();
   });
   const user = userEvent.setup();
+  await screen.findByRole("option", { name: /^Weekend/ });
   await user.selectOptions(await screen.findByRole("combobox", { name: "Shopping list" }), "7");
   const notes = await screen.findByRole("region", { name: "Notes" });
   const frame = within(notes).getByTitle<HTMLIFrameElement>("Notes");
@@ -222,4 +221,45 @@ test("notes save only trusted editor changes and retain the draft after a failed
     expect(JSON.parse(String(init?.body))).toEqual({ description: draft });
     expect(new Headers(init?.headers).get("GROCY-API-KEY")).toBe("notes-key");
   }
+});
+
+test("clear done items retains open items in the selected list", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+
+  let items = [
+    { id: 1, note: "Milk", product_id: null, amount: 1, done: false },
+    { id: 2, note: "Bags", product_id: null, amount: 1, done: true },
+  ];
+
+  const transport = vi.fn<typeof fetch>(async (input, init) => {
+    const path = String(input);
+
+    if (path === "/api/v2/shopping-lists/7")
+      return Response.json({ id: 7, name: "Trip", description: "", items });
+
+    if (path === "/api/stock/shoppinglist/clear") {
+      expect(JSON.parse(String(init?.body))).toEqual({ list_id: 7, done_only: true });
+      items = items.filter((item) => !item.done);
+
+      return new Response(null, { status: 204 });
+    }
+
+    return Response.json([]);
+  });
+
+  vi.stubGlobal("fetch", transport);
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <ShoppingPage selectedListId={7} onListChange={() => {}} />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await screen.findByRole("checkbox", { name: "Bags in the basket" });
+  await user.click(screen.getByRole("button", { name: "Clear done items" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("checkbox", { name: "Bags in the basket" })).toBeNull(),
+  );
+  expect(screen.getByRole("checkbox", { name: "Milk in the basket" })).toBeTruthy();
 });

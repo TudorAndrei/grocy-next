@@ -26,6 +26,7 @@ import { Route as MealPlanRouteImport } from './routes/meal-plan'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
+import { Route as ShoppinglistRouteImport } from './routes/shoppinglist'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as TodayRouteImport } from './routes/today'
@@ -119,6 +120,11 @@ const ShoppingRoute = ShoppingRouteImport.update({
   path: '/shopping',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShoppinglistRoute = ShoppinglistRouteImport.update({
+  id: '/shoppinglist',
+  path: '/shoppinglist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockRoute = StockRouteImport.update({
   id: '/stock',
   path: '/stock',
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/shoppinglist': typeof ShoppinglistRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
   '/today': typeof TodayRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/shoppinglist': typeof ShoppinglistRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
   '/today': typeof TodayRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/shoppinglist': typeof ShoppinglistRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
   '/today': typeof TodayRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/shoppinglist'
     | '/stock'
     | '/tasks'
     | '/today'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/shoppinglist'
     | '/stock'
     | '/tasks'
     | '/today'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/shoppinglist'
     | '/stock'
     | '/tasks'
     | '/today'
@@ -333,6 +345,7 @@ export interface RootRouteChildren {
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
+  ShoppinglistRoute: typeof ShoppinglistRoute
   StockRoute: typeof StockRoute
   TasksRoute: typeof TasksRoute
   TodayRoute: typeof TodayRoute
@@ -463,6 +476,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShoppingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shoppinglist': {
+      id: '/shoppinglist'
+      path: '/shoppinglist'
+      fullPath: '/shoppinglist'
+      preLoaderRoute: typeof ShoppinglistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stock': {
       id: '/stock'
       path: '/stock'
@@ -533,6 +553,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
+  ShoppinglistRoute: ShoppinglistRoute,
   StockRoute: StockRoute,
   TasksRoute: TasksRoute,
   TodayRoute: TodayRoute,
