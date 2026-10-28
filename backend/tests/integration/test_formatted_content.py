@@ -34,7 +34,11 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     assert portal is not None
     identity = portal.call(save_imported_description)
     path = f"/api/v2/content/{entity}/{identity}"
-    assert client.get(path).status_code == 401
+    read_paths = [path]
+    if entity == "recipes":
+        read_paths.append(f"/api/v2/recipes/{identity}/view")
+    for read_path in read_paths:
+        assert client.get(read_path).status_code == 401
 
     # Give the reader this domain only. The extension must not require STOCK.
     monkeypatch.setattr(get_settings(), "default_permissions", [])
@@ -55,7 +59,8 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
         "api_key"
     ]
     headers = {"GROCY-API-KEY": key}
-    assert client.get(path, headers=headers).status_code == 403
+    for read_path in read_paths:
+        assert client.get(read_path, headers=headers).status_code == 403
     assert (
         client.put(
             f"/api/users/{user_id}/permissions",
@@ -66,7 +71,12 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     )
     response = client.get(path, headers=headers)
     assert response.status_code == 200, response.text
-    rendered = response.json()["html"]
+    rendered_outputs = [response.json()["html"]]
+    if entity == "recipes":
+        view = client.get(read_paths[1], headers=headers)
+        assert view.status_code == 200, view.text
+        assert view.json()["cards"][0]["id"] == identity
+        rendered_outputs.append(view.json()["cards"][0]["preparation_html"])
 
     class Tags(HTMLParser):
         def __init__(self):
@@ -80,18 +90,19 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
         def handle_data(self, data):
             self.text.append(data)
 
-    parsed = Tags()
-    parsed.feed(rendered)
-    assert {"h2", "ol", "li", "strong", "table", "td"} <= {tag for tag, _ in parsed.nodes}
-    assert "<script>literal text</script>" in "".join(parsed.text)
-    assert all(tag != "script" for tag, _ in parsed.nodes)
-    assert all("onerror" not in attrs for _, attrs in parsed.nodes)
-    link = next(attrs for tag, attrs in parsed.nodes if tag == "a")
-    assert "href" not in link
-    assert set(link["rel"].split()) == {"noopener", "noreferrer"}
-    frame = next(attrs for tag, attrs in parsed.nodes if tag == "iframe")
-    assert frame["src"] == "https://example.com/video"
-    assert set(frame["sandbox"].split()) == {"allow-scripts", "allow-presentation"}
+    for rendered in rendered_outputs:
+        parsed = Tags()
+        parsed.feed(rendered)
+        assert {"h2", "ol", "li", "strong", "table", "td"} <= {tag for tag, _ in parsed.nodes}
+        assert "<script>literal text</script>" in "".join(parsed.text)
+        assert all(tag != "script" for tag, _ in parsed.nodes)
+        assert all("onerror" not in attrs for _, attrs in parsed.nodes)
+        link = next(attrs for tag, attrs in parsed.nodes if tag == "a")
+        assert "href" not in link
+        assert set(link["rel"].split()) == {"noopener", "noreferrer"}
+        frame = next(attrs for tag, attrs in parsed.nodes if tag == "iframe")
+        assert frame["src"] == "https://example.com/video"
+        assert set(frame["sandbox"].split()) == {"allow-scripts", "allow-presentation"}
     saved = client.get(f"/api/objects/{entity}/{identity}", headers=api_headers)
     assert saved.json()["description"] == description
     assert client.get(f"/api/v2/content/{entity}/2147483647", headers=headers).status_code == 404
