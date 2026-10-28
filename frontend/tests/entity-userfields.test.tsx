@@ -159,6 +159,8 @@ test("editing loads numeric custom names and writes only changed values", async 
     field(2, "0", "text-single-line", { entity: "locations", sort_number: null }),
     field(4, "a", "text-single-line", { entity: "locations", sort_number: 1 }),
     field(1, "1", "checkbox", { entity: "locations", input_required: 1, sort_number: null }),
+    field(5, "😀", "text-single-line", { entity: "locations", sort_number: 1 }),
+    field(6, "\uE000", "text-single-line", { entity: "locations", sort_number: 1 }),
   ];
 
   const writes: JsonObject[] = [];
@@ -192,12 +194,9 @@ test("editing loads numeric custom names and writes only changed values", async 
   expect(screen.getByLabelText<HTMLInputElement>("0").value).toBe("Stored value");
   expect(screen.getByLabelText<HTMLInputElement>("1").required).toBe(false);
   const group = within(screen.getByRole("group", { name: "Userfields" }));
-  expect(group.getAllByText(/^(0|1|a|Z)$/).map((element) => element.textContent)).toEqual([
-    "0",
-    "1",
-    "a",
-    "Z",
-  ]);
+  expect(group.getAllByText(/^(0|1|a|Z|\uE000|😀)$/).map((element) => element.textContent)).toEqual(
+    ["0", "1", "a", "Z", "\uE000", "😀"],
+  );
   await user.type(screen.getByLabelText("0"), " changed");
   await user.click(screen.getByRole("button", { name: "Save location" }));
   await waitFor(() => expect(screen.queryByRole("form", { name: "Edit location" })).toBeNull());
@@ -263,4 +262,67 @@ test("a custom record type change uses its own field names and retains shared ed
     { path: "/api/userfields/userobjects/3", body: { Status: "Shared old changed" } },
     { path: "/api/userfields/userentity-second/3", body: { Status: "Second new" } },
   ]);
+});
+
+test("Manage retains the list name until custom fields save and retries only unfinished writes", async () => {
+  const row = { id: 7, name: "Trip", userfields: { Delivery: "Normal" } };
+  const writes: string[] = [];
+  let fieldAttempts = 0;
+  let nameAttempts = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async (input, init) => {
+      const path = String(input);
+
+      if (path === "/api/system/config") return Response.json({});
+
+      if (path === "/api/objects/shopping_lists") return Response.json([row]);
+
+      if (path === "/api/objects/userfields")
+        return Response.json([
+          field(1, "Delivery", "text-single-line", { entity: "shopping_lists" }),
+        ]);
+
+      if (path === "/api/userfields/shopping_lists/7" && init?.method === "PUT") {
+        writes.push("field");
+
+        if (++fieldAttempts === 1)
+          return Response.json({ error_message: "Field save failed" }, { status: 500 });
+        Object.assign(row.userfields, JSON.parse(String(init.body)));
+
+        return new Response(null, { status: 204 });
+      }
+
+      if (path === "/api/objects/shopping_lists/7" && init?.method === "PUT") {
+        writes.push("name");
+
+        if (++nameAttempts === 1)
+          return Response.json({ error_message: "Name save failed" }, { status: 500 });
+        Object.assign(row, JSON.parse(String(init.body)));
+
+        return new Response(null, { status: 204 });
+      }
+
+      return Response.json([]);
+    }),
+  );
+  mount("shopping_lists");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /Edit.*Trip/ }));
+  await user.clear(screen.getByLabelText("Name"));
+  await user.type(screen.getByLabelText("Name"), "New trip");
+  await user.clear(screen.getByLabelText("Delivery"));
+  await user.type(screen.getByLabelText("Delivery"), "Side");
+  await user.click(screen.getByRole("button", { name: "Save shopping list" }));
+  await screen.findByText("Field save failed");
+  expect(row).toEqual({ id: 7, name: "Trip", userfields: { Delivery: "Normal" } });
+  await user.click(screen.getByRole("button", { name: "Save shopping list" }));
+  await screen.findByText("Name save failed");
+  expect(row).toEqual({ id: 7, name: "Trip", userfields: { Delivery: "Side" } });
+  await user.click(screen.getByRole("button", { name: "Save shopping list" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("form", { name: "Edit shopping list" })).toBeNull(),
+  );
+  expect(row.name).toBe("New trip");
+  expect(writes).toEqual(["field", "field", "name", "name"]);
 });

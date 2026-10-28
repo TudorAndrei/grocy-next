@@ -50,8 +50,20 @@ const customFieldsSchema = z.array(
   userfieldSchema.extend({ entity: z.string(), sort_number: z.number().nullable().optional() }),
 );
 
-// SQLite NOCASE folds ASCII letters only. Other letters retain their code point order.
-const fieldNameOrder = (name: string) => name.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+function fieldNameOrder(first: string, second: string) {
+  // SQLite NOCASE folds ASCII letters only, then compares Unicode code points.
+  const fold = (name: string) => [...name.replace(/[A-Z]/g, (letter) => letter.toLowerCase())];
+  const a = fold(first);
+  const b = fold(second);
+
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    const difference = a[index].codePointAt(0)! - b[index].codePointAt(0)!;
+
+    if (difference) return difference;
+  }
+
+  return a.length - b.length;
+}
 
 export function EntityManager({ entity, detail, actions, fixed, title, editor }: Props) {
   const { t: tr } = useI18n();
@@ -108,10 +120,8 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
     queryFn: async () =>
       customFieldsSchema.parse(await api.objects("userfields")).sort((a, b) => {
         const position = (a.sort_number ?? -Infinity) - (b.sort_number ?? -Infinity);
-        const first = fieldNameOrder(a.name);
-        const second = fieldNameOrder(b.name);
 
-        return position || (first < second ? -1 : first > second ? 1 : 0);
+        return position || fieldNameOrder(a.name, b.name);
       }),
     enabled: !["userfields", "userentities"].includes(entity),
   });
@@ -245,8 +255,22 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       const body = { ...operation.body };
       const purchaseFactor = body.qu_factor_purchase_to_stock;
 
+      const saveFields = async (id: number) => {
+        for (const [namespace, edits] of Object.entries(operation.fields ?? {}))
+          await saveUserfields(namespace, id, groups[namespace] ?? [], edits, (name, edit) =>
+            setFieldEdits((previous) => ({
+              ...previous,
+              [namespace]: { ...previous[namespace], [name]: edit },
+            })),
+          );
+      };
+
+      const fieldsBeforeRecord = entity === "shopping_lists" && editing !== null;
+
       if (entity === "products") delete body.qu_factor_purchase_to_stock;
       let id = editing!;
+
+      if (fieldsBeforeRecord) await saveFields(id);
 
       if (editing === null) {
         const created = await api.createObject(entity, body);
@@ -292,13 +316,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
         }
       }
 
-      for (const [namespace, edits] of Object.entries(operation.fields ?? {}))
-        await saveUserfields(namespace, id, groups[namespace] ?? [], edits, (name, edit) =>
-          setFieldEdits((previous) => ({
-            ...previous,
-            [namespace]: { ...previous[namespace], [name]: edit },
-          })),
-        );
+      if (!fieldsBeforeRecord) await saveFields(id);
 
       if (pictureGroup && operation.picture) {
         await request(filePath(pictureGroup, operation.picture.name), {
