@@ -46,6 +46,12 @@ const preferenceFields: Array<{
 }> = [
   { key: "locale", label: "Language", type: "select" },
   {
+    key: "recipes_show_list_side_by_side",
+    label: "Show the recipe list and the recipe side by side",
+    type: "checkbox",
+    feature: "RECIPES",
+  },
+  {
     key: "recipes_show_ingredient_checkbox",
     label: "Show a little checkbox next to each ingredient to mark it as done",
     type: "checkbox",

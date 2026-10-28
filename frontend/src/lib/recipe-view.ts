@@ -48,3 +48,48 @@ export const recipeViewSchema = z.object({
 export type RecipeView = z.infer<typeof recipeViewSchema>;
 
 export type RecipeCard = RecipeView["cards"][number];
+
+export const recipeOverviewSchema = z.array(
+  z.object({
+    id: z.number(),
+    name: z.string(),
+    picture_file_name: z.string().nullable(),
+    desired_servings: z.number(),
+    due_score: z.number().nullable(),
+    missing_products_count: z.number(),
+    product_names: z.string(),
+    stock_status: z.enum(["Xenoughinstock", "enoughinstockwithshoppinglist", "notenoughinstock"]),
+  }),
+);
+
+export type RecipeListItem = z.infer<typeof recipeOverviewSchema>[number];
+
+export type RecipeStatus = RecipeListItem["stock_status"];
+
+export type RecipeListMode = "list" | "gallery";
+
+export type RecipeOverviewSearch = {
+  recipe?: number;
+  search?: string;
+  status?: RecipeStatus;
+  tab?: RecipeListMode;
+  embedded?: boolean;
+};
+
+export const recipeOverviewSearchSchema = z.object({
+  recipe: z.coerce.number().int().optional().catch(undefined),
+  search: z
+    .union([z.string(), z.json().transform((value) => JSON.stringify(value))])
+    .optional()
+    .catch(undefined),
+  status: z
+    .enum(["all", "Xenoughinstock", "enoughinstockwithshoppinglist", "notenoughinstock"])
+    .optional()
+    .catch(undefined)
+    .transform((value) => (value === "all" ? undefined : value)),
+  tab: z.enum(["list", "gallery"]).optional().catch(undefined),
+  embedded: z
+    .unknown()
+    .optional()
+    .transform((value) => (value === undefined ? undefined : true)),
+});

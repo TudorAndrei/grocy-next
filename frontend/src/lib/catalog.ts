@@ -99,6 +99,7 @@ export function useInvalidateStock() {
       queryClient.invalidateQueries({ queryKey: ["stock"] }),
       queryClient.invalidateQueries({ queryKey: ["recipe-fulfillment"] }),
       queryClient.invalidateQueries({ queryKey: ["recipe-view"] }),
+      queryClient.invalidateQueries({ queryKey: ["recipe-overview"] }),
       queryClient.invalidateQueries({ queryKey: ["shopping"] }),
     ]);
   };

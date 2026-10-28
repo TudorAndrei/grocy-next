@@ -2,7 +2,7 @@ import { z } from "zod";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
 import { localizationSchema } from "./localization";
-import { recipeViewSchema } from "./recipe-view";
+import { recipeOverviewSchema, recipeViewSchema } from "./recipe-view";
 import type {
   BarcodeProduct,
   Battery,
@@ -158,6 +158,8 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getRecipeOverview: async () =>
+    recipeOverviewSchema.parse(await request<JsonValue>("/api/v2/recipes/overview")),
   getRecipeView: async (id: number) =>
     recipeViewSchema.parse(await request<JsonValue>(`/api/v2/recipes/${id}/view`)),
   getContent: async (entity: "recipes" | "equipment", id: number) =>
@@ -281,17 +283,6 @@ export const api = {
     post<void>("/api/stock/shoppinglist/add-missing-products", { list_id: listId }),
 
   listRecipes: () => request<Recipe[]>("/api/objects/recipes"),
-
-  // The Grocy list route returns recipe rows, so ask the v2 route per recipe.
-  listRecipeFulfillment: async () => {
-    const recipes = await request<Recipe[]>("/api/objects/recipes");
-
-    return Promise.all(
-      recipes.map((recipe) =>
-        request<RecipeFulfillment>(`/api/v2/recipes/${recipe.id}/fulfillment`),
-      ),
-    );
-  },
 
   getRecipeFulfillment: (recipeId: number) =>
     request<RecipeFulfillment>(`/api/v2/recipes/${recipeId}/fulfillment`),
@@ -435,6 +426,7 @@ export const queryKeys = {
   setup: ["setup"] as const,
   userSettings: ["user", "settings"] as const,
   recipeView: (id: number) => ["recipe-view", id] as const,
+  recipeOverview: ["recipe-overview"] as const,
   currentUser: ["user", "current"] as const,
   objects: (entity: string) => ["objects", entity] as const,
   calendarAgenda: ["calendar", "agenda"] as const,

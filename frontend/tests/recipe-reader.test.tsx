@@ -4,7 +4,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
-import type { RecipeView } from "@/lib/recipe-view";
+import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
 
 function fixture(): RecipeView {
   return {
@@ -89,9 +89,57 @@ function mount(
   view: RecipeView,
   writes: Array<{ path: string; body: string }>,
   holdFirstSave = false,
+  options: {
+    path?: string;
+    sideBySide?: boolean;
+    holdRecipeView?: boolean;
+    overviewRows?: RecipeListItem[];
+  } = {},
 ) {
   vi.stubGlobal("scrollTo", vi.fn());
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL = () => "blob:gallery";
+      static revokeObjectURL = () => undefined;
+    },
+  );
   let finish: (() => void) | undefined;
+  let finishView: (() => void) | undefined;
+
+  const overview: RecipeListItem[] = [
+    {
+      id: 1,
+      name: "Main dish",
+      picture_file_name: "main.png",
+      desired_servings: 4,
+      due_score: 20,
+      missing_products_count: 1,
+      product_names: "Flour, Salt",
+      stock_status: "notenoughinstock",
+    },
+    {
+      id: 2,
+      name: "Sauce",
+      picture_file_name: null,
+      desired_servings: 3,
+      due_score: 0,
+      missing_products_count: 0,
+      product_names: "Salt",
+      stock_status: "Xenoughinstock",
+    },
+    {
+      id: 3,
+      name: "Zucchini 23 stew",
+      picture_file_name: null,
+      desired_servings: 1,
+      due_score: 1,
+      missing_products_count: 1,
+      product_names: "Flour",
+      stock_status: "enoughinstockwithshoppinglist",
+    },
+  ];
+
   vi.stubGlobal(
     "fetch",
     vi.fn<typeof fetch>(async (input, init) => {
@@ -126,9 +174,34 @@ function mount(
           night_mode: "off",
           recipes_show_ingredient_checkbox: "on",
           recipe_ingredients_group_by_product_group: "1",
+          recipes_show_list_side_by_side: options.sideBySide ?? true,
         });
 
-      if (path === "/api/v2/recipes/1/view") return Response.json(view);
+      if (path === "/api/v2/recipes/overview")
+        return Response.json(options.overviewRows ?? overview);
+
+      if (path === "/api/v2/recipes/1/view") {
+        if (options.holdRecipeView)
+          await new Promise<void>((resolve) => {
+            finishView = resolve;
+          });
+
+        return Response.json(view);
+      }
+
+      if (path === "/api/v2/recipes/2/view")
+        return Response.json({ ...view, recipe_id: 2, cards: [view.cards[1]] });
+
+      if (path.startsWith("/api/files/recipepictures/"))
+        return new Response(
+          Uint8Array.from(
+            atob(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1foAAAAASUVORK5CYII=",
+            ),
+            (character) => character.charCodeAt(0),
+          ),
+          { headers: { "Content-Type": "image/png" } },
+        );
 
       if (path === "/api/objects/products")
         return Response.json([
@@ -141,11 +214,12 @@ function mount(
 
       if (path === "/api/objects/recipes")
         return Response.json(
-          view.cards.map((card) => ({
+          [...view.cards, { id: 3, name: "Zucchini 23 stew", desired_servings: 1 }].map((card) => ({
             id: card.id,
             name: card.name,
             desired_servings: card.desired_servings,
             base_servings: 1,
+            type: "normal",
           })),
         );
 
@@ -171,7 +245,7 @@ function mount(
 
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ["/recipes/1"] }),
+    history: createMemoryHistory({ initialEntries: [options.path ?? "/recipes/1"] }),
   });
 
   const rendered = render(
@@ -180,8 +254,127 @@ function mount(
     </QueryClientProvider>,
   );
 
-  return { ...rendered, client, finishSave: () => finish?.() };
+  return {
+    ...rendered,
+    client,
+    router,
+    finishSave: () => finish?.(),
+    finishView: () => finishView?.(),
+  };
 }
+
+test("recipe overview searches ingredient names, filters three stock states, and selects inline cards", async () => {
+  const app = mount(fixture(), [], false, { path: "/recipes" });
+  const user = userEvent.setup();
+  expect(await screen.findByRole("heading", { level: 1, name: "Main dish" })).toBeTruthy();
+  const catalog = screen.getByRole("region", { name: "Recipe list" });
+  await within(catalog).findByRole("link", { name: "Zucchini 23 stew" });
+
+  const names = () =>
+    within(catalog)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+
+  expect(names()).toEqual(["Main dish", "Sauce", "Zucchini 23 stew"]);
+  await user.selectOptions(
+    within(catalog).getByRole("combobox", { name: "Status" }),
+    "enoughinstockwithshoppinglist",
+  );
+  await waitFor(() => expect(names()).toEqual(["Zucchini 23 stew"]));
+  expect(new URLSearchParams(app.router.history.location.search).get("status")).toBe(
+    "enoughinstockwithshoppinglist",
+  );
+  await user.click(within(catalog).getByRole("button", { name: "Clear filter" }));
+  await user.type(
+    within(catalog).getByRole("searchbox", { name: "Search recipes" }),
+    '"Main dish" Salt',
+  );
+  await waitFor(() => expect(names()).toEqual(["Main dish"]));
+  await user.click(within(catalog).getByRole("button", { name: "Clear filter" }));
+  await user.click(within(catalog).getByRole("button", { name: "Due score: Sort" }));
+  expect(names()).toEqual(["Sauce", "Zucchini 23 stew", "Main dish"]);
+  await user.click(within(catalog).getByRole("link", { name: "Sauce" }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Sauce" })).toBeTruthy();
+  expect(new URLSearchParams(app.router.history.location.search).get("recipe")).toBe("2");
+  await user.click(within(catalog).getByRole("tab", { name: "Gallery" }));
+  expect(await within(catalog).findByRole("img", { name: "Main dish picture" })).toBeTruthy();
+  expect(localStorage.getItem("recipes_last_tab_id")).toBe("gallery-tab");
+  app.unmount();
+  app.client.clear();
+});
+
+test("the saved gallery opens a full-screen card when side-by-side display is disabled", async () => {
+  localStorage.setItem("recipes_last_tab_id", "gallery-tab");
+  const app = mount(fixture(), [], false, { path: "/recipes?search=Main", sideBySide: false });
+  const user = userEvent.setup();
+  const link = await screen.findByRole("link", { name: "Main dish" });
+  await user.click(link);
+  const dialog = await screen.findByRole("dialog", { name: "Main dish" });
+  await user.click(within(dialog).getByRole("link", { name: "Recipes" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.body.classList.contains("fullscreen-card")).toBe(false);
+  expect(document.activeElement).toBe(link);
+  expect(new URLSearchParams(app.router.history.location.search).get("search")).toBe("Main");
+  expect(screen.getByRole("tab", { name: "Gallery" }).getAttribute("aria-selected")).toBe("true");
+  app.unmount();
+  app.client.clear();
+});
+
+test("closing a loading recipe card prevents a late response from opening it again", async () => {
+  const app = mount(fixture(), [], false, {
+    path: "/recipes",
+    sideBySide: false,
+    holdRecipeView: true,
+  });
+
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("link", { name: "Main dish" }));
+  expect(await screen.findByRole("dialog", { name: "Recipe" })).toBeTruthy();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await act(async () => app.finishView());
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.body.style.overflow).toBe("");
+  app.unmount();
+  app.client.clear();
+});
+
+test("legacy recipe query parameters restore gallery, selected recipe, status, and numeric search", async () => {
+  const app = mount(fixture(), [], false, {
+    path: "/recipes?tab=gallery&recipe=2&search=Salt&status=Xenoughinstock",
+  });
+
+  const catalog = await screen.findByRole("region", { name: "Recipe list" });
+  await within(catalog).findByRole("link", { name: "Sauce" });
+  expect(
+    within(catalog)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("aria-label")),
+  ).toEqual(["Sauce"]);
+  expect(await screen.findByRole("heading", { level: 1, name: "Sauce" })).toBeTruthy();
+  await act(async () => app.router.history.push("/recipes?search=23"));
+  await waitFor(() =>
+    expect(
+      within(catalog)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Zucchini 23 stew"]),
+  );
+  expect(screen.getByRole<HTMLInputElement>("searchbox", { name: "Search recipes" }).value).toBe(
+    "23",
+  );
+  await act(async () => app.router.history.push("/recipes?embedded=0&recipe=2"));
+  expect(await screen.findByRole("dialog", { name: "Sauce" })).toBeTruthy();
+  app.unmount();
+  app.client.clear();
+});
+
+test("an empty embedded recipe view shows the empty message", async () => {
+  const app = mount(fixture(), [], false, { path: "/recipes?embedded", overviewRows: [] });
+  expect(await screen.findByText("No recipes yet.")).toBeTruthy();
+  app.unmount();
+  app.client.clear();
+});
 
 test("recipe reader uses saved servings, included cards, groups, and temporary ingredient marks", async () => {
   const writes: Array<{ path: string; body: string }> = [];

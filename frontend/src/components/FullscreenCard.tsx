@@ -28,17 +28,26 @@ export function FullscreenCard({
   label,
   children,
   hash = false,
+  defaultExpanded = false,
+  onClose,
 }: {
   label: string;
   children: ReactNode;
   hash?: boolean;
+  defaultExpanded?: boolean;
+  onClose?: () => void;
 }) {
-  const [expanded, setExpanded] = useState(() => hash && window.location.hash === "#fullscreen");
+  const [expanded, setExpanded] = useState(
+    () => defaultExpanded || (hash && window.location.hash === "#fullscreen"),
+  );
+
   const root = useRef<HTMLElement>(null);
 
   const change = useCallback(
     (value: boolean) => {
       setExpanded(value);
+
+      if (!value) onClose?.();
 
       if (hash) {
         if (value) {
@@ -52,7 +61,7 @@ export function FullscreenCard({
         window.history.replaceState(window.history.state, "", url);
       }
     },
-    [hash],
+    [hash, onClose],
   );
 
   useEffect(() => {

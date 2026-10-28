@@ -55,6 +55,9 @@ export function usePreferences() {
     keepScreenOnWhenFullscreen: enabled("keep_screen_on_when_fullscreen_card"),
     showIngredientCheckbox: enabled("recipes_show_ingredient_checkbox"),
     groupIngredientsByProductGroup: enabled("recipe_ingredients_group_by_product_group"),
+    recipesSideBySide:
+      settings.data?.recipes_show_list_side_by_side === undefined ||
+      enabled("recipes_show_list_side_by_side"),
     formatAmount: (value: number | string | null | undefined) =>
       formatAmount(value, amountPrecision),
     formatPrice: (value: number) =>

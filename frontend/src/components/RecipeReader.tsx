@@ -16,7 +16,15 @@ import { PageHeader } from "./PageHeader";
 import { RichText } from "./RichDescription";
 import { useNotify } from "./Toaster";
 
-export function RecipeReader({ view }: { view: RecipeView }) {
+export function RecipeReader({
+  view,
+  overlay = false,
+  onClose,
+}: {
+  view: RecipeView;
+  overlay?: boolean;
+  onClose?: () => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const features = useFeatures();
@@ -107,13 +115,29 @@ export function RecipeReader({ view }: { view: RecipeView }) {
   }
 
   return (
-    <FullscreenCard label={card.name} hash>
+    <FullscreenCard label={card.name} hash={!overlay} defaultExpanded={overlay} onClose={onClose}>
       <PageHeader
         title={card.name}
         lead={`${t("Servings")}: ${card.desired_servings}`}
         back={
           <>
-            <Link to="/recipes" className="back-link">
+            <Link
+              to="/recipes"
+              className="back-link"
+              onClick={(event) => {
+                if (
+                  overlay &&
+                  onClose &&
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  !event.shiftKey &&
+                  !event.altKey
+                ) {
+                  event.preventDefault();
+                  onClose();
+                }
+              }}
+            >
               <Icon name="back" />
               {t("Recipes")}
             </Link>
