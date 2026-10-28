@@ -8,13 +8,13 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { OwnProfile } from "@/components/OwnProfile";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
-import { useTheme } from "@/hooks/useTheme";
 import { currentUserQuery, systemInfoQuery, userSettingsQuery } from "@/hooks/queries";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { api } from "@/lib/api";
 import { preferenceEnabled } from "@/lib/preferences";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
+import { isNightModeTime } from "@/lib/theme";
 
 type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "about";
 
@@ -24,8 +24,6 @@ const settingsSearchSchema = z.object({
   tab: z.enum(["connection", "profile", "appearance", "preferences", "about"]).catch("connection"),
 });
 
-const themePreferenceSchema = z.enum(["light", "dark", "system"]);
-
 export const Route = createFileRoute("/settings")({
   validateSearch: (search): SettingsSearch => settingsSearchSchema.parse(search),
   component: SettingsPage,
@@ -34,7 +32,8 @@ export const Route = createFileRoute("/settings")({
 const preferenceFields: Array<{
   key: string;
   label: string;
-  type: "number" | "checkbox" | "select";
+  type: "number" | "checkbox" | "select" | "text";
+  section?: "appearance";
   options?: string[];
   optionLabels?: Record<string, string>;
   feature?: string;
@@ -107,10 +106,35 @@ const preferenceFields: Array<{
   },
   {
     key: "night_mode",
+    section: "appearance",
     label: "Night mode",
     type: "select",
     options: ["follow-system", "on", "off"],
-    optionLabels: { "follow-system": "Use system setting" },
+    optionLabels: { "follow-system": "Use system setting", on: "On", off: "Off" },
+  },
+  {
+    key: "auto_night_mode_enabled",
+    label: "Auto enable in time range",
+    type: "checkbox",
+    section: "appearance",
+  },
+  {
+    key: "auto_night_mode_time_range_from",
+    label: "From",
+    type: "text",
+    section: "appearance",
+  },
+  {
+    key: "auto_night_mode_time_range_to",
+    label: "To",
+    type: "text",
+    section: "appearance",
+  },
+  {
+    key: "auto_night_mode_time_range_goes_over_midnight",
+    label: "Time range goes over midnight",
+    type: "checkbox",
+    section: "appearance",
   },
 ];
 
@@ -120,7 +144,6 @@ function SettingsPage() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
-  const { preference, setPreference } = useTheme();
   const initial = readApiConfig();
   const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
   const [apiKey, setApiKey] = useState(initial.apiKey);
@@ -180,6 +203,85 @@ function SettingsPage() {
 
     return String(value);
   };
+
+  const renderPreferences = (section: "appearance" | "preferences") => (
+    <>
+      {settings.isLoading ? <LoadingBlock label={t("Loading preferences…")} /> : null}
+      {settings.isSuccess ? (
+        <form
+          className="panel panel-inner"
+          onSubmit={(e) => {
+            e.preventDefault();
+            savePreferences.mutate();
+          }}
+        >
+          <div className="form-grid">
+            {preferenceFields.map((field) =>
+              (field.section ?? "preferences") !== section ||
+              (field.feature && !features.enabled(field.feature)) ? null : (
+                <div className="field" key={field.key}>
+                  <label htmlFor={`pref-${field.key}`}>{t(field.label)}</label>
+                  {field.type === "checkbox" ? (
+                    <input
+                      id={`pref-${field.key}`}
+                      type="checkbox"
+                      checked={preferenceEnabled(settingsValue(field.key))}
+                      onChange={(e) =>
+                        setDraft((d) => ({
+                          ...d,
+                          [field.key]: e.target.checked ? "1" : "0",
+                        }))
+                      }
+                    />
+                  ) : field.type === "select" ? (
+                    <select
+                      id={`pref-${field.key}`}
+                      value={settingsValue(field.key)}
+                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                    >
+                      {(field.key === "locale" ? ["", ...languages] : (field.options ?? [])).map(
+                        (opt) => (
+                          <option key={opt} value={opt}>
+                            {t(field.optionLabels?.[opt] ?? (opt || "Default"))}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      id={`pref-${field.key}`}
+                      type={field.type === "text" ? "text" : "number"}
+                      min={field.type === "number" ? "0" : undefined}
+                      placeholder={field.type === "text" ? "HH:mm" : undefined}
+                      aria-invalid={
+                        field.type === "text" && !isNightModeTime(settingsValue(field.key))
+                      }
+                      readOnly={
+                        field.type === "text" &&
+                        !preferenceEnabled(settingsValue("auto_night_mode_enabled"))
+                      }
+                      max={field.max}
+                      step={field.step}
+                      value={settingsValue(field.key)}
+                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                    />
+                  )}
+                </div>
+              ),
+            )}
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={savePreferences.isPending}>
+            {t("Save")}
+          </button>
+          {savePreferences.isSuccess ? (
+            <p className="muted" role="status">
+              {t("Preferences saved.")}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
+    </>
+  );
 
   const error = system.error || user.error || settings.error || savePreferences.error;
 
@@ -250,98 +352,14 @@ function SettingsPage() {
         {tab === "profile" ? <OwnProfile /> : null}
       </TabPanel>
       <TabPanel id="settings-appearance" labelledBy="tab-appearance" hidden={tab !== "appearance"}>
-        <section className="panel" style={{ maxWidth: "32rem" }}>
-          <div className="panel-inner">
-            <div className="field">
-              <label htmlFor="theme-pref">{t("App theme")}</label>
-              <select
-                id="theme-pref"
-                value={preference}
-                onChange={(e) => setPreference(themePreferenceSchema.parse(e.target.value))}
-              >
-                <option value="system">{t("Match system")}</option>
-                <option value="light">{t("Light")}</option>
-                <option value="dark">{t("Dark")}</option>
-              </select>
-            </div>
-            <p className="muted">
-              {t(
-                "This theme applies to Grocy Next only. Server-side night mode is under Preferences.",
-              )}
-            </p>
-          </div>
-        </section>
+        {tab === "appearance" ? renderPreferences("appearance") : null}
       </TabPanel>
       <TabPanel
         id="settings-preferences"
         labelledBy="tab-preferences"
         hidden={tab !== "preferences"}
       >
-        {settings.isLoading ? <LoadingBlock label={t("Loading preferences…")} /> : null}
-        {settings.isSuccess ? (
-          <form
-            className="panel panel-inner"
-            onSubmit={(e) => {
-              e.preventDefault();
-              savePreferences.mutate();
-            }}
-          >
-            <div className="form-grid">
-              {preferenceFields.map((field) =>
-                field.feature && !features.enabled(field.feature) ? null : (
-                  <div className="field" key={field.key}>
-                    <label htmlFor={`pref-${field.key}`}>{t(field.label)}</label>
-                    {field.type === "checkbox" ? (
-                      <input
-                        id={`pref-${field.key}`}
-                        type="checkbox"
-                        checked={preferenceEnabled(settingsValue(field.key))}
-                        onChange={(e) =>
-                          setDraft((d) => ({
-                            ...d,
-                            [field.key]: e.target.checked ? "1" : "0",
-                          }))
-                        }
-                      />
-                    ) : field.type === "select" ? (
-                      <select
-                        id={`pref-${field.key}`}
-                        value={settingsValue(field.key)}
-                        onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                      >
-                        {(field.key === "locale" ? ["", ...languages] : (field.options ?? [])).map(
-                          (opt) => (
-                            <option key={opt} value={opt}>
-                              {t(field.optionLabels?.[opt] ?? (opt || "Default"))}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    ) : (
-                      <input
-                        id={`pref-${field.key}`}
-                        type="number"
-                        min="0"
-                        max={field.max}
-                        step={field.step}
-                        value={settingsValue(field.key)}
-                        onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                      />
-                    )}
-                  </div>
-                ),
-              )}
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={savePreferences.isPending}>
-              {t("Save")}
-            </button>
-            {savePreferences.isSuccess ? (
-              <p className="muted" role="status">
-                {t("Preferences saved.")}
-              </p>
-            ) : null}
-          </form>
-        ) : null}
+        {tab === "preferences" ? renderPreferences("preferences") : null}
       </TabPanel>
       <TabPanel id="settings-about" labelledBy="tab-about" hidden={tab !== "about"}>
         {system.isLoading || user.isLoading ? (

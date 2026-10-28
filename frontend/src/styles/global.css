@@ -599,6 +599,11 @@ textarea::placeholder {
   color: var(--ink-3);
 }
 
+input[aria-invalid="true"] {
+  border-color: var(--tomato);
+  background-color: var(--tomato-soft);
+}
+
 input:hover:not(:focus),
 select:hover:not(:focus) {
   border-color: var(--cobalt-line);
@@ -1999,19 +2004,14 @@ a.btn[aria-disabled="true"] {
 
 @media (max-width: 900px) {
   .site-rail {
-    transform: translateX(-100%);
-    transition: transform 280ms var(--ease);
+    inset-inline-start: calc(-1 * min(300px, 86vw));
+    transition: inset-inline-start 280ms var(--ease);
     width: min(300px, 86vw);
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
-  [dir="rtl"] .site-rail {
-    transform: translateX(100%);
-  }
-
-  .site-rail[data-open="true"],
-  [dir="rtl"] .site-rail[data-open="true"] {
-    transform: none;
+  .site-rail[data-open="true"] {
+    inset-inline-start: 0;
     box-shadow: 12px 0 40px rgb(16 37 94 / 0.3);
   }
 

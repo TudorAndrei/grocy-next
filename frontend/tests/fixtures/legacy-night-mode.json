@@ -1,0 +1,285 @@
+{
+  "baseline": "Grocy 4.5.0 (21aa5eab218c8466f90729154cb293fffbe10c21), CheckNightMode with its bundled Moment library",
+  "cases": [
+    {
+      "name": "inside range",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "before range",
+      "at": "2026-10-28T19:59:59",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": false
+    },
+    {
+      "name": "exclusive start",
+      "at": "2026-10-28T20:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": false
+    },
+    {
+      "name": "after start",
+      "at": "2026-10-28T20:00:01",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "after midnight",
+      "at": "2026-10-28T00:30:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": false
+    },
+    {
+      "name": "before morning end",
+      "at": "2026-10-28T06:59:59",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": false
+    },
+    {
+      "name": "same-day inside",
+      "at": "2026-10-28T12:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "10:00",
+        "auto_night_mode_time_range_to": "14:00",
+        "auto_night_mode_time_range_goes_over_midnight": false,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "exclusive end",
+      "at": "2026-10-28T14:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "10:00",
+        "auto_night_mode_time_range_to": "14:00",
+        "auto_night_mode_time_range_goes_over_midnight": false,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": false
+    },
+    {
+      "name": "invalid start preserves enabled",
+      "at": "2026-10-28T12:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "bad",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": true
+      },
+      "enabled": true
+    },
+    {
+      "name": "strict hour preserves disabled",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "7:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": false
+    },
+    {
+      "name": "invalid end disables",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "bad",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": true
+      },
+      "enabled": false
+    },
+    {
+      "name": "null end disables",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": null,
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": true
+      },
+      "enabled": false
+    },
+    {
+      "name": "midnight 24 is accepted",
+      "at": "2026-10-28T23:59:59",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "00:00",
+        "auto_night_mode_time_range_to": "24:00",
+        "auto_night_mode_time_range_goes_over_midnight": false,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "invalid 24 minute preserves",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "24:01",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": "on"
+      },
+      "enabled": true
+    },
+    {
+      "name": "always on",
+      "at": "2026-10-28T12:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "on",
+        "auto_night_mode_enabled": false,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "always off",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": true,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": false,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": true
+      },
+      "enabled": false
+    },
+    {
+      "name": "system dark ignores schedule",
+      "at": "2026-10-28T12:00:00",
+      "systemDark": true,
+      "settings": {
+        "night_mode": "follow-system",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "system light ignores schedule",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "follow-system",
+        "auto_night_mode_enabled": true,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": true
+      },
+      "enabled": false
+    },
+    {
+      "name": "legacy boolean strings",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "off",
+        "auto_night_mode_enabled": "ON",
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": "1",
+        "night_mode_enabled_internal": false
+      },
+      "enabled": true
+    },
+    {
+      "name": "unknown mode keeps internal value",
+      "at": "2026-10-28T21:00:00",
+      "systemDark": false,
+      "settings": {
+        "night_mode": "other",
+        "auto_night_mode_enabled": false,
+        "auto_night_mode_time_range_from": "20:00",
+        "auto_night_mode_time_range_to": "07:00",
+        "auto_night_mode_time_range_goes_over_midnight": true,
+        "night_mode_enabled_internal": "true"
+      },
+      "enabled": true
+    }
+  ]
+}

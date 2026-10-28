@@ -59,6 +59,7 @@ The current repair work covers these confirmed differences:
 - Stock preferences expose price input and display precision, quick consume amounts, and purchase dates. Preference checkboxes read the legacy browser boolean forms. Purchase and inventory forms omit the purchase date when it is disabled, and price history uses the saved display precision.
 - Calendar export retains the legacy error when a time-zone transition falls outside UTC years 0000 through 9999. Boundary comparisons cover the historical Bucharest offset and valid year-zero exports. Date-list tests remove their year-zero tasks so later calendar checks use their own data.
 - The web app provides the 33 legacy languages. It reads the saved language, loads the pinned translation catalog, and applies its plural rules and text direction. Navigation, screen labels, form labels, and action messages use the translation helper. User names, product names, custom captions, and saved field values retain their original text. Quantity units support saved plural forms. Text without a legacy translation keeps its English fallback; remaining wording and date displays still need review.
+- The saved night-mode settings control all web pages. The appearance form supports system, on, off, automatic time ranges, and ranges across midnight. It retains the native exclusive time limits, strict `HH:mm` parser, `24:00` value, and invalid-input rules. Checks run every 60 seconds in production and every four seconds in other modes. The internal enabled flag is saved when it changes. Before login, the app uses the system color scheme. Twenty recorded results from the pinned legacy JavaScript check the schedule rules.
 
 Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
 
@@ -68,9 +69,11 @@ On 2026-10-27, the full reference comparison passed on Python commit `b91d908` i
 
 On 2026-10-28, the same commit passed the full reference comparison in `UTC`: 1,850 passed and 56 skipped. The normal Python test run passed 1,008 tests and skipped 1,062 cases that required other test environments. The disabled-feature comparison also passed both selected cases.
 
-Later checks on Python commit `d7185c4` passed the full `UTC` comparison: 1,862 passed and 56 skipped. The Bucharest run passed 1,861 tests, skipped 56, and failed one stock aggregation comparison while the requests crossed UTC midnight. The stock amounts matched. Commit `fe47375` keeps that aggregation case two days from the date boundary. Its repeat and the separate date-boundary cases passed all three selected checks. The release image passed the HTTP checks, including escaped barcode product selection, and had no PHP executable.
+The latest full comparisons on Python commit `e9a1b62` passed in both `Europe/Bucharest` and `UTC`: 1,862 tests passed and 56 were skipped in each run. The release image passed the HTTP checks, including escaped barcode product selection and the new web language endpoint. It had no PHP executable. The stock aggregation case stays two days from the date boundary; separate cases check the date-boundary rules.
 
 Language checks passed 70 frontend tests and five Python endpoint tests. Formatting, lint, type checks, and the web build passed. Browser checks covered German and Hebrew settings, saved numeric values, desktop text direction, and the Hebrew mobile menu. These checks do not establish complete translation coverage.
+
+The appearance changes passed 93 frontend tests. Browser checks covered saved light and dark modes, the `24:00` schedule value, and a 390-pixel phone view. The language check also passed in that phone view. The menu stays outside the closed view after a direction change and opens from the correct side. Test settings were restored after these checks.
 
 Run the normal tests without PHP:
 
