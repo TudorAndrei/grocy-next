@@ -1,0 +1,149 @@
+{
+  "source": {
+    "version": "4.5.0",
+    "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+    "generator": "pinned Grocycode.php payloads and barcode PNG factories"
+  },
+  "cases": [
+    {
+      "kind": "2D",
+      "code": "grcy:p:17",
+      "size": null,
+      "paths": [
+        "/product/17/grocycode",
+        "/api/v2/products/17/grocycode"
+      ],
+      "stock": false,
+      "width": 100,
+      "height": 100,
+      "pixels": "9b570128d4ff9eb089e6b219aca250f625adfb892950141092f28e89035c8012",
+      "png": "9d825e09834fc1111b091d23d261bd155eb6f11572d65d87dbcdd9facc3c21df"
+    },
+    {
+      "kind": "2D",
+      "code": "grcy:c:17",
+      "size": null,
+      "paths": [
+        "/chore/17/grocycode",
+        "/api/v2/chores/17/grocycode"
+      ],
+      "stock": false,
+      "width": 100,
+      "height": 100,
+      "pixels": "cea6041cdeb3142c1489aa7f1d696e31c6202f87b855e96397939ba420641223",
+      "png": "8f89366c398bc0ed6f93510cbe5373cde0c350f5a74c885d0fb6556768a19712"
+    },
+    {
+      "kind": "2D",
+      "code": "grcy:b:17",
+      "size": null,
+      "paths": [
+        "/battery/17/grocycode",
+        "/api/v2/batteries/17/grocycode"
+      ],
+      "stock": false,
+      "width": 100,
+      "height": 100,
+      "pixels": "e818fbc81c9ec2bf6e83c56de12ffc9076ef158fe9d6e47ae66f3898d5360f00",
+      "png": "e9b00688ed5f2a9facc4b6fce13751f0c8fbebf7d182fcfbb1ef430f23e7d3ac"
+    },
+    {
+      "kind": "2D",
+      "code": "grcy:p:1:label-stock-17",
+      "size": null,
+      "paths": [
+        "/stockentry/991/grocycode",
+        "/api/v2/stock/entries/991/grocycode"
+      ],
+      "stock": true,
+      "width": 100,
+      "height": 100,
+      "pixels": "bae42a216cec57dc128ffd66378d194ebc75a1778c4cfa689cb6127de41a1289",
+      "png": "a8ccb891a881e1e95286bdcf9b6cfc748793d294cca6d36f3a2b953ceb6d7a8b"
+    },
+    {
+      "kind": "2D",
+      "code": "grcy:p::",
+      "size": null,
+      "paths": [
+        "/stockentry/99999/grocycode",
+        "/api/v2/stock/entries/99999/grocycode"
+      ],
+      "stock": false,
+      "width": 100,
+      "height": 100,
+      "pixels": "c2a2ea62d13a6e9cd5878207b4ce9bf4ceaf3bf7872a18425fe91d7b4d854663",
+      "png": "a3e91b2345ff222868f42081fc3fe6cd7b59f25dca1e2c2ffce7bd3c5c1f977b"
+    },
+    {
+      "kind": "1D",
+      "code": "grcy:p:17",
+      "size": null,
+      "paths": [
+        "/product/17/grocycode",
+        "/api/v2/products/17/grocycode"
+      ],
+      "stock": false,
+      "width": 134,
+      "height": 30,
+      "pixels": "5c393867a3ccc493df5939b32c32d85509a0468d85e62e37b7c76b16c63156f0",
+      "png": "3f0d1ec88aec582a4ddd68b989429055111077ad9ec8f2c3a8f0789b7a150180"
+    },
+    {
+      "kind": "1D",
+      "code": "grcy:c:17",
+      "size": null,
+      "paths": [
+        "/chore/17/grocycode",
+        "/api/v2/chores/17/grocycode"
+      ],
+      "stock": false,
+      "width": 134,
+      "height": 30,
+      "pixels": "53230ecb870e75607be7f7663fdd7fbead86fb529d5ae3fae7cffdd105de7f95",
+      "png": "0a2e87aa5886f659a3b99e0b71ea152105390259339a3f790d4e5cfb3ebbba60"
+    },
+    {
+      "kind": "1D",
+      "code": "grcy:b:17",
+      "size": null,
+      "paths": [
+        "/battery/17/grocycode",
+        "/api/v2/batteries/17/grocycode"
+      ],
+      "stock": false,
+      "width": 134,
+      "height": 30,
+      "pixels": "0c71f212f74537741c6c1d52cee13805f862123a0d3e1219ebc93ac3e3f4d3cd",
+      "png": "e983655ff40d12aeca7e3acc7e1d2959fd1e3a15eb394889fdf70e37bd0a13a3"
+    },
+    {
+      "kind": "1D",
+      "code": "grcy:p:1:label-stock-17",
+      "size": null,
+      "paths": [
+        "/stockentry/991/grocycode",
+        "/api/v2/stock/entries/991/grocycode"
+      ],
+      "stock": true,
+      "width": 288,
+      "height": 30,
+      "pixels": "77fea5993451b57af79b9acf117bfb3be670c6ed34b55b622d1c12ddde3c36d5",
+      "png": "1609f601ff24db4be3c6cc5276dc1c53092f969e785194f858092c8e00d00c20"
+    },
+    {
+      "kind": "1D",
+      "code": "grcy:p::",
+      "size": null,
+      "paths": [
+        "/stockentry/99999/grocycode",
+        "/api/v2/stock/entries/99999/grocycode"
+      ],
+      "stock": false,
+      "width": 123,
+      "height": 30,
+      "pixels": "826e0e5a512071fc8ee4eb70c2c7cc5e1ff8e6125647a1427f4a8f1468b69672",
+      "png": "28daea86a3dbc72bb73031a3d2b07c3b10c831bfbca7ca756077287b755013ea"
+    }
+  ]
+}

@@ -1,16 +1,19 @@
-"""Legacy recipe image downloads, generated without PHP."""
+"""Legacy code image downloads, generated without PHP."""
 
 from datetime import UTC, datetime
 from email.utils import format_datetime
 
 from fastapi import APIRouter, Depends, Request, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from grocy.compatibility.lessql import query_parameters
-from grocy.compatibility.php import php_error, truthy
+from grocy.compatibility.php import php_error, php_string, truthy
 from grocy.core.auth import AuthenticatedActor
 from grocy.core.config import get_settings
+from grocy.core.deps import DbSession
 from grocy.domains.codes.image import grocycode_png
+from grocy.domains.printing import stock_entry
 
 router = APIRouter(tags=["codes"])
 
@@ -39,6 +42,12 @@ async def _legacy_page(request: Request) -> None:
     request.scope["grocy_legacy_base_path"] = True
 
 
+async def stock_entry_code(session: AsyncSession, entry_id: str) -> str:
+    entry = await stock_entry(session, entry_id) or {}
+    # The GUI reference reads empty properties when the entry does not exist.
+    return f"grcy:p:{php_string(entry.get('product_id'))}:{php_string(entry.get('stock_id'))}"
+
+
 @router.api_route(
     "/recipe/{recipe_id}/grocycode",
     methods=["GET", "HEAD"],
@@ -47,3 +56,45 @@ async def _legacy_page(request: Request) -> None:
 )
 async def recipe_code(recipe_id: str, request: Request, _actor: AuthenticatedActor) -> Response:
     return await code_response(request, f"grcy:r:{recipe_id}")
+
+
+@router.api_route(
+    "/product/{product_id}/grocycode",
+    methods=["GET", "HEAD"],
+    dependencies=[Depends(_legacy_page)],
+    include_in_schema=False,
+)
+async def product_code(product_id: str, request: Request, _actor: AuthenticatedActor) -> Response:
+    return await code_response(request, f"grcy:p:{product_id}")
+
+
+@router.api_route(
+    "/chore/{chore_id}/grocycode",
+    methods=["GET", "HEAD"],
+    dependencies=[Depends(_legacy_page)],
+    include_in_schema=False,
+)
+async def chore_code(chore_id: str, request: Request, _actor: AuthenticatedActor) -> Response:
+    return await code_response(request, f"grcy:c:{chore_id}")
+
+
+@router.api_route(
+    "/battery/{battery_id}/grocycode",
+    methods=["GET", "HEAD"],
+    dependencies=[Depends(_legacy_page)],
+    include_in_schema=False,
+)
+async def battery_code(battery_id: str, request: Request, _actor: AuthenticatedActor) -> Response:
+    return await code_response(request, f"grcy:b:{battery_id}")
+
+
+@router.api_route(
+    "/stockentry/{entry_id}/grocycode",
+    methods=["GET", "HEAD"],
+    dependencies=[Depends(_legacy_page)],
+    include_in_schema=False,
+)
+async def entry_code(
+    entry_id: str, request: Request, _actor: AuthenticatedActor, session: DbSession
+) -> Response:
+    return await code_response(request, await stock_entry_code(session, entry_id))
