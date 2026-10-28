@@ -1,5 +1,5 @@
 import { useI18n } from "@/lib/i18n";
-import { useId, useState, type ReactNode, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type FormEvent } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonObject } from "@/lib/json";
 import { api, filePath, request } from "@/lib/api";
@@ -29,6 +29,12 @@ type Props = {
   actions?: (row: EntityRow) => ReactNode;
   fixed?: JsonObject;
   title?: string;
+  editor?: {
+    recordId: number | null;
+    initialValues?: Record<string, string>;
+    onSaved: (id: number, body: JsonObject) => Promise<void>;
+    onCancel: () => void;
+  };
 };
 
 function customField(row: EntityRow): EntityField {
@@ -60,7 +66,7 @@ function customField(row: EntityRow): EntityField {
   };
 }
 
-export function EntityManager({ entity, detail, actions, fixed, title }: Props) {
+export function EntityManager({ entity, detail, actions, fixed, title, editor }: Props) {
   const { t: tr } = useI18n();
 
   const features = useFeatures();
@@ -152,6 +158,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
   const [editing, setEditing] = useState<number | null | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const editorStarted = useRef(false);
 
   const query = useQuery({
     queryKey: ["entity-manager", entity],
@@ -214,6 +221,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
 
   const error =
     query.error ||
+    custom.error ||
     options.find((q) => q.error)?.error ||
     (entity === "products" ? productSettings.error : null);
 
@@ -301,11 +309,15 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
       const removalError = await removal;
 
       if (removalError) throw removalError;
+
+      return { id, body };
     },
-    onSuccess: async () => {
-      setEditing(undefined);
+    onSuccess: async (result) => {
+      if (!editor) setEditing(undefined);
       setDeleteId(null);
       await client.invalidateQueries();
+
+      if (editor && result) await editor.onSaved(result.id, result.body);
     },
   });
 
@@ -402,8 +414,31 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
       );
     }
 
-    setValues(initialValues);
+    if (row && entity === "products" && row.calories == null) initialValues.calories = "1";
+
+    setValues(!row ? { ...initialValues, ...editor?.initialValues } : initialValues);
   };
+
+  const editorRecord = query.data?.find((row) => row.id === editor?.recordId);
+  const editorMissing = editor && editor.recordId !== null && query.isSuccess && !editorRecord;
+
+  useEffect(() => {
+    if (
+      !editor ||
+      editorStarted.current ||
+      editorMissing ||
+      !query.isSuccess ||
+      !features.query.isSuccess ||
+      custom.isPending ||
+      custom.isError ||
+      options.some((query) => !query.isSuccess) ||
+      (entity === "products" && !productSettings.isSuccess)
+    )
+      return;
+
+    editorStarted.current = true;
+    start(editorRecord);
+  });
 
   const save = (event: FormEvent) => {
     event.preventDefault();
@@ -473,19 +508,21 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
 
   return (
     <section className="collection" aria-label={title ?? spec.label}>
-      <div className="section-heading">
-        <h2>{title ?? spec.label}</h2>
-        <button
-          className="btn btn-primary"
-          disabled={
-            entity === "products" &&
-            (productSettings.isPending || options.some((query) => query.isPending))
-          }
-          onClick={() => start()}
-        >
-          {tr("Add")} {spec.singular}
-        </button>
-      </div>
+      {!editor ? (
+        <div className="section-heading">
+          <h2>{title ?? spec.label}</h2>
+          <button
+            className="btn btn-primary"
+            disabled={
+              entity === "products" &&
+              (productSettings.isPending || options.some((query) => query.isPending))
+            }
+            onClick={() => start()}
+          >
+            {tr("Add")} {spec.singular}
+          </button>
+        </div>
+      ) : null}
       {editing !== undefined && (
         <form
           onSubmit={save}
@@ -496,11 +533,13 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
               : tr("Edit %s", String(spec.singular))
           }
         >
-          <h3>
-            {editing === null
-              ? tr("New %s", String(spec.singular))
-              : tr("Edit %s", String(spec.singular))}
-          </h3>
+          {!editor ? (
+            <h3>
+              {editing === null
+                ? tr("New %s", String(spec.singular))
+                : tr("Edit %s", String(spec.singular))}
+            </h3>
+          ) : null}
           <div className="form-grid">
             {pictureGroup ? (
               <EntityPictureField
@@ -637,6 +676,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
                     ) : (
                       <input
                         id={id}
+                        autoFocus={!!editor && field.key === "name"}
                         type={field.type ?? "text"}
                         value={
                           field.type === "checkbox"
@@ -682,7 +722,7 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
               type="button"
               className="btn btn-ghost"
               disabled={mutate.isPending}
-              onClick={() => setEditing(undefined)}
+              onClick={() => (editor ? editor.onCancel() : setEditing(undefined))}
             >
               {tr("Cancel")}
             </button>
@@ -690,11 +730,12 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
         </form>
       )}
       {error && <ErrorBlock message={error.message} />}
+      {editorMissing ? <ErrorBlock message={tr("Item not found.")} /> : null}
       {mutate.error && <ErrorBlock message={mutate.error.message} />}
-      {query.isPending && (
+      {(query.isPending || (editor && editing === undefined && !error && !editorMissing)) && (
         <LoadingBlock label={tr("Loading %s...", String(spec.label.toLowerCase()))} />
       )}
-      {(query.data?.length ?? 0) > 5 && (
+      {!editor && (query.data?.length ?? 0) > 5 && (
         <div className="field">
           <label htmlFor={`${prefix}-search`}>
             {tr("Search")} {spec.label.toLowerCase()}
@@ -707,77 +748,79 @@ export function EntityManager({ entity, detail, actions, fixed, title }: Props) 
           />
         </div>
       )}
-      {query.isSuccess && rows.length === 0 && (
+      {!editor && query.isSuccess && rows.length === 0 && (
         <p className="empty-state">
           {tr("No")} {spec.label.toLowerCase()} {tr("to show. Use Add")} {spec.singular}{" "}
           {tr("to create one.")}
         </p>
       )}
-      <ul className="product-list">
-        {rows.map((row) => (
-          <li key={row.id} className="product-row management-row">
-            <div>
-              {pictureGroup && row.picture_file_name ? (
-                <EntityPictureDetails
-                  group={pictureGroup}
-                  name={row.picture_file_name}
-                  label={tr("%s picture", String(row.name ?? spec.singular))}
-                />
-              ) : null}
-              {detail ? (
-                detail(row)
-              ) : (
-                <>
-                  <h3>{row.name ?? row.note ?? row.barcode ?? `#${row.id}`}</h3>
-                  {row.description && <p>{row.description}</p>}
-                  <p className="muted">
-                    {spec.fields
-                      .filter(
-                        (f) =>
-                          f.ref ||
-                          f.type === "number" ||
-                          f.type === "date" ||
-                          f.type === "datetime-local",
-                      )
-                      .flatMap((f) =>
-                        row[f.key] == null
-                          ? []
-                          : [
-                              `${f.label}: ${f.ref ? (options[refs.indexOf(f.ref)]?.data?.find((r) => r.id === row[f.key])?.name ?? row[f.key]) : row[f.key]}`,
-                            ],
-                      )
-                      .join("; ")}
-                  </p>
-                </>
-              )}
-            </div>
-            <div className="actions">
-              {actions?.(row)}
-              <button className="btn btn-ghost" onClick={() => start(row)}>
-                {tr("Edit")}
-                <span className="sr-only"> {row.name ?? row.id}</span>
-              </button>
-              <button
-                className="btn btn-ghost"
-                disabled={mutate.isPending}
-                onClick={() =>
-                  deleteId === row.id
-                    ? mutate.mutate({ kind: "delete", id: row.id })
-                    : setDeleteId(row.id)
-                }
-              >
-                {deleteId === row.id ? tr("Confirm delete") : tr("Delete")}
-                <span className="sr-only"> {row.name ?? row.id}</span>
-              </button>
-              {deleteId === row.id && (
-                <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>
-                  {tr("Cancel delete")}
+      {!editor ? (
+        <ul className="product-list">
+          {rows.map((row) => (
+            <li key={row.id} className="product-row management-row">
+              <div>
+                {pictureGroup && row.picture_file_name ? (
+                  <EntityPictureDetails
+                    group={pictureGroup}
+                    name={row.picture_file_name}
+                    label={tr("%s picture", String(row.name ?? spec.singular))}
+                  />
+                ) : null}
+                {detail ? (
+                  detail(row)
+                ) : (
+                  <>
+                    <h3>{row.name ?? row.note ?? row.barcode ?? `#${row.id}`}</h3>
+                    {row.description && <p>{row.description}</p>}
+                    <p className="muted">
+                      {spec.fields
+                        .filter(
+                          (f) =>
+                            f.ref ||
+                            f.type === "number" ||
+                            f.type === "date" ||
+                            f.type === "datetime-local",
+                        )
+                        .flatMap((f) =>
+                          row[f.key] == null
+                            ? []
+                            : [
+                                `${f.label}: ${f.ref ? (options[refs.indexOf(f.ref)]?.data?.find((r) => r.id === row[f.key])?.name ?? row[f.key]) : row[f.key]}`,
+                              ],
+                        )
+                        .join("; ")}
+                    </p>
+                  </>
+                )}
+              </div>
+              <div className="actions">
+                {actions?.(row)}
+                <button className="btn btn-ghost" onClick={() => start(row)}>
+                  {tr("Edit")}
+                  <span className="sr-only"> {row.name ?? row.id}</span>
                 </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+                <button
+                  className="btn btn-ghost"
+                  disabled={mutate.isPending}
+                  onClick={() =>
+                    deleteId === row.id
+                      ? mutate.mutate({ kind: "delete", id: row.id })
+                      : setDeleteId(row.id)
+                  }
+                >
+                  {deleteId === row.id ? tr("Confirm delete") : tr("Delete")}
+                  <span className="sr-only"> {row.name ?? row.id}</span>
+                </button>
+                {deleteId === row.id && (
+                  <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>
+                    {tr("Cancel delete")}
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }

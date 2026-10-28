@@ -32,6 +32,7 @@ test.each([
     auto_reprint_stock_label: 1,
     default_purchase_price_type: 3,
     due_type: 2,
+    calories: null,
   };
 
   vi.stubGlobal(
@@ -88,7 +89,7 @@ test.each([
   await user.click(await screen.findByRole("button", { name: /Edit.*Milk/ }));
   await user.clear(screen.getByLabelText("Name"));
   await user.type(screen.getByLabelText("Name"), "Fresh milk");
-  expect(screen.getByLabelText("Energy per stock unit (kJ)")).toBeDefined();
+  expect(screen.getByLabelText<HTMLInputElement>("Energy per stock unit (kJ)").value).toBe("1");
 
   if (tracking) await user.selectOptions(screen.getByLabelText("Default stock label"), "1");
   await user.click(screen.getByRole("button", { name: "Save product" }));
@@ -102,6 +103,7 @@ test.each([
     default_best_before_days_after_thawing: tracking ? 2 : 0,
     should_not_be_frozen: tracking ? 1 : 0,
     due_type: tracking ? "2" : 1,
+    calories: 1,
   });
 
   if (tracking)

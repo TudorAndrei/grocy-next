@@ -25,6 +25,7 @@ export function configuredFeatures(config: JsonObject | undefined): Features {
     switch (route) {
       case "stock":
       case "products":
+      case "product":
       case "barcode":
       case "journal":
       case "reviews":

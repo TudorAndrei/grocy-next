@@ -1,0 +1,69 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
+import { EntityManager } from "@/components/EntityManager";
+import { PageHeader } from "@/components/PageHeader";
+import { useI18n } from "@/lib/i18n";
+
+export const Route = createFileRoute("/product/$productId")({
+  validateSearch: z.object({
+    flow: z.coerce.string().optional().catch(undefined),
+    name: z.coerce.string().optional().catch(undefined),
+    barcode: z.coerce.string().optional().catch(undefined),
+    returnto: z.string().optional().catch(undefined),
+  }),
+  component: ProductFormPage,
+});
+
+function returnPath(path = "/products", productName?: string) {
+  const base = "https://grocy.invalid";
+  let target: URL;
+
+  try {
+    target = new URL(path, base);
+  } catch {
+    return "/products";
+  }
+
+  if (!path.startsWith("/") || target.origin !== base) return "/products";
+
+  if (productName !== undefined) target.searchParams.set("product-name", productName);
+
+  return target.pathname + target.search + target.hash;
+}
+
+function ProductFormPage() {
+  const { t } = useI18n();
+  const { productId } = Route.useParams();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const recordId = productId === "new" ? null : Number(productId);
+
+  return (
+    <>
+      <PageHeader title={t(recordId === null ? "Create product" : "Edit product")} />
+      <EntityManager
+        key={productId + ":" + (search.name ?? "")}
+        entity="products"
+        editor={{
+          recordId,
+          initialValues:
+            search.flow === "InplaceNewProductWithName" ? { name: search.name ?? "" } : undefined,
+          onCancel: () => {
+            void navigate({ href: returnPath(search.returnto) });
+          },
+          onSaved: async (id, body) => {
+            if (search.returnto !== undefined) {
+              await navigate({
+                href: returnPath(
+                  search.returnto,
+                  search.flow !== undefined ? String(body.name ?? "") : undefined,
+                ),
+              });
+            } else
+              await navigate({ to: "/products/$productId", params: { productId: String(id) } });
+          },
+        }}
+      />
+    </>
+  );
+}
