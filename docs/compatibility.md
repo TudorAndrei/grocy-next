@@ -123,7 +123,9 @@ Editing rounds stored amount fields for display with the native browser number f
 
 An empty Energy control submits empty text, including on creation. SQLite retains that text value. The compatibility read converts empty text to null, as the native PDO connection does. The native number picker therefore shows one when that product is reopened. A new product keeps the normal zero Energy default.
 
-Legacy number-picker buttons and the product form's stock-entry and journal dialogs still need work.
+Product number fields have Increase and Decrease buttons. Each button changes the value by one and uses the same empty-field rules as the keyboard. Values are not clamped at the field limit; an invalid result blocks saving. The buttons retain the native rule for disabled inputs: they can change the visible draft, but the save still omits that input. Enabling the input permits the changed value to be saved. The buttons have accessible names and support Tab, Enter, and Space without submitting the form. Native browser spin controls are hidden, as in the legacy page.
+
+The product form's stock-entry and journal dialogs still need work.
 
 The product editor now has barcode and product conversion tables. Barcode forms retain optional amounts, units, stores, notes, camera input, and custom fields. The table includes configured custom columns. New barcode units start empty. Available units follow the native conversion order relative to the purchase unit and include connected inactive units. Empty optional barcode values are sent as empty strings. This retains the native stored values and prevents an omitted unit from taking the database default.
 
@@ -310,6 +312,10 @@ The product number changes passed all 255 frontend tests and 13 selected Python 
 Native and Python release controls had matching numeric rules at precision zero and two. At two places, both displayed 1.125 as 1.13 and 0.555 as 0.56. Both retained a disabled stored tare weight of 0.125. Fractional due days and zero quick amounts blocked saving. Arrow Up changed 0.25 to 1.25 in both browsers. Edit saves had matching product fields and conversion rows. Both stored empty Energy as SQLite text and displayed one after reopening.
 
 Copy comparisons retained a source minimum of 1.125 without display rounding and an empty required quick amount. Both controls were invalid. After correction, both copies saved matching fields. New products at precision zero also had matching fields and empty Energy storage types. Comparisons used explicit matching units. Desktop and 390-pixel phone checks showed the invalid quick amount within the screen. Save moved focus to that field. The phone page had no horizontal overflow, and the browser reported no script errors. The final release used `/house`, had PHP disabled, and had no PHP executable in either image. The owned browser, four test containers, and their network were removed.
+
+The product number buttons passed all 255 frontend tests on 2026-10-28. Formatting, lint, type checks, and root and `/house` release builds passed. Four extended form cases failed with the previous controls because the buttons were missing. The cases cover both precision settings, pointer actions, keyboard button actions without a save, empty values, fractions, invalid negative values, and disabled tare and parent-minimum drafts. Existing validation, copy, and save-retry cases still pass.
+
+Native and Python release button saves had matching product fields and conversion rows. Both retained a stored tare weight of 0.125 after a disabled draft changed to 1.13. After the input was enabled, both saved 1.13. Both increased the minimum to 2.13 and the quick-open amount to 1.56. Release keyboard checks moved focus through the input and both buttons. Enter increased the value; Space decreased it. Desktop and 390-pixel phone checks had no horizontal overflow. Phone button targets measured 44 by 44 pixels. Saved Hebrew and dark-theme settings also retained the layout and control order. The browser reported no script errors. The release used `/house`, had PHP disabled, and had no PHP executable in either image. The owned browser, four test containers, and their network were removed.
 
 Run the normal tests without PHP:
 
