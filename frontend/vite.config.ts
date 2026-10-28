@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
   const apiPrefix = `${base.replace(/\/$/, "")}/api`;
   const filesPrefix = `${base.replace(/\/$/, "")}/files`;
 
+  const resourcePaths =
+    "(?:(?:product|recipe|chore|battery|stockentry)/[^/?]+/grocycode|stockentry/[^/?]+/label)(?:\\?|$)";
+
+  const escapedBase = base.replace(/\/+$/, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
   const apiProxy = {
     target: process.env.GROCY_API_PROXY || "http://127.0.0.1:8000",
     changeOrigin: true,
@@ -35,6 +40,7 @@ export default defineConfig(({ mode }) => {
         [apiPrefix]: apiProxy,
         "/files": apiProxy,
         [filesPrefix]: apiProxy,
+        [`^${escapedBase}/${resourcePaths}`]: apiProxy,
       },
     },
   };
