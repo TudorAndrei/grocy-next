@@ -151,6 +151,10 @@ export function EntityManager({
   const [creating, setCreating] = useState(false);
   const [factorChanged, setFactorChanged] = useState(false);
   const [tareEditable, setTareEditable] = useState(false);
+  const [minimumStockDisabled, setMinimumStockDisabled] = useState(false);
+  const [parentReadError, setParentReadError] = useState<{ id: string; error: Error } | null>(null);
+  const [parentReadRevision, setParentReadRevision] = useState(0);
+  const [parentSelected, setParentSelected] = useState(false);
   const form = useRef<HTMLFormElement>(null);
 
   const pictureGroup =
@@ -325,9 +329,44 @@ export function EntityManager({
       !productOptions.isFetching &&
       options.every((query) => query.isSuccess && !query.isFetching));
 
+  const parentId =
+    entity === "products" &&
+    editing !== undefined &&
+    productOptions.data?.references.parent_product_id?.includes(Number(values.parent_product_id))
+      ? values.parent_product_id
+      : "";
+
+  const parentReadEnabled =
+    productOptionsReady && !(creating && editor?.copyOf !== undefined && !parentSelected);
+
+  useEffect(() => {
+    if (!parentId || !parentReadEnabled) return;
+    let current = true;
+
+    void request<EntityRow>(`/api/objects/products/${parentId}`).then(
+      (parent) => {
+        if (!current) return;
+        setMinimumStockDisabled(
+          preferenceEnabled(String(parent.cumulate_min_stock_amount_of_sub_products ?? "")),
+        );
+        setParentReadError(null);
+      },
+      (error: Error) => {
+        if (current) setParentReadError({ id: parentId, error });
+      },
+    );
+
+    return () => {
+      current = false;
+    };
+  }, [parentId, parentReadEnabled, editorRevision, parentReadRevision]);
+
+  const parentError = parentReadError?.id === parentId ? parentReadError.error : null;
+
   const error =
     query.error ||
     productOptions.error ||
+    parentError ||
     copySource.error ||
     custom.error ||
     descriptions.error ||
@@ -484,6 +523,11 @@ export function EntityManager({
   useEffect(() => onPendingChange?.(mutate.isPending), [mutate.isPending, onPendingChange]);
 
   const selectValue = (field: EntityField, value: string, fromInput = false) => {
+    if (entity === "products" && field.key === "parent_product_id") setParentSelected(true);
+
+    if (entity === "products" && field.key === "parent_product_id" && !value)
+      setMinimumStockDisabled(false);
+
     if (entity === "products" && field.key === "qu_factor_purchase_to_stock")
       setFactorChanged(true);
 
@@ -689,6 +733,9 @@ export function EntityManager({
     setCreating(!row);
     setFactorChanged(false);
     setTareEditable(Boolean(row && Number(row.enable_tare_weight_handling)));
+    setMinimumStockDisabled(false);
+    setParentReadError(null);
+    setParentSelected(false);
     setPicture({
       original: row?.picture_file_name ?? null,
       upload: null,
@@ -860,6 +907,9 @@ export function EntityManager({
       if (field.when && !field.when.values.includes(values[field.when.key])) continue;
 
       if (entity === "products" && field.key === "tare_weight" && !tareEditable) continue;
+
+      if (entity === "products" && field.key === "min_stock_amount" && minimumStockDisabled)
+        continue;
 
       if (
         entity === "products" &&
@@ -1167,7 +1217,9 @@ export function EntityManager({
                         id={id}
                         autoFocus={!!editor && field.key === "name"}
                         disabled={
-                          entity === "products" && field.key === "tare_weight" && !tareEditable
+                          entity === "products" &&
+                          ((field.key === "tare_weight" && !tareEditable) ||
+                            (field.key === "min_stock_amount" && minimumStockDisabled))
                         }
                         type={field.type ?? "text"}
                         value={
@@ -1313,6 +1365,11 @@ export function EntityManager({
         />
       ) : null}
       {error && <ErrorBlock message={error.message} />}
+      {parentError ? (
+        <button type="button" className="btn" onClick={() => setParentReadRevision((n) => n + 1)}>
+          {tr("Retry parent product")}
+        </button>
+      ) : null}
       {productOptions.error ? (
         <button
           type="button"

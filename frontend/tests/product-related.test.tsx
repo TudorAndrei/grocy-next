@@ -83,6 +83,8 @@ function mount(
       treat_opened_as_out_of_stock: 0,
       picture_file_name: "source.png",
       userfields: { Owner: "Source owner" },
+      parent_product_id: 9,
+      min_stock_amount: 9,
     });
 
   if (options.tare) Object.assign(product, { enable_tare_weight_handling: 0, tare_weight: 120 });
@@ -237,7 +239,11 @@ function mount(
       return Response.json(product);
     }
 
-    if (path === "/api/objects/products") return Response.json(products);
+    if (path === "/api/objects/products/9")
+      return Response.json({ id: 9, name: "Parent", cumulate_min_stock_amount_of_sub_products: 1 });
+
+    if (path === "/api/objects/products")
+      return Response.json(options.copying ? [...products, { id: 9, name: "Parent" }] : products);
 
     if (path.startsWith("/api/files/productpictures/"))
       return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
@@ -579,6 +585,8 @@ test("catalog copy links create a separate product with native copy fields and r
   expect(form.getByLabelText<HTMLInputElement>("Owner").value).toBe("");
   expect(form.getByLabelText<HTMLInputElement>("Container weight").value).toBe("120");
   expect(form.getByLabelText<HTMLInputElement>("Container weight").disabled).toBe(true);
+  expect(form.getByLabelText<HTMLInputElement>("Minimum stock").disabled).toBe(false);
+  expect(form.getByLabelText<HTMLInputElement>("Minimum stock").value).toBe("9");
   await user.type(form.getByLabelText("Name"), "New coffee");
   expect(form.getByLabelText<HTMLSelectElement>("Consume unit").value).toBe("1");
   expect(form.getByLabelText<HTMLSelectElement>("Price unit").value).toBe("1");
@@ -597,9 +605,14 @@ test("catalog copy links create a separate product with native copy fields and r
     description: "<p>Source <strong>description</strong></p>",
     tare_weight: 0,
     picture_file_name: null,
+    parent_product_id: 9,
+    min_stock_amount: 9,
   });
   await user.click(await availableButton("Save & continue"));
   await waitFor(() => expect(router.state.location.href).toBe("/product/8"));
+  await waitFor(() =>
+    expect(screen.getByLabelText<HTMLInputElement>("Minimum stock").disabled).toBe(true),
+  );
   expect(products[1]?.userfields).toEqual({ Owner: "New owner" });
   expect(product).toMatchObject({
     id: 7,

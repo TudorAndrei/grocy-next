@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 import { EntityManager } from "@/components/EntityManager";
@@ -28,7 +28,7 @@ const matrix = [
   { from_qu_id: 3, to_qu_id: 2, factor: 4 },
 ];
 
-function mount() {
+function mount({ child = false } = {}) {
   const product: EntityRow = {
     id: 7,
     name: "Coffee",
@@ -40,12 +40,16 @@ function mount() {
     qu_id_purchase: 5,
     qu_id_consume: 4,
     qu_id_price: 5,
-    parent_product_id: null,
+    parent_product_id: child ? 8 : null,
+    min_stock_amount: 7,
   };
 
   const products = [product, { id: 8, name: "Parent" }, { id: 11, name: "Other parent" }];
   const writes: { path: string; body: JsonObject }[] = [];
   let attempts = 0;
+  let failParent = false;
+  let holdParent = false;
+  let parentResponse: (() => void) | undefined;
   vi.stubGlobal(
     "fetch",
     vi.fn<typeof fetch>(async (input, init) => {
@@ -53,7 +57,7 @@ function mount() {
       const path = url.pathname;
 
       if (path === "/api/v2/products/form-options") {
-        if (url.searchParams.has("product_id") && ++attempts === 1)
+        if (!child && url.searchParams.has("product_id") && ++attempts === 1)
           return Response.json({ error_message: "Product choices failed" }, { status: 503 });
 
         const existing = url.searchParams.has("product_id");
@@ -69,8 +73,23 @@ function mount() {
 
         return Response.json({
           references: existing ? references : newReferences,
-          parent_disabled: existing,
+          parent_disabled: existing && !child,
           conversions: existing ? matrix : [],
+        });
+      }
+
+      if (path === "/api/objects/products/8" || path === "/api/objects/products/11") {
+        if (failParent)
+          return Response.json({ error_message: "Parent read failed" }, { status: 503 });
+
+        if (holdParent && path.endsWith("/8"))
+          await new Promise<void>((resolve) => {
+            parentResponse = resolve;
+          });
+
+        return Response.json({
+          id: path.endsWith("/8") ? 8 : 11,
+          cumulate_min_stock_amount_of_sub_products: path.endsWith("/8") ? "on" : 0,
         });
       }
 
@@ -150,7 +169,18 @@ function mount() {
     client.clear();
   });
 
-  return { writes, product };
+  return {
+    writes,
+    product,
+    setParentFailure: (value: boolean) => {
+      failParent = value;
+    },
+    holdParentRead: () => {
+      holdParent = true;
+    },
+    pendingParentRead: () => Boolean(parentResponse),
+    releaseParentRead: () => parentResponse?.(),
+  };
 }
 
 function choices(label: string) {
@@ -244,4 +274,56 @@ test("new product forms send explicit empty optional references with valid requi
       default_consume_location_id: "",
     },
   });
+});
+
+test("parent minimum rules retain disabled values and refresh when the selected parent changes", async () => {
+  const {
+    writes,
+    product,
+    setParentFailure,
+    holdParentRead,
+    pendingParentRead,
+    releaseParentRead,
+  } = mount({ child: true });
+
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /Edit.*Coffee/ }));
+  let minimum = screen.getByLabelText<HTMLInputElement>("Minimum stock");
+  await waitFor(() => expect(minimum.disabled).toBe(true));
+  expect(minimum.value).toBe("7");
+  await user.selectOptions(screen.getByLabelText("Default location"), "3");
+  await user.click(screen.getByRole("button", { name: "Save product" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]?.body).not.toHaveProperty("min_stock_amount");
+  expect(product.min_stock_amount).toBe(7);
+
+  await user.click(await screen.findByRole("button", { name: /Edit.*Coffee/ }));
+  minimum = screen.getByLabelText<HTMLInputElement>("Minimum stock");
+  await waitFor(() => expect(minimum.disabled).toBe(true));
+  await user.selectOptions(screen.getByLabelText("Parent product"), "11");
+  await waitFor(() => expect(minimum.disabled).toBe(false));
+  await user.clear(minimum);
+  await user.type(minimum, "9");
+  setParentFailure(true);
+  await user.selectOptions(screen.getByLabelText("Parent product"), "8");
+  await screen.findByText("Parent read failed");
+  expect(minimum.disabled).toBe(false);
+  expect(minimum.value).toBe("9");
+  setParentFailure(false);
+  await user.click(screen.getByRole("button", { name: "Retry parent product" }));
+  await waitFor(() => expect(minimum.disabled).toBe(true));
+  expect(minimum.value).toBe("9");
+  await user.selectOptions(screen.getByLabelText("Parent product"), "");
+  expect(minimum.disabled).toBe(false);
+  holdParentRead();
+  await user.selectOptions(screen.getByLabelText("Parent product"), "8");
+  await waitFor(() => expect(pendingParentRead()).toBe(true));
+  await user.selectOptions(screen.getByLabelText("Parent product"), "11");
+  await act(async () => releaseParentRead());
+  expect(minimum.disabled).toBe(false);
+  await user.selectOptions(screen.getByLabelText("Parent product"), "");
+  await user.click(screen.getByRole("button", { name: "Save product" }));
+  await waitFor(() => expect(writes).toHaveLength(2));
+  expect(writes[1]?.body).toMatchObject({ parent_product_id: "", min_stock_amount: 9 });
+  expect(product.min_stock_amount).toBe(9);
 });
