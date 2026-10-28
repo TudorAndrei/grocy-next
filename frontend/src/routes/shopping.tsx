@@ -6,7 +6,7 @@ import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
 import { unitLabel } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
-import { ThermalPrintAction } from "@/components/ThermalPrintAction";
+import { ShoppingPrintAction } from "@/components/ShoppingPrintAction";
 import type { ShoppingList, ShoppingListItem } from "@/lib/types";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Icon } from "@/components/Icon";
@@ -245,10 +245,8 @@ function ShoppingPage() {
                 {tr("Add expired")}
               </button>
             ) : null}
-            <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
-              {tr("Print")}
-            </button>
-            <ThermalPrintAction listId={listId} />
+            <ShoppingPrintAction listId={listId} paper />
+            <ShoppingPrintAction listId={listId} />
             {features.enabled("LABEL_PRINTER") ? (
               <Link to="/labels" className="btn btn-ghost">
                 {tr("Labels")}

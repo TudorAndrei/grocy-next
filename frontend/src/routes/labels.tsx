@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
-import { ThermalPrintAction } from "@/components/ThermalPrintAction";
+import { ShoppingPrintAction } from "@/components/ShoppingPrintAction";
 import { batteriesQuery, choresQuery, productsQuery } from "@/hooks/queries";
 import { useFeatures } from "@/lib/features";
 import { api, queryKeys } from "@/lib/api";
@@ -119,7 +119,7 @@ function LabelsPage() {
       <TabPanel id="panel-shopping" labelledBy="tab-shopping" hidden={tab !== "shopping"}>
         <div className="panel panel-inner">
           <p className="page-lead">{tr("Thermal shopping list layout for receipt printers.")}</p>
-          <ThermalPrintAction listId={1} />
+          <ShoppingPrintAction listId={1} />
         </div>
       </TabPanel>
     </>

@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/rea
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
+import type { UserSettings } from "@/lib/types";
 import { routeTree } from "@/routeTree.gen";
 import { writeApiConfig } from "@/lib/config";
 
@@ -36,7 +37,7 @@ function mount({
     addEventListener() {},
     removeEventListener() {},
   }));
-  let value = header;
+  const values: UserSettings = { shopping_list_print_show_header: header };
   let finish: (() => void) | undefined;
   let failed = false;
 
@@ -53,15 +54,17 @@ function mount({
 
     if (path === "/api/user") return Response.json([{ id: 1, username: "test" }]);
 
-    if (path === "/api/user/settings")
-      return Response.json({ shopping_list_print_show_header: value });
+    if (path === "/api/user/settings") return Response.json(values);
 
-    if (path === "/api/user/settings/shopping_list_print_show_header") {
-      const body: { value: boolean } = JSON.parse(String(init?.body));
-      value = body.value;
+    if (path.startsWith("/api/user/settings/")) {
+      const body: { value: boolean | string } = JSON.parse(String(init?.body));
+      values[path.split("/").at(-1)!] = body.value;
 
       return new Response(null, { status: 204 });
     }
+
+    if (path.includes("/print?"))
+      return Response.json({ error_message: "Could not load paper document" }, { status: 503 });
 
     if (path.startsWith("/api/print/shoppinglist/thermal?")) {
       if (failOnce && !failed) {
@@ -199,4 +202,45 @@ test("the labels page permits a thermal printer without a label printer", async 
   const dialog = await screen.findByRole("dialog", { name: "Print" });
   await user.click(within(dialog).getByRole("button", { name: "Thermal printer" }));
   await screen.findByText("Print request sent");
+});
+
+test("paper print choices persist and use the selected list with authenticated error feedback", async () => {
+  const { fetchMock } = mount();
+  const user = userEvent.setup();
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Shopping list" }), "7");
+  await user.click(screen.getByRole("button", { name: "Print" }));
+  let dialog = await screen.findByRole("dialog", { name: "Print" });
+  await user.click(within(dialog).getByRole("checkbox", { name: "Show header" }));
+  await waitFor(() =>
+    expect(
+      within(dialog).getByRole<HTMLInputElement>("checkbox", { name: "Group by product group" })
+        .disabled,
+    ).toBe(false),
+  );
+  await user.click(within(dialog).getByRole("checkbox", { name: "Group by product group" }));
+  const layout = within(dialog).getByRole<HTMLSelectElement>("combobox", { name: "Layout type" });
+  await waitFor(() => expect(layout.disabled).toBe(false));
+  await user.selectOptions(layout, "list");
+  await waitFor(() => expect(layout.disabled).toBe(false));
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  await user.click(screen.getByRole("button", { name: "Print" }));
+  dialog = await screen.findByRole("dialog", { name: "Print" });
+  expect(
+    within(dialog).getByRole<HTMLInputElement>("checkbox", { name: "Show header" }).checked,
+  ).toBe(false);
+  expect(
+    within(dialog).getByRole<HTMLInputElement>("checkbox", { name: "Group by product group" })
+      .checked,
+  ).toBe(false);
+  expect(
+    within(dialog).getByRole<HTMLSelectElement>("combobox", { name: "Layout type" }).value,
+  ).toBe("list");
+  await user.click(within(dialog).getByRole("button", { name: "Print" }));
+  await screen.findByText("Unable to print");
+  const job = fetchMock.mock.calls.find(([path]) => String(path).includes("/print?"));
+  expect(job?.[0]).toBe(
+    "/house/api/v2/shopping-lists/7/print?header=false&grouped=false&layout=list",
+  );
+  expect(new Headers(job?.[1]?.headers).get("GROCY-API-KEY")).toBe("thermal-key");
+  expect(screen.getByRole("button", { name: "Retry" })).toBeDefined();
 });
