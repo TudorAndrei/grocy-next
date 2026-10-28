@@ -2190,6 +2190,32 @@ def test_equivalent_purchases_compact_and_follow_reference_undo(api, catalog):
         assert api.get(base).json()["stock_amount"] == expected
 
 
+def test_purchase_compaction_keeps_transferred_stock_identity_for_undo(api, catalog, execute_sql):
+    product, _, _, source = catalog
+    target = create(api, "locations", name=uuid4().hex)
+    base = f"/api/stock/products/{product}"
+    body = {"amount": 5, "price": 2, "best_before_date": "2037-01-01"}
+    assert api.post(base + "/add", json=body).status_code == 200
+    # Force the next generated hexadecimal stock ID to sort before the saved ID.
+    # This exercises the same compaction choice on both runtimes on every run.
+    saved_id = "z" + uuid4().hex
+    for table in ("stock", "stock_log"):
+        execute_sql(f"UPDATE {table} SET stock_id='{saved_id}' WHERE product_id={product}")
+    transfer = api.post(
+        base + "/transfer",
+        json={"amount": 2, "location_id_from": source, "location_id_to": target},
+    )
+    assert transfer.status_code == 200, transfer.text
+    assert api.post(base + "/add", json={**body, "amount": 3}).status_code == 200
+    entries = api.get(base + "/entries").json()
+    assert {(row["location_id"], row["amount"]) for row in entries} == {(source, 6), (target, 2)}
+    assert len({row["stock_id"] for row in entries}) == 1
+    undone = api.post(f"/api/stock/bookings/{transfer.json()[0]['id']}/undo")
+    assert undone.status_code == 204, undone.text
+    restored = api.get(base + "/entries").json()
+    assert [(row["location_id"], row["amount"]) for row in restored] == [(source, 8)]
+
+
 def test_stock_custom_fields_use_booking_transactions_and_prevent_compaction(api, catalog):
     product, _, _, _ = catalog
     field = "batch_" + uuid4().hex

@@ -1411,6 +1411,11 @@ class StockService:
             old_stock_ids = {entry.stock_id for entry in group}
             keep.stock_id = stock_id
             keep.amount = sum((entry.amount for entry in group), Decimal("0"))
+            # Native compaction also renames split rows at other locations.
+            # Their transfer bookings must still resolve to the saved stock ID.
+            for entry in entries:
+                if entry.stock_id in old_stock_ids:
+                    entry.stock_id = stock_id
             logs = (
                 await self.session.scalars(
                     select(StockLog).where(StockLog.product_id == product_id)
