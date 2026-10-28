@@ -24,7 +24,7 @@ The current repair work covers these confirmed differences:
 - Calendar export downloads the authenticated calendar document.
 - Chore and battery forms send the legacy date and time format.
 - Stock list filters use the same query rules as generic lists.
-- Compatibility recipe routes use the legacy serving rules. The web app uses v2 routes for selected servings.
+- Compatibility recipe routes use the legacy serving rules. The recipe card saves desired servings and uses these routes for consumption and shopping writes.
 - Input filtering runs in Python. It preserves the checked HTML, entity, null, boolean, and numeric value rules.
 - Permission replacement preserves the legacy delete and batch failure order.
 - Custom field writes preserve earlier successful values when a later field fails. Field reads preserve numeric name and object-key comparison rules.
@@ -65,8 +65,9 @@ The current repair work covers these confirmed differences:
 - Recipe preparation and equipment descriptions display formatted text, lists, tables, and images. Python prepares a display copy through the authenticated content endpoint. Stored descriptions and compatibility API responses retain their values. The display copy removes active scripts and adds an iframe sandbox without same-origin access.
 - Recipe and equipment views support full-screen cards. Recipe links retain the `#fullscreen` form. The controls remain visible during scrolling. Keyboard focus stays in the card, Escape closes it, and closing restores page access and prior focus. Automatic data refresh waits while a card is in full-screen mode. Equipment manuals display as PDFs and retain authenticated downloads.
 - The appearance form exposes both screen-on settings. The first user action enables the saved preference. Always-on has priority over the conditional setting. The app releases its lock when the page is hidden, the setting is disabled, or the conditional card closes. It can acquire a new lock when the page becomes visible. A late request also releases its lock after close or removal. Browsers without the native API use the legacy NoSleep.js 0.12.0 method.
+- Recipe cards include every nested recipe once and sort the included cards by name without case sensitivity. Python reads the pinned recipe views and keeps separate ingredient rows, nesting amounts, unit conversions, groups, notes, variable amounts, stock status, prices, and calories. The web reader supports keyboard tab selection and the saved ingredient checkbox and product-group settings. Check marks remain local to the page and reset on reload. Desired servings start with the saved value. Changes are saved in order before stock or shopping actions can run. Consumption can proceed when stock is insufficient, as in the legacy version.
 
-Full Python parity is not complete. Open work includes further configuration options, translated web text, remaining form behavior, and preparation views for included recipes. More saved preferences still need their web effects. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes further configuration options, translated web text, remaining form behavior, and the recipe list layout and remaining recipe actions. More saved preferences still need their web effects. Test results must identify the runtime and selected cases.
 
 ## Verification
 
@@ -91,6 +92,10 @@ The formatted-content and full-screen changes passed 14 selected Python tests an
 Browser checks covered direct full-screen links, formatted recipe and equipment text, keyboard exit, desktop and phone PDF views, and controls during long-page scrolling. The browser's native screen-lock API acquired a lock in full-screen mode and released it on Escape. The saved always-on setting also acquired a lock outside a card. These checks confirm browser requests and lock release; they do not check physical display sleep.
 
 Both release images built. The Python image passed the HTTP checks, including both formatted-content routes and saved-description preservation. The production web image passed the recipe, clock, scroll, and native screen-lock checks through `/house`. Checked API and asset requests used that prefix. Neither release image had a PHP executable. Browser fixtures were removed, test settings were restored, and the temporary release containers and network were removed.
+
+The included-recipe repair passed nine selected Python integration tests and all 172 frontend tests. Formatting, lint, type checks, and the web build passed. The Python tests cover nested card order, shared child recipes, separate ingredient rows, converted amounts, single-unit checks, groups, notes, stock and shopping amounts, access checks, and safe preparation output. The frontend tests cover full unit names, keyboard selection, temporary check marks, saved servings, and ordered saves before native consumption. The saved-serving regression failed with the earlier page: it showed `1` when the saved value was `4`. It passed after the correction.
+
+The recipe release images built and passed their checks. The Python image passed HTTP checks for nested recipe cards and safe preparation output. The production web check covered desktop and phone views through `/house`, included preparation, and saving the ingredient checkbox setting through the preference form. The browser then cooked a recipe that needed 200 grams with 50 grams in stock. Python recorded consumption of 50 grams and the remaining stock was zero. Neither release image had a PHP executable. Browser fixtures were removed, test settings were restored, and the temporary release containers and network were removed.
 
 Run the normal tests without PHP:
 
