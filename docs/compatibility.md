@@ -78,6 +78,8 @@ The appearance changes passed 93 frontend tests. Browser checks covered saved li
 
 The product-preset changes passed 95 frontend tests, formatting, lint, type checks, and the web build. Browser checks saved all six presets, created a product, and checked the values in the Python database. The saved due-days value remained `-1`. The preset form also fit a 390-pixel phone view. The test product was removed and the prior settings were restored.
 
+The production web image at `95bbe28` also passed a browser check with the `/house` path prefix. Nginx served the built assets and forwarded requests to the Python API image at `e9a1b62`. Saved product presets survived a reload. German text and the saved night mode worked through that prefix. Neither image had a PHP executable.
+
 Run the normal tests without PHP:
 
 ```bash
