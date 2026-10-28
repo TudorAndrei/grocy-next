@@ -862,6 +862,20 @@ kbd {
     transform 120ms var(--ease);
 }
 
+.shopping-product-workflows {
+  overflow-wrap: anywhere;
+}
+
+.shopping-product-workflows .actions {
+  display: grid;
+  align-items: stretch;
+}
+
+.shopping-product-workflows .btn {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .btn:hover:not(:disabled) {
   background: var(--cobalt-soft);
 }

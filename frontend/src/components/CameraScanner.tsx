@@ -14,15 +14,29 @@ async function applyTorch(track: MediaStreamTrack, enabled: boolean) {
 export function CameraScanner({
   onScan,
   disabled = false,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   onScan: (code: string) => void;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { t: tr } = useI18n();
 
   const features = useFeatures();
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+
+  const setOpen = useCallback(
+    (next: boolean) => {
+      setInternalOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+
+  const close = useCallback(() => setOpen(false), [setOpen]);
 
   if (!features.query.data || features.enabled("DISABLE_BROWSER_BARCODE_CAMERA_SCANNING"))
     return null;
@@ -234,6 +248,7 @@ function CameraDialog({
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
       onClose={onClose}

@@ -176,6 +176,7 @@ export const shoppingListsQuery = {
 };
 
 export const shoppingItemEditorSchema = z.object({
+  barcode_lookup_plugin_name: z.string().optional().default(""),
   item: z
     .object({
       id: z.number(),

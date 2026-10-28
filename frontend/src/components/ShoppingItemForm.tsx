@@ -19,6 +19,7 @@ import { useModalDialog } from "@/hooks/useModalDialog";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { UserfieldsEditor } from "./UserfieldsEditor";
+import { ShoppingProductPicker } from "./ShoppingProductPicker";
 
 export function ShoppingItemForm({
   itemId,
@@ -179,11 +180,14 @@ function ItemFields({
   );
 
   const createdId = useRef<number>(undefined);
+  const amountInput = useRef<HTMLInputElement>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [barcodeToLink, setBarcodeToLink] = useState(options?.barcode);
   const mergeSaved = useRef(false);
   const barcodeSaved = useRef(false);
   const [recordSaved, setRecordSaved] = useState(false);
   const [barcodeLinked, setBarcodeLinked] = useState(false);
-  const stagedFlow = !!options?.merge || options?.barcode !== undefined;
+  const stagedFlow = !!options?.merge || barcodeToLink !== undefined;
   const choices = unitChoices(data, unitProductId);
   const choice = choices.find((row) => row.id === Number(unitId));
   const product = data.products.find((row) => row.id === Number(productId));
@@ -210,11 +214,11 @@ function ItemFields({
       let barcodeFailure: Error | undefined;
 
       const linkBarcode = async () => {
-        if (options?.barcode === undefined || barcodeSaved.current) return;
+        if (barcodeToLink === undefined || barcodeSaved.current) return;
 
         try {
           await api.createObject("product_barcodes", {
-            barcode: options.barcode,
+            barcode: barcodeToLink,
             product_id: productId,
           });
           barcodeSaved.current = true;
@@ -297,9 +301,9 @@ function ItemFields({
 
   return (
     <form onSubmit={submit}>
-      {options?.barcode !== undefined && !barcodeLinked ? (
+      {barcodeToLink !== undefined && !barcodeLinked ? (
         <p className="field-hint">
-          <strong>{options.barcode}</strong>{" "}
+          <strong>{barcodeToLink}</strong>{" "}
           {t("will be added to the list of barcodes for the selected product on submit")}
         </p>
       ) : null}
@@ -322,27 +326,27 @@ function ItemFields({
             </select>
           </label>
         ) : null}
-        <label className="field">
-          {t("Product")}
-          <select
-            autoFocus={!data.item && !initialProduct}
-            disabled={barcodeLinked}
-            value={productId}
-            required={!note.length}
-            onChange={(event) => selectProduct(event.target.value)}
-          >
-            <option value="">{t("None")}</option>
-            {data.products.map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ShoppingProductPicker
+          products={data.products}
+          barcodes={data.barcodes}
+          plugin={data.barcode_lookup_plugin_name}
+          value={productId}
+          required={!note.length}
+          disabled={barcodeLinked}
+          autoFocus={!data.item && !initialProduct}
+          lookupDisabled={options?.flow !== undefined || barcodeToLink !== undefined}
+          listId={features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedList : 1}
+          itemId={data.item?.id}
+          onChange={selectProduct}
+          onResolved={() => requestAnimationFrame(() => amountInput.current?.focus())}
+          onAssignBarcode={setBarcodeToLink}
+          onBusyChange={setPickerBusy}
+        />
         <div className="form-grid">
           <label className="field">
             {t("Amount")}
             <input
+              ref={amountInput}
               type="number"
               autoFocus={!!data.item || !!initialProduct}
               required
@@ -400,7 +404,7 @@ function ItemFields({
         <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
           {t("Cancel")}
         </button>
-        <button type="submit" className="btn btn-primary" disabled={save.isPending}>
+        <button type="submit" className="btn btn-primary" disabled={save.isPending || pickerBusy}>
           {t("Save")}
         </button>
       </div>

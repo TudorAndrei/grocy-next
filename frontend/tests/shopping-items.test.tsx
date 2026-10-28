@@ -53,7 +53,10 @@ function mount(
   let rowWrites = 0;
   let lookups = 0;
   const writes: { path: string; method: string; body: string }[] = [];
-  const products = [{ id: 1, name: "Milk", qu_id_stock: 1, qu_id_purchase: 2 }];
+
+  const products = [
+    { id: 1, name: "Milk", qu_id_stock: 1, qu_id_purchase: 2, location_id: 1, active: 1 },
+  ];
 
   const units = [
     { id: 1, name: "Piece", name_plural: "Pieces" },
@@ -71,14 +74,63 @@ function mount(
     if (path === "/api/user") return Response.json([{ id: 1, username: "test" }]);
 
     if (path === "/api/system/config")
-      return Response.json({ FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS: multiple });
+      return Response.json({
+        FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS: multiple,
+        STOCK_BARCODE_LOOKUP_PLUGIN: "TestLookup",
+      });
+
+    if (path === "/api/user/settings")
+      return Response.json({ product_presets_location_id: 1, product_presets_qu_id: 1 });
+
+    if (path === "/api/objects/locations") return Response.json([{ id: 1, name: "Fridge" }]);
+
+    if (path === "/api/objects/products" && method === "POST") {
+      const body = JSON.parse(String(init?.body));
+      products.push({
+        id: 2,
+        name: body.name,
+        qu_id_stock: body.qu_id_stock,
+        qu_id_purchase: body.qu_id_purchase,
+        location_id: body.location_id,
+        active: body.active,
+      });
+
+      return Response.json({ created_object_id: "2" });
+    }
+
+    if (path === "/api/objects/products/2" && method === "PUT") {
+      Object.assign(products[1], JSON.parse(String(init?.body)));
+
+      return new Response(null, { status: 204 });
+    }
 
     if (path === "/api/objects/products") return Response.json(products);
+
+    if (path.startsWith("/api/stock/barcodes/external-lookup/")) {
+      if (path.includes("EXT-ERROR"))
+        return Response.json({ error_message: "Plugin failed" }, { status: 503 });
+
+      if (path.includes("EXT-MISS")) return Response.json(null);
+      products.push({
+        id: 2,
+        name: "External tea",
+        qu_id_stock: 1,
+        qu_id_purchase: 1,
+        location_id: 1,
+        active: 1,
+      });
+
+      return Response.json({ id: 2, name: "External tea" });
+    }
+
+    if (path.startsWith("/api/objects/product_barcodes_view?") && path.includes("Retired"))
+      return Response.json([{ id: 9 }]);
 
     if (path === "/api/objects/quantity_units") return Response.json(units);
 
     if (path.startsWith("/api/v2/shopping-lists/items/editor"))
       return Response.json({
+        barcode_lookup_plugin_name: "Test lookup",
         item: path.includes("item_id=") ? saved : null,
         lists: [
           { id: 1, name: "Groceries" },
@@ -88,6 +140,14 @@ function mount(
         units,
         barcodes: [{ product_id: 1, barcodes: "MILK-CODE,123" }],
         conversions: [
+          ...products.slice(1).map((product) => ({
+            product_id: product.id,
+            from_qu_id: 1,
+            to_qu_id: 1,
+            factor: 1,
+            to_qu_name: "Piece",
+            to_qu_name_plural: "Pieces",
+          })),
           {
             product_id: 1,
             from_qu_id: 1,
@@ -307,7 +367,7 @@ test("a merge link selects a barcode match and retries lookup and fields without
   const user = userEvent.setup();
   const form = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
   const amount = await form.findByRole<HTMLInputElement>("spinbutton", { name: "Amount" });
-  expect(form.getByRole<HTMLSelectElement>("combobox", { name: "Product" }).value).toBe("1");
+  expect(form.getByRole<HTMLInputElement>("combobox", { name: "Product" }).value).toBe("Milk");
   expect(form.getByRole<HTMLSelectElement>("combobox", { name: "Shopping list" }).value).toBe("7");
   expect(form.getByRole<HTMLSelectElement>("combobox", { name: "Quantity unit" }).value).toBe("2");
   expect(amount.value).toBe("1");
@@ -351,7 +411,7 @@ test("an edit link retains the saved product and applies list and stock-amount o
   const form = within(await screen.findByRole("dialog", { name: "Edit shopping list item" }));
   const amount = await form.findByRole<HTMLInputElement>("spinbutton", { name: "Amount" });
   expect(amount.value).toBe("0.5");
-  expect(form.getByRole<HTMLSelectElement>("combobox", { name: "Product" }).value).toBe("1");
+  expect(form.getByRole<HTMLInputElement>("combobox", { name: "Product" }).value).toBe("Milk");
   expect(form.getByRole<HTMLSelectElement>("combobox", { name: "Shopping list" }).value).toBe("7");
   await user.click(form.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/shopping"));
@@ -376,8 +436,8 @@ test.each(["barcode", "row"] as const)(
 
     const user = userEvent.setup();
     const form = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
-    const product = await form.findByRole<HTMLSelectElement>("combobox", { name: "Product" });
-    expect(product.value).toBe("1");
+    const product = await form.findByRole<HTMLInputElement>("combobox", { name: "Product" });
+    expect(product.value).toBe("Milk");
     await form.findByText(
       "will be added to the list of barcodes for the selected product on submit",
     );
@@ -416,3 +476,204 @@ test.each(["barcode", "row"] as const)(
     });
   },
 );
+
+test.each(["milk-code", "23", "grcy:p:1", "Milk"])(
+  "the shopping picker resolves %s and submits its purchase-unit quantity",
+  async (code) => {
+    const { writes, router } = mount("/shoppinglistitem/new?list=7");
+    const user = userEvent.setup();
+    const form = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
+    const product = await form.findByRole<HTMLInputElement>("combobox", { name: "Product" });
+    await user.type(product, code + "{Enter}");
+    await waitFor(() => expect(product.value).toBe("Milk"));
+    expect(form.getByRole<HTMLSelectElement>("combobox", { name: "Quantity unit" }).value).toBe(
+      "2",
+    );
+    await user.click(form.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/shopping"));
+    expect(JSON.parse(writes[0].body)).toEqual({
+      shopping_list_id: 7,
+      product_id: "1",
+      amount: 6,
+      qu_id: "2",
+      note: "",
+    });
+  },
+);
+
+test("an unknown shopping code can be assigned to an existing product without leaving the selected list", async () => {
+  const { writes, router } = mount("/shoppinglistitem/new?list=7");
+  const user = userEvent.setup();
+  const form = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
+  const product = await form.findByRole<HTMLInputElement>("combobox", { name: "Product" });
+  await user.type(product, "555{Enter}");
+  const workflows = within(await screen.findByRole("dialog", { name: "Create or assign product" }));
+  workflows.getByRole("button", { name: "Cancel" }).focus();
+  await user.keyboard("b");
+  await waitFor(() => expect(document.activeElement).toBe(product));
+  await user.type(product, "Milk{Enter}");
+  await user.click(form.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/shopping"));
+  expect(writes.map((write) => write.path)).toEqual([
+    "/api/objects/product_barcodes",
+    "/api/objects/shopping_list",
+  ]);
+  expect(JSON.parse(writes[0].body)).toEqual({ barcode: "555", product_id: "1" });
+  expect(JSON.parse(writes[1].body)).toEqual({
+    shopping_list_id: 7,
+    product_id: "1",
+    amount: 6,
+    qu_id: "2",
+    note: "",
+  });
+});
+
+test("a code that belongs to an unavailable product reports the native error", async () => {
+  const { writes } = mount("/shoppinglistitem/new");
+  const user = userEvent.setup();
+  const form = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
+  await user.type(await form.findByRole("combobox", { name: "Product" }), "Retired{Enter}");
+  await form.findByText("This product is not in stock");
+  expect(form.getByRole<HTMLInputElement>("combobox", { name: "Product" }).value).toBe("");
+  expect(writes).toHaveLength(0);
+});
+
+test("Escape closes picker and camera dialogs and retains the shopping draft", async () => {
+  const { writes } = mount("/shoppinglistitem/new?list=7");
+  const user = userEvent.setup();
+  const outer = await screen.findByRole("dialog", { name: "Create shopping list item" });
+  const form = within(outer);
+  await user.type(await form.findByRole("textbox", { name: "Note" }), "Keep this draft");
+  const product = form.getByRole("combobox", { name: "Product" });
+  await user.type(product, "555{Enter}");
+  const workflows = await screen.findByRole("dialog", { name: "Create or assign product" });
+  await act(async () => {
+    workflows.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
+  });
+  await waitFor(() => expect(document.activeElement).toBe(product));
+  await user.click(form.getByRole("button", { name: "Scan with camera" }));
+  const camera = await screen.findByRole("dialog", { name: "Scan a barcode" });
+  await act(async () => {
+    camera.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
+  });
+  expect(await screen.findByRole("dialog", { name: "Create shopping list item" })).toBe(outer);
+  expect(form.getByRole<HTMLTextAreaElement>("textbox", { name: "Note" }).value).toBe(
+    "Keep this draft",
+  );
+  expect(document.body.style.overflow).toBe("hidden");
+  expect(writes).toHaveLength(0);
+});
+
+test.each(["name", "barcode"] as const)(
+  "a new product %s workflow returns to the shopping form and saves the selected product",
+  async (mode) => {
+    const { writes, router } = mount("/shoppinglistitem/new?list=7");
+    const user = userEvent.setup();
+
+    const initial = within(
+      await screen.findByRole("dialog", { name: "Create shopping list item" }),
+    );
+
+    await user.type(await initial.findByRole("combobox", { name: "Product" }), "555{Enter}");
+
+    const workflows = within(
+      await screen.findByRole("dialog", { name: "Create or assign product" }),
+    );
+
+    await user.click(
+      workflows.getByRole("button", {
+        name: mode === "name" ? /Add as new product$/ : /Add as new product and prefill barcode/,
+      }),
+    );
+    const editor = within(await screen.findByRole("form", { name: "Add product" }));
+    const name = editor.getByRole<HTMLInputElement>("textbox", { name: "Name" });
+    expect(name.value).toBe(mode === "name" ? "555" : "");
+
+    if (mode === "barcode") await user.type(name, "New tea");
+    await user.click(editor.getByRole("button", { name: "Save product" }));
+
+    const returned = within(
+      await screen.findByRole("dialog", { name: "Create shopping list item" }),
+    );
+
+    const selected = await returned.findByRole<HTMLInputElement>("combobox", { name: "Product" });
+    expect(selected.value).toBe(mode === "name" ? "555" : "New tea");
+    expect(returned.getByRole<HTMLSelectElement>("combobox", { name: "Shopping list" }).value).toBe(
+      "7",
+    );
+    await user.click(returned.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/shopping"));
+    expect(writes.filter((write) => write.path === "/api/objects/products")).toHaveLength(1);
+    expect(JSON.parse(writes.at(-1)?.body ?? "")).toEqual({
+      shopping_list_id: 7,
+      product_id: "2",
+      amount: 1,
+      qu_id: "1",
+      note: "",
+    });
+
+    if (mode === "barcode")
+      expect(JSON.parse(writes[1].body)).toEqual({ barcode: "555", product_id: "2" });
+  },
+);
+
+test("external shopping lookup handles no result and failure before returning through the product editor", async () => {
+  const { writes, router, transport } = mount("/shoppinglistitem/new?list=7");
+  const user = userEvent.setup();
+  const form = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
+  const input = await form.findByRole("combobox", { name: "Product" });
+
+  for (const code of ["EXT-MISS", "EXT-ERROR", "EXT-OK"]) {
+    await user.clear(input);
+    await user.type(input, code + "{Enter}");
+
+    const workflows = within(
+      await screen.findByRole("dialog", { name: "Create or assign product" }),
+    );
+
+    await user.click(workflows.getByRole("button", { name: /External barcode lookup/ }));
+
+    if (code === "EXT-MISS") await form.findByText("Nothing was found for the given barcode");
+
+    if (code === "EXT-ERROR") {
+      await workflows.findByText("Plugin failed");
+      await user.click(workflows.getByRole("button", { name: "Cancel" }));
+    }
+  }
+
+  const editor = within(await screen.findByRole("form", { name: "Edit product" }));
+  expect(editor.getByRole<HTMLInputElement>("textbox", { name: "Name" }).value).toBe(
+    "External tea",
+  );
+  await user.click(editor.getByRole("button", { name: "Save product" }));
+  const returned = within(await screen.findByRole("dialog", { name: "Create shopping list item" }));
+  expect((await returned.findByRole<HTMLInputElement>("combobox", { name: "Product" })).value).toBe(
+    "External tea",
+  );
+  await user.click(returned.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/shopping"));
+  expect(writes[0].path).toBe("/api/objects/products/2");
+  expect(JSON.parse(writes.at(-1)?.body ?? "").product_id).toBe("2");
+  expect(
+    transport.mock.calls
+      .filter(([path]) => String(path).includes("external-lookup/"))
+      .map(([path]) => String(path)),
+  ).toEqual([
+    "/house/api/stock/barcodes/external-lookup/EXT-MISS?add=true",
+    "/house/api/stock/barcodes/external-lookup/EXT-ERROR?add=true",
+    "/house/api/stock/barcodes/external-lookup/EXT-OK?add=true",
+  ]);
+});
+
+test("the legacy product form keeps its return link inside the application", async () => {
+  const { router, writes } = mount(
+    "/product/new?flow=InplaceNewProductWithName&name=222&returnto=https%3A%2F%2Fother.example",
+  );
+
+  const user = userEvent.setup();
+  const editor = within(await screen.findByRole("form", { name: "Add product" }));
+  expect(editor.getByRole<HTMLInputElement>("textbox", { name: "Name" }).value).toBe("222");
+  await user.click(editor.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/products"));
+  expect(writes).toHaveLength(0);
+});
