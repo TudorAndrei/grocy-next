@@ -376,7 +376,7 @@ class StockService:
             entry.amount = take
             entry.best_before_date = expiry
             entry.open = 1
-            entry.opened_date = datetime.combine(date.today(), datetime.min.time())
+            entry.opened_date = date.today()
             remaining -= take
             await self._add_log(
                 actor=actor,
@@ -909,11 +909,7 @@ class StockService:
                 setattr(entry, key, fields[key])
         if fields.get("open") is not None:
             entry.open = int(fields["open"])
-            entry.opened_date = (
-                (entry.opened_date or datetime.combine(date.today(), datetime.min.time()))
-                if entry.open
-                else None
-            )
+            entry.opened_date = (entry.opened_date or date.today()) if entry.open else None
         new = await self._add_log(
             actor=actor,
             product_id=entry.product_id,
@@ -1356,7 +1352,11 @@ class StockService:
                 price=log.price,
                 location_id=snapshot.get("location_id", log.location_id),
                 open=snapshot.get("open", 0),
-                opened_date=datetime.fromisoformat(opened) if opened else None,
+                opened_date=(
+                    parse_date(opened) if len(opened) == 10 else datetime.fromisoformat(opened)
+                )
+                if opened
+                else None,
                 shopping_location_id=snapshot.get("shopping_location_id"),
                 note=snapshot.get("note"),
             )
@@ -1482,7 +1482,7 @@ class StockService:
         shopping_location_id: int | None = None,
         recipe_id: int | None = None,
         correlation_id: str | None = None,
-        opened_date: datetime | None = None,
+        opened_date: date | datetime | None = None,
     ) -> StockLog:
         if opened_date is None and stock_row_id is not None:
             entry = await self.session.get(StockEntry, stock_row_id)
@@ -1522,11 +1522,7 @@ class StockService:
             if isinstance(value, Decimal):
                 value = float(value)
             elif isinstance(value, datetime):
-                value = (
-                    value.date().isoformat()
-                    if column.name == "opened_date"
-                    else value.isoformat(sep=" ", timespec="seconds")
-                )
+                value = value.isoformat(sep=" ", timespec="seconds")
             elif isinstance(value, date):
                 value = value.isoformat()
             result[column.name] = value
@@ -1544,9 +1540,7 @@ class StockService:
             "location_id": row.location_id,
             "shopping_location_id": row.shopping_location_id,
             "open": row.open,
-            "opened_date": (
-                row.opened_date.date().isoformat() if row.opened_date is not None else None
-            ),
+            "opened_date": database_time(row.opened_date),
             "stock_id": row.stock_id,
             "price": float(row.price) if row.price is not None else None,
             "note": row.note,

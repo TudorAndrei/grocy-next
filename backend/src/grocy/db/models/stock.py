@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from grocy.db.dates import NativeDate
 from grocy.db.grocy_checks import native_checks
 from grocy.db.models.base import Base, TimestampMixin
+from grocy.db.types import DateOrDateTime
 
 
 class StockEntry(Base, TimestampMixin):
@@ -24,7 +25,7 @@ class StockEntry(Base, TimestampMixin):
     stock_id: Mapped[str] = mapped_column(String(64), nullable=False)
     price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
     open: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    opened_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
+    opened_date: Mapped[date | datetime | None] = mapped_column(DateOrDateTime)
     location_id: Mapped[int | None] = mapped_column(ForeignKey("locations.id"))
     shopping_location_id: Mapped[int | None] = mapped_column(Integer)
     note: Mapped[str | None] = mapped_column(Text)
@@ -49,7 +50,7 @@ class StockLog(Base):
     price: Mapped[Decimal | None] = mapped_column(Numeric(15, 6))
     undone: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     undone_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
-    opened_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
+    opened_date: Mapped[date | datetime | None] = mapped_column(DateOrDateTime)
     location_id: Mapped[int | None] = mapped_column(ForeignKey("locations.id"))
     correlation_id: Mapped[str | None] = mapped_column(String(64))
     transaction_id: Mapped[str | None] = mapped_column(String(64))

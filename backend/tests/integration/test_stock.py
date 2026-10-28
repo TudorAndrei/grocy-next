@@ -1,5 +1,10 @@
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+
+from grocy.db.session import get_session_factory
 
 
 def test_purchase_and_consume(client: TestClient, api_headers: dict[str, str]) -> None:
@@ -85,8 +90,19 @@ def test_purchase_history_keeps_dates_weighted_prices_and_undo(
     assert restored["stock_value"] == 4 * first_price
 
 
+@pytest.mark.parametrize(
+    "opened,previous",
+    [
+        (False, None),
+        (True, None),
+        (True, "2020-01-02"),
+        (True, "2020-01-02 00:00:00"),
+        (True, "2020-01-02 12:34:56"),
+        (False, "2020-01-02"),
+    ],
+)
 def test_stock_entry_edit_undo_follows_correlated_booking_rules(
-    client: TestClient, api_headers: dict
+    client: TestClient, api_headers: dict, opened: bool, previous: str | None
 ):
     client.headers.update(api_headers)
     base = "/api/stock/products/1"
@@ -99,11 +115,23 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
     )
     assert client.post(f"{base}/consume", json={"amount": 1}).status_code == 200
     entry = client.get(f"{base}/entries").json()[0]
+    if previous is not None:
+
+        async def import_opened_date():
+            async with get_session_factory()() as session:
+                await session.execute(
+                    text("UPDATE stock SET opened_date=:opened,open=1 WHERE id=:id"),
+                    {"opened": previous, "id": entry["id"]},
+                )
+                await session.commit()
+
+        assert client.portal is not None
+        client.portal.call(import_opened_date)
     edited = client.put(
         f"/api/stock/entry/{entry['id']}",
         json={
             "amount": 5,
-            "open": False,
+            "open": opened,
             "price": 3.25,
             "purchased_date": "2027-01-04",
             "note": "corrected",
@@ -113,6 +141,13 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
     bookings = edited.json()
     assert [row["transaction_type"] for row in bookings] == ["stock-edit-old", "stock-edit-new"]
     assert [row["price"] for row in bookings] == [2.5, 3.25]
+    expected_opened = (previous or date.today().isoformat()) if opened else None
+    assert [row["opened_date"] for row in bookings] == [previous, expected_opened]
+    assert client.get(f"/api/stock/entry/{entry['id']}").json()["opened_date"] == expected_opened
+    assert (
+        client.get(f"/api/stock/bookings/{bookings[1]['id']}").json()["opened_date"]
+        == expected_opened
+    )
     consumed = client.post(f"{base}/consume", json={"amount": 1})
     assert consumed.status_code == 200
     undone = client.post(f"/api/stock/bookings/{bookings[0]['id']}/undo")
@@ -124,4 +159,5 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
         restored["purchased_date"],
         restored["note"],
     ) == (3, 2.5, "2027-01-01", "original")
+    assert restored["opened_date"] == previous
     assert client.get(base).json()["avg_price"] == 3.25
