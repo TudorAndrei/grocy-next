@@ -55,17 +55,9 @@ export function RecipeOverview({
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
   const selected = search.recipe ?? overview.data?.[0]?.id;
   const highlighted = recipesSideBySide ? selected : (chosen ?? selected);
-  const preview = useRef<HTMLDivElement>(null);
   const listTab = useRef<HTMLButtonElement>(null);
   const galleryTab = useRef<HTMLButtonElement>(null);
   const prefix = useId();
-
-  useEffect(() => {
-    if (search.recipe !== undefined && window.innerWidth < 768 && recipesSideBySide) {
-      preview.current?.scrollIntoView({ block: "start" });
-      preview.current?.focus({ preventScroll: true });
-    }
-  }, [search.recipe, recipesSideBySide, overview.isSuccess]);
 
   const statusText = (recipe: RecipeListItem) =>
     recipe.stock_status === "Xenoughinstock"
@@ -366,9 +358,7 @@ export function RecipeOverview({
           </div>
         </section>
         {recipesSideBySide && selected !== undefined ? (
-          <div ref={preview} className="recipe-selection" tabIndex={-1}>
-            <RecipePreview key={selected} id={selected} />
-          </div>
+          <RecipePreview key={selected} id={selected} focusOnLoad={search.recipe !== undefined} />
         ) : null}
       </div>
       {overlay !== undefined ? (
@@ -393,19 +383,29 @@ function RecipePreview({
   id,
   overlay = false,
   onClose,
+  focusOnLoad = false,
 }: {
   id: number;
   overlay?: boolean;
   onClose?: () => void;
+  focusOnLoad?: boolean;
 }) {
   const { t } = useI18n();
+  const preview = useRef<HTMLDivElement>(null);
 
   const view = useQuery({
     queryKey: queryKeys.recipeView(id),
     queryFn: () => api.getRecipeView(id),
   });
 
-  if (view.isSuccess) return <RecipeReader view={view.data} overlay={overlay} onClose={onClose} />;
+  useEffect(() => {
+    if (focusOnLoad && !view.isPending && window.innerWidth < 768) {
+      preview.current?.scrollIntoView({ block: "start" });
+      preview.current?.focus({ preventScroll: true });
+    }
+  }, [focusOnLoad, view.isPending]);
+
+  if (overlay && view.isSuccess) return <RecipeReader view={view.data} overlay onClose={onClose} />;
 
   const content = view.isError ? (
     <>
@@ -424,6 +424,8 @@ function RecipePreview({
       {content}
     </FullscreenCard>
   ) : (
-    content
+    <div ref={preview} className="recipe-selection" tabIndex={-1}>
+      {view.isSuccess ? <RecipeReader view={view.data} /> : content}
+    </div>
   );
 }
