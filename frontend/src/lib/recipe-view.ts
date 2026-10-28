@@ -27,6 +27,7 @@ export const recipeViewSchema = z.object({
   need_fulfilled: z.boolean(),
   need_fulfilled_with_shopping_list: z.boolean(),
   missing_products_count: z.number(),
+  missing_ingredients: z.array(z.object({ product_id: z.number(), product_name: z.string() })),
   cards: z
     .array(
       z.object({

@@ -32,6 +32,11 @@ export function RecipeReader({
   const notify = useNotify();
   const invalidateStock = useInvalidateStock();
   const [selected, setSelected] = useState(view.recipe_id);
+
+  const [action, setAction] = useState<{ kind: "cook" | "shopping"; card: RecipeCard } | null>(
+    null,
+  );
+
   const card = view.cards.find((item) => item.id === selected) ?? view.cards[0];
   const root = view.cards[0];
   const [draft, setDraft] = useState<string | null>(null);
@@ -70,7 +75,7 @@ export function RecipeReader({
     !valid || Number(servings) !== root.desired_servings || saveServings.isPending;
 
   const cook = useMutation({
-    mutationFn: () => api.action(`/api/recipes/${card.id}/consume`),
+    mutationFn: (id: number) => api.action(`/api/recipes/${id}/consume`, {}),
     onSuccess: async () => {
       await invalidateStock();
       notify({ message: t("Ingredients consumed from stock") });
@@ -79,8 +84,10 @@ export function RecipeReader({
   });
 
   const shopping = useMutation({
-    mutationFn: () =>
-      api.action(`/api/recipes/${card.id}/add-not-fulfilled-products-to-shoppinglist`, {}),
+    mutationFn: ({ id, excludedProductIds }: { id: number; excludedProductIds: number[] }) =>
+      api.action(`/api/recipes/${id}/add-not-fulfilled-products-to-shoppinglist`, {
+        excludedProductIds,
+      }),
     onSuccess: async () => {
       await client.invalidateQueries();
       notify({ message: t("Missing ingredients added to the shopping list") });
@@ -198,7 +205,7 @@ export function RecipeReader({
                 disabled={
                   shopping.isPending || changingServings || card.need_fulfilled_with_shopping_list
                 }
-                onClick={() => shopping.mutate()}
+                onClick={() => setAction({ kind: "shopping", card })}
               >
                 {t("Add missing to list")}
               </button>
@@ -207,7 +214,7 @@ export function RecipeReader({
               <button
                 className="btn btn-primary"
                 disabled={cook.isPending || changingServings}
-                onClick={() => cook.mutate()}
+                onClick={() => setAction({ kind: "cook", card })}
               >
                 {cook.isPending ? t("Cooking…") : t("Cook and consume")}
               </button>
@@ -276,7 +283,136 @@ export function RecipeReader({
           </div>
         </section>
       ))}
+      {action ? (
+        <RecipeActionDialog
+          kind={action.kind}
+          name={action.card.name}
+          missingIngredients={view.missing_ingredients}
+          onClose={() => setAction(null)}
+          onConfirm={(excludedProductIds) => {
+            if (action.kind === "cook") cook.mutate(action.card.id);
+            else shopping.mutate({ id: action.card.id, excludedProductIds });
+            setAction(null);
+          }}
+        />
+      ) : null}
     </FullscreenCard>
+  );
+}
+
+function RecipeActionDialog({
+  kind,
+  name,
+  missingIngredients,
+  onClose,
+  onConfirm,
+}: {
+  kind: "cook" | "shopping";
+  name: string;
+  missingIngredients: RecipeView["missing_ingredients"];
+  onClose: () => void;
+  onConfirm: (excludedProductIds: number[]) => void;
+}) {
+  const { t } = useI18n();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [excluded, setExcluded] = useState(new Set<number>());
+  const prefix = useId();
+
+  useEffect(() => {
+    const element = dialog.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+
+    element?.showModal();
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      element?.close();
+      document.body.style.overflow = previousOverflow;
+
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="recipe-action-dialog"
+      aria-labelledby={`${prefix}-title`}
+      aria-describedby={`${prefix}-message`}
+      onKeyDown={(event) => event.stopPropagation()}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <h2 id={`${prefix}-title`}>
+        {t(kind === "cook" ? "Cook and consume" : "Add missing to list")}
+      </h2>
+      <p id={`${prefix}-message`}>
+        {kind === "cook"
+          ? t(
+              'Are you sure you want to consume all ingredients needed by recipe "%s" (ingredients marked with "only check if any amount is in stock" will be ignored)?',
+              name,
+            )
+          : t(
+              'Are you sure you want to put all missing ingredients for recipe "%s" on the shopping list?',
+              name,
+            )}
+      </p>
+      {kind === "cook" ? (
+        <p>
+          {t(
+            "For ingredients that are only partially in stock, the in stock amount will be consumed.",
+          )}
+        </p>
+      ) : (
+        <fieldset>
+          <legend>{t("Uncheck ingredients to not put them on the shopping list")}</legend>
+          <ul className="recipe-shopping-choices">
+            {missingIngredients.map((ingredient, index) => (
+              <li key={index}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!excluded.has(index)}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setExcluded((current) => {
+                        const next = new Set(current);
+
+                        if (checked) next.delete(index);
+                        else next.add(index);
+
+                        return next;
+                      });
+                    }}
+                  />
+                  {ingredient.product_name}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      )}
+      <div className="recipe-action-buttons">
+        <button className="btn" onClick={onClose}>
+          {t("No")}
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() =>
+            onConfirm(
+              missingIngredients.flatMap((ingredient, index) =>
+                excluded.has(index) ? [ingredient.product_id] : [],
+              ),
+            )
+          }
+        >
+          {t("Yes")}
+        </button>
+      </div>
+    </dialog>
   );
 }
 

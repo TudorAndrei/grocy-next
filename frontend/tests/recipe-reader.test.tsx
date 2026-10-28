@@ -2,10 +2,26 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
 import { pictureBytes } from "./fixtures/picture";
+
+beforeEach(() => {
+  for (const method of ["showModal", "close"] as const) {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, method);
+    Object.defineProperty(HTMLDialogElement.prototype, method, {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = method === "showModal";
+      },
+    });
+    onTestFinished(() => {
+      if (descriptor) Object.defineProperty(HTMLDialogElement.prototype, method, descriptor);
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, method);
+    });
+  }
+});
 
 function fixture(): RecipeView {
   return {
@@ -13,6 +29,7 @@ function fixture(): RecipeView {
     need_fulfilled: false,
     need_fulfilled_with_shopping_list: false,
     missing_products_count: 1,
+    missing_ingredients: [{ product_id: 1, product_name: "Flour" }],
     cards: [
       {
         id: 1,
@@ -439,7 +456,75 @@ test("serving changes are saved in order before native partial consumption", asy
     { path: "/api/objects/recipes/1", body: '{"desired_servings":5}' },
   ]);
   await user.click(cook);
+  const confirmation = await screen.findByRole("dialog", { name: "Cook and consume" });
+  expect(within(confirmation).getByText(/only partially in stock/)).toBeTruthy();
+  expect(writes).toHaveLength(2);
+  await user.click(within(confirmation).getByRole("button", { name: "No" }));
+  expect(writes).toHaveLength(2);
+  await user.click(cook);
+  await user.click(
+    within(await screen.findByRole("dialog", { name: "Cook and consume" })).getByRole("button", {
+      name: "Yes",
+    }),
+  );
   await waitFor(() => expect(writes.at(-1)?.path).toBe("/api/recipes/1/consume"));
+  app.unmount();
+  app.client.clear();
+});
+
+test("recipe shopping confirmation preserves row choices and sends excluded product IDs", async () => {
+  const writes: Array<{ path: string; body: string }> = [];
+  const view = fixture();
+  view.missing_products_count = 2;
+  view.missing_ingredients.push(
+    { product_id: 2, product_name: "Salt" },
+    { product_id: 1, product_name: "Flour" },
+  );
+  view.cards[0].ingredients.push({
+    ...view.cards[0].ingredients[0]!,
+    id: 102,
+    amount: 5,
+    missing_amount: 3,
+  });
+  view.cards[1]!.need_fulfilled_with_shopping_list = false;
+  Object.assign(view.cards[1]!.ingredients[0]!, {
+    amount: 3,
+    stock_amount: 0,
+    missing_amount: 3,
+    fulfilled: false,
+    fulfilled_with_shopping_list: false,
+    variable_amount: null,
+  });
+  const app = mount(view, writes);
+  const user = userEvent.setup();
+  const button = await screen.findByRole("button", { name: "Add missing to list" });
+  await user.click(button);
+  const dialog = await screen.findByRole("dialog", { name: "Add missing to list" });
+  const rows = within(dialog).getAllByRole<HTMLInputElement>("checkbox");
+  expect(rows.map((row) => row.checked)).toEqual([true, true, true]);
+  expect(rows.map((row) => row.labels?.[0]?.textContent)).toEqual(["Flour", "Salt", "Flour"]);
+  expect(writes).toEqual([]);
+  await user.click(rows[2]!);
+  expect(rows.map((row) => row.checked)).toEqual([true, true, false]);
+  await user.click(within(dialog).getByRole("button", { name: "No" }));
+  expect(writes).toEqual([]);
+  await user.click(button);
+  const reopened = await screen.findByRole("dialog", { name: "Add missing to list" });
+  expect(
+    within(reopened)
+      .getAllByRole<HTMLInputElement>("checkbox")
+      .every((row) => row.checked),
+  ).toBe(true);
+  await user.click(within(reopened).getAllByRole("checkbox")[2]!);
+  await user.click(within(reopened).getByRole("button", { name: "Yes" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        path: "/api/recipes/1/add-not-fulfilled-products-to-shoppinglist",
+        body: '{"excludedProductIds":[1]}',
+      },
+    ]),
+  );
   app.unmount();
   app.client.clear();
 });
