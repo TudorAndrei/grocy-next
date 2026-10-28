@@ -79,6 +79,8 @@ The recipe list, gallery, and reader provide code downloads. Included recipe car
 
 Python also provides the legacy product, chore, battery, and stock-entry code image routes. Stock-entry codes read the saved product ID and stock ID. Missing entries retain the checked empty-field code. GUI routes require authentication; the application routes also require their own domain permission. The same code menu serves product lists, product details, stock tables, stock entries, the stock journal, chores, batteries, and recipes. The separate labels page uses these printer actions and lists normal recipes. Its tab panels refer to the correct tab labels.
 
+The release web server and development proxy forward all five legacy code image routes and stock-entry paper label routes to Python. They retain query values, binary output, download headers, HEAD responses, authentication, and error responses. Resource routing uses the configured path prefix literally, including dots and plus signs. Product form routes still open the web app. The web image builds its escaped resource pattern from `VITE_BASE_PATH`.
+
 Stock-entry paper labels use the native product name, due-date text, code size, font sizes, and image placement. The document embeds its PNG and the pinned Roboto fonts. It can open and print without further authenticated asset requests. It retains the missing-entry output and remains available when its code image fails. The GUI route retains login and HEAD behavior; the application route requires stock access. The stock-entry menu can open this document with the label-printer flag disabled.
 
 Thermal shopping actions send a print request for the selected list. Their dialog reads and saves the header preference, shows connection status, reports printer errors, and permits retry with the retained options. Closing a pending dialog does not permit a second job before the first request finishes. Successful output closes the dialog and reports that the request was sent. The labels page also permits thermal printing when a label printer is disabled. Printer JSON responses remain inside the application.
@@ -227,12 +229,28 @@ Native and Python release browsers selected the same product from a barcode suff
 
 The final release browser decoded a real Python product Grocycode PNG through a virtual video stream and the actual scanner. It selected the product, ended the stream, and focused Amount. The prior build returned focus to the camera button. Phone checks covered product creation, nested Escape, retained notes, all unknown-code actions, and a long code at 390 pixels. The long-code dialog initially had 566 pixels of content in 352 pixels of space. The final dialog had 352 pixels for both, with no horizontal overflow. No release exceptions were captured. Both release images had no PHP executable. The owned browser session, four containers, and their network were removed. Physical camera and torch checks remain open.
 
+The web resource repair passed all 231 frontend tests and 71 selected Python tests. The Python cases include the pinned native code images and paper labels. Formatting, lint, type checks, workflow validation, and all three web image builds passed. Both original proxies failed the new public HTTP check because an image request returned the app HTML.
+
+Release and development servers passed 326 checked responses across `/`, `/house`, and `/house.v1+demo`. The checks compare image bytes, download query values, content type, cache headers, content length, HEAD output, login redirect paths, invalid-size responses, and existing and missing stock-entry labels with the direct Python API. Both API keys and test session cookies worked. Product forms retained the app response. The punctuation-prefix check also retained the route boundary outside that prefix. Conditional image requests matched the direct API. All three release configurations had no PHP executable. Four development servers, six disposable containers, and three networks were removed.
+
+The `web-resources` CI job builds root and punctuation-prefix releases, prepares disposable stock and session data, checks the Python runtime, and repeats the same resource checks through the release and development servers. The workflow passed local actionlint and ShellCheck validation; it has not been run on GitHub in this change.
+
 Run the normal tests without PHP:
 
 ```bash
 cd backend
 GROCY_USE_NATIVE_PHP=false uv run pytest
 ```
+
+With the API and web server running, check public resource links:
+
+```bash
+uv run --project backend python scripts/check-web-resources.py \
+  --api-url http://127.0.0.1:8000 \
+  --web-url http://127.0.0.1:8080
+```
+
+Include the configured path prefix in each URL. Add another `--web-url` to check a development server. The command sends only GET and HEAD requests. It uses `GROCY_TEST_API_KEY`, with the local `dev-key` default. Set `GROCY_TEST_SESSION_COOKIE` to also check a session cookie.
 
 Run the separate legacy comparisons from the repository root:
 
