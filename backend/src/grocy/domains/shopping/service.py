@@ -83,6 +83,9 @@ class ShoppingService:
                 "SELECT id,name,name_plural,plural_forms FROM quantity_units "
                 "WHERE active=1 ORDER BY name COLLATE NOCASE"
             ),
+            "barcodes": await rows(
+                "SELECT product_id,barcodes FROM product_barcodes_comma_separated"
+            ),
             "conversions": await rows(
                 "SELECT product_id,from_qu_id,to_qu_id,factor,to_qu_name,to_qu_name_plural "
                 "FROM cache__quantity_unit_conversions_resolved"

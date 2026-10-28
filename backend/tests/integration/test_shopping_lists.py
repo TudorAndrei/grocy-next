@@ -136,6 +136,7 @@ def test_shopping_paper_resolves_uploaded_custom_image(client, api_headers, tmp_
 
 
 def test_shopping_item_editor_loads_native_fields_units_and_row(client, api_headers):
+    create(client, api_headers, "product_barcodes", {"product_id": 1, "barcode": "Form-123"})
     item = create(
         client,
         api_headers,
@@ -177,6 +178,9 @@ def test_shopping_item_editor_loads_native_fields_units_and_row(client, api_head
     assert data["values"] == {"0": "First"}
     assert data["fields"][0]["id"] == field
     assert data["products"] and data["units"] and data["conversions"]
+    assert next(row for row in data["barcodes"] if row["product_id"] == 1)["barcodes"] == (
+        "4006381333931,Form-123"
+    )
     inactive = create(
         client,
         api_headers,
