@@ -1,16 +1,10 @@
+import { initialUserfields, saveUserfields, type FieldEdits } from "@/lib/userfields";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useModalDialog } from "@/hooks/useModalDialog";
-import {
-  initialUserfields,
-  saveUserfields,
-  shoppingEditor,
-  shoppingListsQuery,
-  type FieldEdits,
-  type shoppingEditorSchema,
-} from "@/lib/shopping-list";
+import { shoppingEditor, shoppingListsQuery, type shoppingEditorSchema } from "@/lib/shopping-list";
 import type { z } from "zod";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";

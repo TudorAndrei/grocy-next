@@ -9,7 +9,7 @@ import {
   type FieldEdits,
   type FieldEdit,
   type UserfieldDefinition,
-} from "@/lib/shopping-list";
+} from "@/lib/userfields";
 import { EntityPicture } from "./EntityPicture";
 import { ErrorBlock } from "./ErrorBlock";
 

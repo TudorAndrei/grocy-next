@@ -1,3 +1,4 @@
+import { initialUserfields, saveUserfields, type FieldEdits } from "@/lib/userfields";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
@@ -6,14 +7,11 @@ import { useI18n } from "@/lib/i18n";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
 import {
-  initialUserfields,
-  saveUserfields,
   shoppingItemEditor,
   shoppingListsQuery,
   mergedShoppingItem,
   type ShoppingItemOptions,
   type ShoppingItemEditor,
-  type FieldEdits,
 } from "@/lib/shopping-list";
 import { useModalDialog } from "@/hooks/useModalDialog";
 import { ErrorBlock } from "./ErrorBlock";

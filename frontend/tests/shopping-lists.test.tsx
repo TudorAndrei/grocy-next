@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import { writeApiConfig } from "@/lib/config";
-import type { UserfieldDefinition } from "@/lib/shopping-list";
+import type { UserfieldDefinition } from "@/lib/userfields";
 
 beforeEach(() => {
   for (const [prototype, method] of [
