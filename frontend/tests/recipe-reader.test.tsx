@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
+import { pictureBytes } from "./fixtures/picture";
 
 function fixture(): RecipeView {
   return {
@@ -193,15 +194,7 @@ function mount(
         return Response.json({ ...view, recipe_id: 2, cards: [view.cards[1]] });
 
       if (path.startsWith("/api/files/recipepictures/"))
-        return new Response(
-          Uint8Array.from(
-            atob(
-              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1foAAAAASUVORK5CYII=",
-            ),
-            (character) => character.charCodeAt(0),
-          ),
-          { headers: { "Content-Type": "image/png" } },
-        );
+        return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
 
       if (path === "/api/objects/products")
         return Response.json([

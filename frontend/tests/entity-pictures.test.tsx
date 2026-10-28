@@ -5,6 +5,7 @@ import { expect, test, vi } from "vitest";
 import { EntityManager } from "@/components/EntityManager";
 import type { EntityRow } from "@/lib/entities";
 import type { JsonObject } from "@/lib/json";
+import { pictureBytes } from "./fixtures/picture";
 
 function mount(entity: string) {
   vi.stubGlobal(
@@ -23,19 +24,7 @@ function mount(entity: string) {
   );
 }
 
-const image = () =>
-  new File(
-    [
-      Uint8Array.from(
-        atob(
-          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1foAAAAASUVORK5CYII=",
-        ),
-        (character) => character.charCodeAt(0),
-      ),
-    ],
-    "picture.png",
-    { type: "image/png" },
-  );
+const image = () => new File([pictureBytes], "picture.png", { type: "image/png" });
 
 test.each([
   ["products", "product", "productpictures"],
