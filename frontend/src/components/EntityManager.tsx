@@ -1,4 +1,5 @@
 import { useI18n } from "@/lib/i18n";
+import { z } from "zod";
 import { useEffect, useId, useRef, useState, type ReactNode, type FormEvent } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JsonObject } from "@/lib/json";
@@ -16,6 +17,14 @@ import { useFeatures } from "@/lib/features";
 import { userSettingsQuery } from "@/hooks/queries";
 import { preferenceEnabled } from "@/lib/preferences";
 import { CameraScanner } from "./CameraScanner";
+import { UserfieldsEditor } from "./UserfieldsEditor";
+import {
+  initialUserfields,
+  saveUserfields,
+  userfieldSchema,
+  type FieldEdits,
+  type UserfieldDefinition,
+} from "@/lib/userfields";
 import {
   EntityPictureDetails,
   EntityPictureField,
@@ -37,34 +46,12 @@ type Props = {
   };
 };
 
-function customField(row: EntityRow): EntityField {
-  const kind = String(row.type);
+const customFieldsSchema = z.array(
+  userfieldSchema.extend({ entity: z.string(), sort_number: z.number().nullable().optional() }),
+);
 
-  return {
-    key: `custom:${row.entity}:${row.name}`,
-    label: String(row.caption),
-    required: Boolean(row.input_required),
-    value: row.default_value == null ? "" : String(row.default_value),
-    type: kind.startsWith("number")
-      ? "number"
-      : kind === "datetime"
-        ? "datetime-local"
-        : kind === "date"
-          ? "date"
-          : kind === "checkbox"
-            ? "checkbox"
-            : kind === "preset-checklist"
-              ? "multiple"
-              : ["text", "text-multi-line"].includes(kind)
-                ? "textarea"
-                : undefined,
-    choices: kind.startsWith("preset-")
-      ? String(row.config ?? "")
-          .split(/\r\n|\r|\n/)
-          .filter(Boolean)
-      : undefined,
-  };
-}
+// SQLite NOCASE folds ASCII letters only. Other letters retain their code point order.
+const fieldNameOrder = (name: string) => name.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
 
 export function EntityManager({ entity, detail, actions, fixed, title, editor }: Props) {
   const { t: tr } = useI18n();
@@ -98,6 +85,8 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
     !field.features || field.features.every(features.enabled);
 
   const [values, setValues] = useState<Record<string, string>>({});
+  const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdits>>({});
+  const [creating, setCreating] = useState(false);
 
   const pictureGroup =
     entity === "products" ? "productpictures" : entity === "recipes" ? "recipepictures" : null;
@@ -115,42 +104,52 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   });
 
   const custom = useQuery({
-    queryKey: ["objects", "userfields"],
-    queryFn: () => api.objects("userfields"),
+    queryKey: ["entity-manager-userfields"],
+    queryFn: async () =>
+      customFieldsSchema.parse(await api.objects("userfields")).sort((a, b) => {
+        const position = (a.sort_number ?? -Infinity) - (b.sort_number ?? -Infinity);
+        const first = fieldNameOrder(a.name);
+        const second = fieldNameOrder(b.name);
+
+        return position || (first < second ? -1 : first > second ? 1 : 0);
+      }),
     enabled: !["userfields", "userentities"].includes(entity),
   });
 
-  const customFields = (custom.data ?? []).filter(
-    (row) =>
-      row.entity === entity ||
-      (entity === "userobjects" &&
-        row.entity ===
-          `userentity-${recordTypes.data?.find((type) => type.id === Number(values.userentity_id))?.name}`),
-  );
+  const customGroups = (typeId: string | undefined) => {
+    const namespace = `userentity-${recordTypes.data?.find((type) => type.id === Number(typeId))?.name}`;
+    const groups: Record<string, UserfieldDefinition[]> = {};
+
+    for (const field of custom.data ?? []) {
+      if (field.entity === entity || (entity === "userobjects" && field.entity === namespace))
+        (groups[field.entity] ??= []).push(field);
+    }
+
+    return groups;
+  };
+
+  const groups = customGroups(values.userentity_id);
 
   const spec: EntitySpec = {
     ...baseSpec,
-    fields: [
-      ...labeledFields.filter(fieldEnabled).map((field) =>
-        entity === "userfields" && field.key === "entity"
-          ? {
-              ...field,
-              choiceLabels: Object.fromEntries([
-                ...(field.choices ?? []).map((key) => [key, tr(entities.get(key)?.label ?? key)]),
-                ...(recordTypes.data ?? []).map((type) => [
-                  `userentity-${type.name}`,
-                  String(type.caption ?? type.name),
-                ]),
+    fields: labeledFields.filter(fieldEnabled).map((field) =>
+      entity === "userfields" && field.key === "entity"
+        ? {
+            ...field,
+            choiceLabels: Object.fromEntries([
+              ...(field.choices ?? []).map((key) => [key, tr(entities.get(key)?.label ?? key)]),
+              ...(recordTypes.data ?? []).map((type) => [
+                `userentity-${type.name}`,
+                String(type.caption ?? type.name),
               ]),
-              choices: [
-                ...(field.choices ?? []),
-                ...(recordTypes.data ?? []).map((type) => `userentity-${type.name}`),
-              ],
-            }
-          : field,
-      ),
-      ...customFields.map(customField),
-    ],
+            ]),
+            choices: [
+              ...(field.choices ?? []),
+              ...(recordTypes.data ?? []).map((type) => `userentity-${type.name}`),
+            ],
+          }
+        : field,
+    ),
   };
 
   const prefix = useId();
@@ -229,7 +228,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
     mutationFn: async (operation: {
       kind: "save" | "delete";
       body?: JsonObject;
-      fields?: Record<string, Record<string, string>>;
+      fields?: Record<string, FieldEdits>;
       id?: number;
       picture?: PictureUpload | null;
       removePicture?: string | null;
@@ -293,11 +292,13 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
         }
       }
 
-      for (const [namespace, values] of Object.entries(operation.fields ?? {}))
-        await request(`/api/userfields/${encodeURIComponent(namespace)}/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(values),
-        });
+      for (const [namespace, edits] of Object.entries(operation.fields ?? {}))
+        await saveUserfields(namespace, id, groups[namespace] ?? [], edits, (name, edit) =>
+          setFieldEdits((previous) => ({
+            ...previous,
+            [namespace]: { ...previous[namespace], [name]: edit },
+          })),
+        );
 
       if (pictureGroup && operation.picture) {
         await request(filePath(pictureGroup, operation.picture.name), {
@@ -322,13 +323,22 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   });
 
   const selectValue = (field: EntityField, value: string) => {
+    if (field.key === "userentity_id") {
+      const nextGroups = customGroups(value);
+      setFieldEdits((previous) =>
+        Object.fromEntries(
+          Object.entries(nextGroups).map(([namespace, definitions]) => [
+            namespace,
+            namespace === entity && previous[namespace]
+              ? previous[namespace]
+              : initialUserfields(definitions, {}, true),
+          ]),
+        ),
+      );
+    }
+
     setValues((previous) => {
-      const next =
-        field.key === "userentity_id"
-          ? Object.fromEntries(
-              Object.entries(previous).filter(([key]) => !key.startsWith("custom:")),
-            )
-          : { ...previous };
+      const next = { ...previous };
 
       next[field.key] = value;
 
@@ -345,6 +355,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
   const start = (row?: EntityRow) => {
     mutate.reset();
     setEditing(row?.id ?? null);
+    setCreating(!row);
     setPicture({
       original: row?.picture_file_name ?? null,
       upload: null,
@@ -352,29 +363,14 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
     });
 
     const initialValues = Object.fromEntries(
-      [
-        ...baseSpec.fields,
-        ...(custom.data ?? [])
-          .filter(
-            (field) =>
-              field.entity === entity ||
-              (entity === "userobjects" &&
-                field.entity ===
-                  `userentity-${recordTypes.data?.find((type) => type.id === Number(row?.userentity_id))?.name}`),
-          )
-          .map(customField),
-      ].map((f) => [
+      baseSpec.fields.map((f) => [
         f.key,
         row
           ? f.type === "checkbox"
-            ? Number(f.key.startsWith("custom:") ? row.custom_values?.[f.key] : row[f.key])
+            ? Number(row[f.key])
               ? "1"
               : "0"
-            : String(
-                f.key.startsWith("custom:")
-                  ? (row.custom_values?.[f.key] ?? "")
-                  : (row[f.key] ?? ""),
-              )
+            : String(row[f.key] ?? "")
           : (f.value ?? ""),
       ]),
     );
@@ -417,6 +413,25 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
     if (row && entity === "products" && row.calories == null) initialValues.calories = "1";
 
     setValues(!row ? { ...initialValues, ...editor?.initialValues } : initialValues);
+    setFieldEdits(
+      Object.fromEntries(
+        Object.entries(customGroups(String(row?.userentity_id ?? initialValues.userentity_id))).map(
+          ([namespace, definitions]) => [
+            namespace,
+            initialUserfields(
+              definitions,
+              Object.fromEntries(
+                definitions.map((field) => [
+                  field.name,
+                  row?.custom_values?.[`custom:${namespace}:${field.name}`] ?? null,
+                ]),
+              ),
+              !row,
+            ),
+          ],
+        ),
+      ),
+    );
   };
 
   const editorRecord = query.data?.find((row) => row.id === editor?.recordId);
@@ -429,7 +444,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       editorMissing ||
       !query.isSuccess ||
       !features.query.isSuccess ||
-      custom.isPending ||
+      (custom.isEnabled && custom.isPending) ||
       custom.isError ||
       options.some((query) => !query.isSuccess) ||
       (entity === "products" && !productSettings.isSuccess)
@@ -459,22 +474,13 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
       body.default_best_before_days_after_open = 1;
     }
 
-    const fields: Record<string, Record<string, string>> = {};
-
     for (const field of spec.fields) {
       if (fixed && field.key in fixed) continue;
 
       if (field.when && !field.when.values.includes(values[field.when.key])) continue;
       const value = values[field.key] ?? field.value ?? "";
 
-      if (field.key.startsWith("custom:")) {
-        const definition = customFields.find(
-          (definition) => customField(definition).key === field.key,
-        )!;
-
-        const namespace = String(definition.entity);
-        (fields[namespace] ??= {})[String(definition.name)] = value;
-      } else if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
+      if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
         if (editing !== null && !field.required) body[field.key] = null;
       } else
@@ -494,7 +500,7 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
     mutate.mutate({
       kind: "save",
       body,
-      fields,
+      fields: fieldEdits,
       picture: picture.upload,
       removePicture: picture.remove ? picture.original : null,
     });
@@ -514,8 +520,11 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
           <button
             className="btn btn-primary"
             disabled={
-              entity === "products" &&
-              (productSettings.isPending || options.some((query) => query.isPending))
+              mutate.isPending ||
+              (custom.isEnabled && !custom.isSuccess) ||
+              (recordTypes.isEnabled && !recordTypes.isSuccess) ||
+              (entity === "products" &&
+                (productSettings.isPending || options.some((query) => query.isPending)))
             }
             onClick={() => start()}
           >
@@ -711,6 +720,21 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
                 );
               })}
           </div>
+          {Object.entries(groups).map(([namespace, fields]) => (
+            <UserfieldsEditor
+              key={namespace}
+              fields={fields}
+              values={fieldEdits[namespace] ?? {}}
+              creating={creating}
+              disabled={mutate.isPending}
+              onChange={(name, edit) =>
+                setFieldEdits((previous) => ({
+                  ...previous,
+                  [namespace]: { ...previous[namespace], [name]: edit },
+                }))
+              }
+            />
+          ))}
           <div className="actions">
             <button
               className="btn btn-primary"
@@ -795,7 +819,15 @@ export function EntityManager({ entity, detail, actions, fixed, title, editor }:
               </div>
               <div className="actions">
                 {actions?.(row)}
-                <button className="btn btn-ghost" onClick={() => start(row)}>
+                <button
+                  className="btn btn-ghost"
+                  disabled={
+                    mutate.isPending ||
+                    (custom.isEnabled && !custom.isSuccess) ||
+                    (recordTypes.isEnabled && !recordTypes.isSuccess)
+                  }
+                  onClick={() => start(row)}
+                >
                   {tr("Edit")}
                   <span className="sr-only"> {row.name ?? row.id}</span>
                 </button>

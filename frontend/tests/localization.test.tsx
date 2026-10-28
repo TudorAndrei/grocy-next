@@ -152,6 +152,9 @@ test("Hebrew labels retain user names, custom captions, and saved unit forms", a
             name: "caption",
             caption: "Settings",
             type: "text-single-line",
+            input_required: 0,
+            default_value: null,
+            config: null,
           },
         ]);
 
