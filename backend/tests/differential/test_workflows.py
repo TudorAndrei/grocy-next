@@ -6116,3 +6116,134 @@ def test_ldap_login_creates_and_reuses_the_directory_identity(
         assert [row["permission_id"] for row in permissions] == [29]
     finally:
         api.cookies.clear()
+
+
+@pytest.mark.parametrize(
+    "group,display",
+    [
+        ("userfiles", 'Receipt "quoted".txt'),
+        ("equipmentmanuals", "Manual.pdf"),
+        ("recipepictures", "Recipe photo.png"),
+        ("productpictures", "Äpfel 漢字.png"),
+        ("userpictures", "Profile.jpg"),
+    ],
+)
+def test_named_file_links_use_the_stored_file_and_the_display_name(
+    api, tmp_path, monkeypatch, group, display
+):
+    from urllib.parse import quote
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    name = uuid4().hex + ".bin"
+    source = base64.b64encode(name.encode()).decode()
+    label = base64.b64encode(display.encode()).decode()
+    path = f"/api/files/{group}/{quote(source, safe='')}"
+    link = f"/files/{group}/{quote(source + '_' + label, safe='')}"
+    content = b"\x00\xffnamed file body\n"
+    assert api.put(path, content=content).status_code == 204
+
+    def download(method):
+        if not hasattr(api, "portal"):
+            return api.request(method, link, headers={"Range": "bytes=0-0"})
+
+        async def fetch():
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=api.app),
+                base_url=str(api.base_url),
+                headers=api.headers,
+            ) as connected:
+                return await connected.request(method, link, headers={"Range": "bytes=0-0"})
+
+        return api.portal.call(fetch)
+
+    try:
+        response = download("GET")
+        assert response.status_code == 200, response.text
+        assert response.content == content
+        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-disposition"] == f'inline; filename="{display}"'
+        assert response.headers["cache-control"] == "max-age=2592000"
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-headers"] == "*"
+        head = download("HEAD")
+        assert head.status_code == 200 and head.content == b""
+        assert head.headers["content-disposition"] == response.headers["content-disposition"]
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "case,status",
+    [
+        ("missing", 404),
+        ("bad_display", 404),
+        ("bad_group", 404),
+        ("empty_display", 404),
+        ("no_display", 500),
+        ("bad_group_no_display", 404),
+    ],
+)
+def test_named_file_link_errors_use_web_responses(api, case, status):
+    source = base64.b64encode((uuid4().hex + ".txt").encode()).decode()
+    display = base64.b64encode(b"Missing.txt").decode()
+    if case == "bad_display":
+        display = base64.b64encode(b"NoExtension").decode()
+    if case == "empty_display":
+        display = ""
+    token = source if case in {"no_display", "bad_group_no_display"} else source + "_" + display
+    group = "invalid" if case in {"bad_group", "bad_group_no_display"} else "userfiles"
+    response = api.get(f"/files/{group}/{token}")
+    assert response.status_code == status, response.text
+    assert response.headers["content-type"].startswith("text/html")
+    if status == 404:
+        assert "This page does not exist" in response.text
+        assert 'http-equiv="refresh"' in response.text
+        assert "5;url=" in response.text
+
+
+def test_named_file_picture_links_keep_original_and_cached_image(api, tmp_path, monkeypatch):
+    from PIL import Image
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    original = BytesIO()
+    Image.new("RGB", (80, 40), "red").save(original, "PNG")
+    name = uuid4().hex + ".png"
+    source = base64.b64encode(name.encode()).decode()
+    label = base64.b64encode(b"Recipe cover.jpg").decode()
+    path = f"/api/files/userfiles/{source}"
+    link = f"/files/userfiles/{source}_{label}_ignored"
+    assert api.put(path, content=original.getvalue()).status_code == 204
+    try:
+        assert api.get(link, params={"best_fit_width": 20}).content == original.getvalue()
+        picture = api.get(
+            link, params={"force_serve_as": "picture", "best_fit_width": 20, "best_fit_height": 20}
+        )
+        assert picture.status_code == 200, picture.text
+        assert picture.headers["content-type"] == "image/png"
+        assert picture.headers["content-disposition"] == 'inline; filename="Recipe cover.jpg"'
+        assert Image.open(BytesIO(picture.content)).size == (20, 10)
+        assert api.get(path).content == original.getvalue()
+        cached = base64.b64encode((name[:-4] + "__downscaledto20x20.png").encode()).decode()
+        assert api.get(f"/api/files/userfiles/{cached}").content == picture.content
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+def test_named_file_preflight_needs_no_login(api):
+    previous = dict(api.headers)
+    api.headers.pop("GROCY-API-KEY", None)
+    try:
+        response = api.options(
+            "/files/userfiles/anything",
+            headers={"Origin": "https://example.invalid", "Access-Control-Request-Method": "GET"},
+        )
+        assert response.status_code == 200 and response.content == b""
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-headers"] == "*"
+        assert response.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, OPTIONS"
+    finally:
+        api.headers.update(previous)

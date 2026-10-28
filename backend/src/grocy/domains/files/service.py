@@ -65,10 +65,15 @@ class FilesService:
         return file_name
 
     def _path(self, group: str, file_name: str) -> tuple[Path, str]:
+        self._group(group)
+        return self._file_path(group, self._name(file_name))
+
+    def _group(self, group: str) -> None:
         groups = FILE_GROUPS if self.compatibility else FILE_GROUPS | {"equipment", "nutrition"}
         if group not in groups:
             raise GrocyError("Invalid file group", code=None)
-        name = self._name(file_name)
+
+    def _file_path(self, group: str, name: str) -> tuple[Path, str]:
         code = None if self.compatibility else "invalid_path"
         if name in {"", ".", ".."} or any(
             character in name for character in ("/", "\\", "\x00", "\r", "\n")
@@ -89,9 +94,24 @@ class FilesService:
         height: str | int | None = None,
         picture: bool = False,
         head: bool = False,
+        named: bool = False,
     ) -> Response:
         try:
-            path, name = self._path(group, file_name)
+            if not named:
+                path, name = self._path(group, file_name)
+            else:
+                self._group(group)
+                parts = file_name.split("_")
+                if len(parts) < 2:
+                    raise php_error("Invalid filename")
+                name = self._name(parts[1])
+                if any(character in name for character in ("\x00", "\r", "\n")):
+                    raise GrocyError("Invalid filename", code=None)
+                try:
+                    internal = _decode(parts[0]).decode()
+                except UnicodeDecodeError as error:
+                    raise GrocyError("Invalid filename", code=None) from error
+                path, _ = self._file_path(group, internal)
             if not path.is_file():
                 raise NotFoundError("File not found")
             media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"

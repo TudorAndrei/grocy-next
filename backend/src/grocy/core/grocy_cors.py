@@ -1,3 +1,4 @@
+from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from grocy.core.config import get_settings
@@ -19,7 +20,9 @@ class GrocyCorsHeadersMiddleware:
         prefix = get_settings().base_path.rstrip("/")
         if prefix and path.startswith(prefix + "/"):
             path = path[len(prefix) :]
-        if scope["type"] != "http" or not path.startswith("/api"):
+        api = path.startswith("/api")
+        named_file = path.startswith("/files/")
+        if scope["type"] != "http" or not (api or named_file):
             await self.app(scope, receive, send)
             return
 
@@ -33,10 +36,15 @@ class GrocyCorsHeadersMiddleware:
                         if not name.lower().startswith(b"access-control-")
                     ]
                 present = {name.lower() for name, _ in headers}
-                for name, value in _GROCY_CORS:
+                defaults = _GROCY_CORS if api else _GROCY_CORS[:-1]
+                for name, value in defaults:
                     if name not in present:
                         headers.append((name, value))
                 message = {**message, "headers": headers}
             await send(message)
 
+        if named_file and scope["method"] == "OPTIONS":
+            response = Response(headers={"Content-Type": "text/html; charset=UTF-8"})
+            await response(scope, receive, send_with_cors)
+            return
         await self.app(scope, receive, send_with_cors)
