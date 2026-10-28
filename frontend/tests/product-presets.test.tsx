@@ -1,3 +1,4 @@
+import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
@@ -82,6 +83,7 @@ function app(path: string) {
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
+  supportProductOptions();
   supportDescriptionEditors();
   render(
     <QueryClientProvider

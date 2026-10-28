@@ -222,6 +222,22 @@ export const api = {
     request<NutritionRecord>(`/api/v2/products/${id}/nutrition/revisions/${revision}/restore`, {
       method: "POST",
     }),
+  getProductFormOptions: async (id: number | null) =>
+    z
+      .object({
+        references: z.record(z.string(), z.array(z.number().int())),
+        parent_disabled: z.boolean(),
+        conversions: z.array(
+          z.object({
+            from_qu_id: z.number().int(),
+            to_qu_id: z.number().int(),
+            factor: z.number(),
+          }),
+        ),
+      })
+      .parse(
+        await request(`/api/v2/products/form-options${id === null ? "" : `?product_id=${id}`}`),
+      ),
   listProducts: () => request<ProductListResponse>("/api/objects/products"),
 
   listLocations: () => request<Location[]>("/api/objects/locations"),

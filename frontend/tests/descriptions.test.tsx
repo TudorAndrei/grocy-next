@@ -1,3 +1,4 @@
+import { supportProductOptions } from "./fixtures/product-options";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -72,6 +73,7 @@ function mount(entity: Entity, { documentFailure = false, saveFailure = false } 
       return Response.json([]);
     }),
   );
+  supportProductOptions();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   const app = render(

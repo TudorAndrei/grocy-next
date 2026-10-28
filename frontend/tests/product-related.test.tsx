@@ -1,3 +1,4 @@
+import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { z } from "zod";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -324,6 +325,7 @@ function mount(
   });
 
   vi.stubGlobal("fetch", transport);
+  supportProductOptions();
   supportDescriptionEditors();
 
   const router = createRouter({

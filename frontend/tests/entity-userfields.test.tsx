@@ -1,3 +1,4 @@
+import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -24,6 +25,7 @@ function field(id: number, name: string, type: string, overrides: JsonObject = {
 }
 
 function mount(entity: string) {
+  supportProductOptions();
   supportDescriptionEditors();
   render(
     <QueryClientProvider

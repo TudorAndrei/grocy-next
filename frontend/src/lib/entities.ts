@@ -150,8 +150,8 @@ export const entities = new Map<string, EntitySpec>(
           ["STOCK_PRICE_TRACKING"],
           "1",
         ),
-        ref("qu_id_consume", "Consume unit", "quantity_units", false),
-        ref("qu_id_price", "Price unit", "quantity_units", false),
+        ref("qu_id_consume", "Consume unit", "quantity_units"),
+        ref("qu_id_price", "Price unit", "quantity_units"),
         tracked(numeric("default_best_before_days_after_open", "Days after opening"), [
           "STOCK_BEST_BEFORE_DATE_TRACKING",
           "STOCK_PRODUCT_OPENED_TRACKING",

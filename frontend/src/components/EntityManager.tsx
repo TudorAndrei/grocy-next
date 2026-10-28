@@ -140,6 +140,7 @@ export function EntityManager({
   const [values, setValues] = useState<Record<string, string>>({});
   const [descriptionReady, setDescriptionReady] = useState(!richEntity);
   const [editorRevision, setEditorRevision] = useState(0);
+  const initializedReferences = useRef(-1);
 
   const changeDescription = useCallback(
     (description: string) => setValues((values) => ({ ...values, description })),
@@ -148,6 +149,7 @@ export function EntityManager({
 
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdits>>({});
   const [creating, setCreating] = useState(false);
+  const [factorChanged, setFactorChanged] = useState(false);
   const [tareEditable, setTareEditable] = useState(false);
   const form = useRef<HTMLFormElement>(null);
 
@@ -227,6 +229,18 @@ export function EntityManager({
 
   const client = useQueryClient();
   const [editing, setEditing] = useState<number | null | undefined>(undefined);
+
+  const productOptions = useQuery({
+    queryKey: [
+      "product-form-options",
+      editor ? editor.recordId : creating ? null : (editing ?? null),
+    ],
+    queryFn: () =>
+      api.getProductFormOptions(editor ? editor.recordId : creating ? null : (editing ?? null)),
+    enabled: entity === "products",
+    retry: false,
+  });
+
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const editorStarted = useRef(false);
@@ -305,8 +319,15 @@ export function EntityManager({
     })),
   });
 
+  const productOptionsReady =
+    !productOptions.isEnabled ||
+    (productOptions.isSuccess &&
+      !productOptions.isFetching &&
+      options.every((query) => query.isSuccess && !query.isFetching));
+
   const error =
     query.error ||
+    productOptions.error ||
     copySource.error ||
     custom.error ||
     descriptions.error ||
@@ -316,6 +337,7 @@ export function EntityManager({
 
   const ready =
     query.isSuccess &&
+    productOptionsReady &&
     (!copySource.isEnabled || (copySource.isSuccess && !copySource.isFetching)) &&
     features.query.isSuccess &&
     (!custom.isEnabled || custom.isSuccess) &&
@@ -327,6 +349,7 @@ export function EntityManager({
   const mutate = useMutation({
     mutationFn: async (operation: {
       kind: "save" | "delete";
+      factorChanged?: boolean;
       body?: JsonObject;
       fields?: Record<string, FieldEdits>;
       id?: number;
@@ -379,6 +402,7 @@ export function EntityManager({
 
       if (
         entity === "products" &&
+        operation.factorChanged &&
         !(creating && editor?.copyOf !== undefined) &&
         operation.intent !== "refresh" &&
         purchaseFactor != null &&
@@ -459,7 +483,13 @@ export function EntityManager({
 
   useEffect(() => onPendingChange?.(mutate.isPending), [mutate.isPending, onPendingChange]);
 
-  const selectValue = (field: EntityField, value: string) => {
+  const selectValue = (field: EntityField, value: string, fromInput = false) => {
+    if (entity === "products" && field.key === "qu_factor_purchase_to_stock")
+      setFactorChanged(true);
+
+    if (entity === "products" && ["qu_id_stock", "qu_id_purchase"].includes(field.key))
+      setFactorChanged(false);
+
     if (field.key === "userentity_id") {
       const nextGroups = customGroups(value);
       setFieldEdits((previous) =>
@@ -481,15 +511,21 @@ export function EntityManager({
 
       if (entity === "product_barcodes" && field.key === "product_id") next.qu_id = "";
 
-      if (
-        entity === "products" &&
-        next.qu_id_stock &&
-        (field.key === "qu_id_stock" ||
-          (field.key === "name" && creating && editor?.copyOf !== undefined))
-      ) {
+      if (entity === "products" && next.qu_id_stock && (field.key === "qu_id_stock" || fromInput)) {
         for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"]) {
-          if (!next[key]) next[key] = next.qu_id_stock;
+          if (!referenceValue(key, next[key]) && referenceValue(key, next.qu_id_stock))
+            next[key] = next.qu_id_stock;
         }
+      }
+
+      if (entity === "products" && ["qu_id_stock", "qu_id_purchase"].includes(field.key)) {
+        const conversion = productOptions.data?.conversions.find(
+          (row) =>
+            row.from_qu_id === Number(next.qu_id_purchase) &&
+            row.to_qu_id === Number(next.qu_id_stock),
+        );
+
+        next.qu_factor_purchase_to_stock = String(conversion?.factor ?? 1);
       }
 
       return next;
@@ -526,6 +562,13 @@ export function EntityManager({
   const referenceRows = (field: EntityField) => {
     const rows = options[refs.indexOf(field.ref ?? "")]?.data ?? [];
 
+    if (entity === "products")
+      return (productOptions.data?.references[field.key] ?? []).flatMap((id) => {
+        const row = rows.find((row) => row.id === id);
+
+        return row ? [row] : [];
+      });
+
     if (entity === "product_barcodes" && field.key === "qu_id") {
       const productId = Number(fixed?.product_id ?? values.product_id);
       const product = options[refs.indexOf("products")]?.data?.find((row) => row.id === productId);
@@ -539,6 +582,51 @@ export function EntityManager({
           .sort((a, b) => compareSqliteNames(String(a.name), String(b.name)))
       : rows;
   };
+
+  const referenceValue = (key: string, value = "") =>
+    value && productOptions.data?.references[key]?.includes(Number(value)) ? value : "";
+
+  useEffect(() => {
+    if (
+      entity !== "products" ||
+      editing === undefined ||
+      !productOptionsReady ||
+      initializedReferences.current === editorRevision ||
+      !productOptions.data
+    )
+      return;
+    initializedReferences.current = editorRevision;
+    const references = productOptions.data.references;
+    setValues((previous) => {
+      const next = { ...previous };
+
+      for (const [key, ids] of Object.entries(references))
+        next[key] = previous[key] && ids.includes(Number(previous[key])) ? previous[key] : "";
+
+      if (!(creating && editor?.copyOf !== undefined))
+        for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"])
+          if (!next[key] && next.qu_id_stock && references[key]?.includes(Number(next.qu_id_stock)))
+            next[key] = next.qu_id_stock;
+
+      const conversion = productOptions.data?.conversions.find(
+        (row) =>
+          row.from_qu_id === Number(next.qu_id_purchase) &&
+          row.to_qu_id === Number(next.qu_id_stock),
+      );
+
+      next.qu_factor_purchase_to_stock = String(conversion?.factor ?? 1);
+
+      return next;
+    });
+  }, [
+    entity,
+    editing,
+    editorRevision,
+    productOptionsReady,
+    productOptions.data,
+    creating,
+    editor?.copyOf,
+  ]);
 
   const namedUnit = (id: EntityRow["qu_id"], count: number) => {
     const unit = options[refs.indexOf("quantity_units")]?.data?.find(
@@ -599,6 +687,7 @@ export function EntityManager({
     setEditorRevision((revision) => revision + 1);
     setEditing(row?.id ?? null);
     setCreating(!row);
+    setFactorChanged(false);
     setTareEditable(Boolean(row && Number(row.enable_tare_weight_handling)));
     setPicture({
       original: row?.picture_file_name ?? null,
@@ -771,12 +860,24 @@ export function EntityManager({
       if (field.when && !field.when.values.includes(values[field.when.key])) continue;
 
       if (entity === "products" && field.key === "tare_weight" && !tareEditable) continue;
-      const value = values[field.key] ?? field.value ?? "";
+
+      if (
+        entity === "products" &&
+        field.key === "parent_product_id" &&
+        productOptions.data?.parent_disabled
+      )
+        continue;
+      const stored = values[field.key] ?? field.value ?? "";
+      const value = entity === "products" && field.ref ? referenceValue(field.key, stored) : stored;
 
       if (field.key === "description" && richEntity) body.description = value;
       else if (field.type === "checkbox") body[field.key] = value === "1" ? 1 : 0;
       else if (!value) {
-        if (entity === "product_barcodes" && !field.required) body[field.key] = "";
+        if (
+          (entity === "product_barcodes" || (entity === "products" && field.ref)) &&
+          !field.required
+        )
+          body[field.key] = "";
         else if (editing !== null && !field.required) body[field.key] = null;
       } else
         body[field.key] =
@@ -797,6 +898,7 @@ export function EntityManager({
 
   const saveOperation = (intent: "continue" | "return" | "refresh") => ({
     kind: "save" as const,
+    factorChanged,
     body: recordBody(),
     fields: fieldEdits,
     picture: picture.upload,
@@ -807,7 +909,7 @@ export function EntityManager({
   const save = (event: FormEvent) => {
     event.preventDefault();
 
-    if (!descriptionReady) return;
+    if (!descriptionReady || !productOptionsReady) return;
     const submitter = event.nativeEvent instanceof SubmitEvent ? event.nativeEvent.submitter : null;
     mutate.mutate(
       saveOperation(
@@ -819,7 +921,7 @@ export function EntityManager({
   };
 
   const afterDelete = async () => {
-    if (!descriptionReady || !form.current?.reportValidity()) return;
+    if (!descriptionReady || !productOptionsReady || !form.current?.reportValidity()) return;
     await mutate.mutateAsync(saveOperation("refresh"));
   };
 
@@ -859,7 +961,12 @@ export function EntityManager({
             ) {
               event.preventDefault();
 
-              if (descriptionReady && event.currentTarget.reportValidity() && !mutate.isPending)
+              if (
+                descriptionReady &&
+                productOptionsReady &&
+                event.currentTarget.reportValidity() &&
+                !mutate.isPending
+              )
                 mutate.mutate(
                   saveOperation(!creating && editor.allowReturn ? "return" : "continue"),
                 );
@@ -1007,8 +1114,25 @@ export function EntityManager({
                             );
                         }}
                         id={id}
-                        value={values[field.key] ?? field.value ?? ""}
+                        value={
+                          entity === "products" && field.ref
+                            ? referenceValue(field.key, values[field.key])
+                            : (values[field.key] ?? field.value ?? "")
+                        }
                         required={field.required}
+                        aria-describedby={
+                          entity === "products" &&
+                          field.key === "parent_product_id" &&
+                          productOptions.data?.parent_disabled
+                            ? `${id}-hint`
+                            : undefined
+                        }
+                        disabled={
+                          entity === "products" &&
+                          (!productOptionsReady ||
+                            (field.key === "parent_product_id" &&
+                              productOptions.data?.parent_disabled))
+                        }
                         onChange={(e) => selectValue(field, e.target.value)}
                       >
                         <option value="">
@@ -1081,10 +1205,20 @@ export function EntityManager({
                                 ? "1"
                                 : "0"
                               : e.target.value,
+                            field.type !== "checkbox",
                           );
                         }}
                       />
                     )}
+                    {entity === "products" &&
+                    field.key === "parent_product_id" &&
+                    productOptions.data?.parent_disabled ? (
+                      <p className="field-hint" id={`${id}-hint`}>
+                        {tr(
+                          "Not possible because this product is already used as a parent product in another product",
+                        )}
+                      </p>
+                    ) : null}
                     {entity === "product_barcodes" && field.key === "barcode" ? (
                       <CameraScanner onScan={(code) => setValues({ ...values, barcode: code })} />
                     ) : null}
@@ -1129,7 +1263,12 @@ export function EntityManager({
               className="btn btn-primary"
               name="intent"
               value="continue"
-              disabled={mutate.isPending || !descriptionReady || options.some((q) => q.isPending)}
+              disabled={
+                mutate.isPending ||
+                !descriptionReady ||
+                !productOptionsReady ||
+                options.some((q) => q.isPending)
+              }
             >
               {editor?.continueLabel ? (
                 tr(editor.continueLabel)
@@ -1144,7 +1283,12 @@ export function EntityManager({
                 className="btn"
                 name="intent"
                 value="return"
-                disabled={mutate.isPending || !descriptionReady || options.some((q) => q.isPending)}
+                disabled={
+                  mutate.isPending ||
+                  !descriptionReady ||
+                  !productOptionsReady ||
+                  options.some((q) => q.isPending)
+                }
               >
                 {tr("Save & return to products")}
               </button>
@@ -1163,12 +1307,23 @@ export function EntityManager({
       {Related && relatedRecord ? (
         <Related
           row={relatedRecord}
-          pending={mutate.isPending || !descriptionReady}
+          pending={mutate.isPending || !descriptionReady || !productOptionsReady}
           reload={reload}
           afterDelete={afterDelete}
         />
       ) : null}
       {error && <ErrorBlock message={error.message} />}
+      {productOptions.error ? (
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            void productOptions.refetch();
+          }}
+        >
+          {tr("Retry product options")}
+        </button>
+      ) : null}
       {copySource.error ? (
         <div className="actions">
           <button

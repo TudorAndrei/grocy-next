@@ -10,6 +10,7 @@ from grocy.api.v2 import (
     mcp_http,
     mealplan,
     nutrition,
+    products,
     recipes,
     settings,
     setup,
@@ -30,3 +31,4 @@ router.include_router(codes.router)
 router.include_router(content.router)
 router.include_router(recipes.router)
 router.include_router(localization.router)
+router.include_router(products.router)

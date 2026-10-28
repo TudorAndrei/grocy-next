@@ -1,3 +1,4 @@
+import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
@@ -249,6 +250,7 @@ function mount(
   });
 
   vi.stubGlobal("fetch", transport);
+  supportProductOptions();
   supportDescriptionEditors();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 

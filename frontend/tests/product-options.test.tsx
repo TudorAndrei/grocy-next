@@ -1,3 +1,4 @@
+import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -79,6 +80,7 @@ test.each([
       return Response.json([]);
     }),
   );
+  supportProductOptions();
   supportDescriptionEditors();
   render(
     <QueryClientProvider
