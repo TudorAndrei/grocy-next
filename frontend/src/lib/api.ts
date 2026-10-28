@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stockJournalSchema, type JournalSearch } from "./stock-journal";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
 import { localizationSchema } from "./localization";
@@ -169,6 +170,14 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getStockJournal: async (search: JournalSearch, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+
+    for (const key of ["product", "months"] as const)
+      if (search[key] !== undefined) query.set(key, search[key]);
+
+    return stockJournalSchema.parse(await request(`/api/v2/stock/journal?${query}`, { signal }));
+  },
   getMealPlanSections: async () =>
     mealPlanSectionsSchema.parse(
       await request<JsonValue>("/api/objects/meal_plan_sections?order=sort_number:asc"),
@@ -456,7 +465,6 @@ export const queryKeys = {
   stock: (id: number) => ["stock", id] as const,
   stockOverview: ["stock", "overview"] as const,
   stockVolatile: ["stock", "volatile"] as const,
-  stockJournal: (limit: number) => ["stock", "journal", limit] as const,
   shopping: (id = 1) => ["shopping", id] as const,
   recipes: ["recipes"] as const,
   recipesFulfillment: ["recipe-fulfillment"] as const,

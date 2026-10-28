@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { EntityManager } from "./EntityManager";
 import { ProductRelatedData } from "./ProductRelatedData";
+import { ProductJournal } from "./StockJournal";
 
 export function ProductEditor(
   props: Omit<ComponentProps<typeof EntityManager>, "entity" | "related">,
@@ -12,6 +13,12 @@ export function ProductEditor(
       {...props}
       entity="products"
       related={ProductRelatedData}
+      editorActions={(row, pending) => (
+        <>
+          {props.editorActions?.(row, pending)}
+          <ProductJournal productId={row.id} name={row.name ?? ""} disabled={pending} />
+        </>
+      )}
       actions={(row) => (
         <>
           {props.actions?.(row)}

@@ -91,6 +91,36 @@ function mount(path: string, labelPrinter = true) {
         { id: 1, product_id: 17, amount: 2, transaction_type: "purchase", undone: 0 },
       ]);
 
+    if (path.startsWith("/api/v2/stock/journal"))
+      return Response.json({
+        products: [{ id: 17, name: "Code product" }],
+        locations: [{ id: 1, name: "Shelf" }],
+        users: [{ id: 1, name: "Test" }],
+        transaction_types: ["purchase"],
+        rows: [
+          {
+            id: 1,
+            product_id: 17,
+            product_name: "Code product",
+            amount: 2,
+            qu_name: "Piece",
+            qu_name_plural: "Pieces",
+            row_created_timestamp: "2026-10-28 12:00:00",
+            transaction_type: "purchase",
+            location_id: 1,
+            location_name: "Shelf",
+            user_display_name: "Test",
+            note: null,
+            stock_id: "code-stock",
+            spoiled: 0,
+            undone: 0,
+            undone_timestamp: null,
+            correlation_id: null,
+            custom_values: {},
+          },
+        ],
+      });
+
     if (path.endsWith("/nutrition"))
       return Response.json({ error_message: "Not found" }, { status: 404 });
 

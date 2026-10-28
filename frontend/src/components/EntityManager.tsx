@@ -50,6 +50,7 @@ type Props = {
   entity: string;
   detail?: (row: EntityRow) => ReactNode;
   actions?: (row: EntityRow) => ReactNode;
+  editorActions?: (row: EntityRow, pending: boolean) => ReactNode;
   fixed?: JsonObject;
   title?: string;
   onPendingChange?: (pending: boolean) => void;
@@ -74,6 +75,7 @@ export function EntityManager({
   entity,
   detail,
   actions,
+  editorActions,
   fixed,
   title,
   editor,
@@ -1023,6 +1025,9 @@ export function EntityManager({
             {tr("Add")} {spec.singular}
           </button>
         </div>
+      ) : null}
+      {relatedRecord && editorActions ? (
+        <div className="actions">{editorActions(relatedRecord, mutate.isPending)}</div>
       ) : null}
       {editing !== undefined && (
         <form

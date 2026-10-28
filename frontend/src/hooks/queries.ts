@@ -1,6 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { api, queryKeys, request } from "@/lib/api";
-import type { StockLogRow } from "@/lib/types";
+import { api, queryKeys } from "@/lib/api";
 
 export const stockOverviewQuery = () =>
   queryOptions({
@@ -60,12 +59,6 @@ export const objectsQuery = (entity: string) =>
   queryOptions({
     queryKey: queryKeys.objects(entity),
     queryFn: () => api.objects(entity),
-  });
-
-export const stockJournalQuery = (limit = 150) =>
-  queryOptions({
-    queryKey: queryKeys.stockJournal(limit),
-    queryFn: () => request<StockLogRow[]>(`/api/objects/stock_log?order=id:desc&limit=${limit}`),
   });
 
 export const productsQuery = () =>

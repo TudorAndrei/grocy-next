@@ -15,6 +15,7 @@ from grocy.api.v2 import (
     settings,
     setup,
     shopping,
+    stock,
 )
 
 router = APIRouter(prefix="/api/v2")
@@ -32,3 +33,4 @@ router.include_router(content.router)
 router.include_router(recipes.router)
 router.include_router(localization.router)
 router.include_router(products.router)
+router.include_router(stock.router)

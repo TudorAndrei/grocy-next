@@ -1134,6 +1134,45 @@ input[type="checkbox"] {
   border-end-end-radius: var(--radius-sm);
 }
 
+.stock-journal-dialog {
+  width: min(1280px, calc(100% - 32px));
+}
+
+.journal-filters .field {
+  flex: 1 1 160px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.journal-filters {
+  align-items: end;
+}
+
+.journal-sort {
+  min-height: 28px;
+  min-width: 24px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.journal-table tbody th {
+  min-width: 160px;
+}
+
+.journal-table tbody th small {
+  display: block;
+  font-weight: 400;
+}
+
+.journal-table [data-undone] {
+  color: var(--ink-3);
+}
+
 .field-row {
   display: flex;
   flex-wrap: wrap;
@@ -3391,4 +3430,43 @@ a.btn[aria-disabled="true"] {
 
 .description-editor[data-expanded] .shopping-notes-frame {
   height: calc(100dvh - 6rem) !important;
+}
+
+.journal-table-scroll {
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+
+.journal-table {
+  display: table;
+  min-inline-size: 64rem;
+}
+
+.journal-table thead {
+  display: table-header-group;
+}
+
+.journal-table tbody {
+  display: table-row-group;
+}
+
+.journal-table tr {
+  display: table-row;
+  padding: 0;
+  border: 0;
+}
+
+.journal-table.stock-table th,
+.journal-table.stock-table td {
+  display: table-cell;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.journal-table th[scope="row"] {
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  background: transparent;
 }
