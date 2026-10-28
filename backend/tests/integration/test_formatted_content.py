@@ -162,7 +162,9 @@ def test_description_editor_authorizes_the_domain_and_keeps_drafts_out_of_storag
     client.put(
         "/api/user/settings/locale", headers=headers, json={"value": "de"}
     ).raise_for_status()
-    response = client.post(path, headers=headers, json={"html": imported})
+    response = client.post(
+        path, headers=headers, json={"html": imported, "paste": entity == "products"}
+    )
     assert response.status_code == 200, response.text
     document = EditorDocument(response.text)
     assert document.options == {
@@ -171,6 +173,7 @@ def test_description_editor_authorizes_the_domain_and_keeps_drafts_out_of_storag
         "label": "Beschreibung",
         "channel": "grocy-description",
         "sourceLabel": "Code view",
+        **({"pasteInitial": True} if entity == "products" else {}),
     }
     assert len(document.scripts) == 6
     nonce = document.scripts[0]["nonce"]

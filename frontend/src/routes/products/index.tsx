@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
 import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
-import { ProductEditor } from "@/components/ProductEditor";
+import { CopyProductLink, ProductEditor } from "@/components/ProductEditor";
 import { RichText } from "@/components/RichDescription";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
@@ -158,6 +158,7 @@ function ProductsPage() {
                     <td className="num">{min > 0 ? catalog.amountText(product.id, min) : "—"}</td>
                     <td className="code">{product.barcode ?? "—"}</td>
                     <td className="row-actions">
+                      <CopyProductLink id={product.id} name={product.name} />
                       <GrocycodeActions
                         kind="product"
                         id={product.id}

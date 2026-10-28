@@ -19,11 +19,13 @@ const messageSchema = z.object({
 export function DescriptionEditor({
   entity,
   value,
+  pasteInitial = false,
   onChange,
   onReady,
 }: {
   entity: "products" | "recipes" | "equipment";
   value: string;
+  pasteInitial?: boolean;
   onChange: (html: string) => void;
   onReady: (ready: boolean) => void;
 }) {
@@ -31,6 +33,7 @@ export function DescriptionEditor({
   const instance = useId();
   const frame = useRef<HTMLIFrameElement>(null);
   const leave = useRef<HTMLButtonElement>(null);
+  const paste = useRef(pasteInitial);
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState({ document: -1, height: 390 });
 
@@ -41,7 +44,7 @@ export function DescriptionEditor({
         await fetchApiDocument(
           `/api/v2/content/${entity}/editor`,
           signal,
-          JSON.stringify({ html: value }),
+          JSON.stringify({ html: value, paste: paste.current }),
         )
       ).text(),
     staleTime: Infinity,
@@ -88,7 +91,11 @@ export function DescriptionEditor({
         return;
       }
 
-      if (data.kind === "ready") appearance();
+      if (data.kind === "ready") {
+        paste.current = false;
+        appearance();
+      }
+
       setExpanded(data.fullscreen);
       setState({ document: document.dataUpdatedAt, height: Math.max(360, data.height) });
 

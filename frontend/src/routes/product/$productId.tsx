@@ -10,6 +10,7 @@ export const Route = createFileRoute("/product/$productId")({
     name: z.coerce.string().optional().catch(undefined),
     barcode: z.coerce.string().optional().catch(undefined),
     returnto: z.string().optional().catch(undefined),
+    "copy-of": z.coerce.number().int().positive().optional().catch(undefined),
   }),
   component: ProductFormPage,
 });
@@ -42,9 +43,10 @@ function ProductFormPage() {
     <>
       <PageHeader title={t(recordId === null ? "Create product" : "Edit product")} />
       <ProductEditor
-        key={productId + ":" + (search.name ?? "")}
+        key={productId + ":" + (search.name ?? "") + ":" + (search["copy-of"] ?? "")}
         editor={{
           recordId,
+          copyOf: recordId === null ? search["copy-of"] : undefined,
           continueLabel: "Save & continue",
           allowReturn: search.flow === undefined && search.returnto === undefined,
           initialValues:
@@ -61,7 +63,12 @@ function ProductFormPage() {
                 ),
               });
             } else if (returnToList) await navigate({ href: `/products?product=${id}` });
-            else await navigate({ to: "/product/$productId", params: { productId: String(id) } });
+            else
+              await navigate({
+                to: "/product/$productId",
+                params: { productId: String(id) },
+                search: {},
+              });
           },
         }}
       />

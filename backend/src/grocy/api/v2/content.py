@@ -30,6 +30,7 @@ class FormattedContent(BaseModel):
 
 class EditorDraft(BaseModel):
     html: str
+    paste: bool = False
 
 
 @router.get("/content/{entity}")
@@ -59,7 +60,12 @@ async def description_editor(
         actor.user_id, request.headers.get("accept-language", "")
     )
     document = await run_in_threadpool(
-        editor_document, body.html, locale, label="Description", channel="grocy-description"
+        editor_document,
+        body.html,
+        locale,
+        label="Description",
+        channel="grocy-description",
+        paste_initial=body.paste,
     )
     return HTMLResponse(document)
 

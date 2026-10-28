@@ -44,7 +44,9 @@ def _assets(editor_locale: str) -> tuple[str, str]:
     return styles, scripts
 
 
-def editor_document(description: str, locale: str, *, label: str, channel: str) -> str:
+def editor_document(
+    description: str, locale: str, *, label: str, channel: str, paste_initial: bool = False
+) -> str:
     catalog = localization(locale, get_settings().mode)["messages"][""]
 
     def tr(value: str) -> str:
@@ -55,13 +57,15 @@ def editor_document(description: str, locale: str, *, label: str, channel: str) 
     styles, scripts = _assets(editor_locale)
     nonce = secrets.token_urlsafe(24)
     scripts = scripts.replace("__GROCY_EDITOR_NONCE__", nonce)
-    options = {
+    options: dict[str, str | bool] = {
         "initial": description,
         "locale": editor_locale,
         "label": tr(label),
         "channel": channel,
         "sourceLabel": tr("Code view"),
     }
+    if paste_initial:
+        options["pasteInitial"] = True
     setup = Path(__file__).with_suffix(".js").read_text()
     options_json = (
         json.dumps(options, ensure_ascii=True).replace("<", "\\u003c").replace(">", "\\u003e")

@@ -60,6 +60,7 @@ type Props = {
   }>;
   editor?: {
     recordId: number | null;
+    copyOf?: number;
     initialValues?: Record<string, string>;
     onSaved: (id: number, body: JsonObject, returnToList: boolean) => Promise<void>;
     onCancel: () => void;
@@ -81,6 +82,14 @@ export function EntityManager({
   const { t: tr, pluralIndex } = useI18n();
 
   const features = useFeatures();
+
+  const copySource = useQuery({
+    queryKey: ["product-copy", editor?.copyOf],
+    queryFn: () => request<EntityRow>(`/api/objects/products/${editor?.copyOf}`),
+    enabled: entity === "products" && editor?.recordId === null && editor.copyOf !== undefined,
+    retry: false,
+    gcTime: 0,
+  });
 
   const richEntity =
     entity === "products" || entity === "recipes" || entity === "equipment" ? entity : null;
@@ -139,6 +148,7 @@ export function EntityManager({
 
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdits>>({});
   const [creating, setCreating] = useState(false);
+  const [tareEditable, setTareEditable] = useState(false);
   const form = useRef<HTMLFormElement>(null);
 
   const pictureGroup =
@@ -198,6 +208,23 @@ export function EntityManager({
   };
 
   const prefix = useId();
+
+  const descriptionLoaded = useCallback(
+    (loaded: boolean) => {
+      setDescriptionReady(loaded);
+
+      if (
+        loaded &&
+        creating &&
+        editor?.copyOf !== undefined &&
+        document.activeElement instanceof HTMLIFrameElement &&
+        form.current?.contains(document.activeElement)
+      )
+        document.getElementById(`${prefix}-name`)?.focus();
+    },
+    [creating, editor?.copyOf, prefix],
+  );
+
   const client = useQueryClient();
   const [editing, setEditing] = useState<number | null | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -280,6 +307,7 @@ export function EntityManager({
 
   const error =
     query.error ||
+    copySource.error ||
     custom.error ||
     descriptions.error ||
     (entity === "product_barcodes" ? barcodeConversions.error : null) ||
@@ -288,6 +316,7 @@ export function EntityManager({
 
   const ready =
     query.isSuccess &&
+    (!copySource.isEnabled || (copySource.isSuccess && !copySource.isFetching)) &&
     features.query.isSuccess &&
     (!custom.isEnabled || custom.isSuccess) &&
     (!recordTypes.isEnabled || recordTypes.isSuccess) &&
@@ -350,6 +379,7 @@ export function EntityManager({
 
       if (
         entity === "products" &&
+        !(creating && editor?.copyOf !== undefined) &&
         operation.intent !== "refresh" &&
         purchaseFactor != null &&
         body.qu_id_purchase !== body.qu_id_stock
@@ -405,7 +435,8 @@ export function EntityManager({
     onSuccess: async (result) => {
       if (result?.intent === "refresh") {
         await client.invalidateQueries({
-          predicate: (query) => query.queryKey[0] !== "description-editor",
+          predicate: (query) =>
+            query.queryKey[0] !== "description-editor" && query.queryKey[0] !== "product-copy",
         });
         await reload(result.id);
 
@@ -415,7 +446,8 @@ export function EntityManager({
       if (!editor) setEditing(undefined);
       setDeleteId(null);
       await client.invalidateQueries({
-        predicate: (query) => query.queryKey[0] !== "description-editor",
+        predicate: (query) =>
+          query.queryKey[0] !== "description-editor" && query.queryKey[0] !== "product-copy",
       });
 
       if (editor && related && result?.intent === "continue") await reload(result.id);
@@ -449,9 +481,14 @@ export function EntityManager({
 
       if (entity === "product_barcodes" && field.key === "product_id") next.qu_id = "";
 
-      if (entity === "products" && field.key === "qu_id_stock" && value) {
+      if (
+        entity === "products" &&
+        next.qu_id_stock &&
+        (field.key === "qu_id_stock" ||
+          (field.key === "name" && creating && editor?.copyOf !== undefined))
+      ) {
         for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"]) {
-          if (!next[key]) next[key] = value;
+          if (!next[key]) next[key] = next.qu_id_stock;
         }
       }
 
@@ -562,6 +599,7 @@ export function EntityManager({
     setEditorRevision((revision) => revision + 1);
     setEditing(row?.id ?? null);
     setCreating(!row);
+    setTareEditable(Boolean(row && Number(row.enable_tare_weight_handling)));
     setPicture({
       original: row?.picture_file_name ?? null,
       upload: null,
@@ -581,7 +619,7 @@ export function EntityManager({
       ]),
     );
 
-    if (!row && entity === "products") {
+    if (!row && entity === "products" && editor?.copyOf === undefined) {
       const settings = productSettings.data;
 
       const references = [
@@ -614,6 +652,45 @@ export function EntityManager({
       initialValues.default_stock_label_type = String(
         settings?.product_presets_default_stock_label_type ?? 0,
       );
+    }
+
+    if (!row && entity === "products" && editor?.copyOf !== undefined) {
+      const source = copySource.data;
+
+      if (source) {
+        // The native copy form fills these controls only. Other controls keep
+        // new-record defaults, and custom values and related rows stay separate.
+        for (const key of [
+          "parent_product_id",
+          "description",
+          "location_id",
+          "shopping_location_id",
+          "min_stock_amount",
+          "cumulate_min_stock_amount_of_sub_products",
+          "default_best_before_days",
+          "default_best_before_days_after_open",
+          "product_group_id",
+          "qu_id_stock",
+          "qu_id_purchase",
+          "enable_tare_weight_handling",
+          "tare_weight",
+          "not_check_stock_fulfillment_for_recipes",
+          "calories",
+          "default_best_before_days_after_freezing",
+          "default_best_before_days_after_thawing",
+          "quick_consume_amount",
+          "quick_open_amount",
+          "default_consume_location_id",
+          "no_own_stock",
+          "hide_on_stock_overview",
+          "auto_reprint_stock_label",
+          "default_stock_label_type",
+          "move_on_open",
+          "treat_opened_as_out_of_stock",
+        ]) {
+          if (source[key] != null) initialValues[key] = String(source[key]);
+        }
+      }
     }
 
     if (row && entity === "products" && row.calories == null) initialValues.calories = "1";
@@ -692,6 +769,8 @@ export function EntityManager({
       if (fixed && field.key in fixed) continue;
 
       if (field.when && !field.when.values.includes(values[field.when.key])) continue;
+
+      if (entity === "products" && field.key === "tare_weight" && !tareEditable) continue;
       const value = values[field.key] ?? field.value ?? "";
 
       if (field.key === "description" && richEntity) body.description = value;
@@ -814,6 +893,11 @@ export function EntityManager({
               .filter(
                 (f) =>
                   (!fixed || !(f.key in fixed)) &&
+                  !(
+                    f.key === "qu_factor_purchase_to_stock" &&
+                    creating &&
+                    editor?.copyOf !== undefined
+                  ) &&
                   (!f.when || f.when.values.includes(values[f.when.key])),
               )
               .map((field) => {
@@ -824,8 +908,9 @@ export function EntityManager({
                         key={editorRevision}
                         entity={richEntity}
                         value={values.description ?? ""}
+                        pasteInitial={creating && editor?.copyOf !== undefined}
                         onChange={changeDescription}
-                        onReady={setDescriptionReady}
+                        onReady={descriptionLoaded}
                       />
                     </div>
                   );
@@ -957,6 +1042,9 @@ export function EntityManager({
                       <input
                         id={id}
                         autoFocus={!!editor && field.key === "name"}
+                        disabled={
+                          entity === "products" && field.key === "tare_weight" && !tareEditable
+                        }
                         type={field.type ?? "text"}
                         value={
                           field.type === "checkbox"
@@ -983,17 +1071,18 @@ export function EntityManager({
                               : "any"
                             : undefined
                         }
-                        onChange={(e) =>
-                          setValues({
-                            ...values,
-                            [field.key]:
-                              field.type === "checkbox"
-                                ? e.target.checked
-                                  ? "1"
-                                  : "0"
-                                : e.target.value,
-                          })
-                        }
+                        onChange={(e) => {
+                          if (entity === "products" && field.key === "enable_tare_weight_handling")
+                            setTareEditable(e.target.checked);
+                          selectValue(
+                            field,
+                            field.type === "checkbox"
+                              ? e.target.checked
+                                ? "1"
+                                : "0"
+                              : e.target.value,
+                          );
+                        }}
                       />
                     )}
                     {entity === "product_barcodes" && field.key === "barcode" ? (
@@ -1080,6 +1169,22 @@ export function EntityManager({
         />
       ) : null}
       {error && <ErrorBlock message={error.message} />}
+      {copySource.error ? (
+        <div className="actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              void copySource.refetch();
+            }}
+          >
+            {tr("Retry")}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={editor?.onCancel}>
+            {tr("Cancel")}
+          </button>
+        </div>
+      ) : null}
       {editorMissing ? <ErrorBlock message={tr("Item not found.")} /> : null}
       {mutate.error && <ErrorBlock message={mutate.error.message} />}
       {(query.isPending || (editor && editing === undefined && !error && !editorMissing)) && (

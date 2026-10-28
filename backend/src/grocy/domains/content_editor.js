@@ -1,7 +1,14 @@
-window.initializeRichTextEditor = function ({ initial, locale, label, sourceLabel, channel }) {
+window.initializeRichTextEditor = function ({
+  initial,
+  locale,
+  label,
+  sourceLabel,
+  channel,
+  pasteInitial = false,
+}) {
   const $ = window.jQuery;
   const editor = $("#description");
-  editor.val(initial);
+  editor.val(pasteInitial ? "" : initial);
   let initialized = false;
 
   function emit(kind) {
@@ -65,6 +72,7 @@ window.initializeRichTextEditor = function ({ initial, locale, label, sourceLabe
       );
   });
   initialized = true;
+  if (pasteInitial && initial) editor.summernote("pasteHTML", initial);
   new ResizeObserver(() => emit("resize")).observe(document.body);
   new MutationObserver(() => {
     const full = editor.summernote("fullscreen.isFullscreen");

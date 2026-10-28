@@ -30,6 +30,9 @@ beforeEach(() => {
 function mount(
   options: {
     creating?: boolean;
+    copying?: boolean;
+    copyFailure?: boolean;
+    tare?: boolean;
     fieldFailure?: boolean;
     holdBarcode?: boolean;
     productFailure?: boolean;
@@ -62,6 +65,26 @@ function mount(
     qu_id_price: 1,
     active: 1,
   };
+
+  if (options.copying)
+    Object.assign(product, {
+      active: 0,
+      description: "<p>Source <strong>description</strong></p>",
+      qu_id_consume: 3,
+      qu_id_price: 2,
+      default_best_before_days: 20,
+      enable_tare_weight_handling: 1,
+      tare_weight: 120,
+      due_type: 2,
+      should_not_be_frozen: 1,
+      disable_open: 1,
+      default_purchase_price_type: 3,
+      treat_opened_as_out_of_stock: 0,
+      picture_file_name: "source.png",
+      userfields: { Owner: "Source owner" },
+    });
+
+  if (options.tare) Object.assign(product, { enable_tare_weight_handling: 0, tare_weight: 120 });
 
   const products: EntityRow[] = options.creating ? [] : [product];
 
@@ -103,6 +126,21 @@ function mount(
   ];
 
   const fields = [
+    ...(options.copying
+      ? [
+          {
+            id: 3,
+            entity: "products",
+            name: "Owner",
+            caption: "Owner",
+            type: "text-single-line",
+            input_required: 1,
+            default_value: "Preset owner",
+            config: null,
+            show_as_column_in_tables: 0,
+          },
+        ]
+      : []),
     {
       id: 1,
       entity: "product_barcodes",
@@ -128,6 +166,7 @@ function mount(
   ];
 
   const writes: { path: string; method: string; body: JsonObject }[] = [];
+  let copyAttempts = 0;
   let fieldAttempts = 0;
   let productAttempts = 0;
   let releaseBarcode: (() => void) | undefined;
@@ -153,7 +192,9 @@ function mount(
     if (path === "/api/user/settings")
       return Response.json({
         product_presets_location_id: 1,
-        product_presets_qu_id: 1,
+        product_presets_qu_id: options.copying ? 3 : 1,
+        product_presets_default_due_days: options.copying ? 99 : 0,
+        product_presets_treat_opened_as_out_of_stock: true,
         stock_decimal_places_amounts: 4,
       });
 
@@ -166,14 +207,18 @@ function mount(
 
     if (path === "/api/objects/userfields") return Response.json(fields);
 
-    if (path === "/api/v2/products/7/grocycode")
+    if (/^\/api\/v2\/products\/(7|8)\/grocycode$/.test(path))
       return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
 
     if (path === "/api/objects/products" && method === "POST") {
-      Object.assign(product, body);
-      products.push(product);
+      if (options.copying)
+        products.push({ ...body, id: 8, tare_weight: 0, picture_file_name: null });
+      else {
+        Object.assign(product, body);
+        products.push(product);
+      }
 
-      return Response.json({ created_object_id: "7" });
+      return Response.json({ created_object_id: options.copying ? "8" : "7" });
     }
 
     if (path === "/api/objects/products/7" && method === "PUT") {
@@ -184,9 +229,29 @@ function mount(
       return new Response(null, { status: 204 });
     }
 
+    if (path === "/api/objects/products/7" && method === "GET" && options.copying) {
+      if (options.copyFailure && ++copyAttempts === 1)
+        return Response.json({ error_message: "Source load failed" }, { status: 503 });
+
+      return Response.json(product);
+    }
+
     if (path === "/api/objects/products") return Response.json(products);
 
+    if (path.startsWith("/api/files/productpictures/"))
+      return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
+
+    if (path === "/api/objects/products/8" && method === "PUT") {
+      Object.assign(
+        products.find((row) => row.id === 8)!,
+        body,
+      );
+
+      return new Response(null, { status: 204 });
+    }
+
     const tables = new Map<string, EntityRow[]>([
+      ["products", products],
       ["product_barcodes", barcodes],
       ["quantity_unit_conversions", conversions],
       ["quantity_unit_conversions_resolved", resolved],
@@ -264,7 +329,9 @@ function mount(
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({
-      initialEntries: [options.creating ? "/product/new" : "/product/7"],
+      initialEntries: [
+        options.copying ? "/products" : options.creating ? "/product/new" : "/product/7",
+      ],
     }),
   });
 
@@ -475,4 +542,100 @@ test("empty optional barcode fields retain the native explicit empty values", as
     note: "",
     shopping_location_id: "",
   });
+});
+
+test("catalog copy links create a separate product with native copy fields and retain it on a field retry", async () => {
+  const { router, products, product, writes, barcodes, conversions } = mount({
+    copying: true,
+    copyFailure: true,
+    fieldFailure: true,
+  });
+
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Copy Coffee" });
+  await user.click(screen.getByRole("button", { name: "Edit catalog" }));
+  const catalog = within(await screen.findByRole("region", { name: "Products" }));
+  await catalog.findByRole("link", { name: "Copy Coffee" });
+  expect(
+    screen.getAllByRole("link", { name: "Copy Coffee" }).map((link) => link.getAttribute("href")),
+  ).toEqual(["/product/new?copy-of=7", "/product/new?copy-of=7"]);
+  await user.click(catalog.getByRole("link", { name: "Copy Coffee" }));
+  await screen.findByText("Source load failed");
+  expect(screen.queryByRole("form", { name: "Add product" })).toBeNull();
+  expect(writes).toEqual([]);
+  product.default_best_before_days = 21;
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+  const form = within(await screen.findByRole("form", { name: "Add product" }));
+  expect(form.getByLabelText<HTMLInputElement>("Name").value).toBe("");
+  expect(form.getByLabelText<HTMLSelectElement>("Stock unit").value).toBe("1");
+  expect(form.getByLabelText<HTMLSelectElement>("Purchase unit").value).toBe("2");
+  expect(form.getByLabelText<HTMLInputElement>("Days before expiry").value).toBe("21");
+  expect(form.getByLabelText<HTMLInputElement>("Active").checked).toBe(true);
+  expect(form.getByLabelText<HTMLInputElement>("Treat opened stock as missing").checked).toBe(
+    false,
+  );
+  expect(form.getByLabelText<HTMLInputElement>("Owner").value).toBe("");
+  expect(form.getByLabelText<HTMLInputElement>("Container weight").value).toBe("120");
+  expect(form.getByLabelText<HTMLInputElement>("Container weight").disabled).toBe(true);
+  await user.type(form.getByLabelText("Name"), "New coffee");
+  expect(form.getByLabelText<HTMLSelectElement>("Consume unit").value).toBe("1");
+  expect(form.getByLabelText<HTMLSelectElement>("Price unit").value).toBe("1");
+  await user.type(form.getByLabelText("Owner"), "New owner");
+  await user.click(await availableButton("Save & continue"));
+  await screen.findByText("Field save failed");
+  expect(products).toHaveLength(2);
+  expect(products[1]).toMatchObject({
+    id: 8,
+    name: "New coffee",
+    active: 1,
+    due_type: "1",
+    should_not_be_frozen: 0,
+    disable_open: 0,
+    default_purchase_price_type: "1",
+    description: "<p>Source <strong>description</strong></p>",
+    tare_weight: 0,
+    picture_file_name: null,
+  });
+  await user.click(await availableButton("Save & continue"));
+  await waitFor(() => expect(router.state.location.href).toBe("/product/8"));
+  expect(products[1]?.userfields).toEqual({ Owner: "New owner" });
+  expect(product).toMatchObject({
+    id: 7,
+    name: "Coffee",
+    active: 0,
+    userfields: { Owner: "Source owner" },
+    tare_weight: 120,
+  });
+  expect(barcodes[0]).toMatchObject({ product_id: 7, barcode: "CODE" });
+  expect(conversions[0]).toMatchObject({ product_id: 7, factor: 6 });
+  expect(writes.map(({ path, method }) => `${method} ${path}`)).toEqual([
+    "POST /api/objects/products",
+    "PUT /api/userfields/products/8",
+    "PUT /api/objects/products/8",
+    "PUT /api/userfields/products/8",
+  ]);
+});
+
+test("disabled product tare weight retains its stored value until the user enables its control", async () => {
+  const { product, writes } = mount({ tare: true });
+  const user = userEvent.setup();
+  const weight = await screen.findByLabelText<HTMLInputElement>("Container weight");
+  expect(weight.disabled).toBe(true);
+  expect(weight.value).toBe("120");
+  await user.click(await availableButton("Save & continue"));
+  await waitFor(() =>
+    expect(writes.some((write) => write.path === "/api/objects/products/7")).toBe(true),
+  );
+  expect(writes.find((write) => write.path === "/api/objects/products/7")?.body).not.toHaveProperty(
+    "tare_weight",
+  );
+  await availableButton("Save & continue");
+  await user.click(screen.getByLabelText("Use container weight"));
+  const enabled = screen.getByLabelText<HTMLInputElement>("Container weight");
+  expect(enabled.disabled).toBe(false);
+  await user.clear(enabled);
+  await user.type(enabled, "149");
+  await user.click(await availableButton("Save & continue"));
+  await waitFor(() => expect(product.tare_weight).toBe(149));
+  expect(product.enable_tare_weight_handling).toBe(1);
 });
