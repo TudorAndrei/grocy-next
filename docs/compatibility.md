@@ -63,7 +63,7 @@ The current repair work covers these confirmed differences:
 - New-product presets expose location, group, quantity unit, due days, opened-stock treatment, and stock label type. The editor applies them only to new records and uses the preset unit for all four unit fields. A stock-unit choice fills other empty unit choices and retains an existing choice. Existing records keep their saved values, and disabled tracking fields retain their submission rules.
 - The header clock follows its saved setting, updates each second, and uses the legacy long and short formats. The short format is shown below 576 pixels. It uses the catalog's `moment_locale` value, including its English fallback. Clock code loads when the setting is enabled. Its interval stops when the clock is disabled or removed.
 
-Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. Test results must identify the runtime and selected cases.
+Full Python parity is not complete. Open work includes further configuration options, translated web text, and remaining form behavior. The web app still lacks full-screen recipe and equipment cards, rich preparation text, and the two screen-on preferences. The conditional screen-on setting needs a full-screen card before it can have its legacy effect. Test results must identify the runtime and selected cases.
 
 ## Verification
 
