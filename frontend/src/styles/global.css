@@ -478,6 +478,19 @@ kbd {
 .recipe-table-scroll {
   overflow-x: auto;
 }
+.recipe-plan-cell {
+  width: 1%;
+}
+.recipe-gallery-actions {
+  padding: 0 16px 16px;
+}
+.recipe-plan-dialog .recipe-plan-fields {
+  display: grid;
+  gap: 16px;
+}
+.recipe-plan-fields .field {
+  margin: 0;
+}
 .recipe-overview-table {
   width: 100%;
   border-collapse: collapse;

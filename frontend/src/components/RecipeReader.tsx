@@ -15,6 +15,8 @@ import { Icon } from "./Icon";
 import { PageHeader } from "./PageHeader";
 import { RichText } from "./RichDescription";
 import { useNotify } from "./Toaster";
+import { RecipeMealPlanAction } from "./RecipeMealPlan";
+import { useModalDialog } from "@/hooks/useModalDialog";
 
 export function RecipeReader({
   view,
@@ -185,6 +187,7 @@ export function RecipeReader({
           <>
             <FullscreenToggle />
             <FullscreenPrint />
+            <RecipeMealPlanAction id={card.id} name={card.name} />
             {card.id === view.recipe_id ? (
               <label className="field servings-field">
                 <span>{t("Desired servings")}</span>
@@ -327,25 +330,9 @@ function RecipeActionDialog({
   onConfirm: (excludedProductIds: number[]) => void;
 }) {
   const { t } = useI18n();
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useModalDialog();
   const [excluded, setExcluded] = useState(new Set<number>());
   const prefix = useId();
-
-  useEffect(() => {
-    const element = dialog.current;
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-
-    element?.showModal();
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      element?.close();
-      document.body.style.overflow = previousOverflow;
-
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
-    };
-  }, []);
 
   return (
     <dialog

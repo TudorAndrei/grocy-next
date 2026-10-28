@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
@@ -114,6 +114,8 @@ function mount(
     sideBySide?: boolean;
     holdRecipeView?: boolean;
     overviewRows?: RecipeListItem[];
+    mealPlanEnabled?: boolean;
+    failMealOnce?: boolean;
   } = {},
 ) {
   vi.stubGlobal("scrollTo", vi.fn());
@@ -127,6 +129,7 @@ function mount(
   let finish: (() => void) | undefined;
   let finishView: (() => void) | undefined;
   let copiedView: RecipeView | undefined;
+  let failMeal = options.failMealOnce;
 
   const overview: RecipeListItem[] = [
     {
@@ -170,6 +173,16 @@ function mount(
         const body = String(init.body ?? "");
         writes.push({ path, body });
 
+        if (path === "/api/objects/meal_plan") {
+          if (failMeal) {
+            failMeal = false;
+
+            return Response.json({ error_message: "Meal save failed" }, { status: 400 });
+          }
+
+          return Response.json({ created_object_id: "99" });
+        }
+
         if (path.endsWith("/copy")) {
           const source = view.cards.find((card) => path === `/api/recipes/${card.id}/copy`)!;
           copiedView = {
@@ -199,7 +212,16 @@ function mount(
 
       if (path === "/api/user") return Response.json([{ id: 1, username: "tester" }]);
 
-      if (path === "/api/system/config") return Response.json({});
+      if (path === "/api/system/config")
+        return Response.json(
+          options.mealPlanEnabled === false ? { FEATURE_FLAG_RECIPES_MEALPLAN: false } : {},
+        );
+
+      if (path === "/api/objects/meal_plan_sections?order=sort_number:asc")
+        return Response.json([
+          { id: 2, name: "Breakfast" },
+          { id: 1, name: "Dinner" },
+        ]);
 
       if (path === "/api/user/settings")
         return Response.json({
@@ -590,6 +612,119 @@ test("recipe shopping confirmation preserves row choices and sends excluded prod
       },
     ]),
   );
+  app.unmount();
+  app.client.clear();
+});
+
+test("recipe meal planning uses local today, retains choices, and saves changed recipe fields", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2027, 3, 4, 0, 15));
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  const writes: Array<{ path: string; body: string }> = [];
+  const app = mount(fixture(), writes, false, { path: "/recipes" });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Add Main dish to meal plan" }));
+  let dialog = await screen.findByRole("dialog", { name: "Add meal plan entry" });
+  await waitFor(() =>
+    expect(within(dialog).getByLabelText<HTMLSelectElement>("Section").value).toBe("2"),
+  );
+  const day = within(dialog).getByLabelText<HTMLInputElement>("Day");
+  expect(day.value).toBe("2027-04-04");
+  expect(within(dialog).getByLabelText<HTMLSelectElement>("Recipe").value).toBe("1");
+  const servings = within(dialog).getByLabelText<HTMLInputElement>("Servings");
+  expect(servings.value).toBe("1");
+  expect(document.activeElement).toBe(servings);
+  expect(new URLSearchParams(app.router.history.location.search).has("recipe")).toBe(false);
+  await user.clear(servings);
+  await user.type(servings, "0.5");
+  await user.selectOptions(within(dialog).getByLabelText("Section"), "1");
+  await user.selectOptions(within(dialog).getByLabelText("Recipe"), "2");
+  fireEvent.change(day, { target: { value: "2027-04-07" } });
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(writes).toEqual([]);
+  await user.click(screen.getByRole("tab", { name: "Gallery" }));
+  const card = (await screen.findByRole("link", { name: "Main dish" })).closest("li")!;
+  await user.click(within(card).getByRole("button", { name: "Add to meal plan" }));
+  dialog = await screen.findByRole("dialog", { name: "Add meal plan entry" });
+  expect(within(dialog).getByLabelText<HTMLInputElement>("Day").value).toBe("2027-04-04");
+  expect(within(dialog).getByLabelText<HTMLSelectElement>("Recipe").value).toBe("1");
+  expect(within(dialog).getByLabelText<HTMLInputElement>("Servings").value).toBe("0.5");
+  expect(within(dialog).getByLabelText<HTMLSelectElement>("Section").value).toBe("1");
+  fireEvent.change(within(dialog).getByLabelText("Day"), { target: { value: "" } });
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  expect(writes).toEqual([]);
+  fireEvent.change(within(dialog).getByLabelText("Day"), { target: { value: "2027-04-07" } });
+  await user.selectOptions(within(dialog).getByLabelText("Recipe"), "2");
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Add meal plan entry" })).toBeNull(),
+  );
+  expect(writes.map((write) => ({ path: write.path, body: JSON.parse(write.body) }))).toEqual([
+    {
+      path: "/api/objects/meal_plan",
+      body: {
+        day: "2027-04-07",
+        recipe_id: "2",
+        recipe_servings: "0.5",
+        section_id: "1",
+        type: "recipe",
+      },
+    },
+  ]);
+  expect(await screen.findByText("Successfully added the recipe to the meal plan")).toBeTruthy();
+  app.unmount();
+  app.client.clear();
+});
+
+test("recipe meal planning retains failed input and releases full-screen locks on removal", async () => {
+  const writes: Array<{ path: string; body: string }> = [];
+  const app = mount(fixture(), writes, false, { failMealOnce: true });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Expand to fullscreen" }));
+  const button = screen.getByRole("button", { name: "Add to meal plan" });
+  await user.click(button);
+  let dialog = await screen.findByRole("dialog", { name: "Add meal plan entry" });
+  await waitFor(() =>
+    expect(within(dialog).getByRole<HTMLButtonElement>("button", { name: "Save" }).disabled).toBe(
+      false,
+    ),
+  );
+  const input = within(dialog).getByLabelText<HTMLInputElement>("Servings");
+  await user.clear(input);
+  await user.type(input, "3");
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  expect(await within(dialog).findByText("Meal save failed")).toBeTruthy();
+  expect(input.value).toBe("3");
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Add meal plan entry" })).toBeNull(),
+  );
+  expect(writes).toHaveLength(2);
+  expect(
+    writes.map((write) => {
+      const body: { recipe_servings: string } = JSON.parse(write.body);
+
+      return body.recipe_servings;
+    }),
+  ).toEqual(["3", "3"]);
+  expect(screen.getByRole("dialog", { name: "Main dish" })).toBeTruthy();
+  expect(document.activeElement).toBe(button);
+  await user.click(button);
+  dialog = await screen.findByRole("dialog", { name: "Add meal plan entry" });
+  expect(within(dialog).getByLabelText<HTMLInputElement>("Servings").value).toBe("3");
+  app.unmount();
+  app.client.clear();
+  expect(document.body.style.overflow).toBe("");
+  expect(document.body.classList.contains("fullscreen-card")).toBe(false);
+});
+
+test("the meal-plan feature flag controls recipe planning actions", async () => {
+  const app = mount(fixture(), [], false, { path: "/recipes", mealPlanEnabled: false });
+  await screen.findByRole("heading", { level: 1, name: "Main dish" });
+  expect(screen.queryByRole("button", { name: "Add to meal plan" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add Main dish to meal plan" })).toBeNull();
   app.unmount();
   app.client.clear();
 });

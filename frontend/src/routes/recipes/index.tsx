@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RecipeOverview } from "@/components/RecipeOverview";
+import { RecipeMealPlanProvider } from "@/components/RecipeMealPlan";
 import { recipeOverviewSearchSchema, type RecipeOverviewSearch } from "@/lib/recipe-view";
 
 export const Route = createFileRoute("/recipes/")({
@@ -12,11 +13,13 @@ function RecipesPage() {
   const navigate = useNavigate({ from: Route.fullPath });
 
   return (
-    <RecipeOverview
-      search={search}
-      onSearchChange={(change) => {
-        void navigate({ search: (previous) => ({ ...previous, ...change }), replace: true });
-      }}
-    />
+    <RecipeMealPlanProvider>
+      <RecipeOverview
+        search={search}
+        onSearchChange={(change) => {
+          void navigate({ search: (previous) => ({ ...previous, ...change }), replace: true });
+        }}
+      />
+    </RecipeMealPlanProvider>
   );
 }

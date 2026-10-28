@@ -6,6 +6,7 @@ import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { RecipeReader } from "@/components/RecipeReader";
+import { RecipeMealPlanProvider } from "@/components/RecipeMealPlan";
 
 export const Route = createFileRoute("/recipes/$recipeId")({ component: RecipeDetailPage });
 
@@ -24,7 +25,7 @@ function RecipeDetailPage() {
   if (view.isError) return <ErrorBlock message={view.error.message} />;
 
   return (
-    <>
+    <RecipeMealPlanProvider key={id}>
       <RecipeReader key={id} view={view.data} />
       <EntityManager entity="recipes_pos" fixed={{ recipe_id: id }} title={t("Edit ingredients")} />
       <EntityManager
@@ -32,6 +33,6 @@ function RecipeDetailPage() {
         fixed={{ recipe_id: id }}
         title={t("Included recipes")}
       />
-    </>
+    </RecipeMealPlanProvider>
   );
 }

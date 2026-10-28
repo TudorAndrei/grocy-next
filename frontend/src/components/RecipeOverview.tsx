@@ -22,6 +22,7 @@ import { Icon } from "./Icon";
 import { LoadingBlock } from "./LoadingBlock";
 import { PageHeader } from "./PageHeader";
 import { RecipeReader } from "./RecipeReader";
+import { RecipeMealPlanAction } from "./RecipeMealPlan";
 
 type SortKey = "name" | "desired_servings" | "due_score" | "stock_status";
 
@@ -302,6 +303,11 @@ export function RecipeOverview({
                         {features.enabled("STOCK")
                           ? heading("stock_status", t("Requirements fulfilled"))
                           : null}
+                        {features.routeEnabled("/meal-plan") ? (
+                          <th>
+                            <span className="sr-only">{t("Actions")}</span>
+                          </th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -310,7 +316,10 @@ export function RecipeOverview({
                           key={recipe.id}
                           data-selected={highlighted === recipe.id || undefined}
                           onClick={(event) => {
-                            if (event.target instanceof Element && event.target.closest("a"))
+                            if (
+                              event.target instanceof Element &&
+                              event.target.closest("a, button")
+                            )
                               return;
                             open(recipe.id);
                           }}
@@ -330,6 +339,11 @@ export function RecipeOverview({
                           ) : null}
                           <td className="num">{recipe.due_score ?? ""}</td>
                           {features.enabled("STOCK") ? <td>{badge(recipe)}</td> : null}
+                          {features.routeEnabled("/meal-plan") ? (
+                            <td className="recipe-plan-cell">
+                              <RecipeMealPlanAction id={recipe.id} name={recipe.name} compact />
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                     </tbody>
@@ -358,6 +372,11 @@ export function RecipeOverview({
                       <h3>{recipe.name}</h3>
                       {features.enabled("STOCK") ? badge(recipe) : null}
                     </Link>
+                    {features.routeEnabled("/meal-plan") ? (
+                      <div className="recipe-gallery-actions">
+                        <RecipeMealPlanAction id={recipe.id} name={recipe.name} />
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>

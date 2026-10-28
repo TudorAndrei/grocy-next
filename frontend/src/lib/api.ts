@@ -96,6 +96,16 @@ const configuredLocaleSchema = z.string().optional().catch(undefined);
 const contentSchema = z.object({ html: z.string() });
 const createdObjectSchema = z.object({ created_object_id: z.coerce.number().int() });
 
+const mealPlanSectionsSchema = z.array(
+  z.object({
+    id: z.number(),
+    name: z
+      .string()
+      .nullable()
+      .transform((name) => name ?? ""),
+  }),
+);
+
 function errorMessage(body: JsonValue, fallback: string): string {
   const result = errorBodySchema.safeParse(body);
 
@@ -159,6 +169,10 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getMealPlanSections: async () =>
+    mealPlanSectionsSchema.parse(
+      await request<JsonValue>("/api/objects/meal_plan_sections?order=sort_number:asc"),
+    ),
   getRecipeOverview: async () =>
     recipeOverviewSchema.parse(await request<JsonValue>("/api/v2/recipes/overview")),
   getRecipeView: async (id: number) =>
