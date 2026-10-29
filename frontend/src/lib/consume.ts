@@ -69,12 +69,17 @@ export async function getConsumeCatalog(signal: AbortSignal) {
 }
 
 export async function getConsumeDetails(product: string, signal?: AbortSignal) {
-  return details.parse(await request(`/api/stock/products/${product}`, { signal }));
+  return details.parse(
+    await request(`/api/stock/products/${product}`, { signal, cache: "default" }),
+  );
 }
 
 export async function getConsumeEntries(product: string, signal: AbortSignal) {
   return entries.parse(
-    await request(`/api/stock/products/${product}/entries?include_sub_products=true`, { signal }),
+    await request(`/api/stock/products/${product}/entries?include_sub_products=true`, {
+      signal,
+      cache: "default",
+    }),
   );
 }
 
@@ -82,37 +87,31 @@ export async function getConsumeStockEntry(product: string, stockId: string, sig
   const filter = new URLSearchParams([["query[]", `stock_id=${stockId}`]]);
 
   return entries.parse(
-    await request(`/api/stock/products/${product}/entries?${filter}`, { signal }),
+    await request(`/api/stock/products/${product}/entries?${filter}`, { signal, cache: "default" }),
   )[0];
 }
 
-export async function getConsumeSelection(
-  product: string,
-  signal: AbortSignal,
-  code?: { barcode: string; stockId?: string },
-) {
+export async function getConsumeBarcode(barcode: string, signal: AbortSignal) {
+  const params = new URLSearchParams([["query[]", `barcode=${barcode}`]]);
+
+  return z
+    .array(z.object({ amount: z.number().nullable(), qu_id: z.number().nullable() }))
+    .parse(
+      await request(`/api/objects/product_barcodes?${params}`, { signal, cache: "default" }),
+    )[0];
+}
+
+export async function getConsumeSelection(product: string, signal: AbortSignal) {
   const selected = await getConsumeDetails(product, signal);
 
   const found = locations.parse(
-    await request(`/api/stock/products/${product}/locations?include_sub_products=true`, { signal }),
+    await request(`/api/stock/products/${product}/locations?include_sub_products=true`, {
+      signal,
+      cache: "default",
+    }),
   );
 
-  const params = new URLSearchParams([["query[]", `barcode=${code?.barcode}`]]);
-
-  const barcode =
-    code === undefined
-      ? undefined
-      : z
-          .array(z.object({ amount: z.number().nullable(), qu_id: z.number().nullable() }))
-          .parse(await request(`/api/objects/product_barcodes?${params}`, { signal }))[0];
-
-  let stock: ConsumeEntry | undefined;
-
-  if (code?.stockId !== undefined) {
-    stock = await getConsumeStockEntry(product, code.stockId, signal);
-  }
-
-  return { details: selected, locations: found, barcode, stock };
+  return { details: selected, locations: found };
 }
 
 export type ConsumeSelection = Awaited<ReturnType<typeof getConsumeSelection>>;

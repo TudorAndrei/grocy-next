@@ -13,6 +13,7 @@ import { usePreferences } from "@/lib/preferences";
 import { stockEditorUnits } from "@/lib/stock-editor";
 import {
   getConsumeCatalog,
+  getConsumeBarcode,
   getConsumeDetails,
   getConsumeEntries,
   getConsumeSelection,
@@ -127,6 +128,8 @@ function ConsumeFields({
   const sourceRead = useRef<AbortController>(undefined);
   const version = useRef(0);
   const sourceVersion = useRef(0);
+  // Native callbacks share these values before React renders their changes.
+  const sourceValues = useRef({ sum: 0, specific: false, factor: NaN, amount: "" });
   const autoSubmit = useRef(false);
   const alive = useRef(true);
   const [options, setOptions] = useState(initialOptions);
@@ -151,7 +154,7 @@ function ConsumeFields({
   const [product, setProduct] = useState(initial ? String(initial.id) : "");
   const [selection, setSelection] = useState<ConsumeSelection>();
   const [code, setCode] = useState<ProductCode>();
-  const [amount, setAmount] = useState(String(preferences.consumeAmount));
+  const [amount, updateAmount] = useState(String(preferences.consumeAmount));
   const [conversionAmount, setConversionAmount] = useState(String(preferences.consumeAmount));
   const [unitId, setUnitId] = useState("");
   const [unitRestored, setUnitRestored] = useState(false);
@@ -162,9 +165,9 @@ function ConsumeFields({
   );
 
   const [entries, setEntries] = useState<ConsumeEntry[]>([]);
-  const [sum, setSum] = useState(0);
+  const [sum, updateSum] = useState(0);
   const [maximum, setMaximum] = useState<string>();
-  const [specific, setSpecific] = useState(false);
+  const [specific, updateSpecific] = useState(false);
   const [stockItemDisabled, setStockItemDisabled] = useState(true);
   const [stockId, setStockId] = useState("");
   const [exact, setExact] = useState(false);
@@ -195,6 +198,21 @@ function ConsumeFields({
   const tareWeight = details?.product.tare_weight ?? 0;
   const minimumAmount = tare && !exact ? tareWeight : minimum;
 
+  function setAmount(value: string) {
+    sourceValues.current.amount = value;
+    updateAmount(value);
+  }
+
+  function setSum(value: number) {
+    sourceValues.current.sum = value;
+    updateSum(value);
+  }
+
+  function setSpecific(value: boolean) {
+    sourceValues.current.specific = value;
+    updateSpecific(value);
+  }
+
   const postedAmount = (Number(conversionAmount) / factor)
     .toFixed(Math.max(1, precision))
     .replace(/0*$/g, "");
@@ -213,32 +231,32 @@ function ConsumeFields({
     value: string,
     {
       data = selection,
-      nextFactor = factor,
       selectedCode = code,
-      reloadCode = true,
+      batch,
     }: {
       data?: ConsumeSelection;
-      nextFactor?: number;
       selectedCode?: ProductCode;
-      reloadCode?: boolean;
+      batch?: { current: number; controller: AbortController };
     } = {},
   ) {
-    sourceRead.current?.abort();
-    const current = ++sourceVersion.current;
-    sourceRead.current = new AbortController();
-    const signal = sourceRead.current.signal;
+    if (!batch) {
+      sourceRead.current?.abort();
+      sourceRead.current = new AbortController();
+    }
 
-    if (specific) setStockItemDisabled(true);
+    const current = batch?.current ?? ++sourceVersion.current;
+    const signal = (batch?.controller ?? sourceRead.current!).signal;
+
+    if (sourceValues.current.specific) setStockItemDisabled(true);
     setSpecific(false);
     setStockId("");
     setEntries([]);
-    setSum(0);
     setLocation(value);
 
-    const reloadStockCode =
-      reloadCode && options.embedded === undefined && selectedCode?.stockId !== undefined;
+    const reloadStockCode = options.embedded === undefined && selectedCode?.stockId !== undefined;
 
     if ((!value && !reloadStockCode) || !data) {
+      setSum(0);
       setSourceLoading(false);
 
       return;
@@ -256,32 +274,37 @@ function ConsumeFields({
 
         if (signal.aborted || current !== sourceVersion.current || !stock) return;
         value = String(stock.location_id);
-        data = { ...data, stock };
         setLocation(value);
         // The native callback changes only the display input, not the amount picker.
         setAmount(String(stock.amount));
       }
 
+      // Native resets the shared sum when each stock-code lookup returns.
+      setSum(0);
       const rows = await getConsumeEntries(String(data.details.product.id), signal);
-      const located = rows.filter((row) => String(row.location_id) === value);
-      const fresh = await getConsumeDetails(String(data.details.product.id), signal);
 
       if (signal.aborted || current !== sourceVersion.current) return;
+      const located = rows.filter((row) => String(row.location_id) === value);
       const total = located.reduce((amount, row) => amount + (row.amount || 0), 0);
       const forced = options.embedded === undefined ? selectedCode?.stockId : options.stockId;
-      setEntries(located);
-      setSum(total);
-      setSelection({ ...data, details: fresh });
-      setMaximum(limit(fresh, total, nextFactor));
+      setEntries((previous) => [...previous, ...located]);
+      setSum(sourceValues.current.sum + total);
 
       const matchingEntries = located.filter((row) => row.stock_id === forced).length;
 
       if (forced !== undefined && matchingEntries > 0) {
         // Native clicks the checkbox once for each matching row, including duplicates.
-        setSpecific(matchingEntries % 2 === 1);
-        setStockItemDisabled(matchingEntries % 2 !== 1);
+        const checked = sourceValues.current.specific !== (matchingEntries % 2 === 1);
+        setSpecific(checked);
+        setStockItemDisabled(!checked);
         setStockId(forced);
       }
+
+      const fresh = await getConsumeDetails(String(data.details.product.id), signal);
+
+      if (signal.aborted || current !== sourceVersion.current) return;
+      setSelection({ ...data, details: fresh });
+      setMaximum(limit(fresh, sourceValues.current.sum, sourceValues.current.factor));
 
       if (scanEnabled && (!selectedCode || selectedCode.barcode.startsWith("grcy"))) {
         setAmount("1");
@@ -332,33 +355,21 @@ function ConsumeFields({
     const signal = read.current.signal;
 
     try {
-      const data = await getConsumeSelection(value, signal, selectedCode);
+      const data = await getConsumeSelection(value, signal);
 
       if (signal.aborted || current !== version.current) return;
       const choices = stockEditorUnits(catalog, value, data.details.quantity_unit_stock.id);
-      const selectedUnit = data.barcode?.qu_id ?? data.details.default_quantity_unit_consume?.id;
+      const selectedUnit = data.details.default_quantity_unit_consume?.id;
       const nextUnit = choices.find((row) => row.id === selectedUnit);
 
-      let nextAmount = preferences.useQuickConsumeAmount
+      const nextAmount = preferences.useQuickConsumeAmount
         ? String((data.details.product.quick_consume_amount ?? 0) * (nextUnit?.factor ?? NaN))
         : String(preferences.consumeAmount);
-
-      if (data.barcode?.amount != null) nextAmount = String(data.barcode.amount);
 
       const preferred =
         data.details.product.default_consume_location_id || data.details.location?.id;
 
-      const defaultPresent = data.locations.some(
-        (row) => row.location_id === preferred && row.amount !== 0,
-      );
-
-      let source = defaultPresent ? preferred : data.locations[0]?.location_id;
       const convertedAmount = nextAmount;
-
-      if (options.embedded === undefined && data.stock) {
-        source = data.stock.location_id;
-        nextAmount = String(data.stock.amount);
-      }
 
       setSelection(data);
       const seen = new Set<number>();
@@ -371,19 +382,68 @@ function ConsumeFields({
         }),
       );
       setUnitId(nextUnit ? String(nextUnit.id) : "");
+      sourceValues.current.factor = nextUnit?.factor ?? NaN;
       setUnitRestored(false);
       setAmount(nextAmount === "NaN" ? "" : nextAmount);
       setConversionAmount(convertedAmount);
-      await refreshLocation(source === undefined ? "" : String(source), {
-        data,
-        nextFactor: nextUnit?.factor ?? NaN,
-        selectedCode,
-        reloadCode: false,
-      });
+      const changes: string[] = [];
+      let defaultAdded = false;
+      let defaultAmount = 0;
+      seen.clear();
+
+      for (const row of data.locations) {
+        if (row.location_id === preferred) {
+          if (!seen.has(row.location_id)) {
+            changes.push(String(preferred));
+            defaultAdded = true;
+          }
+
+          defaultAmount += row.amount;
+        }
+
+        seen.add(row.location_id);
+
+        if (!defaultAdded) changes.push("");
+      }
+
+      if (defaultAmount === 0 && data.locations[0])
+        changes.push(String(data.locations[0].location_id));
+
+      sourceRead.current = new AbortController();
+      const batch = { current: ++sourceVersion.current, controller: sourceRead.current };
+
+      const locationReads = changes.map((source) =>
+        refreshLocation(source, {
+          data,
+          selectedCode,
+          batch,
+        }),
+      );
+
+      let barcodeFound = false;
+
+      const barcodeRead = selectedCode
+        ? getConsumeBarcode(selectedCode.barcode, signal).then((barcode) => {
+            if (signal.aborted || current !== version.current || !barcode) return;
+            barcodeFound = true;
+
+            if (barcode.amount != null) setAmount(String(barcode.amount));
+
+            if (barcode.qu_id != null) {
+              const barcodeUnit = choices.find((row) => row.id === barcode.qu_id);
+              setUnitId(barcodeUnit ? String(barcodeUnit.id) : "");
+              sourceValues.current.factor = barcodeUnit?.factor ?? NaN;
+            }
+
+            setConversionAmount(sourceValues.current.amount);
+          })
+        : undefined;
+
+      await Promise.all([...locationReads, barcodeRead]);
 
       if (signal.aborted || current !== version.current) return;
 
-      if (scanEnabled && data.barcode) autoSubmit.current = true;
+      if (scanEnabled && barcodeFound) autoSubmit.current = true;
       requestAnimationFrame(() =>
         form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.focus(),
       );
@@ -729,6 +789,8 @@ function ConsumeFields({
                 onChange={(event) => {
                   const value = event.target.value;
                   setUnitId(value);
+                  sourceValues.current.factor =
+                    units.find((row) => String(row.id) === value)?.factor ?? NaN;
                   setConversionAmount(amount);
 
                   if (details)

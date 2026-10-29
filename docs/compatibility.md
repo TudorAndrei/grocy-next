@@ -607,6 +607,22 @@ Legacy API responses now retain the native HTTP cache policy. The common respons
 
 The public comparison covers GET, HEAD, and OPTIONS for product details, stock entries, stock locations, location objects, and system information. The file comparison also checks its explicit cache lifetime. Both the local Python app and the Linux release passed all 32 selected comparisons with PHP. Nine stock read cases failed on Python before the repair and passed on PHP. All 285 integration tests passed, with five optional tests skipped. Ruff lint, formatting, and Python types passed. Python remains the release runtime; PHP is only the test reference.
 
+### Initial consume location callbacks
+
+The consume form now retains each initial location event. A stock code starts a stock-entry lookup for each event, including an event before the default location is added. Each returned lookup resets the shared stock sum. Its entry callback appends choices, adds their amounts, and toggles the specific-item checkbox once per matching row. The initial callbacks share their current amount, unit factor, sum, and checkbox state. They are no longer replaced by one final location read.
+
+The stock-code reads start before the barcode lookup, as on the native page. Consume reads now use the browser's default HTTP cache mode. Together with the legacy cache-header correction above, this retains native handling of repeated requests. The visible amount and hidden booking amount still retain their separate native behavior.
+
+Three new cases failed on the previous form. The one-location control passed. The corrected form passed all 422 frontend tests in 45 files. The new cases check one, two, and three initial callbacks, a delayed stock reply, retained duplicate choices, amount limits, checkbox state, and the complete consumption request. Existing focus, cleared-location, barcode, scan-mode, purchase, transfer, and shared number-control cases also passed. Lint, formatting, all three type checks, and root and `/house` builds passed.
+
+The native page and Linux release matched with stock in one, two, and three locations. Their initial choice counts were one, two, and three. Their specific-item checkbox states were on, off, and on. Consumption and visible Undo passed on both runtimes. All stable booking and stock fields matched, including retained stock identities. A fresh three-location case also passed booking and Undo on the final release images.
+
+A disposable HTTP proxy held selected replies without changing their bodies. With all stock lookups completed before entry replies, both runtimes retained a six-unit maximum. Releasing the final stock lookup after one entry callback gave four units on both. Releasing it after two entry callbacks gave two units on both. Their three choices and checked state also matched. The normal three-location browser run showed the same four-unit maximum on both runtimes after the cache correction.
+
+The 1440-pixel and 390-pixel views retained the existing layout. The phone form had no horizontal overflow, and both action buttons remained reachable after scrolling. All 153 frontend source files matched the build snapshot. All 87 web build files matched the final image. All 177 Python source files matched the API image. PHP was disabled and absent from the release images. Saved stock and booking records remained unchanged after restart, and the database integrity check passed.
+
+The initial consume callback difference recorded above is corrected. Overlapping product and manual location changes, scan-mode reply timing, scan sounds, recipe text, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash

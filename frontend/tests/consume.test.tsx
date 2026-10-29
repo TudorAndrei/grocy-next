@@ -23,6 +23,21 @@ function mount(
     openPermission = true,
     duplicateEntry = false,
     singleUnit = false,
+    stockLocations,
+    delayThirdStockLookup = false,
+  }: {
+    scan?: boolean;
+    quick?: boolean;
+    tracking?: boolean;
+    failRead?: boolean;
+    failSave?: boolean;
+    failEntries?: boolean;
+    failBarcode?: boolean;
+    openPermission?: boolean;
+    duplicateEntry?: boolean;
+    singleUnit?: boolean;
+    stockLocations?: number[];
+    delayThirdStockLookup?: boolean;
   } = {},
 ) {
   const writes: { path: string; body: JsonObject }[] = [];
@@ -33,6 +48,12 @@ function mount(
   let scanEnabled = scan;
   let stock = { amount: 10, opened: 2 };
   let previousStock = { ...stock };
+  let stockLookups = 0;
+  let releaseThirdStockLookup!: () => void;
+
+  const thirdStockLookup = new Promise<void>((resolve) => {
+    releaseThirdStockLookup = resolve;
+  });
 
   const rows = [
     {
@@ -68,6 +89,9 @@ function mount(
   ];
 
   if (duplicateEntry) rows.push({ ...rows[1]!, id: 104, amount: 1 });
+
+  if (stockLocations?.includes(3))
+    rows.push({ ...rows[0]!, id: 105, stock_id: "back-stock", location_id: 3, amount: 5 });
 
   const fetchData = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://localhost");
@@ -187,7 +211,7 @@ function mount(
           description: null,
           enable_tare_weight_handling: tare ? 1 : 0,
           tare_weight: 3,
-          default_consume_location_id: 2,
+          default_consume_location_id: stockLocations?.at(-1) ?? 2,
           quick_consume_amount: 4,
           disable_open: 0,
           move_on_open: 1,
@@ -210,17 +234,31 @@ function mount(
     }
 
     if (path.endsWith("/locations"))
-      return Response.json([
-        { location_id: 1, location_name: "Shelf", amount: 4 },
-        { location_id: 2, location_name: "Pantry", amount: 6 },
-        { location_id: 2, location_name: "Pantry", amount: 2 },
-      ]);
+      return Response.json(
+        stockLocations?.map((location) => ({
+          location_id: location,
+          location_name: ["", "Shelf", "Pantry", "Back"][location],
+          amount: rows
+            .filter((row) => row.location_id === location)
+            .reduce((sum, row) => sum + row.amount, 0),
+        })) ?? [
+          { location_id: 1, location_name: "Shelf", amount: 4 },
+          { location_id: 2, location_name: "Pantry", amount: 6 },
+          { location_id: 2, location_name: "Pantry", amount: 2 },
+        ],
+      );
 
     if (path.endsWith("/entries")) {
       if (failEntries && ++entryReads === 1)
         return Response.json({ error_message: "Entries unavailable" }, { status: 503 });
 
-      return Response.json(url.searchParams.has("query[]") ? [rows[0]] : rows);
+      if (url.searchParams.has("query[]")) {
+        if (++stockLookups === 3 && delayThirdStockLookup) await thirdStockLookup;
+
+        return Response.json([rows[0]]);
+      }
+
+      return Response.json(rows);
     }
 
     if (
@@ -253,7 +291,13 @@ function mount(
     client.clear();
   });
 
-  return { writes, reads, router, entries: rows };
+  return {
+    writes,
+    reads,
+    router,
+    entries: rows,
+    releaseThirdStockLookup,
+  };
 }
 
 async function choose(name = "Coffee") {
@@ -365,6 +409,63 @@ test("a repeated stock code retains both choices and the native unchecked prefil
   expect(entry.value).toBe("pantry-stock");
   expect(amount.max).toBe("1.13");
 });
+
+test.each([
+  { locations: [1], choices: 1, checked: true, maximum: "0.50", delayed: false },
+  { locations: [1, 2], choices: 2, checked: false, maximum: "1.00", delayed: false },
+  { locations: [1, 3, 2], choices: 3, checked: true, maximum: "1.50", delayed: false },
+  { locations: [1, 3, 2], choices: 3, checked: true, maximum: "0.50", delayed: true },
+])(
+  "initial stock-code callbacks retain choices and booking values for $locations with delayed=$delayed",
+  async ({ locations, choices, checked, maximum, delayed }) => {
+    const { writes, releaseThirdStockLookup } = mount("/consume", {
+      stockLocations: locations,
+      delayThirdStockLookup: delayed,
+    });
+
+    const picker = await screen.findByLabelText("Product");
+
+    fireEvent.change(picker, { target: { value: "grcy:p:7:shelf-stock" } });
+    fireEvent.keyDown(picker, { key: "Enter" });
+    const entry = screen.getByLabelText<HTMLSelectElement>("Specific stock item");
+    const matches = () => [...entry.options].filter((row) => row.value === "shelf-stock");
+
+    if (delayed) {
+      await waitFor(() => expect(matches()).toHaveLength(2));
+      releaseThirdStockLookup();
+    }
+
+    const amount = screen.getByLabelText<HTMLInputElement>("Amount");
+    await waitFor(() => expect(amount.disabled).toBe(false));
+    expect(matches()).toHaveLength(choices);
+    expect(entry.value).toBe("shelf-stock");
+    expect(entry.disabled).toBe(!checked);
+    expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(
+      checked,
+    );
+    expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("1");
+    expect(amount.value).toBe("4");
+    expect(amount.max).toBe(maximum);
+    expect(document.querySelector<HTMLInputElement>('input[name="amount"]')!.value).toBe("4.");
+    fireEvent.change(amount, { target: { value: "0.25" } });
+    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    await screen.findByText("Removed 2 Pieces of Coffee from stock");
+
+    const expected: JsonObject = {
+      amount: "2.",
+      allow_subproduct_substitution: true,
+      exact_amount: false,
+      spoiled: false,
+      location_id: "1",
+    };
+
+    if (checked) expected.stock_entry_id = "shelf-stock";
+    expect(writes[0]).toEqual({
+      path: "/api/stock/products/7/consume",
+      body: expected,
+    });
+  },
+);
 
 test("opening retains recipe, unit, and location and does not close an embedded form", async () => {
   const { writes } = mount("/consume?embedded&product=7");
@@ -503,6 +604,7 @@ test("barcode amounts survive scan mode and stock codes choose their entry locat
   expect(amount.value).toBe("4");
   expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("1");
   expect(screen.getByLabelText<HTMLSelectElement>("Specific stock item").value).toBe("shelf-stock");
+  await userEvent.click(screen.getByLabelText("Use a specific stock item"));
   fireEvent.change(amount, { target: { value: "0.25" } });
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
   await waitFor(() =>
