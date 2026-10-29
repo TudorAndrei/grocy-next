@@ -9,9 +9,15 @@ from grocy.domains.stock.journal import (
     journal_summary,
     journal_view,
 )
+from grocy.domains.stock.purchase import purchase_editor
 from grocy.domains.stock.transfer import transfer_editor
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/purchase/editor")
+async def get_purchase_editor(actor: AuthenticatedActor, session: DbSession) -> dict:
+    return await purchase_editor(session)
 
 
 @router.get("/stock/transfer/editor")

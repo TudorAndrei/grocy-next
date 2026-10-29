@@ -132,6 +132,7 @@ def test_transfer_editor_allows_authenticated_readers_and_reports_their_own_perm
     response.raise_for_status()
     headers = {"GROCY-API-KEY": response.json()["api_key"]}
     assert client.get("/api/v2/stock/transfer/editor", headers=headers).status_code == 200
+    assert client.get("/api/v2/stock/purchase/editor", headers=headers).status_code == 200
     permissions = client.get("/api/v2/user/permissions", headers=headers)
     permissions.raise_for_status()
     assert permissions.json()["STOCK_TRANSFER"] is False
