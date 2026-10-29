@@ -601,6 +601,12 @@ All four Open cases and both inventory cases failed on Python before the repair 
 
 The Open receipt difference recorded above is corrected. Initial consume location callbacks, further response-order cases, scan sounds, recipe text, embedded host behavior, purchase gaps, and inventory page behavior still need work. Full legacy compliance remains incomplete. Python remains the release runtime. PHP remains only a test reference.
 
+### Legacy API cache headers
+
+Legacy API responses now retain the native HTTP cache policy. The common response middleware no longer adds `Cache-Control: no-store` to these routes. Explicit cache headers, such as the file download lifetime, remain in effect. Application routes under `/api/v2/` and the health route retain their default `no-store` policy. The extension authentication test checks this policy for both successful and denied prefixed requests.
+
+The public comparison covers GET, HEAD, and OPTIONS for product details, stock entries, stock locations, location objects, and system information. The file comparison also checks its explicit cache lifetime. Both the local Python app and the Linux release passed all 32 selected comparisons with PHP. Nine stock read cases failed on Python before the repair and passed on PHP. All 285 integration tests passed, with five optional tests skipped. Ruff lint, formatting, and Python types passed. Python remains the release runtime; PHP is only the test reference.
+
 Run the normal tests without PHP:
 
 ```bash

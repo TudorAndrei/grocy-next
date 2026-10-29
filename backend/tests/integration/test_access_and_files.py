@@ -64,9 +64,11 @@ def test_api_base_path_preserves_extension_authentication_and_cors(
     extension = client.get("/grocy/api/v2/api-keys", headers={**api_headers, **origin})
     assert extension.status_code == 200, extension.text
     assert extension.headers["Access-Control-Allow-Origin"] == origin["Origin"]
+    assert extension.headers["Cache-Control"] == "no-store"
     denied = client.get("/grocy/api/v2/api-keys", headers=origin)
     assert denied.status_code == 401, denied.text
     assert denied.json()["error_code"] == "unauthorized"
+    assert denied.headers["Cache-Control"] == "no-store"
 
 
 def test_permissions_keys_and_mcp_use_stored_identity(

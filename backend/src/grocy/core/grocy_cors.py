@@ -7,7 +7,6 @@ _GROCY_CORS = (
     (b"access-control-allow-origin", b"*"),
     (b"access-control-allow-headers", b"*"),
     (b"access-control-allow-methods", b"GET, POST, PUT, DELETE, OPTIONS"),
-    (b"cache-control", b"no-store"),
 )
 
 
@@ -36,7 +35,9 @@ class GrocyCorsHeadersMiddleware:
                         if not name.lower().startswith(b"access-control-")
                     ]
                 present = {name.lower() for name, _ in headers}
-                defaults = _GROCY_CORS if api else _GROCY_CORS[:-1]
+                defaults = _GROCY_CORS
+                if path.startswith("/api/v2/") or path == "/api/health":
+                    defaults += ((b"cache-control", b"no-store"),)
                 for name, value in defaults:
                     if name not in present:
                         headers.append((name, value))

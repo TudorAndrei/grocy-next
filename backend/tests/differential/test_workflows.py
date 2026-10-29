@@ -1848,6 +1848,24 @@ def test_open_booking_records_preserve_metadata_and_undo(api, catalog, amount, m
         assert saved["undone_timestamp"]
 
 
+@pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
+@pytest.mark.parametrize(
+    "resource",
+    [
+        "stock/products/{product}",
+        "stock/products/{product}/entries",
+        "stock/products/{product}/locations",
+        "objects/locations",
+        "system/info",
+    ],
+)
+def test_legacy_api_reads_retain_native_http_cache_policy(api, catalog, method, resource):
+    product, *_ = catalog
+    response = api.request(method, "/api/" + resource.format(product=product))
+    assert response.status_code == 200, response.text
+    assert response.headers.get("cache-control") is None
+
+
 @pytest.mark.parametrize(
     "entity,action,log_entity",
     [
