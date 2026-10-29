@@ -5,12 +5,20 @@ from fastapi import APIRouter, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from grocy.core.auth import CurrentActor
+from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.core.permissions import PERMISSIONS
 from grocy.db.models.users import ApiKey, User
 
 router = APIRouter(tags=["access"])
+
+
+@router.get("/user/permissions")
+async def own_permissions(actor: AuthenticatedActor) -> dict[str, bool]:
+    return {
+        name: actor.is_admin or name in actor.permissions for name, _parent in PERMISSIONS.values()
+    }
 
 
 class CreateKey(BaseModel):

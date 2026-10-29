@@ -113,7 +113,10 @@ def test_transfer_editor_catalog_keeps_aggregate_stock_inactive_sources_and_save
     assert locations.json()[0]["location_id"] == shelf
 
 
-def test_transfer_editor_requires_stock_permission(client, api_headers, monkeypatch):
+def test_transfer_editor_allows_authenticated_readers_and_reports_their_own_permissions(
+    client, api_headers, monkeypatch
+):
+    assert client.get("/api/v2/user/permissions").status_code == 401
     monkeypatch.setattr(get_settings(), "default_permissions", [])
     client.post(
         "/api/users",
@@ -128,4 +131,16 @@ def test_transfer_editor_requires_stock_permission(client, api_headers, monkeypa
     response = client.post("/api/v2/api-keys", headers=api_headers, json={"user_id": identity})
     response.raise_for_status()
     headers = {"GROCY-API-KEY": response.json()["api_key"]}
-    assert client.get("/api/v2/stock/transfer/editor", headers=headers).status_code == 403
+    assert client.get("/api/v2/stock/transfer/editor", headers=headers).status_code == 200
+    permissions = client.get("/api/v2/user/permissions", headers=headers)
+    permissions.raise_for_status()
+    assert permissions.json()["STOCK_TRANSFER"] is False
+    assert permissions.json()["ADMIN"] is False
+    client.post(
+        f"/api/users/{identity}/permissions", headers=api_headers, json={"permission_id": 18}
+    ).raise_for_status()
+    permissions = client.get("/api/v2/user/permissions", headers=headers).json()
+    assert permissions["STOCK_TRANSFER"] is True
+    assert permissions["STOCK"] is False
+    assert permissions["STOCK_CONSUME"] is False
+    assert client.get("/api/v2/stock/transfer/editor", headers=headers).status_code == 200

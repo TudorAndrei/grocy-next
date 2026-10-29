@@ -16,7 +16,6 @@ router = APIRouter(tags=["stock"])
 
 @router.get("/stock/transfer/editor")
 async def get_transfer_editor(actor: AuthenticatedActor, session: DbSession) -> dict:
-    actor.require("STOCK")
     return await transfer_editor(session)
 
 
