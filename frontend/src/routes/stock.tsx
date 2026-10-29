@@ -15,6 +15,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { QuickMoves } from "@/components/QuickMoves";
 import { useFeatures } from "@/lib/features";
 import { GrocycodeActions } from "@/components/GrocycodeActions";
+import { TransferDialog } from "@/components/TransferForm";
+import { usePermissions } from "@/lib/permissions";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
@@ -26,6 +28,7 @@ type Row = {
   productId: number;
   name: string;
   amount: number;
+  ownAmount: number;
   minimumAmount: number;
   opened: number;
   min: number;
@@ -37,6 +40,8 @@ function StockPage() {
   const { t: tr } = useI18n();
 
   const features = useFeatures();
+  const can = usePermissions();
+  const [transfer, setTransfer] = useState<number>();
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const { dueSoonDays, formatAmount } = usePreferences();
@@ -68,6 +73,7 @@ function StockPage() {
         productId: item.product_id,
         name: item.product.name,
         amount: stockAmount(item),
+        ownAmount: item.amount,
         minimumAmount: amountForMinimum,
         opened: openedStockAmount(item),
         min:
@@ -88,6 +94,7 @@ function StockPage() {
         productId: missing.id,
         name: missing.name,
         amount: 0,
+        ownAmount: 0,
         minimumAmount: 0,
         opened: 0,
         min: missing.amount_missing,
@@ -146,6 +153,12 @@ function StockPage() {
 
   return (
     <>
+      {transfer !== undefined ? (
+        <TransferDialog
+          options={{ embedded: "", product: String(transfer) }}
+          onClose={() => setTransfer(undefined)}
+        />
+      ) : null}
       <PageHeader
         title={tr("Stock overview")}
         lead={tr(
@@ -301,6 +314,17 @@ function StockPage() {
                     ) : null}
                     <td className="row-actions">
                       <QuickMoves productId={row.productId} name={row.name} amount={row.amount} />
+                      {locationsEnabled ? (
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          aria-label={tr("Transfer %s", row.name)}
+                          disabled={row.ownAmount <= 0 || !can("STOCK_TRANSFER")}
+                          onClick={() => setTransfer(row.productId)}
+                        >
+                          {tr("Transfer")}
+                        </button>
+                      ) : null}
                       <GrocycodeActions kind="product" id={row.productId} name={row.name} compact />
                     </td>
                   </tr>

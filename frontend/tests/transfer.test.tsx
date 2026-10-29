@@ -10,7 +10,10 @@ import { supportDialogs } from "./fixtures/dialogs";
 
 beforeEach(supportDialogs);
 
-function mount(path: string, { readFailure = false, saveFailure = false } = {}) {
+function mount(
+  path: string,
+  { readFailure = false, saveFailure = false, transferAllowed = true, locations = true } = {},
+) {
   const writes: { path: string; body: JsonObject }[] = [];
   let detailReads = 0;
   let saves = 0;
@@ -118,11 +121,42 @@ function mount(path: string, { readFailure = false, saveFailure = false } = {}) 
       if (path.endsWith("/api/system/config"))
         return Response.json({
           FEATURE_FLAG_STOCK: true,
+          FEATURE_FLAG_STOCK_LOCATION_TRACKING: locations,
           FEATURE_FLAG_STOCK_PRICE_TRACKING: false,
           FEATURE_FLAG_DISABLE_BROWSER_BARCODE_CAMERA_SCANNING: true,
         });
 
       if (path.endsWith("/api/v2/stock/transfer/editor")) return Response.json(catalog);
+
+      if (path.endsWith("/api/v2/user/permissions"))
+        return Response.json({ STOCK_TRANSFER: transferAllowed });
+
+      if (path.endsWith("/api/objects/locations"))
+        return Response.json([{ id: 2, name: "Freezer" }]);
+
+      if (path.endsWith("/api/stock"))
+        return Response.json([
+          {
+            product_id: 7,
+            product: { id: 7, name: "Coffee", location_id: 2 },
+            amount: 5,
+            amount_aggregated: 9,
+            amount_opened: 0,
+            amount_opened_aggregated: 0,
+            is_aggregated_amount: true,
+          },
+          {
+            product_id: 9,
+            product: { id: 9, name: "Parent", location_id: 2 },
+            amount: 0,
+            amount_aggregated: 4,
+            amount_opened: 0,
+            amount_opened_aggregated: 0,
+            is_aggregated_amount: true,
+          },
+        ]);
+
+      if (path.includes("/api/stock/volatile")) return Response.json({ missing_products: [] });
 
       if (path.includes("/shopping-lists/")) return Response.json({ items: [] });
 
@@ -179,6 +213,53 @@ function mount(path: string, { readFailure = false, saveFailure = false } = {}) 
 
   return { writes };
 }
+
+test("overview transfer uses own stock and retains the page filters and focus", async () => {
+  const { writes } = mount("/stock");
+  const trigger = await screen.findByRole<HTMLButtonElement>("button", { name: "Transfer Coffee" });
+  await waitFor(() => expect(trigger.disabled).toBe(false));
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Transfer Parent" }).disabled).toBe(
+    true,
+  );
+  const search = screen.getByRole<HTMLInputElement>("searchbox", { name: "Search stock" });
+  await userEvent.type(search, "Coffee");
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Location" }), "2");
+  await userEvent.click(trigger);
+  await screen.findByRole("dialog", { name: "Transfer" });
+  const amount = screen.getByLabelText<HTMLInputElement>("Amount");
+  await waitFor(() => expect(amount.max).toBe("5.00"));
+  expect(screen.getByLabelText<HTMLSelectElement>("From location").value).toBe("1");
+  expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(document.activeElement).toBe(trigger);
+  expect(search.value).toBe("Coffee");
+  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("2");
+  expect(writes).toEqual([]);
+  await userEvent.click(trigger);
+  await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("Amount").max).toBe("5.00"));
+  fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "1" } });
+  await userEvent.selectOptions(screen.getByLabelText("To location"), "2");
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Transfer" })).toBeNull());
+  expect(writes.map((row) => row.path)).toEqual(["/api/stock/products/7/transfer"]);
+  expect(document.activeElement).toBe(trigger);
+  expect(search.value).toBe("Coffee");
+  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("2");
+});
+
+test.each([
+  { locations: true, transferAllowed: false },
+  { locations: false, transferAllowed: true },
+])("overview transfer follows location and permission settings: %j", async (options) => {
+  mount("/stock", options);
+  await screen.findByRole("link", { name: "Coffee" });
+
+  if (options.locations)
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Transfer Coffee" }).disabled,
+    ).toBe(true);
+  else expect(screen.queryByRole("button", { name: "Transfer Coffee" })).toBeNull();
+});
 
 test("transfer retains native unit limits and stock identity, resets, and undoes the transaction", async () => {
   const { writes } = mount("/transfer?product=7&locationId=1&stockId=mint");

@@ -515,6 +515,10 @@ The stock-code response-order repair passed all 376 frontend tests in 43 files. 
 
 The final browser check after the stock-code repair reported no script errors. The owned browser, four containers, Docker data volume, and network were removed. The release runtime remains Python. PHP was used only as the test reference.
 
+The stock overview now opens the shared transfer dialog from each product row. The legacy overview template checks the product's own stock amount, not its aggregate amount. The Python control retains this rule. A parent with stock only in its children has a disabled control. The control requires `STOCK_TRANSFER`, and the location tracking feature flag controls its presence. The form receives only the product ID and the embedded setting. The overview's location filter does not override the form's default source.
+
+The overview transfer change passed all 379 frontend tests in 43 files. Two routed cases failed before the control was added. The cases now check own stock, permission, feature settings, product-only form selection, Cancel without a write, Save, retained filters, and returned focus. Lint, formatting, all three frontend type checks, and root and `/house` release builds passed. No backend source changed in this batch. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash
