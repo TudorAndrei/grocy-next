@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { ProductOverview } from "./ProductOverview";
+import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { api } from "@/lib/api";
@@ -61,12 +62,15 @@ export function StockJournal({
   search: JournalSearch;
   onChange: (search: JournalSearch) => void;
 }) {
+  const [overview, setOverview] = useState<number>();
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const { t, pluralIndex, ready: translationsReady } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
   const notify = useNotify();
   const id = useId();
+  const table = useRef<HTMLDivElement>(null);
   const [text, setText] = useState("");
   const [transaction, setTransaction] = useState("");
   const [location, setLocation] = useState("");
@@ -473,6 +477,7 @@ export function StockJournal({
             className="journal-table-scroll"
             tabIndex={0}
             role="region"
+            ref={table}
             aria-label={t("Stock journal")}
           >
             <table className="stock-table journal-table">
@@ -555,12 +560,14 @@ export function StockJournal({
                         </div>
                       </td>
                       <th scope="row">
-                        <Link
-                          to="/products/$productId"
-                          params={{ productId: String(row.product_id) }}
+                        <button
+                          type="button"
+                          className="stock-product-trigger"
+                          aria-label={`${t("Product overview")}: ${row.product_name ?? ""}`}
+                          onClick={() => setOverview(row.product_id)}
                         >
                           {isUndone(row) ? <s>{row.product_name}</s> : row.product_name}
-                        </Link>
+                        </button>
                         {isUndone(row) ? (
                           <small>
                             {t("Undone on")} <StockTableDate value={undoDate(row)} />
@@ -597,6 +604,23 @@ export function StockJournal({
             <p className="empty-state">{t("No stock bookings match this filter.")}</p>
           ) : null}
         </>
+      ) : null}
+      {overview !== undefined ? (
+        <ProductOverview
+          productId={overview}
+          embedded={search.embedded !== undefined}
+          expanded={overviewExpanded}
+          onExpandedChange={setOverviewExpanded}
+          onReturn={async () => {
+            setText("");
+            setTransaction("");
+            setLocation("");
+            setUser("");
+            await reload();
+            requestAnimationFrame(() => table.current?.focus());
+          }}
+          onClose={() => setOverview(undefined)}
+        />
       ) : null}
     </>
   );
@@ -650,6 +674,7 @@ function JournalDialog({
       aria-labelledby={title}
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
     >

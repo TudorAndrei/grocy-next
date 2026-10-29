@@ -8,6 +8,7 @@ import type { EntryRow } from "@/lib/stock-entries";
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { supportDialogs } from "./fixtures/dialogs";
+import { productOverview } from "./fixtures/product-overview";
 
 beforeEach(supportDialogs);
 
@@ -118,6 +119,7 @@ function mount(
   let editorReads = 0;
   let editorWrites = 0;
   let productReads = 0;
+  const overview = { ...productOverview };
   let uploads = 0;
   let heldRead = false;
   let releaseSavedRead = () => {};
@@ -153,6 +155,7 @@ function mount(
       if (path.endsWith("/api/system/config"))
         return Response.json({
           FEATURE_FLAG_STOCK: stock,
+          FEATURE_FLAG_SHOPPINGLIST: tracking,
           FEATURE_FLAG_STOCK_LOCATION_TRACKING: tracking,
           FEATURE_FLAG_STOCK_PRICE_TRACKING: tracking,
           FEATURE_FLAG_STOCK_BEST_BEFORE_DATE_TRACKING: tracking,
@@ -297,13 +300,13 @@ function mount(
         if (failRefresh && ++productReads === 1)
           return Response.json({ error_message: "Entry refresh unavailable" }, { status: 503 });
 
-        return Response.json({
-          product: { disable_open: 0 },
-          qu_conversion_factor_purchase_to_stock: 1,
-          default_quantity_unit_purchase: { name: "Piece" },
-          quantity_unit_stock: { name: "Piece" },
-        });
+        return Response.json(overview);
       }
+
+      if (path.endsWith("/api/v2/content/products/7"))
+        return Response.json({ html: productOverview.product.description });
+
+      if (path.endsWith("/api/stock/products/7/price-history")) return Response.json([]);
 
       if (path.endsWith("/api/objects/userfields"))
         return Response.json([
@@ -345,7 +348,9 @@ function mount(
           },
         ]);
 
-      if (path.endsWith("/api/objects/products/7"))
+      if (path.endsWith("/api/objects/products/7")) {
+        if (init?.method === "PUT") writes.push({ path, body: JSON.parse(String(init.body)) });
+
         return Response.json({
           id: 7,
           name: "Coffee",
@@ -356,6 +361,7 @@ function mount(
           qu_id_price: 1,
           active: 1,
         });
+      }
 
       if (path.endsWith("/api/userfields/products/7")) return Response.json({ origin: "Peru" });
 
@@ -441,8 +447,73 @@ function mount(
     client.clear();
   });
 
-  return { writes, router, labels, releaseSavedRead: () => releaseSavedRead() };
+  return { writes, router, labels, overview, releaseSavedRead: () => releaseSavedRead() };
 }
+
+test("product overview retries and retains the entry filter and product draft through child dialogs", async () => {
+  const { router, overview, writes } = mount("/product/7", { failRefresh: true });
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText<HTMLInputElement>("Name");
+  await user.type(name, " draft");
+  await user.click(screen.getByRole("button", { name: "Stock entries" }));
+  const entries = within(await screen.findByRole("dialog", { name: "Stock entries" }));
+  await entries.findByText("Mint batch");
+  await user.selectOptions(entries.getByRole("combobox", { name: "Location" }), "2");
+  const trigger = entries.getByRole("button", { name: "Product overview: Coffee" });
+  await user.click(trigger);
+  const dialog = await screen.findByRole("dialog", { name: "Product overview" });
+  const view = within(dialog);
+  await view.findByText("Entry refresh unavailable");
+  await user.click(view.getByRole("button", { name: "Retry" }));
+  await view.findByRole("heading", { name: "Coffee" });
+  expect(document.activeElement).toBe(view.getByRole("button", { name: "Close" }));
+  expect(view.getByText("2.5 Pieces")).toBeTruthy();
+  expect(view.getByText("12.5 Pieces")).toBeTruthy();
+  expect(view.getByText("$6.00 per Box").title).toBe("$1.00 per Piece");
+  expect(view.getByText("$1.50 per Box").title).toBe("$0.25 per Piece");
+  expect(view.getByText("25%")).toBeTruthy();
+  expect(view.getByText("Never")).toBeTruthy();
+  await user.click(view.getByRole("button", { name: "Show more" }));
+  expect(view.getByText("carefully").tagName).toBe("STRONG");
+  const stock = view.getByRole("button", { name: "Stock entries" });
+  await user.click(stock);
+  await waitFor(() =>
+    expect(screen.getAllByRole("dialog", { name: "Stock entries" })).toHaveLength(2),
+  );
+  const child = screen.getAllByRole("dialog", { name: "Stock entries" })[1]!;
+  fireEvent(child, new Event("cancel", { bubbles: true, cancelable: true }));
+  await waitFor(() =>
+    expect(screen.getAllByRole("dialog", { name: "Stock entries" })).toHaveLength(1),
+  );
+  expect(document.activeElement).toBe(stock);
+  fireEvent(dialog, new Event("cancel", { bubbles: true, cancelable: true }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Product overview" })).toBeNull(),
+  );
+  expect(document.activeElement).toBe(trigger);
+  expect(entries.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("2");
+  overview.stock_amount = 9;
+  await user.click(trigger);
+  const fresh = within(await screen.findByRole("dialog", { name: "Product overview" }));
+  await fresh.findByText("9 Pieces");
+  await fresh.findByRole("button", { name: "Show less" });
+  await user.click(fresh.getByRole("button", { name: "Edit product" }));
+  const editor = within(await screen.findByRole("dialog", { name: "Edit product" }));
+  const savedName = await editor.findByLabelText<HTMLInputElement>("Name");
+  expect(savedName.value).toBe("Coffee");
+  await user.type(savedName, " temporary");
+  await user.click(editor.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit product" })).toBeNull());
+  expect(screen.queryByRole("dialog", { name: "Product overview" })).toBeNull();
+  await entries.findByText("Mint batch");
+  expect(entries.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("");
+  await waitFor(() =>
+    expect(document.activeElement).toBe(entries.getByRole("region", { name: "Stock entries" })),
+  );
+  expect(writes.filter((write) => write.path === "/api/objects/products/7")).toHaveLength(0);
+  expect(name.value).toBe("Coffee draft");
+  expect(router.state.location.href).toBe("/product/7");
+});
 
 test("entry dialog retains the product draft through retry, exact actions, and undo", async () => {
   const { writes, router } = mount("/product/7", { fail: true });
@@ -550,12 +621,26 @@ test.each([false, true])(
 );
 
 test("stock entry reads remain available with tracking disabled", async () => {
-  mount("/stockentries?product=7", { tracking: false });
+  const { overview } = mount("/stockentries?product=7", { tracking: false });
+  overview.product = { ...overview.product, no_own_stock: 1 };
+  const user = userEvent.setup();
   await screen.findByText("Mint batch");
   expect(screen.getAllByRole("button", { name: /^Consume stock entry \d+$/ })).toHaveLength(4);
   expect(screen.queryByRole("button", { name: /^Open stock entry/ })).toBeNull();
   expect(screen.queryByRole("columnheader", { name: "Price" })).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Location" })).toBeNull();
+  await user.click(screen.getAllByRole("button", { name: "Product overview: Coffee" })[0]!);
+  const view = within(await screen.findByRole("dialog", { name: "Product overview" }));
+  await view.findByRole("heading", { name: "Coffee" });
+  expect(view.queryByText("2.5 Pieces")).toBeNull();
+  expect(view.getByText("12.5 Pieces")).toBeTruthy();
+  expect(view.queryByText("Stock value")).toBeNull();
+  expect(view.queryByText("Default location")).toBeNull();
+  expect(view.queryByText("Last price")).toBeNull();
+  expect(view.queryByText("Average price")).toBeNull();
+  expect(view.queryByText("Average shelf life")).toBeNull();
+  expect(view.queryByRole("region", { name: "Price history" })).toBeNull();
+  expect(view.queryByRole("button", { name: "Add to shopping list" })).toBeNull();
 });
 
 test("entry location filters match words in either order and retain native amount and note order", async () => {

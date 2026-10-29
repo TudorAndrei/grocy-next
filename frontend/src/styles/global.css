@@ -3597,3 +3597,62 @@ a.btn[aria-disabled="true"] {
   padding: 0;
   border: 0;
 }
+
+.stock-product-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cobalt);
+  font: inherit;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.product-overview-dialog h3,
+.product-overview-facts dd {
+  overflow-wrap: anywhere;
+}
+
+.product-overview-actions {
+  flex-wrap: wrap;
+}
+
+.product-overview-description > [data-expanded="false"] {
+  height: 2.4rem;
+  overflow: hidden;
+}
+
+.product-overview-facts {
+  display: grid;
+  gap: 8px;
+}
+
+.product-overview-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.product-overview-facts dt {
+  font-weight: 700;
+}
+
+.product-overview-facts dd {
+  margin: 0;
+}
+
+.product-overview-aggregate {
+  margin-inline-start: 8px;
+}
+
+.product-price-history {
+  position: relative;
+  min-width: 0;
+}
+
+.product-price-chart {
+  position: relative;
+  height: 240px;
+}

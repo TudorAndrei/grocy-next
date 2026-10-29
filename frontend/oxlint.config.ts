@@ -5,7 +5,12 @@ export default defineConfig({
   categories: {
     correctness: "error",
   },
-  ignorePatterns: ["src/routeTree.gen.ts", "tools/oxlint/anti-slop/**", "dist/**"],
+  ignorePatterns: [
+    "src/routeTree.gen.ts",
+    "tools/oxlint/anti-slop/**",
+    "dist/**",
+    "public/vendor/**",
+  ],
   jsPlugins: [
     {
       name: "anti-slop",

@@ -8,6 +8,7 @@ import type { JournalRow } from "@/lib/stock-journal";
 import type { UserSettings } from "@/lib/types";
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
+import { productOverview } from "./fixtures/product-overview";
 
 beforeEach(() => {
   for (const method of ["showModal", "close"] as const) {
@@ -217,6 +218,13 @@ function mount(
       const path = url.pathname;
 
       if (path === "/api/v2/setup") return Response.json({ needs_setup: false });
+
+      if (path === "/api/stock/products/7") return Response.json(productOverview);
+
+      if (path === "/api/v2/content/products/7")
+        return Response.json({ html: productOverview.product.description });
+
+      if (path === "/api/stock/products/7/price-history") return Response.json([]);
 
       if (path === "/api/user") return Response.json([{ id: 1, username: "Test" }]);
 
@@ -666,6 +674,28 @@ test("product journal keeps the draft through read retry, filters, linked undo, 
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Table options" })).toBeNull());
   expect(screen.getByRole("dialog", { name: "Stock journal" })).toBe(dialog);
   expect(document.activeElement).toBe(optionsTrigger);
+  const overviewTrigger = view.getAllByRole("button", { name: "Product overview: Coffee" })[0]!;
+  await user.click(overviewTrigger);
+  const overviewDialog = await screen.findByRole("dialog", { name: "Product overview" });
+  const overview = within(overviewDialog);
+  await overview.findByRole("heading", { name: "Coffee" });
+  const journalTrigger = overview.getByRole("button", { name: "Stock journal" });
+  await user.click(journalTrigger);
+  await waitFor(() =>
+    expect(screen.getAllByRole("dialog", { name: "Stock journal" })).toHaveLength(2),
+  );
+  const child = screen.getAllByRole("dialog", { name: "Stock journal" })[1]!;
+  fireEvent(child, new Event("cancel", { cancelable: true, bubbles: true }));
+  await waitFor(() =>
+    expect(screen.getAllByRole("dialog", { name: "Stock journal" })).toHaveLength(1),
+  );
+  expect(document.activeElement).toBe(journalTrigger);
+  fireEvent(overviewDialog, new Event("cancel", { cancelable: true, bubbles: true }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Product overview" })).toBeNull(),
+  );
+  expect(document.activeElement).toBe(overviewTrigger);
+  expect(view.getByRole<HTMLSelectElement>("combobox", { name: "Date range" }).value).toBe("9999");
   fireEvent(dialog, new Event("cancel", { cancelable: true }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(document.activeElement).toBe(trigger);

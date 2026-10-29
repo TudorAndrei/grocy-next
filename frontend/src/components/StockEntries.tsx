@@ -1,5 +1,5 @@
+import { ProductOverview } from "./ProductOverview";
 import { useId, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
 import { useInvalidateStock } from "@/lib/catalog";
@@ -48,6 +48,8 @@ export function StockEntries({
   search: EntriesSearch;
   onChange: (search: EntriesSearch) => void;
 }) {
+  const [overview, setOverview] = useState<number>();
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const { t, pluralIndex, ready: translationsReady } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
@@ -690,12 +692,14 @@ export function StockEntries({
                           </div>
                         </td>
                         <th scope="row">
-                          <Link
-                            to="/products/$productId"
-                            params={{ productId: String(row.product_id) }}
+                          <button
+                            type="button"
+                            className="stock-product-trigger"
+                            aria-label={`${t("Product overview")}: ${row.product_name ?? ""}`}
+                            onClick={() => setOverview(row.product_id)}
                           >
                             {row.product_name}
-                          </Link>
+                          </button>
                         </th>
                         <td>
                           {amount(current)} {unit(row)}
@@ -753,6 +757,19 @@ export function StockEntries({
           {!rows.length ? <p className="empty-state">{t("No stock entries.")}</p> : null}
         </>
       ) : null}
+      {overview !== undefined ? (
+        <ProductOverview
+          productId={overview}
+          embedded={search.embedded !== undefined}
+          expanded={overviewExpanded}
+          onExpandedChange={setOverviewExpanded}
+          onReturn={async () => {
+            await reload();
+            requestAnimationFrame(() => table.current?.focus());
+          }}
+          onClose={() => setOverview(undefined)}
+        />
+      ) : null}
     </>
   );
 }
@@ -805,6 +822,7 @@ function EntriesDialog({
       aria-labelledby={title}
       onCancel={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         onClose();
       }}
     >

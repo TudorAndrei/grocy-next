@@ -51,6 +51,7 @@ export function ShoppingItemForm({
       aria-labelledby={title}
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
 
         if (!pending) onClose();
       }}
