@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { createAppRouter } from "@/router";
@@ -601,28 +601,40 @@ test("an entry read failure has a separate retry and hidden tracking controls do
   });
 });
 
-test("full-page scan mode saves its setting and consumes one display unit", async () => {
-  const { writes, sounds } = mount("/consume");
-  await userEvent.click(await screen.findByRole("button", { name: "Scan mode off" }));
-  await screen.findByRole("button", { name: "Scan mode on" });
-  const picker = screen.getByLabelText("Product");
-  await userEvent.type(picker, "Coffee");
-  expect(writes).toEqual([
-    {
-      path: "/api/user/settings/scan_mode_consume_enabled",
-      body: { value: true },
-    },
-  ]);
-  expect(sounds).toEqual(["/uisounds/silence.mp3"]);
-  fireEvent.keyDown(picker, { key: "Enter" });
-  await screen.findByText("Removed 8 Pieces of Coffee from stock");
-  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.amount).toBe("8.");
-  expect(sounds).toEqual([
-    "/uisounds/silence.mp3",
-    "/uisounds/barcodescannerbeep.mp3",
-    "/uisounds/success.mp3",
-  ]);
-});
+test.each(["Enter", "browser list"])(
+  "full-page scan mode saves its setting and consumes one display unit with %s",
+  async (confirmation) => {
+    const { writes, sounds } = mount("/consume");
+    await userEvent.click(await screen.findByRole("button", { name: "Scan mode off" }));
+    await screen.findByRole("button", { name: "Scan mode on" });
+    const picker = screen.getByLabelText("Product");
+    await userEvent.type(picker, confirmation === "Enter" ? "Coffee" : "Cof");
+    expect(writes).toEqual([
+      {
+        path: "/api/user/settings/scan_mode_consume_enabled",
+        body: { value: true },
+      },
+    ]);
+    expect(sounds).toEqual(["/uisounds/silence.mp3"]);
+
+    if (confirmation === "Enter") fireEvent.keyDown(picker, { key: "Enter" });
+    else
+      fireEvent(
+        picker,
+        createEvent("input", picker, { bubbles: true, target: { value: "Coffee" } }),
+      );
+    await screen.findByText("Removed 8 Pieces of Coffee from stock");
+    expect(
+      writes.filter((row) => row.path.endsWith("/consume")).map((row) => row.body.amount),
+    ).toEqual(["8."]);
+    expect(sounds).toEqual([
+      "/uisounds/silence.mp3",
+      ...(confirmation === "browser list" ? ["/uisounds/barcodescannerbeep.mp3"] : []),
+      "/uisounds/barcodescannerbeep.mp3",
+      "/uisounds/success.mp3",
+    ]);
+  },
+);
 
 test.each([{ locations: [1] }, { locations: [1, 2] }, { locations: [1, 3, 2] }])(
   "scan mode books the scanned stock item from the first location reply in $locations",

@@ -784,7 +784,7 @@ function ConsumeFields({
               deferSelection={scanEnabled}
               workflowPath={`/consume${options.embedded === undefined ? "" : "?embedded"}`}
               onChange={(value, nextCode) => void selectProduct(value, nextCode)}
-              onBarcodeCommit={() => {
+              onEmptyCommit={() => {
                 if (scanState.current) playUiSound("barcodescannerbeep");
               }}
               onResolved={() =>

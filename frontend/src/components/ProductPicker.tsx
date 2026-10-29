@@ -30,7 +30,7 @@ export function ProductPicker({
   deferSelection = false,
   onChange,
   onResolved,
-  onBarcodeCommit,
+  onEmptyCommit,
   onAssignBarcode,
   onBusyChange,
 }: {
@@ -49,7 +49,7 @@ export function ProductPicker({
   deferSelection?: boolean;
   onChange: (value: string, code?: ProductCode) => void;
   onResolved: () => void;
-  onBarcodeCommit?: () => void;
+  onEmptyCommit?: () => void;
   onAssignBarcode: (barcode: string) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
@@ -247,14 +247,14 @@ export function ProductPicker({
     found ??= products.find((product) => product.name.includes(code));
 
     if (found) {
-      if (resolvedCode) onBarcodeCommit?.();
+      if (resolvedCode) onEmptyCommit?.();
       choose(found, resolvedCode);
 
       return;
     }
 
     selection.current = "";
-    onBarcodeCommit?.();
+    onEmptyCommit?.();
     onChange("");
 
     if (!lookupDisabled) check.mutate(code);
@@ -299,9 +299,22 @@ export function ProductPicker({
           setText(next);
           setMessage("");
 
-          const product = deferSelection
-            ? undefined
-            : products.find((product) => product.name === next);
+          // A browser-list choice emits input as Event; text edits use InputEvent.
+          const committed =
+            event.nativeEvent.type === "input" && !(event.nativeEvent instanceof InputEvent);
+
+          const product =
+            deferSelection && !committed
+              ? undefined
+              : products.find((product) => product.name === next);
+
+          if (deferSelection && product) {
+            // The native pointer choice first commits the empty hidden selection.
+            onEmptyCommit?.();
+            choose(product);
+
+            return;
+          }
 
           selection.current = product ? String(product.id) : "";
           onChange(selection.current);

@@ -629,7 +629,7 @@ Scan mode now captures a valid booking from the first stock reply. It retains th
 
 The four original MP3 files are included unchanged from the pinned Grocy release, with its MIT license. Enabling scan mode plays the permission clip. Barcode and stock-code commits retain the two native scan beeps. Successful consumption plays its success clip when scan mode is still active. Invalid scan amounts play the error clip. Open and Undo do not play the consumption success clip. Embedded consume forms keep scan mode off.
 
-Exact-name typing in scan mode now waits for confirmation. The tested Enter path matches the native page: no consumption occurs while typing, and Enter starts one booking. Product-picker pointer selection still needs work. The current browser-list selection also waits for Enter or blur, while a native pointer selection submits at once.
+Exact-name typing in scan mode now waits for confirmation. The tested Enter path matches the native page: no consumption occurs while typing, and Enter starts one booking. This batch left browser-list selection waiting for Enter or blur. The next batch corrects that difference.
 
 All 428 frontend tests passed in 45 files. Seven local checks failed with the previous form. Two focused checks also failed before the name-confirmation and pending-toggle corrections. Lint, formatting, all three type checks, and root and `/house` builds passed. No backend application source changed.
 
@@ -639,7 +639,15 @@ The first release check found that prefixed sound links returned the application
 
 The 1440-pixel and 390-pixel views retained the existing layout. Both phone action buttons remained reachable after scrolling, with no horizontal overflow. All 154 frontend source files matched the build snapshot, and all 93 web build files matched the release image. All 177 Python source files matched the API image. PHP was disabled and absent from the release images. Saved stock and booking records remained unchanged after restart. The database integrity check passed.
 
-Late disabled-form events remain different. The native page can send failed product-details reads with an undefined product while an earlier automatic booking has disabled its inputs. Python retains the first booking and skips further scan attempts until it ends. These late events, pointer selection, overlapping product and location changes, recipe text, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
+Late disabled-form events remain different. The native page can send failed product-details reads with an undefined product while an earlier automatic booking has disabled its inputs. Python retains the first booking and skips further scan attempts until it ends. These late events, overlapping product and location changes, recipe text, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
+
+### Confirmed product-list choices
+
+A confirmed browser-list choice now starts a scan booking at once. Typing still waits for Enter or blur. The choice retains the two scan beeps observed with a pointer on the native page. The shared picker keeps the existing behavior when deferred selection is off.
+
+The input distinction comes from Chromium's [datalist selection handler](https://github.com/chromium/chromium/blob/main/components/autofill/content/renderer/autofill_agent.cc) and its form-control event path. A list choice dispatches a plain input event. Text edits use `InputEvent`. The consume request check covers both this list event and typed-name confirmation. The list case failed before the correction; the Enter control passed.
+
+All 429 frontend tests passed in 45 files. The 29 consume checks include both confirmation paths. Lint, formatting, all three type checks, and root and `/house` builds passed. The separate browser probe confirmed the typed event but could not select the browser popup through automation. This batch therefore does not claim a completed browser check of the popup or full parity across browsers. No backend source or release-runtime setting changed.
 
 Run the normal tests without PHP:
 
