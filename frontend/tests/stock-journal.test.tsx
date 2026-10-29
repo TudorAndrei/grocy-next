@@ -148,6 +148,30 @@ function mount(path: string, fail = false, stock = true) {
     },
   ];
 
+  const tea = rows[5];
+
+  if (!tea) throw new Error("Missing Tea fixture");
+  rows.push(
+    {
+      ...tea,
+      id: 107,
+      amount: 2,
+      location_id: 3,
+      location_name: "North Shelf",
+      user_display_name: "Alex Lane",
+      note: "North booking",
+    },
+    {
+      ...tea,
+      id: 108,
+      amount: 10,
+      location_id: 4,
+      location_name: "Shelf North",
+      user_display_name: "Lane Alex",
+      note: "South booking",
+    },
+  );
+
   const products = [
     {
       id: 7,
@@ -237,10 +261,14 @@ function mount(path: string, fail = false, stock = true) {
           locations: [
             { id: 2, name: "Cellar" },
             { id: 1, name: "Shelf" },
+            { id: 3, name: "North Shelf" },
+            { id: 4, name: "Shelf North" },
           ],
           users: [
             { id: 1, name: "Alice" },
             { id: 2, name: "Bob" },
+            { id: 3, name: "Alex Lane" },
+            { id: 4, name: "Lane Alex" },
           ],
           transaction_types: ["consume", "purchase", "transfer_from", "transfer_to"],
           rows: rows.filter(
@@ -466,9 +494,36 @@ test("journal summary retries, filters visible values, and sorts signed totals",
   await user.click(view.getByRole("button", { name: "Amount" }));
   expect(view.getAllByRole("row")[1]?.textContent).toBe("CoffeeconsumeBob-1 Piece");
   await user.click(view.getByRole("button", { name: "Amount" }));
-  expect(view.getAllByRole("row")[1]?.textContent).toBe("CoffeepurchaseAlice1,000.01 Pieces");
+  expect(view.getAllByRole("row")[1]?.textContent).toBe("TeapurchaseAlice4 Pieces");
   await user.type(screen.getByRole("searchbox", { name: "Search summary" }), "No such product");
   expect(view.getByText("No matching records found")).toBeTruthy();
+});
+
+test("journal matches native word filters, curly phrases, and amount text order", async () => {
+  mount("/stockjournal?product=8&months=9999&embedded=");
+  const user = userEvent.setup();
+  await screen.findByText("Tea stock");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "3");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Done by" }), "3");
+
+  const bookings = () =>
+    screen
+      .getAllByRole("button", { name: /^Undo transaction/ })
+      .map((button) => button.getAttribute("aria-label"));
+
+  expect(bookings()).toEqual(["Undo transaction 107", "Undo transaction 108"]);
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search journal" }),
+    "“North Shelf” “Alex Lane”",
+  );
+  expect(bookings()).toEqual(["Undo transaction 107"]);
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  expect(bookings()).toEqual([
+    "Undo transaction 108",
+    "Undo transaction 107",
+    "Undo transaction 106",
+  ]);
 });
 
 test("summary URL limits survive clearing local filters and the journal links to all totals", async () => {

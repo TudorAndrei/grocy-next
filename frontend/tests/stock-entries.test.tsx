@@ -74,6 +74,28 @@ function mount(
     },
     { ...base, id: 54, stock_id: "disabled", disable_open: 1, note: "Disabled batch" },
     { ...base, id: 55, stock_id: "tea", product_id: 8, product_name: "Tea", note: "Tea batch" },
+    {
+      ...base,
+      id: 56,
+      stock_id: "north",
+      product_id: 8,
+      product_name: "Tea",
+      note: "Zulu batch",
+      location_id: 3,
+      location_name: "North Shelf",
+      amount: 10,
+    },
+    {
+      ...base,
+      id: 57,
+      stock_id: "south",
+      product_id: 8,
+      product_name: "Tea",
+      note: "Alpha batch",
+      location_id: 4,
+      location_name: "Shelf North",
+      amount: 2,
+    },
   ];
 
   const writes: { path: string; body: object }[] = [];
@@ -234,6 +256,8 @@ function mount(
           locations: [
             { id: 2, name: "Cellar" },
             { id: 1, name: "Shelf" },
+            { id: 3, name: "North Shelf" },
+            { id: 4, name: "Shelf North" },
           ],
           stores: [{ id: 1, name: "Roastery" }],
         });
@@ -451,6 +475,24 @@ test("stock entry reads remain available with tracking disabled", async () => {
   expect(screen.queryByRole("button", { name: /^Open stock entry/ })).toBeNull();
   expect(screen.queryByRole("columnheader", { name: "Price" })).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Location" })).toBeNull();
+});
+
+test("entry location filters match words in either order and retain native amount and note order", async () => {
+  mount("/stockentries?product=8&embedded=");
+  const user = userEvent.setup();
+  await screen.findByText("Tea batch");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "3");
+
+  const entries = () =>
+    screen
+      .getAllByRole("button", { name: /^Consume stock entry \d+$/ })
+      .map((button) => button.getAttribute("aria-label"));
+
+  expect(entries()).toEqual(["Consume stock entry 56", "Consume stock entry 57"]);
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  expect(entries()).toEqual(["Consume stock entry 57", "Consume stock entry 56"]);
+  await user.click(screen.getByRole("button", { name: "Note" }));
+  expect(entries()).toEqual(["Consume stock entry 56", "Consume stock entry 57"]);
 });
 
 test.each(["/stockentries", "/stockentry/51"])("%s obeys the stock feature flag", async (path) => {

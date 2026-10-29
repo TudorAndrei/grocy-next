@@ -72,15 +72,9 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
         ),
     )
     .sort((left, right) => {
-      let order: number;
-
-      if (sort.key === "amount") order = left.amount - right.amount;
-      else {
-        const first = (left[sort.key] ?? "").trim().toLowerCase();
-        const second = (right[sort.key] ?? "").trim().toLowerCase();
-
-        order = first < second ? -1 : first > second ? 1 : 0;
-      }
+      const first = sort.key === "amount" ? left.display_amount : (left[sort.key] ?? "");
+      const second = sort.key === "amount" ? right.display_amount : (right[sort.key] ?? "");
+      const order = first.localeCompare(second);
 
       return sort.descending ? -order : order;
     });

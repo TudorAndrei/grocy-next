@@ -17,6 +17,7 @@ import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
 import { StockEntryDialog } from "./StockEntryEditor";
+import { matchesTableSearch } from "@/lib/table-search";
 
 export function StockEntries({
   search,
@@ -153,7 +154,8 @@ export function StockEntries({
       case "row_created_timestamp":
         return row.row_created_timestamp ?? "";
       case "note":
-        return row.note ?? "";
+        // The pinned string sorter compares the cell's HTML, including this ID.
+        return `<span id="stock-${row.id}-note">${row.note ?? ""}</span>`;
       default:
         return sort.key.startsWith("product:")
           ? (row.product_values[sort.key.slice(8)] ?? "")
@@ -165,7 +167,7 @@ export function StockEntries({
     .filter(
       (row) =>
         (!product || String(row.product_id) === product) &&
-        (row.location_name ?? "").toLowerCase().includes(locationName.toLowerCase()),
+        matchesTableSearch(row.location_name ?? "", locationName),
     )
     .sort((a, b) => {
       const first = value(a);
@@ -176,11 +178,7 @@ export function StockEntries({
           ? a.amount - b.amount
           : sort.key === "price"
             ? (a.price ?? 0) - (b.price ?? 0)
-            : String(first).toLowerCase() < String(second).toLowerCase()
-              ? -1
-              : String(first).toLowerCase() > String(second).toLowerCase()
-                ? 1
-                : 0;
+            : String(first).localeCompare(String(second));
 
       return sort.descending ? -order : order;
     });

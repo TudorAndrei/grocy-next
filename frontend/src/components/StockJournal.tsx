@@ -13,6 +13,7 @@ import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
+import { matchesTableSearch } from "@/lib/table-search";
 
 const ranges = [
   ["1", "1 month"],
@@ -81,21 +82,10 @@ export function StockJournal({
 
     const userName = data.data?.users.find((item) => String(item.id) === user)?.name ?? "";
 
-    const contains = (value: string | null, query: string) =>
-      (value ?? "").toLowerCase().includes(query.toLowerCase());
-
-    const terms =
-      text === "all"
-        ? []
-        : (text.toLowerCase().match(/"[^"]+"|\S+/g) ?? []).map((term) =>
-            term.replace(/^"|"$/g, ""),
-          );
-
     const filtered = (data.data?.rows ?? []).filter((row) => {
       const content = [
         row.product_name,
-        amount(row),
-        unit(row),
+        `${amount(row)} ${unit(row)}`,
         row.row_created_timestamp,
         type(row),
         row.location_name,
@@ -103,20 +93,20 @@ export function StockJournal({
         row.note,
         row.undone ? `${t("Undone on")} ${row.undone_timestamp}` : "",
         ...fields.map((field) => row.custom_values[field.name]),
-      ]
-        .join(" ")
-        .toLowerCase();
+      ].join("  ");
 
       return (
-        contains(type(row), transaction ? t(transaction) : "") &&
-        contains(row.location_name, locationName) &&
-        contains(row.user_display_name, userName) &&
-        terms.every((term) => content.includes(term))
+        matchesTableSearch(type(row), transaction ? t(transaction) : "") &&
+        matchesTableSearch(row.location_name ?? "", locationName) &&
+        matchesTableSearch(row.user_display_name ?? "", userName) &&
+        matchesTableSearch(content, text === "all" ? "" : text)
       );
     });
 
     const value = (row: JournalRow) => {
       switch (sort.key) {
+        case "amount":
+          return `${amount(row)} ${unit(row)}`;
         case "product_name":
           return row.product_name ?? "";
         case "row_created_timestamp":
@@ -138,14 +128,7 @@ export function StockJournal({
       const first = value(a);
       const second = value(b);
 
-      const order =
-        sort.key === "amount"
-          ? a.amount - b.amount
-          : String(first).toLowerCase() < String(second).toLowerCase()
-            ? -1
-            : String(first).toLowerCase() > String(second).toLowerCase()
-              ? 1
-              : 0;
+      const order = String(first).localeCompare(String(second));
 
       return sort.descending ? -order : order;
     });

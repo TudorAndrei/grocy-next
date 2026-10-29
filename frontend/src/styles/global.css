@@ -3446,11 +3446,11 @@ a.btn[aria-disabled="true"] {
 .journal-table {
   display: table;
   min-inline-size: 64rem;
+  white-space: nowrap;
 }
 
 .journal-table.journal-summary-table {
   min-inline-size: 36rem;
-  white-space: nowrap;
 }
 
 .journal-table thead {
