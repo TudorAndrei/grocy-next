@@ -2216,10 +2216,12 @@ def test_purchase_compaction_keeps_transferred_stock_identity_for_undo(api, cata
     assert [(row["location_id"], row["amount"]) for row in restored] == [(source, 8)]
 
 
-def test_stock_custom_fields_use_booking_transactions_and_prevent_compaction(api, catalog):
+def test_stock_custom_fields_use_booking_transactions_and_prevent_compaction(
+    api, catalog, custom_field
+):
     product, _, _, _ = catalog
     field = "batch_" + uuid4().hex
-    create(api, "userfields", entity="stock", name=field, caption="Batch", type="text-single-line")
+    custom_field(entity="stock", name=field, caption="Batch", type="text-single-line")
     base = f"/api/stock/products/{product}"
     body = {"amount": 2, "price": 2, "best_before_date": "2037-02-01"}
     purchase = api.post(base + "/add", json=body)
