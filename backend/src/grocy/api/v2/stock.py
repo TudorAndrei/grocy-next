@@ -9,8 +9,15 @@ from grocy.domains.stock.journal import (
     journal_summary,
     journal_view,
 )
+from grocy.domains.stock.transfer import transfer_editor
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/transfer/editor")
+async def get_transfer_editor(actor: AuthenticatedActor, session: DbSession) -> dict:
+    actor.require("STOCK")
+    return await transfer_editor(session)
 
 
 @router.get("/stock/journal/summary")

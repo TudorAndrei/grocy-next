@@ -491,6 +491,12 @@ The release browser saved one shopping item from the overview and returned focus
 
 The final web image also passed a fresh browser check for retained description expansion. Show more changed to Show less and stayed expanded after closing and reopening. The browser reported no script errors. Its three owned test containers, browser, network, and data volume were removed.
 
+The Python transfer editor reader at `/api/v2/stock/transfer/editor` now uses the legacy product selection rules. It includes active products with positive aggregate stock and own-stock handling enabled. Tare products remain in the list for the form to reject. Source stock locations remain available through the product location API, including inactive locations. Destination locations and unit labels use active rows. Barcode groups and saved conversion rows retain their native values and order. The reader requires stock permission. The transfer form and its stock row controls remain separate work.
+
+New imports also retain the saved conversion cache. The previous importer omitted this table, so startup calculated new factors and names. The regression failed on changed saved rows before the repair. It now checks saved and empty caches through import and startup, including precise text factors, global rows, saved names, row IDs, source bytes, and the allocation counter. Imports without a source cache continue to calculate their rows.
+
+The Python release matched the native transfer page on 2026-10-29 after the documented import process. The comparison covered all 18 product choices, 17 active locations, 22 active units, 49 saved conversion rows, and the barcode search values. All 49 full cache rows and the allocation counter also matched the source after startup. PHP was absent from the release image. SQLite reported a valid database. All 283 Python integration checks passed; five optional PHP-worker checks were skipped. Three stock comparisons passed against the disposable PHP reference: product units, parent stock, and transfer with Undo. Python types, lint, and formatting passed.
+
 Run the normal tests without PHP:
 
 ```bash
