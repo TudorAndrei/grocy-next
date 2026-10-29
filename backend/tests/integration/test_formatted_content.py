@@ -148,7 +148,6 @@ def test_description_editor_authorizes_the_domain_and_keeps_drafts_out_of_storag
     client, api_headers, monkeypatch, entity, permission
 ):
     from editor_document import EditorDocument
-
     from grocy.core.config import get_settings
 
     path = f"/api/v2/content/{entity}/editor"
