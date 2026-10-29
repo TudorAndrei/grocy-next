@@ -513,6 +513,8 @@ Root and `/house` builds passed after the chart repair. The final Linux web imag
 
 The stock-code response-order repair passed all 376 frontend tests in 43 files. Both new cases failed against the previous serial reader. They now check both response orders, the retained stock choices and amount limit, and the later explicit source change. Lint, formatting, all three frontend type checks, and root and `/house` builds passed. Browser checks held real native and Python responses, then released them in each order. Both settled forms matched on source, amount limit, forced-stock state, and all five stock choices. The native and Python values were source `5` when stock finished first, source `15` when locations finished first, and limit `8.5000` in both cases. All 82 final web files matched the release image. Full legacy compliance remains incomplete.
 
+The final browser check after the stock-code repair reported no script errors. The owned browser, four containers, Docker data volume, and network were removed. The release runtime remains Python. PHP was used only as the test reference.
+
 Run the normal tests without PHP:
 
 ```bash
