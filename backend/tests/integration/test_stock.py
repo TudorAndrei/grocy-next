@@ -47,6 +47,73 @@ def test_shopping_list_add(client: TestClient, api_headers: dict[str, str]) -> N
     assert any(item["product_id"] == product_id for item in listing.json()["items"])
 
 
+def test_product_details_keep_native_numeric_types_and_saved_price_precision(client, api_headers):
+    base = "/api/stock/products/1"
+    created = client.post(
+        "/api/objects/shopping_locations",
+        headers=api_headers,
+        json={"name": "History shop", "active": 0},
+    )
+    created.raise_for_status()
+    store = int(created.json()["created_object_id"])
+    bookings = []
+    for price in (1.5, 1.5, 2.5):
+        response = client.post(
+            f"{base}/add",
+            headers=api_headers,
+            json={"amount": 1, "price": price, "shopping_location_id": store},
+        )
+        assert response.status_code == 200, response.text
+        bookings.append(response.json()[0]["id"])
+    for amount, spoiled in ((1, False), (0.5, True)):
+        response = client.post(
+            f"{base}/consume",
+            headers=api_headers,
+            json={"amount": amount, "spoiled": spoiled, "exact_amount": True},
+        )
+        assert response.status_code == 200, response.text
+    details = client.get(base, headers=api_headers).json()
+    assert {key: details[key] for key in ("avg_price", "spoil_rate_percent")} == {
+        "avg_price": 1.8333333333333333,
+        "spoil_rate_percent": 33.333333333333336,
+    }
+
+    async def retain_saved_prices():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text(
+                    "UPDATE cache__products_average_price SET price=0.123456789123456 "
+                    "WHERE product_id=1"
+                )
+            )
+            await session.execute(
+                text(
+                    "UPDATE cache__products_last_purchased SET price=7.123456789123456 "
+                    "WHERE product_id=1"
+                )
+            )
+            await session.commit()
+
+    assert client.portal is not None
+    client.portal.call(retain_saved_prices)
+    saved = client.get(base, headers=api_headers).json()
+    assert saved["avg_price"] == 0.123456789123456
+    assert saved["last_price"] == 7.123456789123456
+
+    async def retain_history_precision():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text("UPDATE stock_log SET price=0.123456789123456 WHERE id=:id"),
+                {"id": bookings[0]},
+            )
+            await session.commit()
+
+    client.portal.call(retain_history_precision)
+    history = client.get(f"{base}/price-history", headers=api_headers).json()
+    assert any(row["price"] == 0.123456789123456 for row in history)
+    assert all(row["shopping_location"]["active"] == 0 for row in history)
+
+
 @pytest.mark.parametrize(("first_price", "average"), [(2, 3), (2.25, 3.8)])
 def test_purchase_history_keeps_dates_weighted_prices_and_undo(
     client: TestClient, api_headers: dict, first_price: float, average: float

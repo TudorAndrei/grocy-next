@@ -678,6 +678,8 @@ class StockService:
         from grocy.db.models.catalog import QuantityUnit
 
         product = await self.products.get_active(product_id)
+        if compatibility:
+            return await self._native_product_details(product)
         overview = (
             (
                 await self.session.execute(
@@ -726,22 +728,15 @@ class StockService:
             ("default_quantity_unit_purchase", product.qu_id_purchase),
             (
                 "default_quantity_unit_consume",
-                product.qu_id_consume
-                if compatibility
-                else product.qu_id_consume or product.qu_id_stock,
+                product.qu_id_consume or product.qu_id_stock,
             ),
             (
                 "quantity_unit_price",
-                product.qu_id_price
-                if compatibility
-                else product.qu_id_price or product.qu_id_purchase,
+                product.qu_id_price or product.qu_id_purchase,
             ),
         ]:
-            if compatibility:
-                units[key] = await self._details_row("quantity_units", unit_id)
-            else:
-                unit = await self.session.get(QuantityUnit, unit_id)
-                units[key] = UnitsService(self.session).serialize_unit(unit) if unit else None
+            unit = await self.session.get(QuantityUnit, unit_id)
+            units[key] = UnitsService(self.session).serialize_unit(unit) if unit else None
         location = await self.session.get(Location, product.location_id)
         loc = {"id": location.id, "name": location.name} if location else None
         serialized = self.products.serialize(product, stock_amount=amount)
@@ -763,15 +758,9 @@ class StockService:
         consume_loc = (
             {"id": consume_location.id, "name": consume_location.name} if consume_location else None
         )
-        if compatibility:
-            product_data = await self._details_row("products", product_id)
-            if product_data is not None:
-                product_data.pop("qu_factor_purchase_to_stock", None)
-            loc = await self._details_row("locations", product.location_id)
-            consume_loc = await self._details_row("locations", product.default_consume_location_id)
         aggregated = overview["is_aggregated_amount"] if overview else 0
         return {
-            **(serialized if not compatibility else {}),
+            **serialized,
             "stock_amount": float(amount),
             "product": product_data,
             "product_barcodes": [
@@ -797,7 +786,7 @@ class StockService:
             "stock_amount_opened_aggregated": overview["amount_opened_aggregated"]
             if overview
             else 0,
-            "is_aggregated_amount": int(aggregated) if compatibility else bool(aggregated),
+            "is_aggregated_amount": bool(aggregated),
             "last_purchased": last_purchase.purchased_date.isoformat()
             if last_purchase and last_purchase.purchased_date
             else None,
@@ -812,7 +801,7 @@ class StockService:
             "default_shopping_location_id": product.shopping_location_id,
             "next_due_date": min(dates).isoformat() if dates else None,
             "location": loc,
-            **({"default_location": loc} if not compatibility else {}),
+            "default_location": loc,
             "has_childs": len(await self.products.child_ids(product_id)) > 1,
             "default_consume_location": consume_loc,
             "qu_conversion_factor_purchase_to_stock": float(purchase_factor),
@@ -827,6 +816,74 @@ class StockService:
             ),
         }
 
+    async def _native_product_details(self, product: Product) -> dict[str, Any]:
+        details = await self._details_row("uihelper_product_details", product.id)
+        if details is None:
+            raise NotFoundError("Product not found")
+        current = (
+            (
+                await self.session.execute(
+                    text("SELECT * FROM stock_current WHERE product_id=:id"), {"id": product.id}
+                )
+            )
+            .mappings()
+            .first()
+        )
+        barcodes = (
+            (
+                await self.session.execute(
+                    text("SELECT * FROM product_barcodes WHERE product_id=:id"), {"id": product.id}
+                )
+            )
+            .mappings()
+            .all()
+        )
+        result: dict[str, Any] = {
+            "product": await self._details_row("products", product.id),
+            "product_barcodes": [dict(row) for row in barcodes],
+            "location": await self._details_row("locations", product.location_id),
+            "default_consume_location": await self._details_row(
+                "locations",
+                product.default_consume_location_id
+                if truthy(product.default_consume_location_id)
+                else None,
+            ),
+            "default_shopping_location_id": product.shopping_location_id,
+            "has_childs": truthy(details["has_childs"]),
+        }
+        for target, source in (
+            ("stock_amount", "amount"),
+            ("stock_value", "value"),
+            ("stock_amount_opened", "amount_opened"),
+            ("stock_amount_aggregated", "amount_aggregated"),
+            ("stock_amount_opened_aggregated", "amount_opened_aggregated"),
+            ("is_aggregated_amount", "is_aggregated_amount"),
+        ):
+            result[target] = current[source] if current is not None else 0
+        for target, source in (
+            ("last_purchased", "last_purchased_date"),
+            ("last_used", "last_used_date"),
+            ("last_price", "last_purchased_price"),
+            ("avg_price", "average_price"),
+            ("current_price", "current_price"),
+            ("oldest_price", "current_price"),
+            ("last_shopping_location_id", "last_purchased_shopping_location_id"),
+            ("next_due_date", "next_due_date"),
+            ("average_shelf_life_days", "average_shelf_life_days"),
+            ("spoil_rate_percent", "spoil_rate"),
+            ("qu_conversion_factor_purchase_to_stock", "qu_factor_purchase_to_stock"),
+            ("qu_conversion_factor_price_to_stock", "qu_factor_price_to_stock"),
+        ):
+            result[target] = details[source]
+        for key, unit_id in (
+            ("quantity_unit_stock", product.qu_id_stock),
+            ("default_quantity_unit_purchase", product.qu_id_purchase),
+            ("default_quantity_unit_consume", product.qu_id_consume),
+            ("quantity_unit_price", product.qu_id_price),
+        ):
+            result[key] = await self._details_row("quantity_units", unit_id)
+        return result
+
     async def _label_entry(self, entry: StockEntry) -> dict[str, Any]:
         priority = await self.session.scalar(
             text("SELECT priority FROM stock_next_use WHERE id = :id"), {"id": entry.id}
@@ -834,7 +891,15 @@ class StockService:
         return {**self._serialize_entry(entry), "priority": priority}
 
     async def _details_row(
-        self, table: Literal["products", "quantity_units", "locations"], object_id: int | None
+        self,
+        table: Literal[
+            "products",
+            "quantity_units",
+            "locations",
+            "shopping_locations",
+            "uihelper_product_details",
+        ],
+        object_id: int | None,
     ) -> dict[str, Any] | None:
         if object_id is None:
             return None
@@ -975,42 +1040,31 @@ class StockService:
         }
 
     async def price_history(self, product_id: int) -> list[dict]:
-        from grocy.db.models.catalog import ShoppingLocation
-
         await self.products.get_active(product_id)
-        logs = list(
+        rows = (
             (
                 await self.session.execute(
-                    select(StockLog).where(StockLog.product_id == product_id).order_by(StockLog.id)
+                    text(
+                        "SELECT purchased_date, price, shopping_location_id "
+                        "FROM products_price_history "
+                        "WHERE product_id=:id ORDER BY purchased_date DESC"
+                    ),
+                    {"id": product_id},
                 )
             )
-            .scalars()
+            .mappings()
             .all()
         )
-        history = StockHistory(logs)
-        result = []
-        for purchase in history.priced:
-            log = purchase.log
-            store = (
-                await self.session.get(ShoppingLocation, log.shopping_location_id)
-                if log.shopping_location_id
-                else None
-            )
-            result.append(
-                {
-                    "date": log.purchased_date.isoformat() if log.purchased_date else None,
-                    "price": float(log.price) if log.price is not None else None,
-                    "shopping_location": {
-                        "id": store.id,
-                        "name": store.name,
-                        "description": store.description,
-                        "row_created_timestamp": database_time(store.row_created_timestamp),
-                    }
-                    if store
-                    else None,
-                }
-            )
-        return result
+        return [
+            {
+                "date": row["purchased_date"],
+                "price": row["price"],
+                "shopping_location": await self._details_row(
+                    "shopping_locations", row["shopping_location_id"]
+                ),
+            }
+            for row in rows
+        ]
 
     async def merge_products(self, actor: Actor, keep_id: int, remove_id: int) -> None:
         _ = actor
