@@ -1,4 +1,5 @@
 import { useI18n } from "@/lib/i18n";
+import { createPortal } from "react-dom";
 import {
   createContext,
   useCallback,
@@ -28,8 +29,53 @@ export function useNotify(): Notify {
 const TOAST_MS = 6000;
 
 export function Toaster({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
+
+  const [host] = useState(() => {
+    const element = document.createElement("div");
+    element.className = "toasts";
+    element.setAttribute("role", "status");
+    element.setAttribute("aria-live", "polite");
+
+    return element;
+  });
+
+  useEffect(() => {
+    host.setAttribute("aria-label", t("Notifications"));
+  }, [host, t]);
+
+  useEffect(() => {
+    const move = () => {
+      const target = Array.from(document.querySelectorAll("dialog[open]")).at(-1) ?? document.body;
+
+      if (host.parentElement === target) return;
+
+      const focused =
+        host.contains(document.activeElement) && document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+
+      // Move the same host. Portal identity, timers, and pending Undo state stay intact.
+      target.appendChild(host);
+      focused?.focus();
+    };
+
+    move();
+    const observer = new MutationObserver(move);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["open"],
+    });
+
+    return () => {
+      observer.disconnect();
+      host.remove();
+    };
+  }, [host]);
 
   const dismiss = useCallback((id: number) => {
     setToasts((all) => all.filter((t) => t.id !== id));
@@ -43,11 +89,12 @@ export function Toaster({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={notify}>
       {children}
-      <div className="toasts" role="status" aria-live="polite">
-        {toasts.map((toast) => (
+      {createPortal(
+        toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDone={() => dismiss(toast.id)} />
-        ))}
-      </div>
+        )),
+        host,
+      )}
     </ToastContext.Provider>
   );
 }

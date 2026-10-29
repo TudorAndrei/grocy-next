@@ -488,7 +488,7 @@ export function StockEntries({
         </button>
       ) : null}
       {lastBooking !== undefined ? (
-        <div className="actions" role="status">
+        <div className="actions" role="status" aria-label={t("Stock updated")}>
           <span>{t("Stock updated")}</span>
           <button
             type="button"

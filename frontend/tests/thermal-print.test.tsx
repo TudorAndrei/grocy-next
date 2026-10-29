@@ -143,7 +143,9 @@ test("thermal printing saves header choices and sends one job for the selected l
   ).toBe(false);
   await user.click(within(dialog).getByRole("button", { name: "Thermal printer" }));
   dialog = await screen.findByRole("dialog", { name: "Printing" });
-  expect(within(dialog).getByRole("status").textContent).toBe("Connecting to printer...");
+  expect(within(dialog).getByRole("status", { name: "Printing status" }).textContent).toBe(
+    "Connecting to printer...",
+  );
   await user.click(within(dialog).getByRole("button", { name: "Close" }));
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Thermal print" }).disabled).toBe(
     true,
@@ -181,7 +183,9 @@ test("a failed thermal job shows its error and retries the retained options", as
     "textContent",
     "Printer is offline",
   );
-  expect(within(dialog).getByRole("status").textContent).toBe("Unable to print");
+  expect(within(dialog).getByRole("status", { name: "Printing status" }).textContent).toBe(
+    "Unable to print",
+  );
   await user.click(within(dialog).getByRole("button", { name: "Retry" }));
   await screen.findByText("Print request sent");
   expect(

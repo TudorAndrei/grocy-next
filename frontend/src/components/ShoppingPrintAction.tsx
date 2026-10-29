@@ -163,7 +163,7 @@ function ShoppingPrintDialog({
       <h2>{t(printing || error ? "Printing" : "Print")}</h2>
       {printing || error ? (
         <>
-          <p ref={status} tabIndex={-1} role="status">
+          <p ref={status} tabIndex={-1} role="status" aria-label={t("Printing status")}>
             {t(printing ? (paper ? "Loading..." : "Connecting to printer...") : "Unable to print")}
           </p>
           {error ? <ErrorBlock message={error.message} /> : null}

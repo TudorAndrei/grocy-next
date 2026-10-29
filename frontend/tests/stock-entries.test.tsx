@@ -554,9 +554,17 @@ test("entry dialog retains the product draft through retry, exact actions, and u
     ).toBe(true),
   );
   expect(view.getAllByText("$1.25 per Piece")).toHaveLength(4);
-  await user.click(view.getByRole("button", { name: "Undo" }));
+  await user.click(
+    within(view.getByRole("status", { name: "Stock updated" })).getByRole("button", {
+      name: "Undo",
+    }),
+  );
   await view.findByText("Undo failed");
-  await user.click(view.getByRole("button", { name: "Undo" }));
+  await user.click(
+    within(view.getByRole("status", { name: "Stock updated" })).getByRole("button", {
+      name: "Undo",
+    }),
+  );
   await waitFor(() =>
     expect(
       view.getByRole<HTMLButtonElement>("button", { name: "Open stock entry 51" }).disabled,
@@ -570,7 +578,11 @@ test("entry dialog retains the product draft through retry, exact actions, and u
     dataTransfer: { getData: () => "note" },
   });
   expect(view.queryByRole("button", { name: "Consume stock entry 51" })).toBeNull();
-  await user.click(view.getByRole("button", { name: "Undo" }));
+  await user.click(
+    within(view.getByRole("status", { name: "Stock updated" })).getByRole("button", {
+      name: "Undo",
+    }),
+  );
   await view.findByRole("button", { name: "Consume stock entry 151" });
   await waitFor(() =>
     expect(document.activeElement).toBe(view.getByRole("region", { name: "Stock entries" })),
