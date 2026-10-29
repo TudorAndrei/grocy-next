@@ -32,6 +32,7 @@ export function configuredFeatures(config: JsonObject | undefined): Features {
       case "stockentries":
       case "stockentry":
       case "transfer":
+      case "purchase":
       case "reviews":
       case "activity":
       case "dashboard":

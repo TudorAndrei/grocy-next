@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { request } from "./api";
+import { stockEditorSchema } from "./stock-editor";
+
+export { stockEditorUnits as transferUnits } from "./stock-editor";
+
+export type { StockEditorCatalog as TransferCatalog } from "./stock-editor";
 
 export const transferSearch = z.object({
   product: z.coerce.string().optional().catch(undefined),
@@ -12,33 +17,6 @@ export const transferSearch = z.object({
 });
 
 export type TransferOptions = z.infer<typeof transferSearch>;
-
-const catalogSchema = z.object({
-  barcode_lookup_plugin_name: z.string(),
-  products: z.array(z.object({ id: z.number(), name: z.string() })),
-  locations: z.array(z.object({ id: z.number(), name: z.string(), is_freezer: z.number() })),
-  units: z.array(
-    z.object({
-      id: z.number(),
-      name: z.string(),
-      name_plural: z.string().nullable(),
-      plural_forms: z.string().nullable().optional(),
-    }),
-  ),
-  barcodes: z.array(z.object({ product_id: z.number(), barcodes: z.string().nullable() })),
-  conversions: z.array(
-    z.object({
-      product_id: z.number().nullable(),
-      from_qu_id: z.number().nullable(),
-      to_qu_id: z.number().nullable(),
-      factor: z.union([z.string(), z.number()]).nullable(),
-      to_qu_name: z.string().nullable(),
-      to_qu_name_plural: z.string().nullable(),
-    }),
-  ),
-});
-
-export type TransferCatalog = z.infer<typeof catalogSchema>;
 
 const detailsSchema = z.object({
   product: z.object({
@@ -79,7 +57,7 @@ const entriesSchema = z.array(
 export type TransferEntry = z.infer<typeof entriesSchema>[number];
 
 export async function getTransferCatalog(signal: AbortSignal) {
-  return catalogSchema.parse(await request("/api/v2/stock/transfer/editor", { signal }));
+  return stockEditorSchema.parse(await request("/api/v2/stock/transfer/editor", { signal }));
 }
 
 export async function getTransferDetails(productId: string, signal?: AbortSignal) {
@@ -131,25 +109,4 @@ export type TransferSelection = Awaited<ReturnType<typeof getTransferSelection>>
 
 export async function getTransferEntries(productId: string, signal: AbortSignal) {
   return entriesSchema.parse(await request(`/api/stock/products/${productId}/entries`, { signal }));
-}
-
-export function transferUnits(catalog: TransferCatalog, productId: string, stockUnit: number) {
-  const choices = new Map<
-    number | null,
-    { id: number | null; name: string; name_plural: string | null; factor: number }
-  >();
-
-  for (const row of catalog.conversions) {
-    if (String(row.product_id) !== productId || choices.has(row.to_qu_id)) continue;
-
-    if (row.from_qu_id !== stockUnit && row.to_qu_id !== stockUnit) continue;
-    choices.set(row.to_qu_id, {
-      id: row.to_qu_id,
-      name: String(row.to_qu_name),
-      name_plural: row.to_qu_name_plural,
-      factor: row.to_qu_id === stockUnit ? 1 : Number(String(row.factor)),
-    });
-  }
-
-  return [...choices.values()];
 }

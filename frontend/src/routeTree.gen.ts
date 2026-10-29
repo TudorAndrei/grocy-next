@@ -23,6 +23,7 @@ import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LocationsRouteImport } from './routes/locations'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as MealPlanRouteImport } from './routes/meal-plan'
+import { Route as PurchaseRouteImport } from './routes/purchase'
 import { Route as QuantityunitconversionsresolvedRouteImport } from './routes/quantityunitconversionsresolved'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -111,6 +112,11 @@ const ManageRoute = ManageRouteImport.update({
 const MealPlanRoute = MealPlanRouteImport.update({
   id: '/meal-plan',
   path: '/meal-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PurchaseRoute = PurchaseRouteImport.update({
+  id: '/purchase',
+  path: '/purchase',
   getParentRoute: () => rootRouteImport,
 } as any)
 const QuantityunitconversionsresolvedRoute =
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/purchase': typeof PurchaseRoute
   '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/purchase': typeof PurchaseRoute
   '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/purchase': typeof PurchaseRoute
   '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/locations'
     | '/manage'
     | '/meal-plan'
+    | '/purchase'
     | '/quantityunitconversionsresolved'
     | '/reviews'
     | '/settings'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/locations'
     | '/manage'
     | '/meal-plan'
+    | '/purchase'
     | '/quantityunitconversionsresolved'
     | '/reviews'
     | '/settings'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/locations'
     | '/manage'
     | '/meal-plan'
+    | '/purchase'
     | '/quantityunitconversionsresolved'
     | '/reviews'
     | '/settings'
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   LocationsRoute: typeof LocationsRoute
   ManageRoute: typeof ManageRoute
   MealPlanRoute: typeof MealPlanRoute
+  PurchaseRoute: typeof PurchaseRoute
   QuantityunitconversionsresolvedRoute: typeof QuantityunitconversionsresolvedRoute
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
@@ -558,6 +571,13 @@ declare module '@tanstack/react-router' {
       path: '/meal-plan'
       fullPath: '/meal-plan'
       preLoaderRoute: typeof MealPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/purchase': {
+      id: '/purchase'
+      path: '/purchase'
+      fullPath: '/purchase'
+      preLoaderRoute: typeof PurchaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/quantityunitconversionsresolved': {
@@ -711,6 +731,7 @@ const rootRouteChildren: RootRouteChildren = {
   LocationsRoute: LocationsRoute,
   ManageRoute: ManageRoute,
   MealPlanRoute: MealPlanRoute,
+  PurchaseRoute: PurchaseRoute,
   QuantityunitconversionsresolvedRoute: QuantityunitconversionsresolvedRoute,
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,

@@ -16,6 +16,7 @@ import { QuickMoves } from "@/components/QuickMoves";
 import { useFeatures } from "@/lib/features";
 import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { TransferDialog } from "@/components/TransferForm";
+import { PurchaseDialog } from "@/components/PurchaseForm";
 import { usePermissions } from "@/lib/permissions";
 
 export const Route = createFileRoute("/stock")({
@@ -42,6 +43,7 @@ function StockPage() {
   const features = useFeatures();
   const can = usePermissions();
   const [transfer, setTransfer] = useState<number>();
+  const [purchase, setPurchase] = useState<number>();
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const { dueSoonDays, formatAmount } = usePreferences();
@@ -159,6 +161,12 @@ function StockPage() {
           onClose={() => setTransfer(undefined)}
         />
       ) : null}
+      {purchase !== undefined ? (
+        <PurchaseDialog
+          options={{ embedded: "", product: String(purchase) }}
+          onClose={() => setPurchase(undefined)}
+        />
+      ) : null}
       <PageHeader
         title={tr("Stock overview")}
         lead={tr(
@@ -178,13 +186,9 @@ function StockPage() {
             <button type="button" className="btn" onClick={() => command.open("consume")}>
               {tr("Consume")}
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => command.open("purchase")}
-            >
+            <Link to="/purchase" className="btn btn-primary">
               {tr("Purchase")}
-            </button>
+            </Link>
           </>
         }
       />
@@ -314,6 +318,15 @@ function StockPage() {
                     ) : null}
                     <td className="row-actions">
                       <QuickMoves productId={row.productId} name={row.name} amount={row.amount} />
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        aria-label={tr("Purchase %s", row.name)}
+                        disabled={!can("STOCK_PURCHASE")}
+                        onClick={() => setPurchase(row.productId)}
+                      >
+                        {tr("Purchase")}
+                      </button>
                       {locationsEnabled ? (
                         <button
                           type="button"

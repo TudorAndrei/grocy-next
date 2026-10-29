@@ -49,6 +49,10 @@ export function usePreferences() {
     transferAmount: number("stock_default_transfer_amount", 1),
     useQuickConsumeAmount: enabled("stock_default_consume_amount_use_quick_consume_amount"),
     scanPurchase: enabled("scan_mode_purchase_enabled"),
+    shoppingPurchaseAutoSubmit: enabled(
+      "shopping_list_to_stock_workflow_auto_submit_when_prefilled",
+    ),
+    warnEarlierPurchase: enabled("show_warning_on_purchase_when_due_date_is_earlier_than_next"),
     scanConsume: enabled("scan_mode_consume_enabled"),
     autoReload: enabled("auto_reload_on_db_change"),
     showClock: enabled("show_clock_in_header"),

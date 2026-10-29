@@ -26,6 +26,7 @@ export function ProductPicker({
   listId = 1,
   itemId,
   allowCreate = true,
+  workflowPath,
   onChange,
   onResolved,
   onAssignBarcode,
@@ -42,6 +43,7 @@ export function ProductPicker({
   listId?: number;
   itemId?: number;
   allowCreate?: boolean;
+  workflowPath?: string;
   onChange: (value: string, code?: ProductCode) => void;
   onResolved: () => void;
   onAssignBarcode: (barcode: string) => void;
@@ -150,10 +152,11 @@ export function ProductPicker({
     const flow =
       mode === "barcode" ? "InplaceAddBarcodeToExistingProduct" : "InplaceNewProductWithName";
 
-    const params = new URLSearchParams({ list: String(listId), flow });
+    const params = new URLSearchParams(workflowPath ? { flow } : { list: String(listId), flow });
 
     if (mode === "barcode") params.set("barcode", code);
-    const returnto = `/shoppinglistitem/${itemId ?? "new"}?${params}`;
+    const path = workflowPath ?? `/shoppinglistitem/${itemId ?? "new"}`;
+    const returnto = `${path}${path.includes("?") ? "&" : "?"}${params}`;
     await navigate({
       to: "/product/$productId",
       params: { productId },
