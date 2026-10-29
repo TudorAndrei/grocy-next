@@ -23,6 +23,8 @@ function mount(
     deferSavedRead = false,
     tableState = "",
     dateCases = false,
+    firstAmount = 2.5,
+    failRefresh = false,
   } = {},
 ) {
   const base: EntryRow = {
@@ -30,7 +32,7 @@ function mount(
     product_id: 7,
     product_name: "Coffee",
     stock_id: "mint",
-    amount: 2.5,
+    amount: firstAmount,
     best_before_date: "2999-12-31",
     purchased_date: "2026-10-20",
     row_created_timestamp: "2026-10-20 12:00:00",
@@ -115,6 +117,7 @@ function mount(
   let before: EntryRow[] = [];
   let editorReads = 0;
   let editorWrites = 0;
+  let productReads = 0;
   let uploads = 0;
   let heldRead = false;
   let releaseSavedRead = () => {};
@@ -259,7 +262,10 @@ function mount(
           return Response.json({ detail: "Entries unavailable" }, { status: 503 });
 
         return Response.json({
-          rows,
+          rows: rows.map((row) => ({
+            ...row,
+            location_name: ["", "Shelf", "Cellar", "North Shelf", "Shelf North"][row.location_id],
+          })),
           products: [
             { id: 7, name: "Coffee" },
             { id: 8, name: "Tea" },
@@ -271,6 +277,31 @@ function mount(
             { id: 4, name: "Shelf North" },
           ],
           stores: [{ id: 1, name: "Roastery" }],
+        });
+      }
+
+      if (!init?.method && /\/api\/stock\/entry\/\d+$/.test(path))
+        return Response.json(rows.find((row) => row.id === Number(path.split("/").at(-1))) ?? null);
+
+      if (/\/api\/objects\/locations\/\d+$/.test(path)) {
+        const id = Number(path.split("/").at(-1));
+        const names = ["", "Shelf", "Cellar", "North Shelf", "Shelf North"];
+
+        return Response.json({ id, name: names[id] });
+      }
+
+      if (path.endsWith("/api/objects/shopping_locations/1"))
+        return Response.json({ id: 1, name: "Roastery" });
+
+      if (/\/api\/stock\/products\/\d+$/.test(path)) {
+        if (failRefresh && ++productReads === 1)
+          return Response.json({ error_message: "Entry refresh unavailable" }, { status: 503 });
+
+        return Response.json({
+          product: { disable_open: 0 },
+          qu_conversion_factor_purchase_to_stock: 1,
+          default_quantity_unit_purchase: { name: "Piece" },
+          quantity_unit_stock: { name: "Piece" },
         });
       }
 
@@ -338,7 +369,11 @@ function mount(
         if (path.endsWith("/api/stock/bookings/900/undo")) {
           if (fail && ++undoReads === 1)
             return Response.json({ error_message: "Undo failed" }, { status: 500 });
-          rows = before.map((row) => ({ ...row }));
+          const currentIds = new Set(rows.map((row) => row.id));
+          rows = before.map((row) => ({
+            ...row,
+            id: currentIds.has(row.id) ? row.id : row.id + 100,
+          }));
 
           return new Response(null, { status: 204 });
         }
@@ -346,10 +381,28 @@ function mount(
         if (path.match(/\/api\/stock\/products\/7\/(open|consume)$/)) {
           if (fail && ++actions === 1)
             return Response.json({ error_message: "Booking failed" }, { status: 500 });
+
+          if (
+            path.endsWith("/consume") &&
+            rows.some(
+              (row) =>
+                row.stock_id === body.stock_entry_id &&
+                row.location_id !== Number(body.location_id),
+            )
+          )
+            return Response.json(
+              { error_message: "insufficient stock: have 0, need 1.0" },
+              { status: 400 },
+            );
           before = rows.map((row) => ({ ...row }));
           rows = path.endsWith("/open")
             ? rows.map((row) => (row.stock_id === body.stock_entry_id ? { ...row, open: 1 } : row))
-            : rows.filter((row) => row.stock_id !== body.stock_entry_id);
+            : rows.flatMap((row) => {
+                if (row.stock_id !== body.stock_entry_id) return [row];
+                const amount = row.amount - Number(body.amount);
+
+                return amount > 0 ? [{ ...row, amount }] : [];
+              });
 
           return Response.json([
             {
@@ -440,14 +493,18 @@ test("entry dialog retains the product draft through retry, exact actions, and u
     ).toBe(false),
   );
   await user.click(view.getByRole("button", { name: "Consume stock entry 51 as spoiled" }));
-  await waitFor(() => expect(view.queryByText("Mint batch")).toBeNull());
+  await waitFor(() =>
+    expect(view.queryByRole("button", { name: "Consume stock entry 51" })).toBeNull(),
+  );
   await user.click(view.getByRole("button", { name: "Undo" }));
-  await view.findByText("Mint batch");
+  await view.findByRole("button", { name: "Consume stock entry 151" });
   await waitFor(() =>
     expect(document.activeElement).toBe(view.getByRole("region", { name: "Stock entries" })),
   );
-  await user.click(view.getByRole("button", { name: "Consume stock entry 51" }));
-  await waitFor(() => expect(view.queryByText("Mint batch")).toBeNull());
+  await user.click(view.getByRole("button", { name: "Consume stock entry 151" }));
+  await waitFor(() =>
+    expect(view.queryByRole("button", { name: "Consume stock entry 151" })).toBeNull(),
+  );
   expect(writes.filter((w) => w.path.endsWith("/open")).map((w) => w.body)).toEqual([
     { amount: 2.5, stock_entry_id: "mint" },
     { amount: 2.5, stock_entry_id: "mint" },
@@ -661,6 +718,94 @@ test("the legacy entry editor applies disabled tracking values and reloads saved
       note: "Direct edit",
       open: false,
     },
+  ]);
+});
+
+test("entry edits retain cached groups, filters, units, sorting, and action amounts until Reset", async () => {
+  const { writes } = mount("/stockentries?product=7", { firstAmount: 1 });
+  const user = userEvent.setup();
+  await screen.findByText("Mint batch");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "1");
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  let options = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(options.getByRole("radio", { name: "Location" }));
+  await user.click(options.getByRole("button", { name: "OK" }));
+  await user.click(screen.getByRole("button", { name: "Edit stock entry 51" }));
+  const edit = within(await screen.findByRole("dialog", { name: "Edit stock entry" }));
+  const amount = await edit.findByRole("spinbutton", { name: /^Amount/ });
+  await user.clear(amount);
+  await user.type(amount, "10");
+  await user.selectOptions(edit.getByRole("combobox", { name: "Location" }), "2");
+  await user.clear(edit.getByRole("textbox", { name: "Note" }));
+  await user.type(edit.getByRole("textbox", { name: "Note" }), "Edited cache");
+  await user.clear(edit.getByLabelText("Batch"));
+  await user.type(edit.getByLabelText("Batch"), "Lime");
+  await user.click(edit.getByRole("button", { name: "OK" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  const changed = () =>
+    within(screen.getByRole("button", { name: "Edit stock entry 51" }).closest("tr")!);
+
+  expect(changed().getByText("Edited cache")).toBeTruthy();
+  expect(changed().getByText("10 Piece")).toBeTruthy();
+  expect(changed().getByText("Cellar")).toBeTruthy();
+  expect(changed().getByText("Mint")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Shelf" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Cellar" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "7");
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  options = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(options.getByRole("radio", { name: "None" }));
+  await user.click(options.getByRole("button", { name: "OK" }));
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  expect(
+    screen
+      .getAllByRole("button", { name: /^Edit stock entry/ })
+      .map((button) => button.getAttribute("aria-label")),
+  ).toEqual([52, 51, 54, 53].map((id) => `Edit stock entry ${id}`));
+  await user.click(screen.getByRole("button", { name: "Consume stock entry 51" }));
+  await screen.findByText("insufficient stock: have 0, need 1.0");
+  expect(changed().getByText("10 Piece")).toBeTruthy();
+  expect(writes.find((write) => write.path.endsWith("/consume"))?.body).toEqual({
+    amount: 1,
+    spoiled: false,
+    location_id: "1",
+    stock_entry_id: "mint",
+    exact_amount: true,
+  });
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  options = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(options.getByRole("button", { name: "Reset" }));
+  await user.click(
+    within(
+      await screen.findByRole("dialog", {
+        name: "Are you sure you want to reset the table options?",
+      }),
+    ).getByRole("button", { name: "Yes" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(changed().getByText("10 Pieces")).toBeTruthy());
+  expect(screen.queryByText("insufficient stock: have 0, need 1.0")).toBeNull();
+  expect(changed().getByText("Lime")).toBeTruthy();
+  await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "1");
+  expect(screen.queryByRole("button", { name: "Edit stock entry 51" })).toBeNull();
+});
+
+test("entry refresh Retry keeps the completed booking and partial display update", async () => {
+  const { writes } = mount("/stockentries?product=7", { failRefresh: true });
+  const user = userEvent.setup();
+  await screen.findByText("Mint batch");
+  await user.click(screen.getByRole("button", { name: "Open stock entry 51" }));
+  await screen.findByText("Entry refresh unavailable");
+  const row = within(screen.getByRole("button", { name: "Edit stock entry 51" }).closest("tr")!);
+  expect(row.getByText("Opened")).toBeTruthy();
+  expect(row.getByText("$7.50 per Box")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Retry stock entries" }));
+  await row.findByText("$1.25 per Piece");
+  await waitFor(() => expect(screen.queryByText("Entry refresh unavailable")).toBeNull());
+  expect(writes.filter((write) => write.path.endsWith("/open"))).toEqual([
+    { path: "/api/stock/products/7/open", body: { amount: 2.5, stock_entry_id: "mint" } },
   ]);
 });
 
