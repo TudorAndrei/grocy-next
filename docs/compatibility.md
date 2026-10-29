@@ -507,6 +507,10 @@ The transfer form changes passed all 371 frontend tests in 43 files on 2026-10-2
 
 Four native and Python form states matched: initial selection, converted unit, specific stock selection, and forced-stock clearing. Both real browser forms posted a converted transfer of 0.1 boxes as `0.6` stock units with the same source, destination, and stock ID. Both visible Undo controls restored the checked entry data. The embedded frame checks confirmed resize messages and matching product-change, success, and close messages. Their bookings were then undone. The nested Python dialog saved and undid a transfer while the parent name draft stayed unchanged. Closing restored the stock table focus and page scrolling. At a 390-pixel viewport, the page and dialog had no horizontal overflow. Journal browser checks disabled all 18 transfer controls without permission and enabled them with permission. The browser reported no script errors. Full legacy compliance remains incomplete.
 
+A later build with `VITE_BASE_PATH=/house` found a chart script path error. Without a final slash in that setting, the loader requested `/housevendor/` and received HTML. The loader now adds the path separator. Its regression failed before the repair. The same check passes for `/`, `/house`, and `/house/`. All 374 frontend tests in 43 files now pass. Lint, formatting, and all three frontend type checks also pass.
+
+Root and `/house` builds passed after the chart repair. The final Linux web image loaded both chart scripts from `/house/vendor/` and displayed the chart. A fresh browser check reported no script errors and no horizontal overflow at 390 pixels. All 82 web build files matched the release image. All 175 Python source files matched the API image. The source snapshot matched all 3,734 checked Python and frontend files. The database integrity check passed. PHP remained disabled in the API and absent from both release images.
+
 Run the normal tests without PHP:
 
 ```bash

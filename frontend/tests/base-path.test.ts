@@ -1,7 +1,52 @@
 import { expect, onTestFinished, test, vi } from "vitest";
+import { waitFor } from "@testing-library/react";
 import { api } from "@/lib/api";
 import { readApiConfig, writeApiConfig } from "@/lib/config";
 import { downloadApiDocument } from "@/lib/open-document";
+
+test.each(["/", "/house", "/house/"])(
+  "price chart scripts load under the %s web base path",
+  async (base) => {
+    vi.stubEnv("BASE_URL", base);
+    vi.resetModules();
+
+    class Chart {
+      destroy = vi.fn();
+    }
+
+    window.Chart = Chart;
+
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+      delete window.Chart;
+      document.head.querySelectorAll("script").forEach((element) => element.remove());
+    });
+
+    const { createPriceChart } = await import("@/lib/price-chart");
+
+    const chart = createPriceChart(
+      document.createElement("canvas"),
+      [],
+      1,
+      "Unknown store",
+      "USD",
+      2,
+      new AbortController().signal,
+    );
+
+    const prefix = base === "/" ? "" : "/house";
+
+    for (const filename of ["Chart.min.js", "chartjs-plugin-trendline.min.js"]) {
+      const path = `${prefix}/vendor/chartjs/${filename}`;
+      await waitFor(() =>
+        expect(document.head.querySelector(`script[src="${path}"]`)).not.toBeNull(),
+      );
+      document.head.querySelector(`script[src="${path}"]`)!.dispatchEvent(new Event("load"));
+    }
+
+    expect(await chart).toBeInstanceOf(Chart);
+  },
+);
 
 test("the deployed base path applies to API requests and authenticated downloads", async () => {
   vi.stubEnv("BASE_URL", "/grocy/");

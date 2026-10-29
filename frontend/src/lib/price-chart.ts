@@ -121,7 +121,8 @@ let library: Promise<ChartConstructor> | undefined;
 function script(filename: string) {
   return new Promise<void>((resolve, reject) => {
     const element = document.createElement("script");
-    element.src = `${import.meta.env.BASE_URL}vendor/chartjs/${filename}`;
+    const base = import.meta.env.BASE_URL.replace(/\/+$/, "");
+    element.src = `${base}/vendor/chartjs/${filename}`;
     element.onload = () => resolve();
     element.onerror = () => {
       element.remove();
