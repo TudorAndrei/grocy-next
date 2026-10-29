@@ -22,6 +22,7 @@ function mount(
     failBarcode = false,
     openPermission = true,
     duplicateEntry = false,
+    singleUnit = false,
   } = {},
 ) {
   const writes: { path: string; body: JsonObject }[] = [];
@@ -30,6 +31,8 @@ function mount(
   let entryReads = 0;
   let bookings = 0;
   let scanEnabled = scan;
+  let stock = { amount: 10, opened: 2 };
+  let previousStock = { ...stock };
 
   const rows = [
     {
@@ -83,6 +86,13 @@ function mount(
         if (failSave && ++bookings === 1)
           return Response.json({ error_message: "Booking unavailable" }, { status: 503 });
 
+        if (path.endsWith("/7/consume") || path.endsWith("/7/open")) {
+          previousStock = { ...stock };
+
+          if (path.endsWith("/consume")) stock.amount -= Number(body.amount);
+          else stock.opened += Number(body.amount);
+        }
+
         return Response.json([
           {
             id: 90,
@@ -93,6 +103,8 @@ function mount(
           },
         ]);
       }
+
+      if (path.endsWith("/consume-transaction/undo")) stock = { ...previousStock };
 
       return Response.json({});
     }
@@ -138,24 +150,26 @@ function mount(
         units: [{ id: 1, name: "Piece", name_plural: "Pieces" }],
         barcodes: [{ product_id: 7, barcodes: "COFFEE-2" }],
         recipes: [{ id: 4, name: "Coffee cake" }],
-        conversions: [7, 8, 9].flatMap((product_id) => [
-          {
-            product_id,
-            from_qu_id: 1,
-            to_qu_id: 1,
-            factor: "99",
-            to_qu_name: "Piece",
-            to_qu_name_plural: "Pieces",
-          },
-          {
-            product_id,
-            from_qu_id: 1,
-            to_qu_id: 3,
-            factor: "0.125",
-            to_qu_name: "Saved box",
-            to_qu_name_plural: "Saved boxes",
-          },
-        ]),
+        conversions: [7, 8, 9]
+          .flatMap((product_id) => [
+            {
+              product_id,
+              from_qu_id: 1,
+              to_qu_id: 1,
+              factor: "99",
+              to_qu_name: "Piece",
+              to_qu_name_plural: "Pieces",
+            },
+            {
+              product_id,
+              from_qu_id: 1,
+              to_qu_id: 3,
+              factor: "0.125",
+              to_qu_name: "Saved box",
+              to_qu_name_plural: "Saved boxes",
+            },
+          ])
+          .filter((row) => !singleUnit || row.to_qu_id === 1),
       });
 
     if (/\/api\/stock\/products\/[789]$/.test(path)) {
@@ -178,11 +192,18 @@ function mount(
           disable_open: 0,
           move_on_open: 1,
         },
-        stock_amount: parent ? 0 : 10,
-        stock_amount_opened: parent ? 0 : 2,
+        stock_amount: parent ? 0 : tare ? 10 : stock.amount,
+        stock_amount_opened: parent ? 0 : tare ? 2 : stock.opened,
+        stock_amount_aggregated: parent ? 12.5 : tare ? 10 : stock.amount,
+        stock_amount_opened_aggregated: parent ? 2 : tare ? 2 : stock.opened,
+        is_aggregated_amount: parent ? 1 : 0,
         has_childs: parent,
         quantity_unit_stock: { ...productOverview.quantity_unit_stock, id: 1 },
-        default_quantity_unit_consume: { id: tare ? 1 : 3, name: "Box", name_plural: "Boxes" },
+        default_quantity_unit_consume: {
+          id: tare || singleUnit ? 1 : 3,
+          name: "Box",
+          name_plural: "Boxes",
+        },
         location: { id: 1, name: "Shelf", is_freezer: 0 },
         default_consume_location: { id: 2, name: "Pantry" },
       });
@@ -232,7 +253,7 @@ function mount(
     client.clear();
   });
 
-  return { writes, reads, router };
+  return { writes, reads, router, entries: rows };
 }
 
 async function choose(name = "Coffee") {
@@ -363,7 +384,38 @@ test("opening retains recipe, unit, and location and does not close an embedded 
   expect(screen.getByLabelText<HTMLSelectElement>("Quantity unit").value).toBe("3");
   expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2");
   expect(amount.disabled).toBe(false);
+  expect(screen.getByLabelText<HTMLSelectElement>("Specific stock item").disabled).toBe(false);
   expect(screen.getByText("Moved to Pantry")).toBeTruthy();
+});
+
+test("a failed booking enables native input controls until their own handlers change them", async () => {
+  const { writes } = mount("/consume", { singleUnit: true, failSave: true });
+  await choose();
+  const unit = screen.getByLabelText<HTMLSelectElement>("Quantity unit");
+  const stockItem = screen.getByLabelText<HTMLSelectElement>("Specific stock item");
+  expect(unit.disabled).toBe(true);
+  expect(stockItem.disabled).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Booking unavailable");
+  expect(unit.disabled).toBe(false);
+  expect(stockItem.disabled).toBe(false);
+  fireEvent.change(stockItem, { target: { value: "pantry-stock" } });
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 0.5 Pieces of Coffee from stock");
+  expect(writes.at(-1)?.body).toEqual({
+    amount: "0.5",
+    allow_subproduct_substitution: true,
+    exact_amount: false,
+    spoiled: false,
+    location_id: "2",
+  });
+  expect(stockItem.disabled).toBe(false);
+  await choose();
+  expect(unit.disabled).toBe(true);
+  expect(stockItem.disabled).toBe(false);
+  fireEvent.click(screen.getByLabelText("Use a specific stock item"));
+  fireEvent.click(screen.getByLabelText("Use a specific stock item"));
+  expect(stockItem.disabled).toBe(true);
 });
 
 test("parent stock has no amount ceiling and its own-stock opening guard remains disabled", async () => {
@@ -470,6 +522,86 @@ test("full-page bookmarks retain native empty defaults until the product is sele
     expect(screen.getByLabelText<HTMLSelectElement>("Quantity unit").value).toBe("3"),
   );
 });
+
+test.each(["open", "consume"] as const)(
+  "the consume card retains its native values after %s and Undo until selection",
+  async (action) => {
+    mount("/consume");
+    const amount = await choose();
+    fireEvent.change(screen.getByLabelText("Quantity unit"), { target: { value: "1" } });
+    fireEvent.change(amount, { target: { value: "2" } });
+    const facts = () => screen.getByText("Stock amount").nextElementSibling!.textContent;
+    await waitFor(() => expect(facts()).toBe("10 Pieces 2 opened"));
+    await userEvent.click(
+      screen.getByRole("button", { name: action === "open" ? "Mark as opened" : "OK" }),
+    );
+    await screen.findByText(
+      action === "open"
+        ? "Marked 2 Pieces of Coffee as opened"
+        : "Removed 2 Pieces of Coffee from stock",
+    );
+    await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("Product").value).toBe(""));
+    const retained = action === "open" ? "10 Pieces 2 opened" : "8 Pieces 2 opened";
+    await waitFor(() => expect(facts()).toBe(retained));
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Undo" })).toBeNull());
+    expect(facts()).toBe(retained);
+    await choose();
+    await waitFor(() => expect(facts()).toBe("10 Pieces 2 opened"));
+  },
+);
+
+test.each(["location", "amount"] as const)(
+  "stock-code location changes retain amounts with focus on %s",
+  async (focus) => {
+    const { entries, writes } = mount("/consume");
+    const amount = await choose("grcy:p:7:shelf-stock");
+    expect(amount.value).toBe("4");
+    expect(document.querySelector<HTMLInputElement>('input[name="amount"]')!.value).toBe("4.");
+    expect(screen.getByText("This equals 4 Pieces")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Quantity unit"), { target: { value: "1" } });
+    await userEvent.click(amount);
+    fireEvent.change(amount, { target: { value: "1" } });
+    entries[0]!.location_id = 2;
+    entries[0]!.amount = 3;
+
+    if (focus === "location") await userEvent.selectOptions(screen.getByLabelText("Location"), "2");
+    else fireEvent.change(screen.getByLabelText("Location"), { target: { value: "2" } });
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2"),
+    );
+    await waitFor(() => expect(amount.value).toBe("3"));
+    expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2");
+    expect(amount.value).toBe("3");
+    expect(screen.getByLabelText<HTMLSelectElement>("Specific stock item").value).toBe(
+      "shelf-stock",
+    );
+    expect(document.querySelector<HTMLInputElement>('input[name="amount"]')!.value).toBe("1.");
+
+    if (focus === "location") {
+      await userEvent.selectOptions(screen.getByLabelText("Location"), "");
+      await waitFor(() =>
+        expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2"),
+      );
+      expect(amount.value).toBe("3");
+    }
+
+    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    await screen.findByText(
+      focus === "location"
+        ? "Removed 1 Piece of Coffee from stock"
+        : "Removed 3 Pieces of Coffee from stock",
+    );
+    expect(writes[0]?.body).toEqual({
+      amount: focus === "location" ? "1." : "3.",
+      allow_subproduct_substitution: true,
+      exact_amount: false,
+      spoiled: false,
+      location_id: "2",
+      stock_entry_id: "shelf-stock",
+    });
+  },
+);
 
 test("barcode assignment uses only its native values and a failed assignment still completes consumption", async () => {
   const { writes, router } = mount(

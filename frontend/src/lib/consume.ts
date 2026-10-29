@@ -78,6 +78,14 @@ export async function getConsumeEntries(product: string, signal: AbortSignal) {
   );
 }
 
+export async function getConsumeStockEntry(product: string, stockId: string, signal: AbortSignal) {
+  const filter = new URLSearchParams([["query[]", `stock_id=${stockId}`]]);
+
+  return entries.parse(
+    await request(`/api/stock/products/${product}/entries?${filter}`, { signal }),
+  )[0];
+}
+
 export async function getConsumeSelection(
   product: string,
   signal: AbortSignal,
@@ -101,10 +109,7 @@ export async function getConsumeSelection(
   let stock: ConsumeEntry | undefined;
 
   if (code?.stockId !== undefined) {
-    const filter = new URLSearchParams([["query[]", `stock_id=${code.stockId}`]]);
-    stock = entries.parse(
-      await request(`/api/stock/products/${product}/entries?${filter}`, { signal }),
-    )[0];
+    stock = await getConsumeStockEntry(product, code.stockId, signal);
   }
 
   return { details: selected, locations: found, barcode, stock };

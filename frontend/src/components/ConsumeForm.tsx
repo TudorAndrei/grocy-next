@@ -16,6 +16,7 @@ import {
   getConsumeDetails,
   getConsumeEntries,
   getConsumeSelection,
+  getConsumeStockEntry,
   type ConsumeCatalog,
   type ConsumeDetails,
   type ConsumeEntry,
@@ -121,6 +122,7 @@ function ConsumeFields({
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
   const picker = useRef<HTMLDivElement>(null);
+  const amountAtFocus = useRef<string>(undefined);
   const read = useRef<AbortController>(undefined);
   const sourceRead = useRef<AbortController>(undefined);
   const version = useRef(0);
@@ -150,7 +152,9 @@ function ConsumeFields({
   const [selection, setSelection] = useState<ConsumeSelection>();
   const [code, setCode] = useState<ProductCode>();
   const [amount, setAmount] = useState(String(preferences.consumeAmount));
+  const [conversionAmount, setConversionAmount] = useState(String(preferences.consumeAmount));
   const [unitId, setUnitId] = useState("");
+  const [unitRestored, setUnitRestored] = useState(false);
   const [location, setLocation] = useState("");
 
   const [sources, setSources] = useState(() =>
@@ -161,6 +165,7 @@ function ConsumeFields({
   const [sum, setSum] = useState(0);
   const [maximum, setMaximum] = useState<string>();
   const [specific, setSpecific] = useState(false);
+  const [stockItemDisabled, setStockItemDisabled] = useState(true);
   const [stockId, setStockId] = useState("");
   const [exact, setExact] = useState(false);
   const [spoiled, setSpoiled] = useState(false);
@@ -190,7 +195,7 @@ function ConsumeFields({
   const tareWeight = details?.product.tare_weight ?? 0;
   const minimumAmount = tare && !exact ? tareWeight : minimum;
 
-  const postedAmount = (Number(amount) / factor)
+  const postedAmount = (Number(conversionAmount) / factor)
     .toFixed(Math.max(1, precision))
     .replace(/0*$/g, "");
 
@@ -206,25 +211,57 @@ function ConsumeFields({
 
   async function refreshLocation(
     value: string,
-    data = selection,
-    nextFactor = factor,
-    selectedCode = code,
-    scanAfter = true,
+    {
+      data = selection,
+      nextFactor = factor,
+      selectedCode = code,
+      reloadCode = true,
+    }: {
+      data?: ConsumeSelection;
+      nextFactor?: number;
+      selectedCode?: ProductCode;
+      reloadCode?: boolean;
+    } = {},
   ) {
     sourceRead.current?.abort();
     const current = ++sourceVersion.current;
     sourceRead.current = new AbortController();
     const signal = sourceRead.current.signal;
+
+    if (specific) setStockItemDisabled(true);
     setSpecific(false);
     setStockId("");
     setEntries([]);
     setSum(0);
     setLocation(value);
 
-    if (!value || !data) return;
+    const reloadStockCode =
+      reloadCode && options.embedded === undefined && selectedCode?.stockId !== undefined;
+
+    if ((!value && !reloadStockCode) || !data) {
+      setSourceLoading(false);
+
+      return;
+    }
+
     setSourceLoading(true);
 
     try {
+      if (reloadStockCode && selectedCode?.stockId !== undefined) {
+        const stock = await getConsumeStockEntry(
+          String(data.details.product.id),
+          selectedCode.stockId,
+          signal,
+        );
+
+        if (signal.aborted || current !== sourceVersion.current || !stock) return;
+        value = String(stock.location_id);
+        data = { ...data, stock };
+        setLocation(value);
+        // The native callback changes only the display input, not the amount picker.
+        setAmount(String(stock.amount));
+      }
+
       const rows = await getConsumeEntries(String(data.details.product.id), signal);
       const located = rows.filter((row) => String(row.location_id) === value);
       const fresh = await getConsumeDetails(String(data.details.product.id), signal);
@@ -242,11 +279,13 @@ function ConsumeFields({
       if (forced !== undefined && matchingEntries > 0) {
         // Native clicks the checkbox once for each matching row, including duplicates.
         setSpecific(matchingEntries % 2 === 1);
+        setStockItemDisabled(matchingEntries % 2 !== 1);
         setStockId(forced);
       }
 
-      if (scanAfter && scanEnabled && (!selectedCode || selectedCode.barcode.startsWith("grcy"))) {
+      if (scanEnabled && (!selectedCode || selectedCode.barcode.startsWith("grcy"))) {
         setAmount("1");
+        setConversionAmount("1");
         autoSubmit.current = true;
       }
     } catch (reason) {
@@ -273,6 +312,8 @@ function ConsumeFields({
     setLocation("");
     setEntries([]);
     setStockId("");
+
+    if (specific) setStockItemDisabled(true);
     setSpecific(false);
     setSourceLoading(false);
     setError(undefined);
@@ -283,6 +324,8 @@ function ConsumeFields({
       return;
     }
 
+    if (card === Number(value))
+      void client.invalidateQueries({ queryKey: ["product-overview", Number(value)] });
     setCard(Number(value));
     setLoading(true);
     read.current = new AbortController();
@@ -310,6 +353,7 @@ function ConsumeFields({
       );
 
       let source = defaultPresent ? preferred : data.locations[0]?.location_id;
+      const convertedAmount = nextAmount;
 
       if (options.embedded === undefined && data.stock) {
         source = data.stock.location_id;
@@ -327,13 +371,15 @@ function ConsumeFields({
         }),
       );
       setUnitId(nextUnit ? String(nextUnit.id) : "");
+      setUnitRestored(false);
       setAmount(nextAmount === "NaN" ? "" : nextAmount);
-      await refreshLocation(
-        source === undefined ? "" : String(source),
+      setConversionAmount(convertedAmount);
+      await refreshLocation(source === undefined ? "" : String(source), {
         data,
-        nextUnit?.factor ?? NaN,
+        nextFactor: nextUnit?.factor ?? NaN,
         selectedCode,
-      );
+        reloadCode: false,
+      });
 
       if (signal.aborted || current !== version.current) return;
 
@@ -431,13 +477,18 @@ function ConsumeFields({
         message,
         undo: async () => {
           await api.undoTransaction(transaction);
-          await changed(fresh.product.id);
         },
       });
 
       setEntries([]);
       setSpecific(false);
       setStockId("");
+
+      if (vars.open || options.embedded === undefined) {
+        // EndUiBusy enables all native controls, including an unchecked item picker.
+        setUnitRestored(true);
+        setStockItemDisabled(false);
+      }
 
       if (!vars.open && options.embedded !== undefined) {
         setFinished(true);
@@ -462,13 +513,15 @@ function ConsumeFields({
         }
       } else {
         setProduct("");
-        setAmount(
-          preferences.useQuickConsumeAmount
-            ? vars.open
-              ? String((fresh.product.quick_consume_amount ?? 0) * factor)
-              : ""
-            : String(preferences.consumeAmount),
-        );
+
+        const nextAmount = preferences.useQuickConsumeAmount
+          ? vars.open
+            ? String((fresh.product.quick_consume_amount ?? 0) * factor)
+            : ""
+          : String(preferences.consumeAmount);
+
+        setAmount(nextAmount);
+        setConversionAmount(nextAmount);
 
         if (vars.open) {
           if (fresh.product.move_on_open === 1 && fresh.default_consume_location)
@@ -492,11 +545,15 @@ function ConsumeFields({
         requestAnimationFrame(() => picker.current?.querySelector("input")?.focus());
       }
 
-      await changed(fresh.product.id);
+      if (!vars.open) await changed(fresh.product.id);
 
       if (!vars.open) onClose?.();
     },
-    onError: (reason: Error) => setError({ message: reason.message }),
+    onError: (reason: Error) => {
+      setUnitRestored(true);
+      setStockItemDisabled(false);
+      setError({ message: reason.message });
+    },
   });
 
   const busy = loading || sourceLoading || pickerBusy || save.isPending || finished;
@@ -645,22 +702,34 @@ function ConsumeFields({
                 label={t("Amount")}
                 value={amount}
                 required
-                disabled={busy}
+                disabled={loading || pickerBusy || save.isPending || finished}
                 min={minimumAmount}
                 max={maximum}
                 step={String(minimum)}
-                onChange={setAmount}
+                onChange={(value) => {
+                  setAmount(value);
+                  setConversionAmount(value);
+                }}
+                onFocus={(value) => {
+                  amountAtFocus.current = value;
+                }}
+                onBlur={(value) => {
+                  if (amountAtFocus.current !== undefined && amountAtFocus.current !== value)
+                    setConversionAmount(value);
+                  amountAtFocus.current = undefined;
+                }}
               />
             </div>
             <label className="field">
               <span>{t("Quantity unit")}</span>
               <select
                 required
-                disabled={busy || units.length === 1}
+                disabled={busy || (units.length === 1 && !unitRestored)}
                 value={unitId}
                 onChange={(event) => {
                   const value = event.target.value;
                   setUnitId(value);
+                  setConversionAmount(amount);
 
                   if (details)
                     setMaximum(
@@ -682,12 +751,17 @@ function ConsumeFields({
             </label>
           </div>
           <input type="hidden" name="amount" value={postedAmount} />
-          {amount && unit && details && unit.name !== details.quantity_unit_stock.name ? (
+          {conversionAmount && unit && details && unit.name !== details.quantity_unit_stock.name ? (
             <p className="field-help">
               {t(
                 "This equals %1$s %2$s",
-                (Number(amount) / factor).toLocaleString(),
-                unitLabel(details.quantity_unit_stock, Number(amount) / factor, pluralIndex, false),
+                (Number(conversionAmount) / factor).toLocaleString(),
+                unitLabel(
+                  details.quantity_unit_stock,
+                  Number(conversionAmount) / factor,
+                  pluralIndex,
+                  false,
+                ),
               )}
             </p>
           ) : null}
@@ -710,12 +784,7 @@ function ConsumeFields({
               onChange={(event) => {
                 setError(undefined);
 
-                const value =
-                  options.embedded === undefined && selection?.stock
-                    ? String(selection.stock.location_id)
-                    : event.target.value;
-
-                void refreshLocation(value);
+                void refreshLocation(event.target.value);
               }}
             >
               <option value="" />
@@ -743,6 +812,7 @@ function ConsumeFields({
               disabled={busy}
               onChange={(event) => {
                 setSpecific(event.target.checked);
+                setStockItemDisabled(!event.target.checked);
 
                 if (!event.target.checked) setStockId("");
               }}
@@ -753,7 +823,7 @@ function ConsumeFields({
             <span className="sr-only">{t("Specific stock item")}</span>
             <select
               required={specific}
-              disabled={busy || !specific}
+              disabled={busy || stockItemDisabled}
               value={stockId}
               onChange={(event) => {
                 const value = event.target.value;

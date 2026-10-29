@@ -13,6 +13,8 @@ export function NumberPicker({
   step,
   autoFocus,
   onChange,
+  onFocus,
+  onBlur,
 }: {
   id: string;
   label: string;
@@ -24,6 +26,8 @@ export function NumberPicker({
   step: string;
   autoFocus?: boolean;
   onChange: (value: string) => void;
+  onFocus?: (value: string) => void;
+  onBlur?: (value: string) => void;
 }) {
   const { t } = useI18n();
   const input = useRef<HTMLInputElement>(null);
@@ -48,6 +52,8 @@ export function NumberPicker({
         step={step}
         autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
+        onFocus={(event) => onFocus?.(event.currentTarget.value)}
+        onBlur={(event) => onBlur?.(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
           event.preventDefault();
