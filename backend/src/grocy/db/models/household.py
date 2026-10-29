@@ -12,6 +12,7 @@ from grocy.db.types import DateOrDateTime
 class Chore(Base, TimestampMixin):
     __tablename__ = "chores"
     __table_args__ = (
+        Index("ix_chores_performance1", "id", "active"),
         *native_checks("chores"),
         {"sqlite_autoincrement": True},
     )
@@ -96,6 +97,7 @@ class Task(Base, TimestampMixin):
 class Battery(Base, TimestampMixin):
     __tablename__ = "batteries"
     __table_args__ = (
+        Index("ix_batteries_performance1", "id", "active"),
         *native_checks("batteries"),
         {"sqlite_autoincrement": True},
     )

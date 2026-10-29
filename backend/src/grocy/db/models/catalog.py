@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from grocy.db.grocy_checks import native_checks
@@ -55,6 +55,12 @@ class ProductGroup(Base, TimestampMixin):
 class Product(Base, TimestampMixin):
     __tablename__ = "products"
     __table_args__ = (
+        Index("ix_products_performance1", "parent_product_id"),
+        Index(
+            "ix_products_performance2",
+            text("CASE WHEN parent_product_id IS NULL THEN id ELSE parent_product_id END"),
+            "active",
+        ),
         *native_checks("products"),
         {"sqlite_autoincrement": True},
     )

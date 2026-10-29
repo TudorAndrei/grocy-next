@@ -80,6 +80,22 @@ def test_product_choices_follow_activity_conversions_and_parent_relationships(cl
     before = client.get(f"/api/objects/products/{product}").json()
     new = options()
     edit = options(product)
+    # Pinned native cache order for the same product, global link, and inactive unit.
+    assert [(row["from_qu_id"], row["to_qu_id"]) for row in edit["conversions"]] == [
+        (unit, unit),
+        (unit, box),
+        (unit, crate),
+        (unit, inactive),
+        (box, unit),
+        (box, crate),
+        (box, inactive),
+        (crate, unit),
+        (crate, box),
+        (crate, inactive),
+        (inactive, unit),
+        (inactive, box),
+        (inactive, crate),
+    ]
     assert {unit, box, crate, inactive, unrelated} <= set(new["references"]["qu_id_stock"])
     for key in ("qu_id_purchase", "qu_id_consume", "qu_id_price"):
         assert {unit, box, crate, unrelated} <= set(new["references"][key])
