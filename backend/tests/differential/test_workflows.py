@@ -4385,6 +4385,271 @@ def test_native_stock_consumption_uses_php_bool_argument_conversion(api, catalog
 
 
 @pytest.mark.parametrize(
+    "selection,amount,status,removed,message",
+    [
+        ("location", 4, 200, 2, None),
+        ("entry", 4, 200, 2, None),
+        ("both", 4, 200, 2, None),
+        ("missing", 1, 400, 0, "No transaction was found by the given transaction id"),
+        ("mismatch", 1, 400, 0, "No transaction was found by the given transaction id"),
+        (
+            "location",
+            6,
+            400,
+            0,
+            "Amount to be consumed cannot be > current stock amount "
+            "(if supplied, at the desired location)",
+        ),
+        ("none", 5.004, 200, 5, None),
+        (
+            "none",
+            5.005,
+            400,
+            0,
+            "Amount to be consumed cannot be > current stock amount "
+            "(if supplied, at the desired location)",
+        ),
+    ],
+)
+def test_native_consume_checks_total_stock_before_selection(
+    api, catalog, selection, amount, status, removed, message
+):
+    product, _, _, location = catalog
+    other = create(api, "locations", name=uuid4().hex)
+    path = f"/api/stock/products/{product}"
+    for quantity, place, due in [(2, location, "2027-01-01"), (3, other, "2027-02-01")]:
+        response = api.post(
+            path + "/add",
+            json={
+                "amount": quantity,
+                "location_id": place,
+                "best_before_date": due,
+            },
+        )
+        assert response.status_code == 200, response.text
+    first = next(
+        row for row in rows(api, "stock", product_id=product) if row["location_id"] == location
+    )
+    before = rows(api, "stock_log", product_id=product)
+    body = {"amount": amount, "exact_amount": True}
+    if selection in {"location", "both", "mismatch"}:
+        body["location_id"] = other if selection == "mismatch" else location
+    if selection in {"entry", "both", "mismatch", "missing"}:
+        body["stock_entry_id"] = (
+            "missing-" + uuid4().hex if selection == "missing" else first["stock_id"]
+        )
+    response = api.post(path + "/consume", json=body)
+    assert response.status_code == status, response.text
+    if message:
+        assert response.json() == {"error_message": message}
+        assert rows(api, "stock_log", product_id=product) == before
+    else:
+        bookings = response.json()
+        assert sum(-row["amount"] for row in bookings) == removed
+        assert {row["transaction_type"] for row in bookings} == {"consume"}
+        assert len({row["transaction_id"] for row in bookings}) == 1
+        assert api.get(path).json()["stock_amount"] == 5 - removed
+        if selection != "none":
+            assert {row["location_id"] for row in bookings} == {location}
+        transaction = bookings[0]["transaction_id"]
+        assert api.get(f"/api/stock/transactions/{transaction}").json() == bookings
+        assert api.post(f"/api/stock/transactions/{transaction}/undo").status_code == 204
+        assert api.get(path).json()["stock_amount"] == 5
+        return
+    assert api.get(path).json()["stock_amount"] == 5 - removed
+
+
+@pytest.mark.parametrize("substitute", [False, True])
+@pytest.mark.parametrize("factor", [2, None])
+def test_native_consume_total_includes_child_stock_without_forcing_substitution(
+    api, catalog, substitute, factor
+):
+    product, unit, other, location = catalog
+    child = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        parent_product_id=product,
+        location_id=location,
+        qu_id_stock=other,
+        qu_id_purchase=other,
+    )
+    if factor is not None:
+        create(
+            api,
+            "quantity_unit_conversions",
+            product_id=child,
+            from_qu_id=unit,
+            to_qu_id=other,
+            factor=factor,
+        )
+    for identity, amount in [(product, 1), (child, 6)]:
+        assert (
+            api.post(f"/api/stock/products/{identity}/add", json={"amount": amount}).status_code
+            == 200
+        )
+    response = api.post(
+        f"/api/stock/products/{product}/consume",
+        json={
+            "amount": 3,
+            "allow_subproduct_substitution": substitute,
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert [(row["product_id"], row["amount"]) for row in response.json()] == (
+        [(product, -1), (child, -2 * (factor or 1))] if substitute else [(product, -1)]
+    )
+    assert api.get(f"/api/stock/products/{child}").json()["stock_amount"] == (
+        6 - 2 * (factor or 1) if substitute else 6
+    )
+
+
+def test_native_consume_booking_reads_keep_pdo_fractional_precision(api, catalog):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    response = api.post(path + "/consume", json={"amount": 0.123456789123})
+    assert response.status_code == 200, response.text
+    booking = response.json()[0]
+    assert booking["amount"] == -0.123456789123
+    assert api.get(f"/api/stock/bookings/{booking['id']}").json() == booking
+    assert api.get(f"/api/stock/transactions/{booking['transaction_id']}").json() == [booking]
+    assert api.get(path + "/entries").json()[0]["amount"] == 1.876543210877
+
+
+@pytest.mark.parametrize(
+    "exact,amount,status,removed",
+    [
+        (False, 4, 200, 1),
+        (False, 5, 400, 0),
+        (False, 1, 400, 0),
+        (True, 3, 200, 3),
+        (True, 4, 400, 0),
+    ],
+)
+def test_native_consume_tare_keeps_exact_amount_and_zero_change_rules(
+    api, catalog, exact, amount, status, removed
+):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert (
+        api.put(
+            f"/api/objects/products/{product}",
+            json={
+                "enable_tare_weight_handling": 1,
+                "tare_weight": 2,
+            },
+        ).status_code
+        == 204
+    )
+    assert api.post(path + "/add", json={"amount": 5}).status_code == 200
+    response = api.post(path + "/consume", json={"amount": amount, "exact_amount": exact})
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert response.json()[0]["amount"] == -removed
+    else:
+        message = (
+            "No transaction was found by the given transaction id"
+            if amount == 5
+            else ("The amount cannot be lower than the defined tare weight")
+        )
+        assert response.json() == {"error_message": message}
+    assert api.get(path).json()["stock_amount"] == 3 - removed
+
+
+def test_native_consume_keeps_saved_booking_when_entry_delete_fails(api, catalog, execute_sql):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    trigger = "consume_delete_failure_" + uuid4().hex
+    try:
+        execute_sql(
+            f"CREATE TRIGGER {trigger} BEFORE DELETE ON stock "
+            f"WHEN OLD.product_id={product} BEGIN SELECT RAISE(ABORT,'Entry delete blocked'); END"
+        )
+        response = api.post(path + "/consume", json={"amount": 2})
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+            "Entry delete blocked"
+        }
+        assert api.get(path).json()["stock_amount"] == 2
+        consumed = [
+            row
+            for row in rows(api, "stock_log", product_id=product)
+            if row["transaction_type"] == "consume"
+        ]
+        assert [row["amount"] for row in consumed] == [-2]
+    finally:
+        execute_sql(f"DROP TRIGGER IF EXISTS {trigger}")
+    response = api.post(path + "/consume", json={"amount": 2})
+    assert response.status_code == 200, response.text
+    assert api.get(path).json()["stock_amount"] == 0
+    assert (
+        len(
+            [
+                row
+                for row in rows(api, "stock_log", product_id=product)
+                if row["transaction_type"] == "consume"
+            ]
+        )
+        == 2
+    )
+
+
+@pytest.mark.parametrize(
+    "selection,list_exists", [("matched", True), ("missing", True), ("matched", False)]
+)
+def test_native_consume_shopping_updates_follow_stock_writes_before_result_lookup(
+    api, catalog, selection, list_exists
+):
+    product, unit, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 5}).status_code == 200
+    assert (
+        api.put(f"/api/objects/products/{product}", json={"min_stock_amount": 10}).status_code
+        == 204
+    )
+    shopping_list = create(api, "shopping_lists", name=uuid4().hex) if list_exists else 2147483647
+    enabled = "shopping_list_auto_add_below_min_stock_amount"
+    target = "shopping_list_auto_add_below_min_stock_amount_list_id"
+    saved = api.get("/api/user/settings").json()
+    try:
+        for key, value in [(enabled, 1), (target, shopping_list)]:
+            assert api.put("/api/user/settings/" + key, json={"value": value}).status_code == 204
+        body = {"amount": 1}
+        if selection == "missing":
+            body["stock_entry_id"] = "missing-" + uuid4().hex
+        response = api.post(path + "/consume", json=body)
+        if not list_exists:
+            assert response.status_code == 400, response.text
+            assert response.json() == {"error_message": "Shopping list does not exist"}
+        elif selection == "missing":
+            assert response.status_code == 400, response.text
+            assert response.json() == {
+                "error_message": "No transaction was found by the given transaction id"
+            }
+        else:
+            assert response.status_code == 200, response.text
+        assert api.get(path).json()["stock_amount"] == (5 if selection == "missing" else 4)
+        logs = [
+            row
+            for row in rows(api, "stock_log", product_id=product)
+            if row["transaction_type"] == "consume"
+        ]
+        assert [row["amount"] for row in logs] == ([] if selection == "missing" else [-1])
+        items = rows(api, "shopping_list", product_id=product)
+        assert [(item["amount"], item["shopping_list_id"], item["qu_id"]) for item in items] == (
+            [(5 if selection == "missing" else 6, shopping_list, unit)] if list_exists else []
+        )
+    finally:
+        for key in (enabled, target):
+            assert (
+                api.put("/api/user/settings/" + key, json={"value": saved[key]}).status_code == 204
+            )
+
+
+@pytest.mark.parametrize(
     "body,transaction_type",
     [
         ({"transaction_type": "inventory-correction"}, "consume"),
@@ -4402,6 +4667,28 @@ def test_native_stock_consumption_retains_transaction_field_typo(
     response = api.post(f"/api/stock/products/{product}/consume", json={"amount": 1, **body})
     assert response.status_code == 200, response.text
     assert response.json()[0]["transaction_type"] == transaction_type
+
+
+@pytest.mark.parametrize("transaction_type,label", [("other", "other"), (["consume"], "Array")])
+def test_native_consume_rejects_invalid_transaction_types_with_original_message(
+    api, catalog, transaction_type, label
+):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    response = api.post(
+        path + "/consume",
+        json={
+            "amount": 1,
+            "transaction_type": "ignored",
+            "transactiontype": transaction_type,
+        },
+    )
+    assert response.status_code == 400, response.text
+    assert response.json() == {
+        "error_message": f"Transaction type {label} is not valid (StockService.ConsumeProduct)"
+    }
+    assert api.get(path).json()["stock_amount"] == 2
 
 
 @pytest.mark.parametrize("form", ["decimal", "exponent"])

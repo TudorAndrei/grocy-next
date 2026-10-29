@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import random
-from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import String, delete, insert, select, type_coerce, update
@@ -33,7 +32,7 @@ from grocy.core.errors import GrocyError
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.base import Base
 from grocy.db.models.household import Battery, BatteryChargeCycle, Chore, ChoreLog, Task
-from grocy.domains.stock.service import StockService
+from grocy.domains.stock.legacy_consume import LegacyStockConsumption
 
 
 def _quoted(value: Any) -> Any:
@@ -227,13 +226,12 @@ class HouseholdService:
                 "Grocy\\Services\\StockService::ConsumeProduct", 2, "amount", "float", amount
             )
         try:
-            await StockService(self.session).consume(
+            await LegacyStockConsumption(self.session).consume(
                 actor,
                 product_id,
-                Decimal(repr(float(value))),
+                float(value),
                 exact_amount=False,
                 allow_subproduct_substitution=True,
-                commit=False,
             )
         except GrocyError as error:
             await self.session.rollback()

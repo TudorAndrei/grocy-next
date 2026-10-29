@@ -21,6 +21,7 @@ from grocy.compatibility.rows import save_rows
 from grocy.core.actor import Actor
 from grocy.core.errors import GrocyError
 from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.domains.stock.legacy_consume import LegacyStockConsumption
 from grocy.domains.stock.service import StockService
 
 
@@ -106,11 +107,10 @@ class LegacyRecipesService:
                 stock = _decimal(position["stock_amount"])
                 if not loose_equals(position["only_check_single_unit_in_stock"], 0) or stock <= 0:
                     continue
-                await self.stock.consume(
+                await LegacyStockConsumption(self.session, autocommit=False).consume(
                     actor,
                     position["product_id"],
-                    min(stock, _decimal(position["recipe_amount"])),
-                    commit=False,
+                    float(min(stock, _decimal(position["recipe_amount"]))),
                     allow_subproduct_substitution=True,
                     recipe_id=recipe["id"],
                     exact_amount=True,

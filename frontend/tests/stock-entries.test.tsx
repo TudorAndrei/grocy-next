@@ -391,7 +391,7 @@ function mount(
             )
           )
             return Response.json(
-              { error_message: "insufficient stock: have 0, need 1.0" },
+              { error_message: "No transaction was found by the given transaction id" },
               { status: 400 },
             );
           before = rows.map((row) => ({ ...row }));
@@ -765,7 +765,7 @@ test("entry edits retain cached groups, filters, units, sorting, and action amou
       .map((button) => button.getAttribute("aria-label")),
   ).toEqual([52, 51, 54, 53].map((id) => `Edit stock entry ${id}`));
   await user.click(screen.getByRole("button", { name: "Consume stock entry 51" }));
-  await screen.findByText("insufficient stock: have 0, need 1.0");
+  await screen.findByText("No transaction was found by the given transaction id");
   expect(changed().getByText("10 Piece")).toBeTruthy();
   expect(writes.find((write) => write.path.endsWith("/consume"))?.body).toEqual({
     amount: 1,
@@ -786,7 +786,7 @@ test("entry edits retain cached groups, filters, units, sorting, and action amou
   );
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await waitFor(() => expect(changed().getByText("10 Pieces")).toBeTruthy());
-  expect(screen.queryByText("insufficient stock: have 0, need 1.0")).toBeNull();
+  expect(screen.queryByText("No transaction was found by the given transaction id")).toBeNull();
   expect(changed().getByText("Lime")).toBeTruthy();
   await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "1");
   expect(screen.queryByRole("button", { name: "Edit stock entry 51" })).toBeNull();

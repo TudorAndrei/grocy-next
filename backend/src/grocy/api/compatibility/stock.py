@@ -23,6 +23,7 @@ from grocy.core.errors import GrocyError
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.native_schema import SCHEMA
 from grocy.domains.printing import product_label, stock_entry, stock_label
+from grocy.domains.stock.legacy_consume import LegacyStockConsumption
 from grocy.domains.stock.service import StockService
 
 router = APIRouter(tags=["stock"])
@@ -178,11 +179,12 @@ async def stock_add(
 @router.post("/api/stock/products/{product_id}/consume")
 async def stock_consume(
     product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
-) -> list[dict[str, Any]]:
-    return await stock.consume(
+) -> Response:
+    legacy = LegacyStockConsumption(stock.session)
+    transaction = await legacy.consume(
         actor,
         body.record_id,
-        body.amount,
+        float(body.amount),
         spoiled=body.spoiled,
         transaction_type=body.transaction_type,
         location_id=body.location_id,
@@ -191,6 +193,7 @@ async def stock_consume(
         recipe_id=body.recipe_id,
         exact_amount=body.exact_amount,
     )
+    return PhpJSONResponse(await legacy.bookings(transaction))
 
 
 @router.post("/api/stock/products/{product_id}/open")
@@ -284,7 +287,7 @@ async def stock_add_by_barcode(
 @router.post("/api/stock/products/by-barcode/{barcode}/consume")
 async def stock_consume_by_barcode(
     barcode: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
-) -> list[dict[str, Any]]:
+) -> Response:
     return await stock_consume(str(body.record_id), body, actor, stock)
 
 
@@ -375,11 +378,21 @@ async def stock_shopping_remove_product(body: ShoppingInput, shopping: ShoppingS
 
 
 @router.get("/api/stock/bookings/{booking_id}")
-async def stock_get_booking(booking_id: str, _actor: CurrentActor, stock: StockSvc) -> dict:
+async def stock_get_booking(booking_id: str, _actor: CurrentActor, session: DbSession) -> Response:
     identity = int_argument(
         booking_id, "Grocy\\Services\\StockService::GetStockBooking", "bookingId"
     )
-    return await stock.get_booking(identity)
+    rows = await query_rows(
+        session,
+        "stock_log",
+        {},
+        where="id = ?",
+        bindings=(identity,),
+        columns=SCHEMA["tables"]["stock_log"],
+    )
+    if not rows:
+        raise GrocyError("Stock booking does not exist", code=None)
+    return PhpJSONResponse(rows[0])
 
 
 @router.post("/api/stock/bookings/{booking_id}/undo", status_code=204)
@@ -391,9 +404,9 @@ async def stock_undo(booking_id: str, actor: CurrentActor, stock: StockSvc) -> R
 
 @router.get("/api/stock/transactions/{transaction_id}")
 async def stock_get_transaction(
-    transaction_id: str, _actor: CurrentActor, stock: StockSvc
-) -> list[dict]:
-    return await stock.get_transaction(transaction_id)
+    transaction_id: str, _actor: CurrentActor, session: DbSession
+) -> Response:
+    return PhpJSONResponse(await LegacyStockConsumption(session).bookings(transaction_id))
 
 
 @router.post("/api/stock/transactions/{transaction_id}/undo", status_code=204)
