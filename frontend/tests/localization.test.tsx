@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import { LocalizationProvider } from "@/lib/i18n";
 import { PageHeader } from "@/components/PageHeader";
 import { EntityManager } from "@/components/EntityManager";
@@ -74,8 +74,7 @@ test("the saved language translates navigation and can be changed without changi
     }),
   );
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: ["/settings?tab=preferences"] }),
   });
 

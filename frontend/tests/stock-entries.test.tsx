@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import type { EntryRow } from "@/lib/stock-entries";
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
@@ -426,8 +426,7 @@ function mount(
     defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
   });
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
@@ -530,6 +529,10 @@ test.each([false, true])(
     const { router } = mount(`/stockentries?product=7${embedded ? "&embedded=false" : ""}`);
     const user = userEvent.setup();
     await screen.findByText("Mint batch");
+    expect(new URLSearchParams(router.history.location.search).get("product")).toBe("7");
+
+    if (embedded)
+      expect(new URLSearchParams(router.history.location.search).get("embedded")).toBe("false");
     await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "2");
     await user.click(screen.getByRole("button", { name: "Clear filter" }));
     await screen.findByText("Mint batch");
@@ -537,6 +540,12 @@ test.each([false, true])(
     if (embedded) expect(screen.queryByText("Tea batch")).toBeNull();
     else await screen.findByText("Tea batch");
     expect(router.state.location.search.product).toBe(embedded ? "7" : undefined);
+
+    if (!embedded) {
+      await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "8");
+      await screen.findByText("Tea batch");
+      expect(new URLSearchParams(router.history.location.search).get("product")).toBe("8");
+    }
   },
 );
 

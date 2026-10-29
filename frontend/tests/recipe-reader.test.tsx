@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
 import { writeApiConfig } from "@/lib/config";
 import { pictureBytes } from "./fixtures/picture";
@@ -312,8 +312,7 @@ function mount(
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [options.path ?? "/recipes/1"] }),
   });
 

@@ -1,11 +1,11 @@
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import { writeApiConfig } from "@/lib/config";
 
 beforeEach(() => {
@@ -254,8 +254,7 @@ function mount(
   supportDescriptionEditors();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
@@ -293,7 +292,9 @@ test("editing a row converts display units, moves the item, and retries custom f
   await form.findByText("Field write failed");
   expect(amount.value).toBe("3");
   await user.click(form.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(router.state.location.search).toEqual({ list: 7 }));
+  await waitFor(() =>
+    expect(new URLSearchParams(router.history.location.search).get("list")).toBe("7"),
+  );
   expect(writes.map((write) => write.path)).toEqual([
     "/api/objects/shopping_list/51",
     "/api/userfields/shopping_list/51",
@@ -325,7 +326,7 @@ test("a detailed note creation keeps one new item after a custom field failure",
   await form.findByText("Field write failed");
   await user.click(form.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(router.state.location.search).toEqual({ list: 1 });
+  expect(new URLSearchParams(router.history.location.search).get("list")).toBe("1");
   expect(writes.filter((write) => write.method === "POST")).toHaveLength(1);
   expect(JSON.parse(writes[0].body)).toEqual({
     shopping_list_id: 1,
@@ -387,7 +388,7 @@ test("a merge link selects a barcode match and retries lookup and fields without
   await form.findByText("Field write failed");
   await user.click(form.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/shopping"));
-  expect(router.state.location.search).toEqual({ list: 7 });
+  expect(new URLSearchParams(router.history.location.search).get("list")).toBe("7");
   expect(writes.map((write) => write.path)).toEqual([
     "/api/stock/shoppinglist/add-product",
     "/api/userfields/shopping_list/51",
@@ -673,15 +674,19 @@ test("external shopping lookup handles no result and failure before returning th
   ]);
 });
 
-test("the legacy product form keeps its return link inside the application", async () => {
-  const { router, writes } = mount(
-    "/product/new?flow=InplaceNewProductWithName&name=222&returnto=https%3A%2F%2Fother.example",
-  );
+test.each(["222", "1e3", "0.123456789123456789", "null", '"Tea"', '{"name":"Tea"}'])(
+  "the legacy product form keeps literal name %s and its return link inside the application",
+  async (name) => {
+    const { router, writes } = mount(
+      `/product/new?flow=InplaceNewProductWithName&name=${encodeURIComponent(name)}&returnto=https%3A%2F%2Fother.example`,
+    );
 
-  const user = userEvent.setup();
-  const editor = within(await screen.findByRole("form", { name: "Add product" }));
-  expect(editor.getByRole<HTMLInputElement>("textbox", { name: "Name" }).value).toBe("222");
-  await user.click(editor.getByRole("button", { name: "Cancel" }));
-  await waitFor(() => expect(router.state.location.pathname).toBe("/products"));
-  expect(writes).toHaveLength(0);
-});
+    const user = userEvent.setup();
+    const editor = within(await screen.findByRole("form", { name: "Add product" }));
+    expect(editor.getByRole<HTMLInputElement>("textbox", { name: "Name" }).value).toBe(name);
+    expect(new URLSearchParams(router.history.location.search).get("name")).toBe(name);
+    await user.click(editor.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/products"));
+    expect(writes).toHaveLength(0);
+  },
+);

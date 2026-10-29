@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import { writeApiConfig } from "@/lib/config";
 import type { UserfieldDefinition } from "@/lib/userfields";
 
@@ -140,8 +140,7 @@ function mount(path = "/shopping?list=7", fields: UserfieldDefinition[] = [], fa
   vi.stubGlobal("fetch", fetchMock);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
@@ -170,7 +169,9 @@ test("legacy list links retain selection through changes and browser history", a
   await waitFor(() => expect(selector.value).toBe("7"));
   expect(within(selector).getByRole("option", { name: "Weekend (2)" })).toBeTruthy();
   await user.selectOptions(selector, "1");
-  await waitFor(() => expect(router.state.location.search).toEqual({ list: 1 }));
+  await waitFor(() =>
+    expect(new URLSearchParams(router.history.location.search).get("list")).toBe("1"),
+  );
   await act(async () => router.history.back());
   await waitFor(() => expect(selector.value).toBe("7"));
 });
@@ -239,7 +240,9 @@ test("list creation saves edited custom types and retries an upload on the same 
   await user.click(form.getByRole("button", { name: "Save" }));
   await form.findByText("Upload failed");
   await user.click(form.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(router.state.location.search).toEqual({ list: 8 }));
+  await waitFor(() =>
+    expect(new URLSearchParams(router.history.location.search).get("list")).toBe("8"),
+  );
   expect(
     writes.filter(
       (write) => write.path === "/api/objects/shopping_lists" && write.method === "POST",
@@ -303,7 +306,9 @@ test("editing writes custom fields before the name and deletion returns to the d
       await screen.findByRole("dialog", { name: "Delete shopping list", hidden: true }),
     ).getByRole("button", { name: "Yes" }),
   );
-  await waitFor(() => expect(router.state.location.search).toEqual({ list: 1 }));
+  await waitFor(() =>
+    expect(new URLSearchParams(router.history.location.search).get("list")).toBe("1"),
+  );
   expect(
     screen.getByRole<HTMLButtonElement>("button", {
       name: "Delete shopping list",

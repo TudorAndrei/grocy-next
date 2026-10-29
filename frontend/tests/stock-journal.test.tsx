@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import type { JournalRow } from "@/lib/stock-journal";
 import type { UserSettings } from "@/lib/types";
 import { supportProductOptions } from "./fixtures/product-options";
@@ -414,8 +414,7 @@ function mount(
     defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
   });
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
@@ -693,12 +692,15 @@ test.each(["/journal", "/stockjournal"])(
 
     const user = userEvent.setup();
     await screen.findByText("Old stock");
+    expect(new URLSearchParams(router.history.location.search).get("product")).toBe("7");
+    expect(new URLSearchParams(router.history.location.search).get("months")).toBe("9999");
 
     if (path === "/stockjournal")
       expect(screen.queryByRole("combobox", { name: "Product" })).toBeNull();
     else {
       await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "8");
       await screen.findByText("Tea stock");
+      expect(new URLSearchParams(router.history.location.search).get("product")).toBe("8");
     }
 
     await user.click(screen.getByRole("button", { name: "Clear filter" }));
@@ -1026,6 +1028,12 @@ test("summary URL limits survive clearing local filters and the journal links to
 
   const user = userEvent.setup();
   await screen.findByRole("rowheader", { name: "Old coffee" });
+  expect([...new URLSearchParams(router.history.location.search)]).toEqual([
+    ["product_id", "9"],
+    ["user_id", "1"],
+    ["transaction_type", "purchase"],
+    ["embedded", "false"],
+  ]);
   expect(screen.queryByRole("combobox", { name: "Product" })).toBeNull();
   expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "User" }).value).toBe("");
   await user.selectOptions(screen.getByRole("combobox", { name: "Transaction type" }), "consume");

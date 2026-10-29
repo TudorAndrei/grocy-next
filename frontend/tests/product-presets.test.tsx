@@ -1,11 +1,11 @@
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
+import { createAppRouter } from "@/router";
 import type { UserSettings } from "@/lib/types";
 import type { JsonObject } from "@/lib/json";
 
@@ -78,8 +78,7 @@ function app(path: string) {
     }),
   );
 
-  const router = createRouter({
-    routeTree,
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
