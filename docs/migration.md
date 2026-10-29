@@ -12,6 +12,8 @@ The importer checks SQLite integrity and the required core tables. It takes a SQ
 
 The command returns the destination path, source snapshot path, copied row counts, and archived tables and columns. Data outside the active application schema remains in the exact source snapshot. Review this report before you use the new database.
 
+New imports retain the saved `cache__quantity_unit_conversions_resolved` table. This keeps its row IDs, order, text factors, saved unit names, global rows, and allocation counter. An empty source cache stays empty after startup. If the source has no cache table, startup calculates the conversion rows. Earlier imports retain the original cache in their `.source.sqlite` copy; this change applies to new imports.
+
 Set the new database and turn off demo data:
 
 ```bash

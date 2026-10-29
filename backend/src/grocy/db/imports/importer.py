@@ -15,6 +15,8 @@ from grocy.db.models import Base
 from grocy.db.native_schema import SCHEMA
 from grocy.db.userfield_identity import legacy_field_ids
 
+_CONVERSION_CACHE = "cache__quantity_unit_conversions_resolved"
+
 
 def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
     source_path, target = Path(source).resolve(), Path(destination).resolve()
@@ -129,6 +131,26 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
                     conn.execute(table.insert().values(**values))
                     count += 1
                 copied[table.name] = count
+            if _CONVERSION_CACHE in source_tables:
+                # The native pickers read this saved table, including its row
+                # order, text factors, stale names, global rows, and empty state.
+                # Creating it here also prevents revision 0021 from rebuilding it.
+                conn.exec_driver_sql(SCHEMA["ddl"][_CONVERSION_CACHE])
+                columns = [
+                    row[1]
+                    for row in conn.exec_driver_sql(f'PRAGMA table_info("{_CONVERSION_CACHE}")')
+                ]
+                fields = ",".join(f'"{name}"' for name in columns)
+                records = source_db.execute(
+                    f'SELECT {fields} FROM "{_CONVERSION_CACHE}" ORDER BY rowid'
+                ).fetchall()
+                if records:
+                    placeholders = ",".join("?" for _ in columns)
+                    conn.exec_driver_sql(
+                        f'INSERT INTO "{_CONVERSION_CACHE}" ({fields}) VALUES ({placeholders})',
+                        [tuple(row) for row in records],
+                    )
+                copied[_CONVERSION_CACHE] = len(records)
             if "api_keys" in source_tables:
                 conn.exec_driver_sql(
                     "INSERT OR IGNORE INTO grocy_imported_api_keys(api_key_id) "
@@ -148,9 +170,13 @@ def import_grocy_sqlite(source: str | Path, destination: str | Path) -> dict:
             if source_db.execute(
                 "SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'"
             ).fetchone():
+                counters = {
+                    table.name
+                    for table in Base.metadata.tables.values()
+                    if table.dialect_options["sqlite"]["autoincrement"]
+                } | {_CONVERSION_CACHE}
                 for sequence in source_db.execute("SELECT name, seq FROM sqlite_sequence"):
-                    table = Base.metadata.tables.get(sequence[0])
-                    if table is None or not table.dialect_options["sqlite"]["autoincrement"]:
+                    if sequence[0] not in counters:
                         continue
                     # Keep allocation history, including counters above all remaining row IDs.
                     conn.exec_driver_sql(

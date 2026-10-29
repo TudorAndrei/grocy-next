@@ -134,6 +134,57 @@ def test_import_preserves_dangling_native_references(tmp_path: Path):
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
+@pytest.mark.parametrize("keep_rows", [True, False])
+def test_import_and_startup_keep_saved_conversion_cache_and_counter(
+    tmp_path: Path, monkeypatch, keep_rows
+):
+    from fastapi.testclient import TestClient
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.db.native_schema import SCHEMA
+    from grocy.main import create_app
+
+    source, target = tmp_path / "source.db", tmp_path / "next.db"
+    source_database(source)
+    with sqlite3.connect(source) as db:
+        db.executescript(SCHEMA["ddl"]["cache__quantity_unit_conversions_resolved"])
+        db.execute("INSERT INTO quantity_units(id,name,active) VALUES (2,'Renamed box',0)")
+        db.executescript("""
+            INSERT INTO cache__quantity_unit_conversions_resolved
+                (id,product_id,from_qu_id,from_qu_name,from_qu_name_plural,to_qu_id,
+                 to_qu_name,to_qu_name_plural,factor,path) VALUES
+                (31,NULL,2,'Saved box','Saved boxes',1,'Saved piece','Saved pieces',
+                 '0.125','/2/1/'),
+                (32,1,1,'Saved piece','Saved pieces',2,'Saved box','Saved boxes',
+                 '0.123456789123456','/1/2/');
+            UPDATE sqlite_sequence SET seq=9000
+                WHERE name='cache__quantity_unit_conversions_resolved';
+        """)
+        if not keep_rows:
+            db.execute("DELETE FROM cache__quantity_unit_conversions_resolved")
+        saved = db.execute("SELECT * FROM cache__quantity_unit_conversions_resolved").fetchall()
+    original = source.read_bytes()
+    result = import_grocy_sqlite(source, target)
+    assert source.read_bytes() == original
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{target}")
+    monkeypatch.setenv("GROCY_SEED_DEMO_DATA", "false")
+    monkeypatch.setenv("GROCY_DISABLE_AUTH", "true")
+    clear_settings_cache()
+    with TestClient(create_app()) as app:
+        response = app.get("/api/objects/products/1")
+        assert response.status_code == 200, response.text
+        assert response.json()["name"] == "Milk"
+    with sqlite3.connect(target) as db:
+        assert (
+            db.execute("SELECT * FROM cache__quantity_unit_conversions_resolved").fetchall()
+            == saved
+        )
+        assert db.execute(
+            "SELECT seq FROM sqlite_sequence WHERE name='cache__quantity_unit_conversions_resolved'"
+        ).fetchone() == (9000,)
+    assert result["copied_tables"]["cache__quantity_unit_conversions_resolved"] == len(saved)
+
+
 def test_disabled_location_tracking_restores_default_for_existing_user(tmp_path: Path, monkeypatch):
     from fastapi.testclient import TestClient
 
