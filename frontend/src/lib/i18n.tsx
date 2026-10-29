@@ -9,6 +9,7 @@ const I18nContext = createContext({
   locale: "en",
   direction: "ltr",
   languages: new Array<string>(),
+  ready: true,
 });
 
 export function useI18n() {
@@ -35,8 +36,9 @@ export function LocalizationProvider({ children }: { children: ReactNode }) {
       locale: data?.locale ?? "en",
       direction: data?.direction ?? "ltr",
       languages: data?.languages ?? [],
+      ready: !query.isPending && !query.isPlaceholderData,
     }),
-    [data],
+    [data, query.isPending, query.isPlaceholderData],
   );
 
   useEffect(() => {

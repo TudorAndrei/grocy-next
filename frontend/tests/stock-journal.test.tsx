@@ -27,7 +27,7 @@ beforeEach(() => {
 
 function mount(
   path: string,
-  fail = false,
+  fail: boolean | "reload" = false,
   stock = true,
   savedSettings: UserSettings = {},
   failTableWrites = false,
@@ -303,7 +303,9 @@ function mount(
         ]);
 
       if (path === "/api/v2/stock/journal") {
-        if (fail && ++reads === 1)
+        reads++;
+
+        if ((fail === true && reads === 1) || (fail === "reload" && reads === 2))
           return Response.json({ error_message: "Journal unavailable" }, { status: 503 });
 
         return Response.json({
@@ -390,7 +392,7 @@ function mount(
         writes.push(`${init.method} ${path}`);
 
         if (path === "/api/stock/bookings/103/undo") {
-          if (fail && ++undos === 1)
+          if (fail === true && ++undos === 1)
             return Response.json({ error_message: "Undo failed" }, { status: 500 });
 
           for (const row of rows.filter((row) => row.correlation_id === "move")) {
@@ -407,7 +409,10 @@ function mount(
   );
   supportProductOptions();
   supportDescriptionEditors();
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+  });
 
   const router = createRouter({
     routeTree,
@@ -623,6 +628,16 @@ test("product journal keeps the draft through read retry, filters, linked undo, 
   expect(document.activeElement).toBe(trigger);
   expect(name.value).toBe("Coffee draft");
   expect(router.state.location.href).toBe("/product/7");
+  await user.click(trigger);
+  const reopened = await screen.findByRole("dialog", { name: "Stock journal" });
+  const fresh = within(reopened);
+  await fresh.findByText("Restock");
+  await user.type(fresh.getByRole("searchbox", { name: "Search journal" }), "text-strike-through");
+  expect(fresh.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(2);
+  fireEvent(reopened, new Event("cancel", { cancelable: true }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(name.value).toBe("Coffee draft");
+  expect(document.activeElement).toBe(trigger);
 });
 
 test.each(["/journal", "/stockjournal"])(
@@ -745,18 +760,95 @@ test("journal searches native cell markup and relative date labels", async () =>
       screen.getByRole<HTMLButtonElement>("button", { name: "Undo transaction 103" }).disabled,
     ).toBe(true),
   );
+
+  const changed = within(
+    screen.getByRole("button", { name: "Undo transaction 103" }).closest("tr")!,
+  );
+
+  const linked = within(
+    screen.getByRole("button", { name: "Undo transaction 104" }).closest("tr")!,
+  );
+
+  expect(changed.getByText("2026-10-28 14:00:00")).toBeTruthy();
+  expect(changed.getByText("Today")).toBeTruthy();
+  expect(linked.getByText("2026-10-28 14:00:00")).toBeTruthy();
+  expect(linked.queryByText("Today")).toBeNull();
   await user.type(search, "text-strike-through");
-  expect(screen.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(2);
+  expect(screen.queryByRole("button", { name: /^Undo transaction/ })).toBeNull();
   await user.clear(search);
   await user.click(screen.getByRole("button", { name: "Table options" }));
   const dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
   await user.click(dialog.getByRole("radio", { name: "Product" }));
   await user.click(dialog.getByRole("button", { name: "OK" }));
   expect(screen.getByRole("button", { name: "Coffee" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Coffee Undone on/ })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
   const undone = screen.getByRole("button", { name: /Coffee Undone on 2026-10-28 13:00:00 Today/ });
   await user.click(undone);
   expect(screen.queryByRole("button", { name: "Undo transaction 103" })).toBeNull();
   expect(screen.getByRole("button", { name: "Undo transaction 101" })).toBeTruthy();
+});
+
+test("journal retains cached search and groups through Undo until table Reset reloads data", async () => {
+  mount("/stockjournal?product=7&embedded=");
+  const user = userEvent.setup();
+  await screen.findByText("Restock");
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  let dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(dialog.getByRole("radio", { name: "Product" }));
+  await user.click(dialog.getByRole("button", { name: "OK" }));
+  await user.click(screen.getByRole("button", { name: "Undo transaction 103" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Undo transaction 101" }).disabled,
+    ).toBe(false),
+  );
+  const search = screen.getByRole("searchbox", { name: "Search journal" });
+  await user.type(search, "text-strike-through");
+  expect(screen.queryByRole("button", { name: /^Undo transaction/ })).toBeNull();
+  await user.clear(search);
+  expect(screen.getByRole("button", { name: "Coffee" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Coffee Undone on/ })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Product" }));
+  expect(screen.getByRole("button", { name: "Coffee" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(dialog.getByRole("button", { name: "Reset" }));
+  await user.click(
+    within(
+      await screen.findByRole("dialog", {
+        name: "Are you sure you want to reset the table options?",
+      }),
+    ).getByRole("button", { name: "Yes" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await screen.findByText("Restock");
+  await user.type(screen.getByRole("searchbox", { name: "Search journal" }), "text-strike-through");
+  await waitFor(() =>
+    expect(screen.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(2),
+  );
+});
+
+test("a failed journal reload keeps the display and Retry replaces the cached values", async () => {
+  mount("/stockjournal?product=7&embedded=", "reload");
+  const user = userEvent.setup();
+  await screen.findByText("Restock");
+  await user.click(screen.getByRole("button", { name: "Undo transaction 103" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Undo transaction 101" }).disabled,
+    ).toBe(false),
+  );
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  await screen.findByText("Journal unavailable");
+  expect(screen.getByText("Restock")).toBeTruthy();
+  expect(
+    screen.getByRole<HTMLButtonElement>("button", { name: "Undo transaction 103" }).disabled,
+  ).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Retry journal" }));
+  await waitFor(() => expect(screen.queryByText("Journal unavailable")).toBeNull());
+  await user.type(screen.getByRole("searchbox", { name: "Search journal" }), "text-strike-through");
+  expect(screen.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(2);
 });
 
 test("summary includes native number markup in smart search", async () => {

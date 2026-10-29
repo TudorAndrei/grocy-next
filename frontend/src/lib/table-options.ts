@@ -271,6 +271,10 @@ export function useTableOptions(
     sort,
     sorters,
     resetVersion,
+    reload: () => {
+      setCollapsed([]);
+      setResetVersion((current) => current + 1);
+    },
     ready: settings.isSuccess,
     pending: save.isPending || reset.isPending,
     error: settings.error || save.error || reset.error,

@@ -25,6 +25,9 @@ import {
   type NativeTableRow,
 } from "@/lib/native-table-cell";
 import { StockTableDate } from "./StockTableDate";
+import { useTableSnapshot } from "@/lib/table-snapshot";
+import { localTimestampText } from "@/lib/header-clock";
+import { useNotify } from "./Toaster";
 import { matchesTableSearch } from "@/lib/table-search";
 import { useTableOrder } from "@/lib/table-order";
 import { useTableOptions, type TableColumn } from "@/lib/table-options";
@@ -34,6 +37,14 @@ import {
   StockTableRows,
   StockTableStatus,
 } from "./StockTableOptions";
+
+type JournalUndo = { timestamp: string; at: number; contextual: boolean };
+
+async function undoBooking(identity: number) {
+  await api.action(`/api/stock/bookings/${identity}/undo`);
+
+  return Date.now();
+}
 
 const ranges = [
   ["1", "1 month"],
@@ -50,20 +61,29 @@ export function StockJournal({
   search: JournalSearch;
   onChange: (search: JournalSearch) => void;
 }) {
-  const { t, pluralIndex } = useI18n();
+  const { t, pluralIndex, ready: translationsReady } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
+  const notify = useNotify();
   const id = useId();
   const [text, setText] = useState("");
   const [transaction, setTransaction] = useState("");
   const [location, setLocation] = useState("");
   const [user, setUser] = useState("");
+  const [reloading, setReloading] = useState(false);
+
+  const [undoDisplay, setUndoDisplay] = useState<{
+    version: number;
+    rows: Map<number, JournalUndo>;
+  }>({ version: -1, rows: new Map() });
 
   const data = useQuery({
     queryKey: ["stock", "journal-view", search.product, search.months],
     queryFn: ({ signal }) => api.getStockJournal(search, signal),
     retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   });
 
   const definitions = useQuery(userfieldsQuery);
@@ -74,8 +94,37 @@ export function StockJournal({
     ) ?? [];
 
   const undo = useMutation({
-    mutationFn: (identity: number) => api.action(`/api/stock/bookings/${identity}/undo`),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["stock"] }),
+    mutationFn: undoBooking,
+    onSuccess: async (at, identity) => {
+      const view = initial?.value;
+      const clicked = view?.rows.find((row) => row.id === identity);
+
+      if (clicked && view) {
+        const timestamp = localTimestampText(new Date(at), t("moment_locale"));
+        setUndoDisplay((current) => {
+          const rows =
+            current.version === options.resetVersion
+              ? new Map(current.rows)
+              : new Map<number, JournalUndo>();
+
+          for (const row of view.rows) {
+            if (
+              row.id === identity ||
+              (clicked.correlation_id && row.correlation_id === clicked.correlation_id)
+            ) {
+              rows.set(row.id, { timestamp, at, contextual: row.id === identity });
+            }
+          }
+
+          return { version: options.resetVersion, rows };
+        });
+      }
+
+      notify({ message: t("Booking successfully undone") });
+      await client.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "stock" && query.queryKey[1] !== "journal-view",
+      });
+    },
   });
 
   const unit = (row: JournalRow) =>
@@ -125,11 +174,51 @@ export function StockJournal({
 
   const sort = options.sort;
 
-  const [openedAt] = useState(() => Date.now());
-  const now = new Date(Math.max(openedAt, data.dataUpdatedAt));
+  const initial = useTableSnapshot(
+    data.data,
+    data.isSuccess &&
+      !data.isFetching &&
+      definitions.isSuccess &&
+      options.ready &&
+      translationsReady &&
+      !reloading,
+    options.resetVersion,
+    data.dataUpdatedAt,
+  );
+
+  const now = new Date(initial?.at ?? 0);
+
+  const reload = async () => {
+    setReloading(true);
+
+    try {
+      const result = await data.refetch();
+
+      if (result.isSuccess) options.reload();
+    } finally {
+      setReloading(false);
+    }
+  };
+
+  const changed = (row: JournalRow) =>
+    undoDisplay.version === options.resetVersion ? undoDisplay.rows.get(row.id) : undefined;
+
+  const isUndone = (row: JournalRow) => !!row.undone || !!changed(row);
+
+  const undoDate = (row: JournalRow) => {
+    const update = changed(row);
+
+    if (!update) return dates.get(row)!.undone;
+
+    const value = tableDate(update.timestamp, new Date(update.at), t("moment_locale"), t, {
+      plain: true,
+    });
+
+    return update.contextual ? value : { ...value, relative: "" };
+  };
 
   const dates = new Map(
-    (data.data?.rows ?? []).map((row) => [
+    (initial?.value.rows ?? []).map((row) => [
       row,
       {
         transaction: tableDate(row.row_created_timestamp, now, t("moment_locale"), t, {
@@ -141,7 +230,7 @@ export function StockJournal({
   );
 
   const cells = new Map(
-    (data.data?.rows ?? []).map((row) => {
+    (initial?.value.rows ?? []).map((row) => {
       const context = dates.get(row)!;
 
       const product =
@@ -180,16 +269,20 @@ export function StockJournal({
     cells.get(row)?.[key] ?? nativeTableCell("");
 
   const ordered = useTableOrder(
-    (data.data?.rows ?? []).map((row) => ({ key: String(row.id), row, cells: cells.get(row)! })),
+    (initial?.value.rows ?? []).map((row) => ({
+      key: String(row.id),
+      row,
+      cells: cells.get(row)!,
+    })),
     options,
-    data.isSuccess && definitions.isSuccess,
+    !!initial,
   );
 
   const rows = (() => {
     const locationName =
-      data.data?.locations.find((item) => String(item.id) === location)?.name ?? "";
+      initial?.value.locations.find((item) => String(item.id) === location)?.name ?? "";
 
-    const userName = data.data?.users.find((item) => String(item.id) === user)?.name ?? "";
+    const userName = initial?.value.users.find((item) => String(item.id) === user)?.name ?? "";
 
     return ordered.filter((row) => {
       const content = Object.values(cells.get(row) ?? {})
@@ -244,10 +337,10 @@ export function StockJournal({
             >
               <option value="">{t("All")}</option>
               {search.product !== undefined &&
-              !data.data?.products.some((item) => String(item.id) === search.product) ? (
+              !initial?.value.products.some((item) => String(item.id) === search.product) ? (
                 <option value={search.product} hidden />
               ) : null}
-              {data.data?.products.map((item) => (
+              {initial?.value.products.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -259,7 +352,7 @@ export function StockJournal({
           <span>{t("Transaction type")}</span>
           <select value={transaction} onChange={(event) => setTransaction(event.target.value)}>
             <option value="">{t("All")}</option>
-            {data.data?.transaction_types.map((value) => (
+            {initial?.value.transaction_types.map((value) => (
               <option key={value} value={value}>
                 {t(value)}
               </option>
@@ -271,7 +364,7 @@ export function StockJournal({
             <span>{t("Location")}</span>
             <select value={location} onChange={(event) => setLocation(event.target.value)}>
               <option value="">{t("All")}</option>
-              {data.data?.locations.map((item) => (
+              {initial?.value.locations.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -283,7 +376,7 @@ export function StockJournal({
           <span>{t("Done by")}</span>
           <select value={user} onChange={(event) => setUser(event.target.value)}>
             <option value="">{t("All")}</option>
-            {data.data?.users.map((item) => (
+            {initial?.value.users.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
@@ -314,11 +407,16 @@ export function StockJournal({
             setTransaction("");
             setLocation("");
             setUser("");
-            onChange({
+
+            const next = {
               ...search,
               months: undefined,
               product: search.embedded === undefined ? undefined : search.product,
-            });
+            };
+
+            onChange(next);
+
+            if (next.product === search.product && next.months === search.months) void reload();
           }}
         >
           {t("Clear filter")}
@@ -331,16 +429,16 @@ export function StockJournal({
           type="button"
           className="btn"
           onClick={() => {
-            void Promise.all([data.refetch(), definitions.refetch()]);
+            void Promise.all([reload(), definitions.refetch()]);
           }}
         >
           {t("Retry journal")}
         </button>
       ) : null}
-      {data.isPending || definitions.isPending ? (
+      {!initial && !data.error && !definitions.error ? (
         <LoadingBlock label={t("Loading journal…")} />
       ) : null}
-      {data.isSuccess && definitions.isSuccess && options.ready ? (
+      {initial ? (
         <>
           <p className="toolbar-note" role="status">
             {t("%s rows", String(rows.length))}
@@ -364,6 +462,7 @@ export function StockJournal({
                           setTransaction("");
                           setLocation("");
                           setUser("");
+                          void reload();
                         }}
                       />
                     </th>
@@ -408,14 +507,14 @@ export function StockJournal({
                 })}
               >
                 {rows.map((row) => (
-                  <tr key={row.id} data-undone={row.undone ? true : undefined}>
+                  <tr key={row.id} data-undone={isUndone(row) ? true : undefined}>
                     <StockTableCells options={options}>
                       <td>
                         <div className="row-actions">
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm"
-                            disabled={undo.isPending || !!row.undone}
+                            disabled={undo.isPending || isUndone(row)}
                             aria-label={t("Undo transaction %s", String(row.id))}
                             onClick={() => undo.mutate(row.id)}
                           >
@@ -434,11 +533,11 @@ export function StockJournal({
                           to="/products/$productId"
                           params={{ productId: String(row.product_id) }}
                         >
-                          {row.undone ? <s>{row.product_name}</s> : row.product_name}
+                          {isUndone(row) ? <s>{row.product_name}</s> : row.product_name}
                         </Link>
-                        {row.undone ? (
+                        {isUndone(row) ? (
                           <small>
-                            {t("Undone on")} <StockTableDate value={dates.get(row)!.undone} />
+                            {t("Undone on")} <StockTableDate value={undoDate(row)} />
                           </small>
                         ) : null}
                       </th>

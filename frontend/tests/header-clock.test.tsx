@@ -2,9 +2,10 @@ import { StrictMode } from "react";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { HeaderClock } from "@/components/HeaderClock";
-import { contextualDateText, headerClockText } from "@/lib/header-clock";
+import { contextualDateText, headerClockText, localTimestampText } from "@/lib/header-clock";
 import legacy from "./fixtures/legacy-header-clock.json";
 import stockDates from "./fixtures/legacy-stock-dates.json";
+import journalClock from "./fixtures/legacy-journal-clock.json";
 
 afterEach(() => vi.useRealTimers());
 
@@ -21,6 +22,18 @@ test.each(stockDates.cases)(
     expect(contextualDateText(timestamp, new Date(stockDates.now), locale, (text) => text)).toEqual(
       { date, relative },
     );
+  },
+);
+
+test.each(journalClock.cases)(
+  "legacy journal Undo clock: $locale",
+  ({ locale, timestamp, relative }) => {
+    const now = new Date(journalClock.at);
+    expect(localTimestampText(now, locale)).toBe(timestamp);
+    expect(contextualDateText(timestamp, now, locale, (text) => text)).toEqual({
+      date: timestamp,
+      relative,
+    });
   },
 );
 

@@ -27,7 +27,7 @@ export function contextualDateText(
 
   if (source.length < 10) return { date: source, relative: "" };
   const selected = moment.locales().includes(locale) ? locale : "en";
-  const value = moment(source).locale(selected);
+  const value = moment(source, undefined, selected);
 
   if (!value.isValid()) return { date: source, relative: "" };
 
@@ -41,4 +41,10 @@ export function contextualDateText(
       : legacyPunctuation(value.from(moment(now)), selected);
 
   return { date: source, relative };
+}
+
+export function localTimestampText(date: Date, locale: string) {
+  const selected = moment.locales().includes(locale) ? locale : "en";
+
+  return moment(date).locale(selected).format("YYYY-MM-DD HH:mm:ss");
 }
