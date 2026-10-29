@@ -159,7 +159,6 @@ class StockService:
                 purchased_date=purchased_date or date.today(),
                 price=price,
                 location_id=entry.location_id,
-                stock_row_id=entry.id,
                 shopping_location_id=entry.shopping_location_id,
                 note=note,
                 transaction_id=transaction_id,
@@ -270,7 +269,7 @@ class StockService:
                 used_date=date.today(),
                 spoiled=1 if spoiled else 0,
                 location_id=entry.location_id,
-                stock_row_id=entry.id,
+                opened_date=entry.opened_date,
                 transaction_id=transaction_id,
             )
             if entry.amount == 0:
@@ -385,7 +384,7 @@ class StockService:
                 transaction_type="product-opened",
                 stock_id=entry.stock_id,
                 location_id=entry.location_id,
-                stock_row_id=entry.id,
+                opened_date=entry.opened_date,
                 transaction_id=transaction_id,
                 undo_data=json.dumps({"before": before, "split_stock_id": split_stock_id}),
                 best_before_date=before["best_before_date"]
@@ -507,7 +506,6 @@ class StockService:
                 location_id=source.id,
                 shopping_location_id=entry.shopping_location_id,
                 note=entry.note,
-                stock_row_id=entry.id,
                 transaction_id=transaction_id,
                 correlation_id=correlation_id,
                 undo_data=json.dumps({"before": before}),
@@ -546,7 +544,6 @@ class StockService:
                 location_id=target.id,
                 shopping_location_id=destination.shopping_location_id,
                 note=destination.note,
-                stock_row_id=destination.id,
                 transaction_id=transaction_id,
                 correlation_id=correlation_id,
             )
@@ -629,7 +626,7 @@ class StockService:
                 stock_id=entry.stock_id,
                 best_before_date=entry.best_before_date,
                 location_id=entry.location_id,
-                stock_row_id=entry.id,
+                opened_date=entry.opened_date,
                 transaction_id=transaction_id,
                 purchased_date=entry.purchased_date,
                 price=entry.price,
@@ -1478,7 +1475,6 @@ class StockService:
             for log in logs:
                 if log.stock_id in old_stock_ids:
                     log.stock_id = stock_id
-                    log.stock_row_id = keep.id
                 if not log.undo_data:
                     continue
                 data = json.loads(log.undo_data)
@@ -1543,10 +1539,6 @@ class StockService:
         correlation_id: str | None = None,
         opened_date: date | datetime | None = None,
     ) -> StockLog:
-        if opened_date is None and stock_row_id is not None:
-            entry = await self.session.get(StockEntry, stock_row_id)
-            if entry is not None:
-                opened_date = entry.opened_date
         log = StockLog(
             product_id=product_id,
             amount=amount,

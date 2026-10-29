@@ -591,6 +591,16 @@ The 1440-pixel and 390-pixel views retained the existing layout. Both phone acti
 
 Two further differences were found. Multiple initial location callbacks can append the native stock-code choices more than once and change the amount limit and checkbox state. Python does not yet reproduce that initial sequence. Open receipts also contain a stock row ID in Python where the native receipt has null. Further response-order cases, scan sounds, recipe text, embedded host behavior, the purchase gaps, and inventory remain open. Full legacy compliance remains incomplete.
 
+### Stock booking row references
+
+New purchase, Open, transfer, consumption, and inventory bookings now leave `stock_row_id` null. Grocy 4.5.0 sets this field only for stock edit records. Open and consumption records receive their opened date directly from the stock entry. Stock edit records keep the original row reference when matching stock entries are combined. Combining entries still updates their stock IDs and the associated booking stock IDs.
+
+The public Open comparison checks complete booking records for partial and full opening, with and without transfer on Open. It checks the original expiry in the Open record, the shorter expiry in stock and transfer records, saved metadata, correlated transfer records, booking reads, object reads, and transaction Undo. Existing inventory tests now check their row references. The stock edit tests check Undo and retained references after entries are combined. These are current API and saved-record contracts.
+
+All four Open cases and both inventory cases failed on Python before the repair and passed on PHP. The stock edit reference case also failed with the old entry-combination code. The final selection passed all 38 comparisons with the local Python app and PHP. It also passed all 38 comparisons with the Linux Python release and PHP. All 285 integration tests passed, with five optional tests skipped. Ruff lint and formatting checks and the Python type check passed. The release matched all 177 Python source files. PHP was disabled and its executable was absent. All 62 stock rows and 129 booking rows remained unchanged after restart. The database integrity check passed.
+
+The Open receipt difference recorded above is corrected. Initial consume location callbacks, further response-order cases, scan sounds, recipe text, embedded host behavior, purchase gaps, and inventory page behavior still need work. Full legacy compliance remains incomplete. Python remains the release runtime. PHP remains only a test reference.
+
 Run the normal tests without PHP:
 
 ```bash

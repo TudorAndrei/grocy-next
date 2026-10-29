@@ -1738,6 +1738,116 @@ def test_open_child_stock_follows_grocy_entry_conversion(api, catalog, factor, o
     assert sum(row["amount"] for row in response.json()) == opened
 
 
+@pytest.mark.parametrize("amount", [2, 5])
+@pytest.mark.parametrize("move_on_open", [0, 1])
+def test_open_booking_records_preserve_metadata_and_undo(api, catalog, amount, move_on_open):
+    product, _, _, location = catalog
+    target = create(api, "locations", name=uuid4().hex)
+    store = create(api, "shopping_locations", name=uuid4().hex)
+    today = datetime.now().date()
+    due = (today + timedelta(days=40)).isoformat()
+    opened_due = (today + timedelta(days=2)).isoformat()
+    assert (
+        api.put(
+            f"/api/objects/products/{product}",
+            json={
+                "default_best_before_days_after_open": 2,
+                "move_on_open": move_on_open,
+                "default_consume_location_id": target,
+            },
+        ).status_code
+        == 204
+    )
+    base = f"/api/stock/products/{product}"
+    purchase = api.post(
+        base + "/add",
+        json={
+            "amount": 5,
+            "best_before_date": due,
+            "purchased_date": "2026-01-02",
+            "price": 2.5,
+            "shopping_location_id": store,
+            "note": "Sealed batch",
+        },
+    )
+    assert purchase.status_code == 200, purchase.text
+    stock_id = api.get(base + "/entries").json()[0]["stock_id"]
+    response = api.post(base + "/open", json={"amount": amount, "stock_entry_id": stock_id})
+    assert response.status_code == 200, response.text
+    bookings = response.json()
+    expected_rows = [("product-opened", amount, location, due)]
+    if move_on_open:
+        expected_rows += [
+            ("transfer_from", -amount, location, opened_due),
+            ("transfer_to", amount, target, opened_due),
+        ]
+    assert len(bookings) == len(expected_rows)
+    transaction_id = bookings[0]["transaction_id"]
+    assert isinstance(transaction_id, str) and transaction_id
+    for booking, (kind, booked, place, expiry) in zip(bookings, expected_rows, strict=True):
+        booking_id = booking["id"]
+        assert isinstance(booking_id, int) and booking_id > 0
+        assert re.fullmatch(
+            r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", booking["row_created_timestamp"]
+        )
+        correlation = booking["correlation_id"]
+        if kind == "product-opened":
+            assert correlation is None
+        else:
+            assert isinstance(correlation, str) and correlation
+        assert {
+            key: value
+            for key, value in booking.items()
+            if key not in {"id", "row_created_timestamp", "correlation_id"}
+        } == {
+            "product_id": product,
+            "amount": booked,
+            "best_before_date": expiry,
+            "purchased_date": "2026-01-02",
+            "used_date": None,
+            "spoiled": 0,
+            "stock_id": stock_id,
+            "transaction_type": kind,
+            "price": 2.5,
+            "undone": 0,
+            "undone_timestamp": None,
+            "opened_date": today.isoformat(),
+            "location_id": place,
+            "transaction_id": transaction_id,
+            "stock_row_id": None,
+            "shopping_location_id": store,
+            "user_id": 1,
+            "note": "Sealed batch",
+            "recipe_id": None,
+        }
+        stored = api.get(f"/api/objects/stock_log/{booking_id}").json()
+        stored.pop("userfields", None)
+        assert stored == booking
+        assert api.get(f"/api/stock/bookings/{booking_id}").json() == booking
+    if move_on_open:
+        assert bookings[1]["correlation_id"] == bookings[2]["correlation_id"]
+    assert purchase.json()[0]["stock_row_id"] is None
+    entries = api.get(base + "/entries").json()
+    assert sum(row["amount"] for row in entries) == 5
+    assert sum(row["amount"] for row in entries if row["open"]) == amount
+    opened = next(row for row in entries if row["open"])
+    assert (opened["stock_id"], opened["best_before_date"], opened["location_id"]) == (
+        stock_id,
+        opened_due,
+        target if move_on_open else location,
+    )
+    assert api.post(f"/api/stock/transactions/{transaction_id}/undo").status_code == 204
+    restored = api.get(base + "/entries").json()
+    assert sum(row["amount"] for row in restored) == 5
+    assert all(row["open"] == 0 and row["opened_date"] is None for row in restored)
+    for booking in bookings:
+        saved = api.get(f"/api/stock/bookings/{booking['id']}").json()
+        assert saved["undone"] == 1
+        assert saved["stock_row_id"] is None
+        assert saved["opened_date"] == today.isoformat()
+        assert saved["undone_timestamp"]
+
+
 @pytest.mark.parametrize(
     "entity,action,log_entity",
     [
@@ -1944,6 +2054,7 @@ def test_inventory_increase_uses_last_price_and_store(api, catalog):
     assert inventory.status_code == 200, inventory.text
     assert inventory.json()[0]["price"] == 3
     assert inventory.json()[0]["shopping_location_id"] == store
+    assert inventory.json()[0]["stock_row_id"] is None
 
 
 def test_stock_entry_label_has_product_details_and_entry(api, catalog):
@@ -2115,10 +2226,9 @@ def test_inventory_counts_all_locations_and_rejects_an_unchanged_count(api, cata
             api.post(base + "/add", json={"amount": amount, "location_id": place}).status_code
             == 200
         )
-    assert (
-        api.post(base + "/inventory", json={"new_amount": 2, "location_id": location}).status_code
-        == 200
-    )
+    inventory = api.post(base + "/inventory", json={"new_amount": 2, "location_id": location})
+    assert inventory.status_code == 200, inventory.text
+    assert all(row["stock_row_id"] is None for row in inventory.json())
     assert api.get(base).json()["stock_amount"] == 2
     assert api.post(base + "/inventory", json={"new_amount": 2}).status_code == 400
 
@@ -2309,11 +2419,35 @@ def test_stock_edit_undo_after_consumption_restores_the_original_amount(api, cat
         json={"amount": 5, "price": 3, "open": False, "purchased_date": entry["purchased_date"]},
     )
     assert edited.status_code == 200, edited.text
+    assert [row["stock_row_id"] for row in edited.json()] == [entry["id"], entry["id"]]
     assert api.post(base + "/consume", json={"amount": 1}).status_code == 200
     undone = api.post(f"/api/stock/bookings/{edited.json()[0]['id']}/undo")
     assert undone.status_code == 204, undone.text
     assert api.get(base).json()["stock_amount"] == 3
     assert api.get(base + "/entries").json()[0]["price"] == 2
+
+
+def test_stock_edit_records_keep_the_original_row_reference_after_compaction(api, catalog):
+    product, _, _, location = catalog
+    base = f"/api/stock/products/{product}"
+    body = {"best_before_date": "2037-02-01", "purchased_date": "2026-01-02"}
+    for amount, price in ((2, 1), (3, 2)):
+        assert (
+            api.post(base + "/add", json={**body, "amount": amount, "price": price}).status_code
+            == 200
+        )
+    entry = next(row for row in api.get(base + "/entries").json() if row["price"] == 1)
+    edited = api.put(
+        f"/api/stock/entry/{entry['id']}",
+        json={**body, "amount": 2, "price": 2, "open": False, "location_id": location},
+    )
+    assert edited.status_code == 200, edited.text
+    remaining = api.get(base + "/entries").json()
+    assert len(remaining) == 1 and remaining[0]["amount"] == 5
+    for booking in edited.json():
+        assert booking["stock_row_id"] == entry["id"]
+        saved = api.get(f"/api/stock/bookings/{booking['id']}").json()
+        assert saved["stock_row_id"] == entry["id"]
 
 
 @pytest.mark.parametrize(
