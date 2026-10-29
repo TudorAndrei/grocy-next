@@ -3,7 +3,7 @@ import { supportDescriptionEditors } from "./fixtures/editor";
 import { z } from "zod";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
@@ -38,6 +38,7 @@ function mount(
     holdBarcode?: boolean;
     productFailure?: boolean;
     prices?: boolean;
+    resolvedPage?: boolean;
   } = {},
 ) {
   writeApiConfig({ baseUrl: "/house", apiKey: "catalog-key" });
@@ -209,6 +210,15 @@ function mount(
 
     if (path === "/api/objects/quantity_units") return Response.json(units);
 
+    if (path === "/api/v2/quantity-unit-conversions/resolved")
+      return Response.json({
+        product: { id: product.id, name: product.name },
+        units: units.flatMap((unit) =>
+          unit.active === 1 ? [{ ...unit, name_plural: null, plural_forms: null }] : [],
+        ),
+        rows: resolved.map((row) => ({ ...row, factor: String(row.factor) })),
+      });
+
     if (path === "/api/objects/userfields") return Response.json(fields);
 
     if (/^\/api\/v2\/products\/(7|8)\/grocycode$/.test(path))
@@ -339,14 +349,20 @@ function mount(
     routeTree,
     history: createMemoryHistory({
       initialEntries: [
-        options.copying ? "/products" : options.creating ? "/product/new" : "/product/7",
+        options.copying
+          ? "/products"
+          : options.creating
+            ? "/product/new"
+            : options.resolvedPage
+              ? "/quantityunitconversionsresolved?product=7"
+              : "/product/7",
       ],
     }),
   });
 
   render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } })}
     >
       <RouterProvider router={router} />
     </QueryClientProvider>,
@@ -358,6 +374,7 @@ function mount(
     products,
     barcodes,
     conversions,
+    resolved,
     writes,
     releaseBarcode: () => releaseBarcode?.(),
   };
@@ -470,7 +487,7 @@ test("barcode edits wait for both independent writes when a custom field fails",
 });
 
 test("product conversions use the stock unit, reject equal units, and save fields after the row", async () => {
-  const { conversions, writes } = mount();
+  const { conversions, writes, resolved: cache } = mount();
   const user = userEvent.setup();
   await user.click(await availableButton("Add conversion"));
 
@@ -502,9 +519,35 @@ test("product conversions use the stock unit, reject equal units, and save field
     "/api/userfields/quantity_unit_conversions/22",
   ]);
   await user.click(screen.getByRole("button", { name: "Show resolved conversions" }));
-  const resolved = within(screen.getByRole("table", { name: "Resolved conversions" }));
-  expect(resolved.getByRole("row", { name: "Crate Box 4" })).toBeTruthy();
-  expect(resolved.queryByRole("button")).toBeNull();
+  const resolved = within(await screen.findByRole("dialog", { name: "QU conversions resolved" }));
+  expect(await resolved.findByRole("row", { name: /Crate Box 4 This means 1 Crate/ })).toBeTruthy();
+  await user.selectOptions(resolved.getByLabelText("Quantity unit"), "2");
+  expect(resolved.getAllByRole("row").length).toBe(4);
+  expect(
+    resolved.getByRole("row", { name: /Box 3 This means 1 Box is the same as 3$/ }),
+  ).toBeTruthy();
+  await user.click(resolved.getByRole("button", { name: "Table options" }));
+  const tableOptions = screen.getByRole("dialog", { name: "Table options" });
+  fireEvent(tableOptions, new Event("cancel", { bubbles: false, cancelable: true }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Table options" })).toBeNull());
+  expect(screen.getByRole("dialog", { name: "QU conversions resolved" })).toBeTruthy();
+  await user.click(resolved.getByRole("button", { name: "Close" }));
+  expect(screen.getByRole("button", { name: "Show resolved conversions" })).toBe(
+    document.activeElement,
+  );
+  cache.find((row) => row.id === 7)!.factor = 9;
+  await user.type(screen.getByLabelText("Name"), " draft");
+  await user.click(screen.getByRole("button", { name: "Show resolved conversions" }));
+  const reopened = within(await screen.findByRole("dialog", { name: "QU conversions resolved" }));
+  expect(await reopened.findByRole("row", { name: /Crate Box 9 This means 1 Crate/ })).toBeTruthy();
+  await user.click(reopened.getByRole("button", { name: "Close" }));
+  expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Coffee draft");
+});
+
+test("resolved conversion bookmarks retain the native numeric product query", async () => {
+  const { router } = mount({ resolvedPage: true });
+  await screen.findByRole("table", { name: "QU conversions resolved" });
+  expect(router.state.location.href).toBe("/quantityunitconversionsresolved?product=7");
 });
 
 test.each([

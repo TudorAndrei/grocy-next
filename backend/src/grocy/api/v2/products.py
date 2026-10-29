@@ -12,6 +12,70 @@ from grocy.db.compatibility_views import configure_compatibility_queries
 router = APIRouter(tags=["products"])
 
 
+class ResolvedUnit(BaseModel):
+    id: int
+    name: str | None
+    name_plural: str | None
+    plural_forms: str | None
+
+
+class ResolvedConversion(BaseModel):
+    id: int
+    from_qu_id: int | None
+    to_qu_id: int | None
+    factor: str | None
+
+
+class ResolvedProduct(BaseModel):
+    id: int
+    name: str | None
+
+
+class ResolvedConversions(BaseModel):
+    product: ResolvedProduct | None
+    units: list[ResolvedUnit]
+    rows: list[ResolvedConversion]
+
+
+@router.get("/quantity-unit-conversions/resolved")
+async def resolved_conversions(
+    _actor: AuthenticatedActor, session: DbSession, product: str | None = None
+) -> ResolvedConversions:
+    selected = None
+    if product is not None:
+        row = (
+            (
+                await session.execute(
+                    text("SELECT id,name FROM products WHERE id=:id"), {"id": product}
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is not None:
+            selected = ResolvedProduct(**row)
+    # The native page falls back to the global cache when the product lookup is empty.
+    where = "product_id=:id" if selected is not None else "product_id IS NULL"
+    rows = await session.execute(
+        text(
+            "SELECT id,from_qu_id,to_qu_id,factor "
+            f"FROM cache__quantity_unit_conversions_resolved WHERE {where}"
+        ),
+        {"id": selected.id} if selected is not None else {},
+    )
+    units = await session.execute(
+        text(
+            "SELECT id,name,name_plural,plural_forms FROM quantity_units "
+            "WHERE active=1 ORDER BY name COLLATE NOCASE"
+        )
+    )
+    return ResolvedConversions(
+        product=selected,
+        rows=[ResolvedConversion(**row) for row in rows.mappings()],
+        units=[ResolvedUnit(**row) for row in units.mappings()],
+    )
+
+
 class ProductFormConversion(BaseModel):
     from_qu_id: int
     to_qu_id: int

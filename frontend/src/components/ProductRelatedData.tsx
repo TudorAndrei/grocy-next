@@ -14,6 +14,7 @@ import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
+import { ResolvedConversionsDialog } from "./ResolvedConversions";
 
 type Relation = "product_barcodes" | "quantity_unit_conversions";
 
@@ -46,10 +47,9 @@ export function ProductRelatedData({
           `/api/objects/${entity}?${new URLSearchParams({ "query[]": `product_id=${product.id}` })}`,
         );
 
-      const [barcodes, conversions, resolved, units, stores] = await Promise.all([
+      const [barcodes, conversions, units, stores] = await Promise.all([
         features.enabled("STOCK") ? scoped("product_barcodes") : [],
         scoped("quantity_unit_conversions"),
-        scoped("quantity_unit_conversions_resolved"),
         api.objects("quantity_units"),
         features.enabled("STOCK_PRICE_TRACKING") ? api.objects("shopping_locations") : [],
       ]);
@@ -57,7 +57,6 @@ export function ProductRelatedData({
       return {
         barcodes: barcodes.sort((a, b) => String(a.barcode).localeCompare(String(b.barcode))),
         conversions,
-        resolved,
         units,
         stores,
       };
@@ -230,10 +229,10 @@ export function ProductRelatedData({
             <button
               type="button"
               className="btn btn-ghost"
-              aria-expanded={resolved}
-              onClick={() => setResolved(!resolved)}
+              aria-haspopup="dialog"
+              onClick={() => setResolved(true)}
             >
-              {t(resolved ? "Hide resolved conversions" : "Show resolved conversions")}
+              {t("Show resolved conversions")}
             </button>
           </div>
         </div>
@@ -300,30 +299,10 @@ export function ProductRelatedData({
         {!conversionRows.length ? (
           <p className="empty-state">{t("No product conversions yet.")}</p>
         ) : null}
-        {resolved ? (
-          <div className="table-scroll" tabIndex={0}>
-            <table className="stock-table">
-              <caption>{t("Resolved conversions")}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t("From unit")}</th>
-                  <th scope="col">{t("To unit")}</th>
-                  <th scope="col">{t("Factor")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.data.resolved.map((row, index) => (
-                  <tr key={index}>
-                    <td>{unitName(row.from_qu_id)}</td>
-                    <td>{unitName(row.to_qu_id)}</td>
-                    <td>{preferences.formatAmount(Number(row.factor))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
       </section>
+      {resolved ? (
+        <ResolvedConversionsDialog product={product.id} onClose={() => setResolved(false)} />
+      ) : null}
       {action ? (
         action.remove ? (
           <DeleteRelation

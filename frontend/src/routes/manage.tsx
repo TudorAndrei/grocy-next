@@ -5,6 +5,7 @@ import { EntityManager } from "@/components/EntityManager";
 import { AccessManager } from "@/components/AccessManager";
 import { entities } from "@/lib/entities";
 import { useFeatures } from "@/lib/features";
+import { ResolvedConversionsDialog } from "@/components/ResolvedConversions";
 
 export const Route = createFileRoute("/manage")({ component: ManagePage });
 
@@ -12,6 +13,7 @@ function ManagePage() {
   const { t: tr } = useI18n();
 
   const [selection, setEntity] = useState("locations");
+  const [resolved, setResolved] = useState(false);
   const features = useFeatures();
 
   const choices = [
@@ -63,7 +65,13 @@ function ManagePage() {
           <option value="access">{tr("Users and API keys")}</option>
         </select>
       </div>
+      {entity === "quantity_units" || entity === "quantity_unit_conversions" ? (
+        <button type="button" className="btn" onClick={() => setResolved(true)}>
+          {tr("Show resolved conversions")}
+        </button>
+      ) : null}
       {entity === "access" ? <AccessManager /> : <EntityManager key={entity} entity={entity} />}
+      {resolved ? <ResolvedConversionsDialog onClose={() => setResolved(false)} /> : null}
     </>
   );
 }
