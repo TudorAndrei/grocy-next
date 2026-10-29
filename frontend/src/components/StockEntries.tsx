@@ -18,7 +18,6 @@ import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
 import { StockEntryDialog } from "./StockEntryEditor";
 import {
-  compareNativeCells,
   nativeNumberCell,
   nativeTableCell,
   tableDate,
@@ -30,6 +29,7 @@ import {
 } from "@/lib/native-table-cell";
 import { StockTableDate } from "./StockTableDate";
 import { matchesTableSearch } from "@/lib/table-search";
+import { useTableOrder } from "@/lib/table-order";
 import { useTableOptions, type TableColumn } from "@/lib/table-options";
 import {
   StockTableCells,
@@ -254,21 +254,17 @@ export function StockEntries({
   const value = (row: EntryRow, key: string): NativeTableCell =>
     cells.get(row)?.[key] ?? nativeTableCell("");
 
-  const rows = (data.data?.rows ?? [])
-    .filter(
-      (row) =>
-        (!product || String(row.product_id) === product) &&
-        matchesTableSearch(value(row, "location_name").search, locationName),
-    )
-    .sort((a, b) => {
-      for (const sort of options.sorters) {
-        const order = compareNativeCells(value(a, sort.key), value(b, sort.key));
+  const ordered = useTableOrder(
+    (data.data?.rows ?? []).map((row) => ({ key: String(row.id), row, cells: cells.get(row)! })),
+    options,
+    data.isSuccess && definitions.isSuccess,
+  );
 
-        if (order) return sort.descending ? -order : order;
-      }
-
-      return 0;
-    });
+  const rows = ordered.filter(
+    (row) =>
+      (!product || String(row.product_id) === product) &&
+      matchesTableSearch(value(row, "location_name").search, locationName),
+  );
 
   const columns = tableColumns.flatMap((c) =>
     c.key !== "actions" && c.rendered !== false ? [[c.key, c.label]] : [],

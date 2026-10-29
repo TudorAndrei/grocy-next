@@ -687,3 +687,37 @@ test("entry dates show special labels, Today, and date-only relative time", asyn
   expect(screen.queryByRole("button", { name: "Edit stock entry 51" })).toBeNull();
   expect(screen.getByRole("button", { name: "Edit stock entry 54" })).toBeTruthy();
 });
+
+test("entry order survives product filters and resets with the table layout", async () => {
+  mount("/stockentries?product=8");
+  const user = userEvent.setup();
+  await screen.findByText("Tea batch");
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "7");
+  await screen.findByText("Mint batch");
+  await user.click(screen.getByRole("button", { name: "Product" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "8");
+  await screen.findByText("Tea batch");
+
+  const entries = () =>
+    screen
+      .getAllByRole("button", { name: /^Edit stock entry/ })
+      .map((button) => button.getAttribute("aria-label"));
+
+  expect(entries()).toEqual(["Edit stock entry 57", "Edit stock entry 55", "Edit stock entry 56"]);
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  await user.click(
+    within(await screen.findByRole("dialog", { name: "Table options" })).getByRole("button", {
+      name: "Reset",
+    }),
+  );
+  await user.click(
+    within(
+      await screen.findByRole("dialog", {
+        name: "Are you sure you want to reset the table options?",
+      }),
+    ).getByRole("button", { name: "Yes" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(entries()).toEqual(["Edit stock entry 55", "Edit stock entry 56", "Edit stock entry 57"]);
+});

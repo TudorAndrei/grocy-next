@@ -31,6 +31,7 @@ function mount(
   stock = true,
   savedSettings: UserSettings = {},
   failTableWrites = false,
+  settingsReady?: Promise<void>,
 ) {
   const settings: UserSettings = { stock_decimal_places_amounts: "2", ...savedSettings };
   const tableWrites: { method: string; key: string; value?: string }[] = [];
@@ -221,7 +222,11 @@ function mount(
 
       if (path === "/api/system/config") return Response.json({ FEATURE_FLAG_STOCK: stock });
 
-      if (path === "/api/user/settings") return Response.json(settings);
+      if (path === "/api/user/settings") {
+        await settingsReady;
+
+        return Response.json(settings);
+      }
 
       if (path.startsWith("/api/user/settings/")) {
         const key = decodeURIComponent(path.slice("/api/user/settings/".length));
@@ -766,6 +771,103 @@ test("summary includes native number markup in smart search", async () => {
     "Coffee",
     "Old coffee",
     "Tea",
+  ]);
+});
+
+test("journal sorts hidden rows and retains their prior order until a reload", async () => {
+  const { router } = mount("/stockjournal?product=8&months=9999&embedded=");
+  const user = userEvent.setup();
+  await screen.findByText("Tea stock");
+
+  const bookings = () =>
+    screen
+      .getAllByRole("button", { name: /^Undo transaction/ })
+      .map((button) => button.getAttribute("aria-label"));
+
+  await user.selectOptions(screen.getByRole("combobox", { name: "Done by" }), "1");
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  await user.click(screen.getByRole("button", { name: "Product" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Done by" }), "");
+  expect(bookings()).toEqual([
+    "Undo transaction 108",
+    "Undo transaction 107",
+    "Undo transaction 106",
+  ]);
+  await user.click(screen.getByRole("button", { name: "Product" }));
+  expect(bookings()).toEqual([
+    "Undo transaction 108",
+    "Undo transaction 107",
+    "Undo transaction 106",
+  ]);
+  await router.navigate({
+    to: "/stockjournal",
+    search: { product: "8", months: "12", embedded: "" },
+  });
+  await screen.findByText("Tea stock");
+  expect(bookings()).toEqual([
+    "Undo transaction 106",
+    "Undo transaction 107",
+    "Undo transaction 108",
+  ]);
+});
+
+test("summary keeps distinct user totals in their prior order and resets on URL reload", async () => {
+  const { router } = mount("/stockjournal/summary");
+  const user = userEvent.setup();
+  await screen.findByText("1,000.01 Pieces");
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "7");
+  await user.click(screen.getByRole("button", { name: "Product" }));
+
+  const totals = () =>
+    screen.getAllByRole("rowheader").map((cell) => cell.closest("tr")?.textContent);
+
+  expect(totals()).toEqual(["CoffeeconsumeBob-1 Piece", "CoffeepurchaseAlice1,000.01 Pieces"]);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "");
+  await user.click(screen.getByRole("button", { name: "Product" }));
+  expect(totals()).toEqual([
+    "TeapurchaseAlice4 Pieces",
+    "Old coffeepurchaseAlice2 Pieces",
+    "CoffeeconsumeBob-1 Piece",
+    "CoffeepurchaseAlice1,000.01 Pieces",
+  ]);
+  await router.navigate({ to: "/stockjournal/summary", search: { product_id: "7" } });
+  await screen.findByText("1,000.01 Pieces");
+  expect(totals()).toEqual(["CoffeepurchaseAlice1,000.01 Pieces", "CoffeeconsumeBob-1 Piece"]);
+});
+
+test("summary waits for an imported sort before it records the first row order", async () => {
+  let release = () => {};
+
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  mount(
+    "/stockjournal/summary",
+    false,
+    true,
+    {
+      "datatables_state_stock-journal-summary-table": nativeLayout(
+        5,
+        [0, 1, 2, 3, 4],
+        [],
+        [[3, "asc"]],
+      ),
+    },
+    false,
+    ready,
+  );
+  await screen.findByText("Loading table options…");
+  await waitFor(() => expect(screen.queryByText("Loading journal summary…")).toBeNull());
+  expect(screen.queryByRole("table", { name: "Stock journal summary" })).toBeNull();
+  release();
+  await screen.findByText("1,000.01 Pieces");
+  expect(screen.getAllByRole("rowheader").map((cell) => cell.closest("tr")?.textContent)).toEqual([
+    "CoffeepurchaseAlice1,000.01 Pieces",
+    "TeapurchaseAlice4 Pieces",
+    "Old coffeepurchaseAlice2 Pieces",
+    "CoffeeconsumeBob-1 Piece",
   ]);
 });
 

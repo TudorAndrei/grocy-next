@@ -14,7 +14,6 @@ import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import {
-  compareNativeCells,
   nativeTableCell,
   quantityCell,
   tableDate,
@@ -27,6 +26,7 @@ import {
 } from "@/lib/native-table-cell";
 import { StockTableDate } from "./StockTableDate";
 import { matchesTableSearch } from "@/lib/table-search";
+import { useTableOrder } from "@/lib/table-order";
 import { useTableOptions, type TableColumn } from "@/lib/table-options";
 import {
   StockTableCells,
@@ -179,13 +179,19 @@ export function StockJournal({
   const value = (row: JournalRow, key: string): NativeTableCell =>
     cells.get(row)?.[key] ?? nativeTableCell("");
 
+  const ordered = useTableOrder(
+    (data.data?.rows ?? []).map((row) => ({ key: String(row.id), row, cells: cells.get(row)! })),
+    options,
+    data.isSuccess && definitions.isSuccess,
+  );
+
   const rows = (() => {
     const locationName =
       data.data?.locations.find((item) => String(item.id) === location)?.name ?? "";
 
     const userName = data.data?.users.find((item) => String(item.id) === user)?.name ?? "";
 
-    const filtered = (data.data?.rows ?? []).filter((row) => {
+    return ordered.filter((row) => {
       const content = Object.values(cells.get(row) ?? {})
         .map((cell) => cell.search)
         .join("  ");
@@ -199,16 +205,6 @@ export function StockJournal({
         matchesTableSearch(value(row, "user_display_name").search, userName) &&
         matchesTableSearch(content, text === "all" ? "" : text)
       );
-    });
-
-    return filtered.sort((a, b) => {
-      for (const sort of options.sorters) {
-        const order = compareNativeCells(value(a, sort.key), value(b, sort.key));
-
-        if (order) return sort.descending ? -order : order;
-      }
-
-      return 0;
     });
   })();
 

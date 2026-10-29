@@ -5,7 +5,6 @@ import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { unitLabel } from "@/lib/format";
 import {
-  compareNativeCells,
   nativeTableCell,
   quantityCell,
   tablePlainText,
@@ -16,6 +15,7 @@ import { matchesTableSearch } from "@/lib/table-search";
 import type { SummarySearch } from "@/lib/stock-journal";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
+import { useTableOrder } from "@/lib/table-order";
 import { useTableOptions, type TableColumn } from "@/lib/table-options";
 import {
   StockTableCells,
@@ -91,32 +91,38 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
       amount: quantityCell(quantity, unit),
     };
 
-    return { ...row, transaction_type: transaction, display_amount: `${quantity} ${unit}`, cells };
+    return {
+      ...row,
+      identity: JSON.stringify([row.product_id, row.user_id, row.transaction_type]),
+      transaction_type: transaction,
+      display_amount: `${quantity} ${unit}`,
+      cells,
+    };
   });
 
   const value = (row: (typeof formatted)[number], key: string) =>
     row.cells[key] ?? nativeTableCell("");
 
-  const rows = formatted
-    .filter(
-      (row) =>
-        (!product || (row.product_name ?? "").toLowerCase() === productName.toLowerCase()) &&
-        matchesTableSearch(row.cells.transaction_type!.search, transaction ? t(transaction) : "") &&
-        matchesTableSearch(row.cells.user_display_name!.search, userName) &&
-        matchesTableSearch(
-          columns.map(([key]) => value(row, key).search).join("  "),
-          text === "all" ? "" : text,
-        ),
-    )
-    .sort((left, right) => {
-      for (const order of options.sorters) {
-        const comparison = compareNativeCells(value(left, order.key), value(right, order.key));
+  const ordered = useTableOrder(
+    formatted.map((row) => ({
+      key: row.identity,
+      row,
+      cells: row.cells,
+    })),
+    options,
+    data.isSuccess,
+  );
 
-        if (comparison) return order.descending ? -comparison : comparison;
-      }
-
-      return 0;
-    });
+  const rows = ordered.filter(
+    (row) =>
+      (!product || (row.product_name ?? "").toLowerCase() === productName.toLowerCase()) &&
+      matchesTableSearch(row.cells.transaction_type!.search, transaction ? t(transaction) : "") &&
+      matchesTableSearch(row.cells.user_display_name!.search, userName) &&
+      matchesTableSearch(
+        columns.map(([key]) => value(row, key).search).join("  "),
+        text === "all" ? "" : text,
+      ),
+  );
 
   const clearFilters = () => {
     setText("");
@@ -231,7 +237,7 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
                 })}
               >
                 {rows.map((row) => (
-                  <tr key={`${row.product_id}:${row.user_id}:${row.transaction_type}`}>
+                  <tr key={row.identity}>
                     <StockTableCells options={options}>
                       <td />
                       <th scope="row">{row.product_name}</th>

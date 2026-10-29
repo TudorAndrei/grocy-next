@@ -129,6 +129,7 @@ export function useTableOptions(
   const [draft, setDraft] = useState<{ signature: string; layout: Layout; group?: Group }>();
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const [resetting, setResetting] = useState(false);
+  const [resetVersion, setResetVersion] = useState(0);
 
   const state =
     draft?.signature === signature
@@ -221,6 +222,7 @@ export function useTableOptions(
       save.reset();
       setDraft({ signature, layout: defaults });
       setCollapsed([]);
+      setResetVersion((current) => current + 1);
       onReset();
     },
     onSettled: () => setResetting(false),
@@ -268,6 +270,7 @@ export function useTableOptions(
     groupColumn,
     sort,
     sorters,
+    resetVersion,
     ready: settings.isSuccess,
     pending: save.isPending || reset.isPending,
     error: settings.error || save.error || reset.error,
