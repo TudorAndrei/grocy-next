@@ -167,7 +167,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
         );
 
       const purchaseOptions: PurchaseOptions = {
-        best_before_date: datesEnabled ? bestBefore || null : null,
+        best_before_date: datesEnabled ? bestBeforeValue || null : null,
         price: priceEnabled ? (priceValue === "" ? null : unitPrice) : 0,
         note: note || null,
       };

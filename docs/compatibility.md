@@ -519,6 +519,10 @@ The stock overview now opens the shared transfer dialog from each product row. T
 
 The overview transfer change passed all 379 frontend tests in 43 files. Two routed cases failed before the control was added. The cases now check own stock, permission, feature settings, product-only form selection, Cancel without a write, Save, retained filters, and returned focus. Lint, formatting, all three frontend type checks, and root and `/house` release builds passed. No backend source changed in this batch. Full legacy compliance remains incomplete.
 
+The purchase action now sends the displayed due date even when the user has not edited it. The previous action displayed the default freezer date but sent null. The pinned purchase script sends the date picker value. The existing purchase-details test also expected null, so it did not protect its stated date behavior. Its corrected cases check the request body for an unchanged freezer date, Never due (`2999-12-31`), and an edited date. The first two cases failed before the repair; the edited-date case already passed. The cases retain their amount, price, location, store, purchase date, and note checks.
+
+The purchase date correction passed all 381 frontend tests in 43 files. Lint, formatting, all three frontend type checks, and root and `/house` release builds passed. No backend source changed. Zero-day date defaults, replacement of edited dates after location changes, and the complete legacy purchase, consume, and inventory pages still need work. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash

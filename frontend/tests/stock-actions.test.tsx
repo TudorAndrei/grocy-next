@@ -160,91 +160,101 @@ test.each([true, false])(
   },
 );
 
-test("purchase details keep the selected freezer date and stored amount preferences", async () => {
-  let purchase: Record<string, string | number | null> | null = null;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn<typeof fetch>(async (input, init) => {
-      const path = String(input);
+test.each([
+  { freezerDays: 90, editedDate: undefined, expectedDate: () => isoDay(90) },
+  { freezerDays: -1, editedDate: undefined, expectedDate: () => "2999-12-31" },
+  { freezerDays: 90, editedDate: "2027-03-04", expectedDate: () => "2027-03-04" },
+])(
+  "purchase saves the displayed due date and preferences: %j",
+  async ({ freezerDays, editedDate, expectedDate }) => {
+    let purchase: Record<string, string | number | null> | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(async (input, init) => {
+        const path = String(input);
 
-      if (path === "/api/objects/products") {
-        return Response.json([
-          {
-            id: 1,
-            name: "Milk",
-            qu_id_stock: 1,
-            location_id: 1,
-            min_stock_amount: 1,
-            default_best_before_days: 5,
-            default_best_before_days_after_freezing: 90,
-          },
-        ]);
-      }
+        if (path === "/api/objects/products") {
+          return Response.json([
+            {
+              id: 1,
+              name: "Milk",
+              qu_id_stock: 1,
+              location_id: 1,
+              min_stock_amount: 1,
+              default_best_before_days: 5,
+              default_best_before_days_after_freezing: freezerDays,
+            },
+          ]);
+        }
 
-      if (path === "/api/objects/locations") {
-        return Response.json([
-          { id: 1, name: "Fridge" },
-          { id: 2, name: "Freezer", is_freezer: 1 },
-        ]);
-      }
+        if (path === "/api/objects/locations") {
+          return Response.json([
+            { id: 1, name: "Fridge" },
+            { id: 2, name: "Freezer", is_freezer: 1 },
+          ]);
+        }
 
-      if (path === "/api/objects/quantity_units") {
-        return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);
-      }
+        if (path === "/api/objects/quantity_units") {
+          return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);
+        }
 
-      if (path === "/api/objects/shopping_locations") {
-        return Response.json([{ id: 3, name: "Market" }]);
-      }
+        if (path === "/api/objects/shopping_locations") {
+          return Response.json([{ id: 3, name: "Market" }]);
+        }
 
-      if (path === "/api/user/settings") {
-        return Response.json({
-          stock_default_purchase_amount: 2,
-          stock_decimal_places_amounts: 3,
-          show_purchased_date_on_purchase: true,
-        });
-      }
+        if (path === "/api/user/settings") {
+          return Response.json({
+            stock_default_purchase_amount: 2,
+            stock_decimal_places_amounts: 3,
+            show_purchased_date_on_purchase: true,
+          });
+        }
 
-      if (path === "/api/stock/products/1") {
-        return Response.json({ stock_amount: 12.3456, stock_amount_opened: 0 });
-      }
+        if (path === "/api/stock/products/1") {
+          return Response.json({ stock_amount: 12.3456, stock_amount_opened: 0 });
+        }
 
-      if (path === "/api/stock/products/1/add") {
-        purchase = JSON.parse(String(init?.body));
+        if (path === "/api/stock/products/1/add") {
+          purchase = JSON.parse(String(init?.body));
 
-        return Response.json([
-          { id: 2, product_id: 1, amount: 2, transaction_id: "purchase-details" },
-        ]);
-      }
+          return Response.json([
+            { id: 2, product_id: 1, amount: 2, transaction_id: "purchase-details" },
+          ]);
+        }
 
-      return Response.json([]);
-    }),
-  );
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <StockActions productId={1} />
-    </QueryClientProvider>,
-  );
-  const user = userEvent.setup();
-  await screen.findByText("12.346");
-  await user.selectOptions(screen.getByLabelText("Location"), "2");
-  expect(screen.getByLabelText<HTMLInputElement>("Best before").value).toBe(isoDay(90));
-  await user.click(screen.getByText("Purchase details"));
-  await user.type(screen.getByLabelText("Price per stock unit"), "2.5");
-  await user.selectOptions(screen.getByLabelText("Store"), "3");
-  fireEvent.change(screen.getByLabelText("Purchase date"), { target: { value: "2020-01-02" } });
-  await user.type(screen.getByLabelText("Note"), "Weekly purchase");
-  await user.click(screen.getByRole("button", { name: "Purchase 2 pcs" }));
-  await waitFor(() =>
-    expect(purchase).toMatchObject({
-      amount: 2,
-      best_before_date: null,
-      location_id: 2,
-      price: 2.5,
-      shopping_location_id: 3,
-      purchased_date: "2020-01-02",
-      note: "Weekly purchase",
-    }),
-  );
-});
+        return Response.json([]);
+      }),
+    );
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <StockActions productId={1} />
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await screen.findByText("12.346");
+    await user.selectOptions(screen.getByLabelText("Location"), "2");
+    const dueDate = screen.getByLabelText<HTMLInputElement>("Best before");
+    expect(dueDate.value).toBe(freezerDays === -1 ? "2999-12-31" : isoDay(90));
+
+    if (editedDate) fireEvent.change(dueDate, { target: { value: editedDate } });
+    await user.click(screen.getByText("Purchase details"));
+    await user.type(screen.getByLabelText("Price per stock unit"), "2.5");
+    await user.selectOptions(screen.getByLabelText("Store"), "3");
+    fireEvent.change(screen.getByLabelText("Purchase date"), { target: { value: "2020-01-02" } });
+    await user.type(screen.getByLabelText("Note"), "Weekly purchase");
+    await user.click(screen.getByRole("button", { name: "Purchase 2 pcs" }));
+    await waitFor(() =>
+      expect(purchase).toMatchObject({
+        amount: 2,
+        best_before_date: expectedDate(),
+        location_id: 2,
+        price: 2.5,
+        shopping_location_id: 3,
+        purchased_date: "2020-01-02",
+        note: "Weekly purchase",
+      }),
+    );
+  },
+);
