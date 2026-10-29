@@ -35,6 +35,16 @@ class StockEntry(Base, TimestampMixin):
 class StockLog(Base):
     __tablename__ = "stock_log"
     __table_args__ = (
+        Index("ix_stock_log_performance1", "stock_id", "transaction_type", "amount"),
+        Index(
+            "ix_stock_log_performance2",
+            "product_id",
+            "best_before_date",
+            "purchased_date",
+            "transaction_type",
+            "stock_id",
+            "undone",
+        ),
         *native_checks("stock_log"),
         {"sqlite_autoincrement": True},
     )

@@ -5,6 +5,54 @@ from sqlalchemy import text
 from grocy.db.session import get_session_factory
 
 
+def test_journal_equal_timestamp_source_order_matches_the_native_page(client, api_headers):
+    client.headers.update(api_headers)
+
+    def create(table, **values):
+        response = client.post(f"/api/objects/{table}", json=values)
+        response.raise_for_status()
+        return int(response.json()["created_object_id"])
+
+    unit = create("quantity_units", name="Journal order piece")
+    product = create(
+        "products", name="Journal order tea", location_id=1, qu_id_stock=unit, qu_id_purchase=unit
+    )
+    bookings = []
+    for due in ("2027-06-01", "2027-06-02"):
+        response = client.post(
+            f"/api/stock/products/{product}/add", json={"amount": 4, "best_before_date": due}
+        )
+        response.raise_for_status()
+        bookings.append(response.json()[0]["id"])
+    response = client.post(f"/api/stock/products/{product}/consume", json={"amount": 1})
+    response.raise_for_status()
+    consumed = response.json()[0]["id"]
+
+    async def equal_timestamps():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text(
+                    "UPDATE stock_log SET row_created_timestamp=DATETIME('now','localtime') "
+                    "WHERE product_id=:product"
+                ),
+                {"product": product},
+            )
+            await session.commit()
+
+    assert client.portal is not None
+    client.portal.call(equal_timestamps)
+    response = client.get("/api/v2/stock/journal", params={"product": product})
+    response.raise_for_status()
+    # The pinned PHP page returned Consume, then both purchases in booking order.
+    assert [row["id"] for row in response.json()["rows"]] == [consumed, *bookings]
+    unrestricted = client.get("/api/v2/stock/journal")
+    unrestricted.raise_for_status()
+    assert [row["id"] for row in unrestricted.json()["rows"] if row["product_id"] == product] == [
+        *bookings,
+        consumed,
+    ]
+
+
 def test_journal_window_products_fields_and_correlated_undo(client, api_headers):
     client.headers.update(api_headers)
 
