@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from grocy.core.auth import AuthenticatedActor
 from grocy.core.deps import DbSession
+from grocy.domains.stock.consume import consume_editor
 from grocy.domains.stock.entries import EntriesView, entries_view, entry_editor
 from grocy.domains.stock.journal import (
     JournalSummaryView,
@@ -13,6 +14,11 @@ from grocy.domains.stock.purchase import purchase_editor
 from grocy.domains.stock.transfer import transfer_editor
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/consume/editor")
+async def get_consume_editor(actor: AuthenticatedActor, session: DbSession) -> dict:
+    return await consume_editor(session)
 
 
 @router.get("/stock/purchase/editor")
