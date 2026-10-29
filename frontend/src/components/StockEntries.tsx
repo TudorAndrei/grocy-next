@@ -17,6 +17,18 @@ import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
 import { StockEntryDialog } from "./StockEntryEditor";
+import {
+  compareNativeCells,
+  nativeNumberCell,
+  nativeTableCell,
+  tableDate,
+  tableLine,
+  tablePlainText,
+  tableText,
+  type NativeTableCell,
+  type NativeTableRow,
+} from "@/lib/native-table-cell";
+import { StockTableDate } from "./StockTableDate";
 import { matchesTableSearch } from "@/lib/table-search";
 import { useTableOptions, type TableColumn } from "@/lib/table-options";
 import {
@@ -182,52 +194,75 @@ export function StockEntries({
 
   const sort = options.sort;
 
-  const value = (row: EntryRow, key: string) => {
-    switch (key) {
-      case "product_id":
-        return row.product_id;
-      case "product_name":
-        return row.product_name ?? "";
-      case "amount":
-        return row.amount;
-      case "best_before_date":
-        return row.best_before_date ?? "";
-      case "location_name":
-        return row.location_name ?? "";
-      case "shopping_location_name":
-        return row.shopping_location_name ?? "";
-      case "price":
-        return row.price ?? 0;
-      case "purchased_date":
-      case "purchased_date_group":
-        return row.purchased_date ?? "";
-      case "row_created_timestamp":
-        return row.row_created_timestamp ?? "";
-      case "note":
-        // The pinned string sorter compares the cell's HTML, including this ID.
-        return `<span id="stock-${row.id}-note">${row.note ?? ""}</span>`;
-      default:
-        return key.startsWith("product:")
-          ? (row.product_values[key.slice(8)] ?? "")
-          : (row.stock_values[key.slice(6)] ?? "");
-    }
-  };
+  const [openedAt] = useState(() => Date.now());
+  const now = new Date(Math.max(openedAt, data.dataUpdatedAt));
+
+  const dates = new Map(
+    (data.data?.rows ?? []).map((row) => [
+      row,
+      {
+        due: tableDate(row.best_before_date, now, t("moment_locale"), t, {
+          dateOnly: true,
+          id: `stock-${row.id}-due-date`,
+        }),
+        purchased: tableDate(row.purchased_date, now, t("moment_locale"), t, {
+          dateOnly: true,
+          id: `stock-${row.id}-purchased-date`,
+        }),
+        timestamp: tableDate(row.row_created_timestamp, now, t("moment_locale"), t),
+      },
+    ]),
+  );
+
+  const cells = new Map(
+    (data.data?.rows ?? []).map((row) => {
+      const context = dates.get(row)!;
+
+      const values: NativeTableRow = {
+        product_id: nativeNumberCell(tableText(row.product_id), row.product_id),
+        product_name: nativeTableCell(tableText(row.product_name)),
+        amount: nativeNumberCell(
+          `<span class="custom-sort d-none">${row.amount}</span>${tableLine}<span id="stock-${row.id}-amount" class="locale-number locale-number-quantity-amount number-parsing-done">${tableText(amount(row))}</span> <span id="product-${row.product_id}-qu-name">${tableText(unit(row))}</span>${tableLine}<span id="stock-${row.id}-opened-amount" class="small font-italic">${row.open === 1 ? tableText(t("Opened")) : ""}</span>`,
+          row.amount,
+        ),
+        best_before_date: nativeTableCell(context.due.html, "html"),
+        location_name: nativeTableCell(tableText(row.location_name)),
+        shopping_location_name: nativeTableCell(tableText(row.shopping_location_name)),
+        price: nativeNumberCell(tableText(price(row)), row.price ?? Number.NaN),
+        purchased_date: nativeTableCell(context.purchased.html, "html"),
+        purchased_date_group: nativeTableCell(tableText(row.purchased_date), "html"),
+        row_created_timestamp: nativeTableCell(context.timestamp.html),
+        note: nativeTableCell(`<span id="stock-${row.id}-note">${tableText(row.note)}</span>`),
+        ...Object.fromEntries(
+          productFields.map((field) => [
+            `product:${field.name}`,
+            nativeTableCell(tableText(row.product_values[field.name] ?? null)),
+          ]),
+        ),
+        ...Object.fromEntries(
+          stockFields.map((field) => [
+            `stock:${field.name}`,
+            nativeTableCell(tableText(row.stock_values[field.name] ?? null)),
+          ]),
+        ),
+      };
+
+      return [row, values] as const;
+    }),
+  );
+
+  const value = (row: EntryRow, key: string): NativeTableCell =>
+    cells.get(row)?.[key] ?? nativeTableCell("");
 
   const rows = (data.data?.rows ?? [])
     .filter(
       (row) =>
         (!product || String(row.product_id) === product) &&
-        matchesTableSearch(row.location_name ?? "", locationName),
+        matchesTableSearch(value(row, "location_name").search, locationName),
     )
     .sort((a, b) => {
       for (const sort of options.sorters) {
-        const first = value(a, sort.key);
-        const second = value(b, sort.key);
-
-        const order =
-          sort.key === "amount" || sort.key === "price" || sort.key === "product_id"
-            ? Number(first) - Number(second)
-            : String(first).localeCompare(String(second));
+        const order = compareNativeCells(value(a, sort.key), value(b, sort.key));
 
         if (order) return sort.descending ? -order : order;
       }
@@ -384,7 +419,24 @@ export function StockEntries({
               </thead>
               <StockTableRows
                 options={options}
-                groups={rows.map((row) => String(value(row, options.groupColumn ?? "")))}
+                groups={rows.map((row) => {
+                  const cell = value(row, options.groupColumn ?? "");
+                  const name = tablePlainText(cell.html);
+                  const context = dates.get(row)!;
+
+                  const date =
+                    options.groupColumn === "best_before_date"
+                      ? context.due
+                      : options.groupColumn === "purchased_date"
+                        ? context.purchased
+                        : options.groupColumn === "row_created_timestamp"
+                          ? context.timestamp
+                          : undefined;
+
+                  const label = date ? <StockTableDate value={date} /> : name;
+
+                  return { key: cell.html, label, name };
+                })}
               >
                 {rows.map((row) => {
                   const expired = !!row.best_before_date && row.best_before_date < isoDay();
@@ -478,9 +530,7 @@ export function StockEntries({
                         </td>
                         {features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") ? (
                           <td>
-                            {row.best_before_date === "2999-12-31"
-                              ? t("Never")
-                              : row.best_before_date}
+                            <StockTableDate value={dates.get(row)!.due} />
                           </td>
                         ) : null}
                         {features.enabled("STOCK_LOCATION_TRACKING") ? (
@@ -500,8 +550,12 @@ export function StockEntries({
                             </td>
                           </>
                         ) : null}
-                        <td>{row.purchased_date}</td>
-                        <td>{row.row_created_timestamp}</td>
+                        <td>
+                          <StockTableDate value={dates.get(row)!.purchased} />
+                        </td>
+                        <td>
+                          <StockTableDate value={dates.get(row)!.timestamp} />
+                        </td>
                         <td>{row.note}</td>
                         {productFields.map((f) => (
                           <td key={f.id}>

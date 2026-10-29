@@ -22,6 +22,7 @@ function mount(
     precision = 2,
     deferSavedRead = false,
     tableState = "",
+    dateCases = false,
   } = {},
 ) {
   const base: EntryRow = {
@@ -98,6 +99,14 @@ function mount(
       amount: 2,
     },
   ];
+
+  if (dateCases)
+    rows = rows.map((row) => ({
+      ...row,
+      best_before_date:
+        row.id === 52 ? "2888-12-31" : row.id === 53 ? "2026-10-28" : row.best_before_date,
+      purchased_date: row.id === 53 ? "2026-10-29" : row.purchased_date,
+    }));
 
   const writes: { path: string; body: object }[] = [];
   let reads = 0;
@@ -653,4 +662,28 @@ test("the legacy entry editor applies disabled tracking values and reloads saved
       open: false,
     },
   ]);
+});
+
+test("entry dates show special labels, Today, and date-only relative time", async () => {
+  vi.spyOn(Date, "now").mockReturnValue(new Date("2026-10-28T12:00:00").getTime());
+  mount("/stockentries?product=7", { dateCases: true });
+  const user = userEvent.setup();
+  await screen.findByText("Mint batch");
+
+  const row = (id: number) =>
+    within(screen.getByRole("button", { name: `Edit stock entry ${id}` }).closest("tr")!);
+
+  expect(row(51).getByText("Never")).toBeTruthy();
+  expect(row(52).getByText("Unknown")).toBeTruthy();
+  expect(row(53).getByText("Today")).toBeTruthy();
+  expect(row(53).getByText("in a day")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(dialog.getByRole("radio", { name: "Due date" }));
+  await user.click(dialog.getByRole("button", { name: "OK" }));
+  // The reference groups raw date cells, whose row IDs keep equal dates separate.
+  expect(screen.getAllByRole("button", { name: "Never" })).toHaveLength(2);
+  await user.click(screen.getAllByRole("button", { name: "Never" })[0]!);
+  expect(screen.queryByRole("button", { name: "Edit stock entry 51" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Edit stock entry 54" })).toBeTruthy();
 });

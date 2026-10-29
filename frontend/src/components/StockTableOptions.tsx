@@ -62,7 +62,7 @@ export function StockTableRows({
   children,
 }: {
   options: TableOptions;
-  groups: string[];
+  groups: { key: string; label: ReactNode; name: string }[];
   children: ReactNode;
 }) {
   const { t } = useI18n();
@@ -73,22 +73,22 @@ export function StockTableRows({
       {!options.groupColumn || groups.length === 0
         ? rows
         : rows.map((row, i) => {
-            const group = groups[i] ?? "";
-            const collapsed = options.collapsed(group);
+            const group = groups[i] ?? { key: "", label: "", name: "" };
+            const collapsed = options.collapsed(group.key);
 
             return (
               <Fragment key={isValidElement(row) ? row.key : i}>
-                {i === 0 || groups[i - 1] !== group ? (
+                {i === 0 || groups[i - 1]?.key !== group.key ? (
                   <tr className="stock-table-group">
                     <td colSpan={Math.max(1, options.visibleColumns.length)}>
                       <button
                         type="button"
                         className="btn btn-ghost stock-table-group-toggle"
-                        aria-label={group || t("Group")}
+                        aria-label={group.name || t("Group")}
                         aria-expanded={!collapsed}
-                        onClick={() => options.toggleGroup(group)}
+                        onClick={() => options.toggleGroup(group.key)}
                       >
-                        {group}
+                        <span>{group.label}</span>
                         <Icon name="back" />
                       </button>
                     </td>

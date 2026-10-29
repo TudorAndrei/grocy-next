@@ -4,6 +4,14 @@ import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { unitLabel } from "@/lib/format";
+import {
+  compareNativeCells,
+  nativeTableCell,
+  quantityCell,
+  tablePlainText,
+  tableText,
+  type NativeTableRow,
+} from "@/lib/native-table-cell";
 import { matchesTableSearch } from "@/lib/table-search";
 import type { SummarySearch } from "@/lib/stock-journal";
 import { ErrorBlock } from "./ErrorBlock";
@@ -62,50 +70,47 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
   const productName = data.data?.products.find((row) => String(row.id) === product)?.name ?? "";
   const userName = data.data?.users.find((row) => String(row.id) === user)?.name ?? "";
 
-  const formatted = (data.data?.rows ?? []).map((row) => ({
-    ...row,
-    transaction_type: t(row.transaction_type ?? ""),
-    display_amount: `${row.amount.toLocaleString(undefined, {
+  const formatted = (data.data?.rows ?? []).map((row) => {
+    const transaction = t(row.transaction_type ?? "");
+
+    const quantity = row.amount.toLocaleString(undefined, {
       maximumFractionDigits: preferences.amountPrecision,
-    })} ${unitLabel(
+    });
+
+    const unit = unitLabel(
       { name: row.qu_name ?? "", name_plural: row.qu_name_plural },
       row.amount,
       pluralIndex,
       false,
-    )}`,
-  }));
+    );
 
-  const value = (row: (typeof formatted)[number], key: string): string => {
-    switch (key) {
-      case "product_name":
-        return row.product_name ?? "";
-      case "transaction_type":
-        return row.transaction_type;
-      case "user_display_name":
-        return row.user_display_name ?? "";
-      case "amount":
-        return row.display_amount;
-      default:
-        return "";
-    }
-  };
+    const cells: NativeTableRow = {
+      product_name: nativeTableCell(tableText(row.product_name)),
+      transaction_type: nativeTableCell(tableText(transaction)),
+      user_display_name: nativeTableCell(tableText(row.user_display_name)),
+      amount: quantityCell(quantity, unit),
+    };
+
+    return { ...row, transaction_type: transaction, display_amount: `${quantity} ${unit}`, cells };
+  });
+
+  const value = (row: (typeof formatted)[number], key: string) =>
+    row.cells[key] ?? nativeTableCell("");
 
   const rows = formatted
     .filter(
       (row) =>
         (!product || (row.product_name ?? "").toLowerCase() === productName.toLowerCase()) &&
-        matchesTableSearch(row.transaction_type, transaction ? t(transaction) : "") &&
-        matchesTableSearch(row.user_display_name ?? "", userName) &&
+        matchesTableSearch(row.cells.transaction_type!.search, transaction ? t(transaction) : "") &&
+        matchesTableSearch(row.cells.user_display_name!.search, userName) &&
         matchesTableSearch(
-          [row.product_name, row.transaction_type, row.user_display_name, row.display_amount].join(
-            "  ",
-          ),
+          columns.map(([key]) => value(row, key).search).join("  "),
           text === "all" ? "" : text,
         ),
     )
     .sort((left, right) => {
       for (const order of options.sorters) {
-        const comparison = value(left, order.key).localeCompare(value(right, order.key));
+        const comparison = compareNativeCells(value(left, order.key), value(right, order.key));
 
         if (comparison) return order.descending ? -comparison : comparison;
       }
@@ -218,7 +223,12 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
               </thead>
               <StockTableRows
                 options={options}
-                groups={rows.map((row) => value(row, options.groupColumn ?? ""))}
+                groups={rows.map((row) => {
+                  const cell = value(row, options.groupColumn ?? "");
+                  const label = tablePlainText(cell.html);
+
+                  return { key: cell.html, label, name: label };
+                })}
               >
                 {rows.map((row) => (
                   <tr key={`${row.product_id}:${row.user_id}:${row.transaction_type}`}>

@@ -6,6 +6,7 @@ import { userfieldFile, type UserfieldDefinition } from "@/lib/userfields";
 import { useI18n } from "@/lib/i18n";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
+import { tableNumber } from "@/lib/native-table-cell";
 import { EntityPicture } from "./EntityPicture";
 import { ErrorBlock } from "./ErrorBlock";
 import { Icon } from "./Icon";
@@ -51,12 +52,12 @@ export function UserfieldValue({
       </Fragment>
     ));
 
-  if (field.type === "number-decimal")
-    return Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (field.type === "number-decimal") return tableNumber(value, 0);
 
   if (field.type === "number-currency")
-    return preferences.formatCurrency(
-      Number(value),
+    return tableNumber(
+      value,
+      preferences.priceDisplayPrecision,
       String(features.query.data?.CURRENCY ?? "USD"),
     );
 

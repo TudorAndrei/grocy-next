@@ -715,6 +715,60 @@ test("journal matches native word filters, curly phrases, and amount text order"
   ]);
 });
 
+test("journal searches native cell markup and relative date labels", async () => {
+  vi.spyOn(Date, "now").mockReturnValue(new Date("2026-10-28T14:00:00").getTime());
+  mount("/stockjournal");
+  const user = userEvent.setup();
+  await screen.findByText("Restock");
+  const search = screen.getByRole("searchbox", { name: "Search journal" });
+  await user.type(search, "font-italic");
+  expect(
+    screen
+      .getAllByRole("button", { name: /^Undo transaction/ })
+      .map((b) => b.getAttribute("aria-label")),
+  ).toEqual(["Undo transaction 102"]);
+  await user.clear(search);
+  await user.type(search, "Today");
+  expect(screen.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(4);
+  await user.clear(search);
+  await user.type(search, "name-anchor");
+  expect(screen.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(7);
+  await user.clear(search);
+  await user.click(screen.getByRole("button", { name: "Undo transaction 103" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Undo transaction 103" }).disabled,
+    ).toBe(true),
+  );
+  await user.type(search, "text-strike-through");
+  expect(screen.getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(2);
+  await user.clear(search);
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(dialog.getByRole("radio", { name: "Product" }));
+  await user.click(dialog.getByRole("button", { name: "OK" }));
+  expect(screen.getByRole("button", { name: "Coffee" })).toBeTruthy();
+  const undone = screen.getByRole("button", { name: /Coffee Undone on 2026-10-28 13:00:00 Today/ });
+  await user.click(undone);
+  expect(screen.queryByRole("button", { name: "Undo transaction 103" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Undo transaction 101" })).toBeTruthy();
+});
+
+test("summary includes native number markup in smart search", async () => {
+  mount("/stockjournal/summary");
+  const user = userEvent.setup();
+  await screen.findByText("1,000.01 Pieces");
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search summary" }),
+    "number-parsing-done Alice",
+  );
+  expect(screen.getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
+    "Coffee",
+    "Old coffee",
+    "Tea",
+  ]);
+});
+
 test("summary URL limits survive clearing local filters and the journal links to all totals", async () => {
   const { router } = mount(
     "/stockjournal/summary?product_id=9&user_id=1&transaction_type=purchase&embedded=false",

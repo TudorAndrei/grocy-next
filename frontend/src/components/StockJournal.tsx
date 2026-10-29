@@ -13,6 +13,19 @@ import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
+import {
+  compareNativeCells,
+  nativeTableCell,
+  quantityCell,
+  tableDate,
+  tableLine,
+  tablePlainText,
+  tableText,
+  tableTime,
+  type NativeTableCell,
+  type NativeTableRow,
+} from "@/lib/native-table-cell";
+import { StockTableDate } from "./StockTableDate";
 import { matchesTableSearch } from "@/lib/table-search";
 import { useTableOptions, type TableColumn } from "@/lib/table-options";
 import {
@@ -112,26 +125,59 @@ export function StockJournal({
 
   const sort = options.sort;
 
-  const value = (row: JournalRow, key: string): string => {
-    switch (key) {
-      case "amount":
-        return `${amount(row)} ${unit(row)}`;
-      case "product_name":
-        return row.product_name ?? "";
-      case "row_created_timestamp":
-        return row.row_created_timestamp ?? "";
-      case "transaction_type":
-        return type(row);
-      case "location_name":
-        return row.location_name ?? "";
-      case "user_display_name":
-        return row.user_display_name ?? "";
-      case "note":
-        return row.note ?? "";
-      default:
-        return row.custom_values[key.slice(7)] ?? "";
-    }
-  };
+  const [openedAt] = useState(() => Date.now());
+  const now = new Date(Math.max(openedAt, data.dataUpdatedAt));
+
+  const dates = new Map(
+    (data.data?.rows ?? []).map((row) => [
+      row,
+      {
+        transaction: tableDate(row.row_created_timestamp, now, t("moment_locale"), t, {
+          plain: true,
+        }),
+        undone: tableDate(row.undone_timestamp, now, t("moment_locale"), t, { plain: true }),
+      },
+    ]),
+  );
+
+  const cells = new Map(
+    (data.data?.rows ?? []).map((row) => {
+      const context = dates.get(row)!;
+
+      const product =
+        `<span class="name-anchor ${row.undone ? " text-strike-through " : ""}">${tableText(row.product_name)}</span>` +
+        (row.undone
+          ? `${tableLine}${"\t".repeat(6)}<br>${tableLine}${tableText(t("Undone on"))} ${tableText(row.undone_timestamp)}${tableLine}${tableTime(row.undone_timestamp, context.undone.relative)}`
+          : "");
+
+      const transaction =
+        tableText(t(row.transaction_type ?? "")) +
+        (row.spoiled
+          ? `${tableLine}${"\t".repeat(6)}<span class="font-italic text-muted">${tableText(t("Spoiled"))}</span>`
+          : "");
+
+      const values: NativeTableRow = {
+        product_name: nativeTableCell(product),
+        amount: quantityCell(amount(row), unit(row)),
+        row_created_timestamp: nativeTableCell(context.transaction.html),
+        transaction_type: nativeTableCell(transaction),
+        location_name: nativeTableCell(tableText(row.location_name)),
+        user_display_name: nativeTableCell(tableText(row.user_display_name)),
+        note: nativeTableCell(tableText(row.note)),
+        ...Object.fromEntries(
+          fields.map((field) => [
+            `custom:${field.name}`,
+            nativeTableCell(tableText(row.custom_values[field.name] ?? null)),
+          ]),
+        ),
+      };
+
+      return [row, values] as const;
+    }),
+  );
+
+  const value = (row: JournalRow, key: string): NativeTableCell =>
+    cells.get(row)?.[key] ?? nativeTableCell("");
 
   const rows = (() => {
     const locationName =
@@ -140,29 +186,24 @@ export function StockJournal({
     const userName = data.data?.users.find((item) => String(item.id) === user)?.name ?? "";
 
     const filtered = (data.data?.rows ?? []).filter((row) => {
-      const content = [
-        row.product_name,
-        `${amount(row)} ${unit(row)}`,
-        row.row_created_timestamp,
-        type(row),
-        row.location_name,
-        row.user_display_name,
-        row.note,
-        row.undone ? `${t("Undone on")} ${row.undone_timestamp}` : "",
-        ...fields.map((field) => row.custom_values[field.name]),
-      ].join("  ");
+      const content = Object.values(cells.get(row) ?? {})
+        .map((cell) => cell.search)
+        .join("  ");
 
       return (
-        matchesTableSearch(type(row), transaction ? t(transaction) : "") &&
-        matchesTableSearch(row.location_name ?? "", locationName) &&
-        matchesTableSearch(row.user_display_name ?? "", userName) &&
+        matchesTableSearch(
+          value(row, "transaction_type").search,
+          transaction ? t(transaction) : "",
+        ) &&
+        matchesTableSearch(value(row, "location_name").search, locationName) &&
+        matchesTableSearch(value(row, "user_display_name").search, userName) &&
         matchesTableSearch(content, text === "all" ? "" : text)
       );
     });
 
     return filtered.sort((a, b) => {
       for (const sort of options.sorters) {
-        const order = value(a, sort.key).localeCompare(value(b, sort.key));
+        const order = compareNativeCells(value(a, sort.key), value(b, sort.key));
 
         if (order) return sort.descending ? -order : order;
       }
@@ -352,7 +393,23 @@ export function StockJournal({
               </thead>
               <StockTableRows
                 options={options}
-                groups={rows.map((row) => value(row, options.groupColumn ?? ""))}
+                groups={rows.map((row) => {
+                  const cell = value(row, options.groupColumn ?? "");
+                  const name = tablePlainText(cell.html);
+
+                  const label =
+                    options.groupColumn === "product_name" && row.undone ? (
+                      <span>
+                        <s>{row.product_name}</s>
+                        <br />
+                        {t("Undone on")} <StockTableDate value={dates.get(row)!.undone} />
+                      </span>
+                    ) : (
+                      name
+                    );
+
+                  return { key: cell.html, label, name };
+                })}
               >
                 {rows.map((row) => (
                   <tr key={row.id} data-undone={row.undone ? true : undefined}>
@@ -385,14 +442,16 @@ export function StockJournal({
                         </Link>
                         {row.undone ? (
                           <small>
-                            {t("Undone on")} {row.undone_timestamp}
+                            {t("Undone on")} <StockTableDate value={dates.get(row)!.undone} />
                           </small>
                         ) : null}
                       </th>
                       <td>
                         {amount(row)} {unit(row)}
                       </td>
-                      <td>{row.row_created_timestamp}</td>
+                      <td>
+                        <StockTableDate value={dates.get(row)!.transaction} />
+                      </td>
                       <td>{type(row)}</td>
                       {features.enabled("STOCK_LOCATION_TRACKING") ? (
                         <td>{row.location_name}</td>
