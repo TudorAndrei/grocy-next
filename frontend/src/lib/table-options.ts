@@ -130,6 +130,8 @@ export function useTableOptions(
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const [resetting, setResetting] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
+  const [cellVersion, setCellVersion] = useState(0);
+  const [drawnGroup, setDrawnGroup] = useState<{ signature: string; column?: string }>();
 
   const state =
     draft?.signature === signature
@@ -153,9 +155,11 @@ export function useTableOptions(
 
   const order = layout.ColReorder ?? columns.map((_, i) => i);
 
-  const groupColumn = state.group?.enable
+  const groupSelection = state.group?.enable
     ? columns[order[Number(state.group.dataSrc ?? 0)]]?.key
     : undefined;
+
+  const groupColumn = drawnGroup?.signature === signature ? drawnGroup.column : groupSelection;
 
   const sorts: Sort[] = layout.order.flatMap(([i, direction]) =>
     columns[i] ? [{ key: columns[i].key, descending: direction === "desc" }] : [],
@@ -222,6 +226,7 @@ export function useTableOptions(
       save.reset();
       setDraft({ signature, layout: defaults });
       setCollapsed([]);
+      setDrawnGroup(undefined);
       setResetVersion((current) => current + 1);
       onReset();
     },
@@ -268,13 +273,17 @@ export function useTableOptions(
     visibleColumns,
     order,
     groupColumn,
+    groupSelection,
+    cellVersion,
     sort,
     sorters,
     resetVersion,
     reload: () => {
       setCollapsed([]);
+      setDrawnGroup(undefined);
       setResetVersion((current) => current + 1);
     },
+    draw: () => setDrawnGroup(undefined),
     ready: settings.isSuccess,
     pending: save.isPending || reset.isPending,
     error: settings.error || save.error || reset.error,
@@ -297,6 +306,7 @@ export function useTableOptions(
         columns: layout.columns.map((c, i) => (columns[i]?.key === key ? { ...c, visible } : c)),
       }),
     sortBy: (key: string, multiple: boolean) => {
+      setDrawnGroup(undefined);
       const i = columns.findIndex((c) => c.key === key);
       const existing = layout.order.find(([column]) => column === i);
       const next: [number, "asc" | "desc"] = [i, existing?.[1] === "asc" ? "desc" : "asc"];
@@ -310,12 +320,15 @@ export function useTableOptions(
       const from = next.indexOf(columns.findIndex((c) => c.key === key));
       const to = next.indexOf(columns.findIndex((c) => c.key === target));
 
-      if (from < 0 || to < 0) return;
+      if (from < 0 || to < 0 || from === to) return;
       const [column] = next.splice(from, 1);
       next.splice(to, 0, column);
+      setDrawnGroup({ signature, column: groupColumn });
+      setCellVersion((current) => current + 1);
       patch({ ...layout, ColReorder: next });
     },
     groupBy: (key: string) => {
+      setDrawnGroup(undefined);
       const i = columns.findIndex((c) => c.key === key);
       patch(
         layout,
@@ -325,10 +338,12 @@ export function useTableOptions(
       );
     },
     collapsed: (group: string) => collapsed.includes(group),
-    toggleGroup: (group: string) =>
+    toggleGroup: (group: string) => {
+      setDrawnGroup(undefined);
       setCollapsed((current) =>
         current.includes(group) ? current.filter((c) => c !== group) : [...current, group],
-      ),
+      );
+    },
     reset: (onReset: () => void) => reset.mutateAsync(onReset),
   };
 }

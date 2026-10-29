@@ -125,6 +125,7 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
   );
 
   const clearFilters = () => {
+    options.draw();
     setText("");
     setProduct("");
     setTransaction("");
@@ -136,12 +137,26 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
       <div className="toolbar journal-filters">
         <label className="field">
           <span>{t("Search summary")}</span>
-          <input type="search" value={text} onChange={(event) => setText(event.target.value)} />
+          <input
+            type="search"
+            value={text}
+            onChange={(event) => {
+              options.draw();
+              setText(event.target.value);
+            }}
+            onKeyUp={options.draw}
+          />
         </label>
         {search.embedded === undefined ? (
           <label className="field">
             <span>{t("Product")}</span>
-            <select value={product} onChange={(event) => setProduct(event.target.value)}>
+            <select
+              value={product}
+              onChange={(event) => {
+                options.draw();
+                setProduct(event.target.value);
+              }}
+            >
               <option value="">{t("All")}</option>
               {data.data?.products.map((row) => (
                 <option key={row.id} value={row.id}>
@@ -153,7 +168,13 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
         ) : null}
         <label className="field">
           <span>{t("Transaction type")}</span>
-          <select value={transaction} onChange={(event) => setTransaction(event.target.value)}>
+          <select
+            value={transaction}
+            onChange={(event) => {
+              options.draw();
+              setTransaction(event.target.value);
+            }}
+          >
             <option value="">{t("All")}</option>
             {data.data?.transaction_types.map((value) => (
               <option key={value} value={value}>
@@ -164,7 +185,13 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
         </label>
         <label className="field">
           <span>{t("User")}</span>
-          <select value={user} onChange={(event) => setUser(event.target.value)}>
+          <select
+            value={user}
+            onChange={(event) => {
+              options.draw();
+              setUser(event.target.value);
+            }}
+          >
             <option value="">{t("All")}</option>
             {data.data?.users.map((row) => (
               <option key={row.id} value={row.id}>
@@ -181,7 +208,14 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
       {data.error ? (
         <>
           <ErrorBlock message={data.error.message} />
-          <button type="button" className="btn" onClick={() => void data.refetch()}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              options.draw();
+              void data.refetch();
+            }}
+          >
             {t("Retry summary")}
           </button>
         </>

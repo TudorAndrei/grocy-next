@@ -570,6 +570,50 @@ test("journal imports its native column numbers and keeps filters on a hidden co
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Table options" }));
 });
 
+test("summary keeps drawn groups after a column move until the next table draw", async () => {
+  mount("/stockjournal/summary", false, true, {
+    "datatables_rowGroup_stock-journal-summary-table": '{"enable":true,"dataSrc":"1"}',
+  });
+  const user = userEvent.setup();
+  const table = await screen.findByRole("table", { name: "Stock journal summary" });
+
+  const groups = () =>
+    Array.from(table.querySelectorAll(".stock-table-group button")).map((button) =>
+      button.getAttribute("aria-label"),
+    );
+
+  expect(groups()).toEqual(["Coffee", "Old coffee", "Tea"]);
+  fireEvent.drop(within(table).getByRole("columnheader", { name: "Product" }), {
+    dataTransfer: { getData: () => "transaction_type" },
+  });
+  expect(
+    within(table)
+      .getAllByRole("columnheader")
+      .slice(1)
+      .map((header) => header.textContent),
+  ).toEqual(["Transaction type", "Product", "User", "Amount"]);
+  expect(groups()).toEqual(["Coffee", "Old coffee", "Tea"]);
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  expect(dialog.getByRole<HTMLInputElement>("radio", { name: "Transaction type" }).checked).toBe(
+    true,
+  );
+  await user.click(dialog.getByRole("checkbox", { name: "User" }));
+  await user.click(dialog.getByRole("button", { name: "OK" }));
+  expect(groups()).toEqual(["Coffee", "Old coffee", "Tea"]);
+  fireEvent.keyUp(screen.getByRole("searchbox", { name: "Search summary" }), { key: "End" });
+  expect(groups()).toEqual(["consume", "purchase"]);
+  await user.click(screen.getByRole("button", { name: "consume" }));
+  expect(within(table).getAllByRole("rowheader")).toHaveLength(3);
+  fireEvent.drop(within(table).getByRole("columnheader", { name: "Transaction type" }), {
+    dataTransfer: { getData: () => "product_name" },
+  });
+  expect(groups()).toEqual(["consume", "purchase"]);
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
+  expect(groups()).toEqual(["Coffee", "Old coffee", "Tea"]);
+  expect(within(table).getAllByRole("rowheader")).toHaveLength(4);
+});
+
 test("product journal keeps the draft through read retry, filters, linked undo, and closing", async () => {
   const { writes, router } = mount("/product/7", true);
   const user = userEvent.setup();
@@ -811,6 +855,18 @@ test("journal retains cached search and groups through Undo until table Reset re
   expect(screen.queryByRole("button", { name: /Coffee Undone on/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Product" }));
   expect(screen.getByRole("button", { name: "Coffee" })).toBeTruthy();
+  fireEvent.drop(screen.getByRole("columnheader", { name: "Product" }), {
+    dataTransfer: { getData: () => "note" },
+  });
+  expect(
+    screen.getByRole<HTMLButtonElement>("button", { name: "Undo transaction 103" }).disabled,
+  ).toBe(false);
+  expect(screen.getByRole("button", { name: "Coffee" })).toBeTruthy();
+  const moved = within(screen.getByRole("button", { name: "Undo transaction 103" }).closest("tr")!);
+  expect(moved.queryByText(/Undone on/)).toBeNull();
+  fireEvent.keyUp(search, { key: "End" });
+  expect(screen.queryByRole("button", { name: "Coffee" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Restock" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Table options" }));
   dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
   await user.click(dialog.getByRole("button", { name: "Reset" }));

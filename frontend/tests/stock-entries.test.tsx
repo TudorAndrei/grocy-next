@@ -496,6 +496,10 @@ test("entry dialog retains the product draft through retry, exact actions, and u
   await waitFor(() =>
     expect(view.queryByRole("button", { name: "Consume stock entry 51" })).toBeNull(),
   );
+  fireEvent.drop(view.getByRole("columnheader", { name: "Product" }), {
+    dataTransfer: { getData: () => "note" },
+  });
+  expect(view.queryByRole("button", { name: "Consume stock entry 51" })).toBeNull();
   await user.click(view.getByRole("button", { name: "Undo" }));
   await view.findByRole("button", { name: "Consume stock entry 151" });
   await waitFor(() =>
@@ -752,6 +756,13 @@ test("entry edits retain cached groups, filters, units, sorting, and action amou
   expect(changed().getByText("Mint")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Shelf" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Cellar" })).toBeNull();
+  fireEvent.drop(screen.getByRole("columnheader", { name: "Product" }), {
+    dataTransfer: { getData: () => "note" },
+  });
+  expect(changed().getByText("1 Piece")).toBeTruthy();
+  expect(changed().getByText("Mint batch")).toBeTruthy();
+  expect(changed().getByText("Shelf")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Shelf" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Clear filter" }));
   await user.selectOptions(screen.getByRole("combobox", { name: "Product" }), "7");
   await user.click(screen.getByRole("button", { name: "Table options" }));
@@ -766,7 +777,7 @@ test("entry edits retain cached groups, filters, units, sorting, and action amou
   ).toEqual([52, 51, 54, 53].map((id) => `Edit stock entry ${id}`));
   await user.click(screen.getByRole("button", { name: "Consume stock entry 51" }));
   await screen.findByText("No transaction was found by the given transaction id");
-  expect(changed().getByText("10 Piece")).toBeTruthy();
+  expect(changed().getByText("1 Piece")).toBeTruthy();
   expect(writes.find((write) => write.path.endsWith("/consume"))?.body).toEqual({
     amount: 1,
     spoiled: false,
@@ -808,6 +819,32 @@ test("entry refresh Retry keeps the completed booking and partial display update
     { path: "/api/stock/products/7/open", body: { amount: 2.5, stock_entry_id: "mint" } },
   ]);
 });
+
+test.each([
+  ["price", "$7.50 per Box", 4],
+  ["amount", "2.5 Pieces", 2],
+] as const)(
+  "moved %s groups retain separate entry identities and visible labels",
+  async (key, label, matches) => {
+    mount("/stockentries?product=7");
+    const user = userEvent.setup();
+    const table = await screen.findByRole("table", { name: "Stock entries" });
+    await user.click(screen.getByRole("button", { name: "Table options" }));
+    const options = within(await screen.findByRole("dialog", { name: "Table options" }));
+    await user.click(options.getByRole("radio", { name: "Location" }));
+    await user.click(options.getByRole("button", { name: "OK" }));
+    fireEvent.drop(within(table).getByRole("columnheader", { name: "Location" }), {
+      dataTransfer: { getData: () => key },
+    });
+    expect(within(table).getByRole("button", { name: "Cellar" })).toBeTruthy();
+    await user.click(within(table).getByRole("button", { name: "Product" }));
+    expect(table.querySelectorAll(".stock-table-group")).toHaveLength(4);
+    const groups = within(table).getAllByRole("button", { name: label });
+    expect(groups).toHaveLength(matches);
+    await user.click(groups[0]!);
+    expect(within(table).getAllByRole("button", { name: /^Edit stock entry/ })).toHaveLength(3);
+  },
+);
 
 test("entry dates show special labels, Today, and date-only relative time", async () => {
   vi.spyOn(Date, "now").mockReturnValue(new Date("2026-10-28T12:00:00").getTime());

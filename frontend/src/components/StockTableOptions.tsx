@@ -40,7 +40,7 @@ export function StockTableCells({
 
     if (!isValidElement<ThHTMLAttributes<HTMLTableCellElement>>(cell)) return null;
 
-    if (!headers) return cloneElement(cell, { key: column.key });
+    if (!headers) return cloneElement(cell, { key: `${options.cellVersion}:${column.key}` });
 
     return cloneElement(cell, {
       key: column.key,
@@ -240,7 +240,7 @@ function OptionsDialog({
           <input
             type="radio"
             name={`${title}-group`}
-            checked={!options.groupColumn}
+            checked={!options.groupSelection}
             onChange={() => options.groupBy("")}
           />
           {t("None")}
@@ -252,7 +252,7 @@ function OptionsDialog({
                 type="radio"
                 name={`${title}-group`}
                 checked={
-                  options.groupColumn ===
+                  options.groupSelection ===
                   (column.groupIndex === undefined
                     ? column.key
                     : options.columns[options.order[column.groupIndex]]?.key)

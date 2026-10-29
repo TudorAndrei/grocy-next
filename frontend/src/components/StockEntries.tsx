@@ -21,6 +21,7 @@ import {
   nativeNumberCell,
   nativeTableCell,
   tableDate,
+  tableAttribute,
   tableLine,
   tablePlainText,
   tableText,
@@ -56,11 +57,11 @@ export function StockEntries({
   const [editing, setEditing] = useState<number>();
   const [location, setLocation] = useState("");
   const [reloading, setReloading] = useState(false);
-  const [consumeLocation, setConsumeLocation] = useState<number>();
+  const [consumeLocation, setConsumeLocation] = useState<{ value: number; cellVersion: number }>();
 
   const [display, setDisplay] = useState<{
     version: number;
-    rows: Map<number, EntryRefresh | null>;
+    rows: Map<number, (EntryRefresh & { cellVersion: number }) | null>;
   }>({ version: -1, rows: new Map() });
 
   const data = useQuery({
@@ -93,16 +94,18 @@ export function StockEntries({
 
   const currency = String(features.query.data?.CURRENCY ?? "USD");
 
-  const price = (row: EntryRow, refreshed = false) =>
-    t(
-      "%1$s per %2$s",
+  const priceParts = (row: EntryRow, refreshed = false) =>
+    [
       preferences.formatCurrency(
         (row.price ?? 0) *
           (refreshed ? row.qu_factor_purchase_to_stock : row.qu_factor_price_to_stock),
         currency,
       ),
       (refreshed ? row.purchase_qu_name : row.price_qu_name) ?? "",
-    );
+    ] as const;
+
+  const price = (row: EntryRow, refreshed = false) =>
+    t("%1$s per %2$s", ...priceParts(row, refreshed));
 
   const [lastBooking, setLastBooking] = useState<{ id: number; product: number }>();
 
@@ -126,7 +129,11 @@ export function StockEntries({
               : {
                   amount: row.amount,
                   spoiled: kind === "spoiled",
-                  location_id: String(consumeLocation ?? row.location_id),
+                  location_id: String(
+                    consumeLocation?.cellVersion === options.cellVersion
+                      ? consumeLocation.value
+                      : row.location_id,
+                  ),
                   stock_entry_id: row.stock_id,
                   exact_amount: true,
                 },
@@ -249,14 +256,25 @@ export function StockEntries({
     const updates = await Promise.allSettled(
       targets.map((row) =>
         refreshEntry(row.id, (update) => {
-          if (update?.location_id !== undefined) setConsumeLocation(update.location_id);
+          if (update?.location_id !== undefined)
+            setConsumeLocation({ value: update.location_id, cellVersion: options.cellVersion });
           setDisplay((current) => {
             const rows =
               current.version === options.resetVersion
                 ? new Map(current.rows)
-                : new Map<number, EntryRefresh | null>();
+                : new Map<number, (EntryRefresh & { cellVersion: number }) | null>();
 
-            rows.set(row.id, update === null ? null : { ...rows.get(row.id), ...update });
+            const previous = rows.get(row.id);
+            rows.set(
+              row.id,
+              update === null
+                ? null
+                : {
+                    ...(previous?.cellVersion === options.cellVersion ? previous : undefined),
+                    ...update,
+                    cellVersion: options.cellVersion,
+                  },
+            );
 
             return { version: options.resetVersion, rows };
           });
@@ -293,6 +311,19 @@ export function StockEntries({
   const cells = new Map(
     (initial?.value.rows ?? []).map((row) => {
       const context = dates.get(row)!;
+      const [priceValue, priceUnit] = priceParts(row);
+
+      const priceTitle = t(
+        "%1$s per %2$s",
+        `<span class='locale-number locale-number-currency'>${tableText(row.price)}</span>`,
+        row.qu_name ?? "",
+      );
+
+      const priceMarkup = t(
+        "%1$s per %2$s",
+        `<span class="locale-number locale-number-currency number-parsing-done">${tableText(priceValue)}</span>`,
+        tableText(priceUnit),
+      );
 
       const values: NativeTableRow = {
         product_id: nativeNumberCell(tableText(row.product_id), row.product_id),
@@ -304,7 +335,10 @@ export function StockEntries({
         best_before_date: nativeTableCell(context.due.html, "html"),
         location_name: nativeTableCell(tableText(row.location_name)),
         shopping_location_name: nativeTableCell(tableText(row.shopping_location_name)),
-        price: nativeNumberCell(tableText(price(row)), row.price ?? Number.NaN),
+        price: nativeNumberCell(
+          `<span class="custom-sort d-none">${tableText(row.price)}</span>${tableLine}<span id="stock-${row.id}-price" data-toggle="tooltip" data-trigger="hover click" data-html="true" title="" data-original-title="${tableAttribute(priceTitle)}">${tableLine}\t${priceMarkup}${tableLine}</span>`,
+          row.price ?? Number.NaN,
+        ),
         purchased_date: nativeTableCell(context.purchased.html, "html"),
         purchased_date_group: nativeTableCell(tableText(row.purchased_date), "html"),
         row_created_timestamp: nativeTableCell(context.timestamp.html),
@@ -383,7 +417,10 @@ export function StockEntries({
             <span>{t("Product")}</span>
             <select
               value={product ?? ""}
-              onChange={(e) => onChange({ ...search, product: e.target.value || undefined })}
+              onChange={(e) => {
+                options.draw();
+                onChange({ ...search, product: e.target.value || undefined });
+              }}
             >
               <option value="">{t("All")}</option>
               {initial?.value.products.map((p) => (
@@ -397,7 +434,13 @@ export function StockEntries({
         {features.enabled("STOCK_LOCATION_TRACKING") ? (
           <label className="field">
             <span>{t("Location")}</span>
-            <select value={location} onChange={(e) => setLocation(e.target.value)}>
+            <select
+              value={location}
+              onChange={(e) => {
+                options.draw();
+                setLocation(e.target.value);
+              }}
+            >
               <option value="">{t("All")}</option>
               {initial?.value.locations.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -411,6 +454,7 @@ export function StockEntries({
           type="button"
           className="btn"
           onClick={() => {
+            options.draw();
             setLocation("");
             onChange({
               ...search,
@@ -508,7 +552,14 @@ export function StockEntries({
                 options={options}
                 groups={rows.map((row) => {
                   const cell = value(row, options.groupColumn ?? "");
-                  const name = tablePlainText(cell.html);
+
+                  const name =
+                    options.groupColumn === "price"
+                      ? price(row)
+                      : options.groupColumn === "amount"
+                        ? `${amount(row)} ${unit(row)}${row.open === 1 ? ` ${t("Opened")}` : ""}`
+                        : tablePlainText(cell.html);
+
                   const context = dates.get(row)!;
 
                   const date =
@@ -526,7 +577,12 @@ export function StockEntries({
                 })}
               >
                 {rows.map((row) => {
-                  const update = changed(row);
+                  const appearance = changed(row);
+
+                  const update =
+                    appearance?.cellVersion === options.cellVersion ? appearance : undefined;
+
+                  const status = { ...row, ...appearance };
                   const current = { ...row, ...update };
                   const refreshed = update?.qu_factor_purchase_to_stock !== undefined;
                   const priceRow = refreshed ? current : row;
@@ -556,18 +612,18 @@ export function StockEntries({
                       }
                     : dates.get(row)!;
 
-                  const expired = !!current.best_before_date && current.best_before_date < isoDay();
+                  const expired = !!status.best_before_date && status.best_before_date < isoDay();
 
                   const soon =
-                    !!current.best_before_date &&
-                    current.best_before_date <= isoDay(preferences.dueSoonDays);
+                    !!status.best_before_date &&
+                    status.best_before_date <= isoDay(preferences.dueSoonDays);
 
                   return (
                     <tr
                       key={row.id}
-                      style={update === null ? { display: "none" } : undefined}
+                      style={appearance === null ? { display: "none" } : undefined}
                       data-due={
-                        features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") && current.amount > 0
+                        features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") && status.amount > 0
                           ? expired
                             ? row.due_type === 1
                               ? "best-before"

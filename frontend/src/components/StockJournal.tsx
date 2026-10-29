@@ -75,8 +75,9 @@ export function StockJournal({
 
   const [undoDisplay, setUndoDisplay] = useState<{
     version: number;
+    cellVersion: number;
     rows: Map<number, JournalUndo>;
-  }>({ version: -1, rows: new Map() });
+  }>({ version: -1, cellVersion: -1, rows: new Map() });
 
   const data = useQuery({
     queryKey: ["stock", "journal-view", search.product, search.months],
@@ -103,7 +104,7 @@ export function StockJournal({
         const timestamp = localTimestampText(new Date(at), t("moment_locale"));
         setUndoDisplay((current) => {
           const rows =
-            current.version === options.resetVersion
+            current.version === options.resetVersion && current.cellVersion === options.cellVersion
               ? new Map(current.rows)
               : new Map<number, JournalUndo>();
 
@@ -116,7 +117,7 @@ export function StockJournal({
             }
           }
 
-          return { version: options.resetVersion, rows };
+          return { version: options.resetVersion, cellVersion: options.cellVersion, rows };
         });
       }
 
@@ -201,7 +202,9 @@ export function StockJournal({
   };
 
   const changed = (row: JournalRow) =>
-    undoDisplay.version === options.resetVersion ? undoDisplay.rows.get(row.id) : undefined;
+    undoDisplay.version === options.resetVersion && undoDisplay.cellVersion === options.cellVersion
+      ? undoDisplay.rows.get(row.id)
+      : undefined;
 
   const isUndone = (row: JournalRow) => !!row.undone || !!changed(row);
 
@@ -323,7 +326,11 @@ export function StockJournal({
             id={`${id}-search`}
             type="search"
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => {
+              options.draw();
+              setText(event.target.value);
+            }}
+            onKeyUp={options.draw}
           />
         </label>
         {search.embedded === undefined ? (
@@ -331,9 +338,10 @@ export function StockJournal({
             <span>{t("Product")}</span>
             <select
               value={search.product ?? ""}
-              onChange={(event) =>
-                onChange({ ...search, product: event.target.value || undefined })
-              }
+              onChange={(event) => {
+                options.draw();
+                onChange({ ...search, product: event.target.value || undefined });
+              }}
             >
               <option value="">{t("All")}</option>
               {search.product !== undefined &&
@@ -350,7 +358,13 @@ export function StockJournal({
         ) : null}
         <label className="field">
           <span>{t("Transaction type")}</span>
-          <select value={transaction} onChange={(event) => setTransaction(event.target.value)}>
+          <select
+            value={transaction}
+            onChange={(event) => {
+              options.draw();
+              setTransaction(event.target.value);
+            }}
+          >
             <option value="">{t("All")}</option>
             {initial?.value.transaction_types.map((value) => (
               <option key={value} value={value}>
@@ -362,7 +376,13 @@ export function StockJournal({
         {features.enabled("STOCK_LOCATION_TRACKING") ? (
           <label className="field">
             <span>{t("Location")}</span>
-            <select value={location} onChange={(event) => setLocation(event.target.value)}>
+            <select
+              value={location}
+              onChange={(event) => {
+                options.draw();
+                setLocation(event.target.value);
+              }}
+            >
               <option value="">{t("All")}</option>
               {initial?.value.locations.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -374,7 +394,13 @@ export function StockJournal({
         ) : null}
         <label className="field">
           <span>{t("Done by")}</span>
-          <select value={user} onChange={(event) => setUser(event.target.value)}>
+          <select
+            value={user}
+            onChange={(event) => {
+              options.draw();
+              setUser(event.target.value);
+            }}
+          >
             <option value="">{t("All")}</option>
             {initial?.value.users.map((item) => (
               <option key={item.id} value={item.id}>
