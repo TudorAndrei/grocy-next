@@ -13,6 +13,8 @@ import { useModalDialog } from "@/hooks/useModalDialog";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
+import { TransferDialog } from "./TransferForm";
+import { usePermissions } from "@/lib/permissions";
 import { UserfieldValue } from "./UserfieldValue";
 import {
   nativeTableCell,
@@ -64,6 +66,8 @@ export function StockJournal({
 }) {
   const [overview, setOverview] = useState<number>();
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [transfer, setTransfer] = useState<number>();
+  const can = usePermissions();
   const { t, pluralIndex, ready: translationsReady } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
@@ -551,6 +555,17 @@ export function StockJournal({
                           >
                             {t("Undo")}
                           </button>
+                          {features.enabled("STOCK_LOCATION_TRACKING") ? (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              disabled={!can("STOCK_TRANSFER")}
+                              aria-label={t("Transfer transaction product %s", String(row.id))}
+                              onClick={() => setTransfer(row.product_id)}
+                            >
+                              {t("Transfer")}
+                            </button>
+                          ) : null}
                           <GrocycodeActions
                             kind="product"
                             id={row.product_id}
@@ -604,6 +619,12 @@ export function StockJournal({
             <p className="empty-state">{t("No stock bookings match this filter.")}</p>
           ) : null}
         </>
+      ) : null}
+      {transfer !== undefined ? (
+        <TransferDialog
+          options={{ embedded: "", product: String(transfer) }}
+          onClose={() => setTransfer(undefined)}
+        />
       ) : null}
       {overview !== undefined ? (
         <ProductOverview

@@ -4,14 +4,17 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
 import type { EntityRow } from "@/lib/entities";
-import type { ShoppingItemEditor } from "@/lib/shopping-list";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { useModalDialog } from "@/hooks/useModalDialog";
 import { CameraScanner } from "./CameraScanner";
 import { ErrorBlock } from "./ErrorBlock";
 
-export function ShoppingProductPicker({
+export type ProductCode = { barcode: string; stockId?: string };
+
+type ProductChoice = { id: number; name: string };
+
+export function ProductPicker({
   products,
   barcodes,
   plugin,
@@ -20,24 +23,26 @@ export function ShoppingProductPicker({
   disabled,
   lookupDisabled,
   autoFocus,
-  listId,
+  listId = 1,
   itemId,
+  allowCreate = true,
   onChange,
   onResolved,
   onAssignBarcode,
   onBusyChange,
 }: {
-  products: ShoppingItemEditor["products"];
-  barcodes: ShoppingItemEditor["barcodes"];
+  products: ProductChoice[];
+  barcodes: { product_id: number; barcodes: string | null }[];
   plugin: string;
   value: string;
   required: boolean;
   disabled: boolean;
   lookupDisabled: boolean;
   autoFocus: boolean;
-  listId: number;
+  listId?: number;
   itemId?: number;
-  onChange: (value: string) => void;
+  allowCreate?: boolean;
+  onChange: (value: string, code?: ProductCode) => void;
   onResolved: () => void;
   onAssignBarcode: (barcode: string) => void;
   onBusyChange: (busy: boolean) => void;
@@ -85,10 +90,10 @@ export function ShoppingProductPicker({
     setText(products.find((product) => String(product.id) === value)?.name ?? "");
   }, [products, value]);
 
-  const choose = (product?: ShoppingItemEditor["products"][number]) => {
+  const choose = (product?: ProductChoice, code?: ProductCode) => {
     selection.current = product ? String(product.id) : "";
     setText(product?.name ?? "");
-    onChange(selection.current);
+    onChange(selection.current, code);
     setMessage("");
 
     if (product) {
@@ -207,26 +212,35 @@ export function ShoppingProductPicker({
       return;
     }
 
-    let found: ShoppingItemEditor["products"][number] | undefined;
+    let found: ProductChoice | undefined;
+    let resolvedCode: ProductCode | undefined;
 
     if (!lookupDisabled) {
       if (code.startsWith("grcy")) {
         const parts = code.split(":");
 
-        if (parts[1] === "p") found = products.find((product) => String(product.id) === parts[2]);
-      } else
+        if (parts[1] === "p") {
+          found = products.find((product) => String(product.id) === parts[2]);
+
+          if (found)
+            resolvedCode = { barcode: code, stockId: parts.length === 4 ? parts[3] : undefined };
+        }
+      } else {
         found = products.find((product) => {
           const codes = barcodes.find((row) => row.product_id === product.id)?.barcodes;
 
           return `${codes?.toLowerCase() ?? ""},`.includes(code.toLowerCase() + ",");
         });
+
+        if (found) resolvedCode = { barcode: code };
+      }
     }
 
     found ??= products.find((product) => product.name.toLowerCase() === code.toLowerCase());
     found ??= products.find((product) => product.name.includes(code));
 
     if (found) {
-      choose(found);
+      choose(found, resolvedCode);
 
       return;
     }
@@ -316,7 +330,8 @@ export function ShoppingProductPicker({
         ? createPortal(
             <ProductWorkflows
               code={unknown}
-              plugin={plugin}
+              plugin={allowCreate ? plugin : ""}
+              allowCreate={allowCreate}
               busy={external.isPending}
               error={external.error?.message}
               camera={!features.enabled("DISABLE_BROWSER_BARCODE_CAMERA_SCANNING")}
@@ -341,6 +356,7 @@ export function ShoppingProductPicker({
 function ProductWorkflows({
   code,
   plugin,
+  allowCreate,
   busy,
   error,
   camera,
@@ -353,6 +369,7 @@ function ProductWorkflows({
 }: {
   code: string;
   plugin: string;
+  allowCreate: boolean;
   busy: boolean;
   error?: string;
   camera: boolean;
@@ -368,9 +385,8 @@ function ProductWorkflows({
   const title = useId();
 
   const actions = new Map([
-    ["p", onName],
+    ...(allowCreate ? [["p", onName] as const, ["a", onBarcode] as const] : []),
     ["b", onAssign],
-    ["a", onBarcode],
     ...(plugin ? [["e", onExternal] as const] : []),
     ...(camera ? [["c", onCamera] as const] : []),
   ]);
@@ -402,18 +418,22 @@ function ProductWorkflows({
         <button type="button" className="btn" disabled={busy} onClick={onCancel}>
           {t("Cancel")}
         </button>
-        <button type="button" className="btn" disabled={busy} onClick={onName}>
-          <kbd>P</kbd>
-          {t("Add as new product")}
-        </button>
+        {allowCreate ? (
+          <button type="button" className="btn" disabled={busy} onClick={onName}>
+            <kbd>P</kbd>
+            {t("Add as new product")}
+          </button>
+        ) : null}
         <button type="button" className="btn" disabled={busy} onClick={onAssign}>
           <kbd>B</kbd>
           {t("Add as barcode to existing product")}
         </button>
-        <button type="button" className="btn" disabled={busy} onClick={onBarcode}>
-          <kbd>A</kbd>
-          {t("Add as new product and prefill barcode")}
-        </button>
+        {allowCreate ? (
+          <button type="button" className="btn" disabled={busy} onClick={onBarcode}>
+            <kbd>A</kbd>
+            {t("Add as new product and prefill barcode")}
+          </button>
+        ) : null}
         {plugin ? (
           <button type="button" className="btn" disabled={busy} onClick={onExternal}>
             <kbd>E</kbd>

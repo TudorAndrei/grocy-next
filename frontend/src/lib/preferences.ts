@@ -46,6 +46,7 @@ export function usePreferences() {
     dueSoonDays: Math.max(0, Math.trunc(number("stock_due_soon_days", 5))),
     purchaseAmount: number("stock_default_purchase_amount", 0),
     consumeAmount: number("stock_default_consume_amount", 1),
+    transferAmount: number("stock_default_transfer_amount", 1),
     useQuickConsumeAmount: enabled("stock_default_consume_amount_use_quick_consume_amount"),
     scanPurchase: enabled("scan_mode_purchase_enabled"),
     scanConsume: enabled("scan_mode_consume_enabled"),

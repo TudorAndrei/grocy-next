@@ -21,28 +21,50 @@ import { ProductEditor } from "./ProductEditor";
 import { LoadingBlock } from "./LoadingBlock";
 import { ErrorBlock } from "./ErrorBlock";
 
-export function ProductOverview({
+type CardProps = {
+  productId: number;
+  embedded: boolean;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  onReturn: () => Promise<void>;
+  onClose?: () => void;
+};
+
+export function ProductOverview(props: CardProps & { onClose: () => void }) {
+  const { t } = useI18n();
+  const dialog = useModalDialog();
+
+  return (
+    <dialog
+      ref={dialog}
+      className="recipe-action-dialog product-overview-dialog"
+      aria-label={t("Product overview")}
+      onCancel={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        props.onClose();
+      }}
+    >
+      <ProductCard {...props} />
+    </dialog>
+  );
+}
+
+export function ProductCard({
   productId,
   embedded,
   expanded,
   onExpandedChange,
   onReturn,
   onClose,
-}: {
-  productId: number;
-  embedded: boolean;
-  expanded: boolean;
-  onExpandedChange: (expanded: boolean) => void;
-  onReturn: () => Promise<void>;
-  onClose: () => void;
-}) {
+}: CardProps) {
   const { t, pluralIndex, ready } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
   const returnto = useLocation({ select: (location) => location.href });
-  const dialog = useModalDialog();
   const close = useRef<HTMLButtonElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   const retry = useRef<HTMLButtonElement>(null);
   const focusAfterRead = useRef(false);
   const title = useId();
@@ -63,7 +85,7 @@ export function ProductOverview({
   useEffect(() => {
     if (data.isFetching || !focusAfterRead.current) return;
     focusAfterRead.current = false;
-    (data.isError ? retry : close).current?.focus();
+    ((data.isError ? retry : close).current ?? heading.current)?.focus();
   }, [data.isFetching, data.isError]);
 
   const description = useQuery({
@@ -108,21 +130,16 @@ export function ProductOverview({
   };
 
   return (
-    <dialog
-      ref={dialog}
-      className="recipe-action-dialog product-overview-dialog"
-      aria-labelledby={title}
-      onCancel={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-      }}
-    >
+    <>
       <div className="section-heading">
-        <h2 id={title}>{t("Product overview")}</h2>
-        <button ref={close} type="button" className="btn btn-ghost" onClick={onClose}>
-          {t("Close")}
-        </button>
+        <h2 id={title} ref={heading} tabIndex={-1}>
+          {t("Product overview")}
+        </h2>
+        {onClose ? (
+          <button ref={close} type="button" className="btn btn-ghost" onClick={onClose}>
+            {t("Close")}
+          </button>
+        ) : null}
       </div>
       {data.isPending || data.isFetching || !ready ? <LoadingBlock /> : null}
       {data.error ? (
@@ -316,13 +333,13 @@ export function ProductOverview({
               productId={productId}
               onReturn={async () => {
                 await onReturn();
-                onClose();
+                onClose?.();
               }}
             />
           ) : null}
         </>
       ) : null}
-    </dialog>
+    </>
   );
 }
 

@@ -17,7 +17,7 @@ import { useModalDialog } from "@/hooks/useModalDialog";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { UserfieldsEditor } from "./UserfieldsEditor";
-import { ShoppingProductPicker } from "./ShoppingProductPicker";
+import { ProductPicker } from "./ProductPicker";
 
 export function ShoppingItemForm({
   itemId,
@@ -325,7 +325,7 @@ function ItemFields({
             </select>
           </label>
         ) : null}
-        <ShoppingProductPicker
+        <ProductPicker
           products={data.products}
           barcodes={data.barcodes}
           plugin={data.barcode_lookup_plugin_name}

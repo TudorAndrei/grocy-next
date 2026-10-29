@@ -9,6 +9,7 @@ export function NumberPicker({
   required,
   disabled,
   min,
+  max,
   step,
   autoFocus,
   onChange,
@@ -19,6 +20,7 @@ export function NumberPicker({
   required?: boolean;
   disabled?: boolean;
   min?: number | string;
+  max?: number | string;
   step: string;
   autoFocus?: boolean;
   onChange: (value: string) => void;
@@ -42,6 +44,7 @@ export function NumberPicker({
         required={required}
         disabled={disabled}
         min={min}
+        max={max}
         step={step}
         autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}

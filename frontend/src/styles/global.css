@@ -3610,6 +3610,36 @@ a.btn[aria-disabled="true"] {
   cursor: pointer;
 }
 
+.transfer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 26rem) minmax(0, 36rem);
+  align-items: start;
+  gap: 2rem;
+}
+
+.embedded-main {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.transfer-form > fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+
+.transfer-form .field-row {
+  margin: 0;
+}
+
+.transfer-product {
+  min-width: 0;
+}
+
+.transfer-product h3,
 .product-overview-dialog h3,
 .product-overview-facts dd {
   overflow-wrap: anywhere;
@@ -3617,6 +3647,12 @@ a.btn[aria-disabled="true"] {
 
 .product-overview-actions {
   flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .transfer-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .product-overview-description > [data-expanded="false"] {

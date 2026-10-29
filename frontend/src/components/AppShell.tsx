@@ -1,7 +1,7 @@
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
@@ -27,6 +27,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [previousPath, setPreviousPath] = useState(pathname);
   const queryClient = useQueryClient();
 
+  const embedded = useLocation({
+    select: (location) => Object.hasOwn(location.search, "embedded"),
+  });
+
   if (previousPath !== pathname) {
     setPreviousPath(pathname);
     setMenuOpen(false);
@@ -37,6 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     await api.logout().catch(() => undefined);
     await forgetKey(queryClient);
   };
+
+  if (embedded) return <EmbeddedPage>{children}</EmbeddedPage>;
 
   return (
     <div className="app-shell">
@@ -109,5 +115,31 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
       </nav>
     </div>
+  );
+}
+
+function EmbeddedPage({ children }: { children: ReactNode }) {
+  const main = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const resize = () =>
+      window.parent.postMessage(
+        { Message: "ResizeResponsiveEmbeds", Payload: null },
+        window.location.origin,
+      );
+
+    resize();
+
+    if (typeof ResizeObserver === "undefined" || !main.current) return;
+
+    const observer = new ResizeObserver(resize);
+    observer.observe(main.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <main ref={main} className="embedded-main" id="main-content">
+      {children}
+    </main>
   );
 }

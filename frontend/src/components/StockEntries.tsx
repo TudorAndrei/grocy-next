@@ -17,6 +17,8 @@ import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
 import { StockEntryDialog } from "./StockEntryEditor";
+import { TransferDialog } from "./TransferForm";
+import type { TransferOptions } from "@/lib/transfer";
 import {
   nativeNumberCell,
   nativeTableCell,
@@ -57,6 +59,7 @@ export function StockEntries({
   const notify = useNotify();
   const table = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<number>();
+  const [transfer, setTransfer] = useState<TransferOptions>();
   const [location, setLocation] = useState("");
   const [reloading, setReloading] = useState(false);
   const [consumeLocation, setConsumeLocation] = useState<{ value: number; cellVersion: number }>();
@@ -390,6 +393,16 @@ export function StockEntries({
 
   return (
     <>
+      {transfer ? (
+        <TransferDialog
+          options={transfer}
+          onClose={() => setTransfer(undefined)}
+          onChanged={async (productId) => {
+            await refresh.mutateAsync(productId).catch(() => undefined);
+            requestAnimationFrame(() => table.current?.focus());
+          }}
+        />
+      ) : null}
       {editing !== undefined ? (
         <StockEntryDialog
           entryId={editing}
@@ -683,6 +696,24 @@ export function StockEntries({
                             >
                               {t("Edit")}
                             </button>
+                            {features.enabled("STOCK_LOCATION_TRACKING") ? (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                disabled={pending}
+                                aria-label={t("Transfer stock entry %s", String(row.id))}
+                                onClick={() =>
+                                  setTransfer({
+                                    embedded: "",
+                                    product: String(row.product_id),
+                                    locationId: String(row.location_id),
+                                    stockId: row.stock_id,
+                                  })
+                                }
+                              >
+                                {t("Transfer")}
+                              </button>
+                            ) : null}
                             <GrocycodeActions
                               kind="stock-entry"
                               id={row.id}
