@@ -18,6 +18,13 @@ import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
 import { StockEntryDialog } from "./StockEntryEditor";
 import { matchesTableSearch } from "@/lib/table-search";
+import { useTableOptions, type TableColumn } from "@/lib/table-options";
+import {
+  StockTableCells,
+  StockTableOptions,
+  StockTableRows,
+  StockTableStatus,
+} from "./StockTableOptions";
 
 export function StockEntries({
   search,
@@ -35,7 +42,6 @@ export function StockEntries({
   const [editing, setEditing] = useState<number>();
   const [location, setLocation] = useState("");
   const [refreshedProducts, setRefreshedProducts] = useState<number[]>([]);
-  const [sort, setSort] = useState({ key: "product_name", descending: false });
 
   const data = useQuery({
     queryKey: ["stock", "entries-view"],
@@ -135,8 +141,51 @@ export function StockEntries({
 
   const locationName = data.data?.locations.find((l) => String(l.id) === location)?.name ?? "";
 
-  const value = (row: EntryRow) => {
-    switch (sort.key) {
+  const tableColumns: TableColumn[] = [
+    { key: "actions", label: "", configurable: false },
+    { key: "product_id", label: "", rendered: false, configurable: false },
+    { key: "product_name", label: "Product", groupable: true },
+    { key: "amount", label: "Amount" },
+    {
+      key: "best_before_date",
+      label: "Due date",
+      groupable: true,
+      rendered: features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING"),
+    },
+    {
+      key: "location_name",
+      label: "Location",
+      groupable: true,
+      rendered: features.enabled("STOCK_LOCATION_TRACKING"),
+    },
+    {
+      key: "shopping_location_name",
+      label: "Store",
+      groupable: true,
+      rendered: features.enabled("STOCK_PRICE_TRACKING"),
+    },
+    { key: "price", label: "Price", rendered: features.enabled("STOCK_PRICE_TRACKING") },
+    { key: "purchased_date", label: "Purchased date", groupable: true, groupIndex: 9 },
+    { key: "purchased_date_group", label: "", rendered: false, configurable: false },
+    { key: "row_created_timestamp", label: "Timestamp", defaultVisible: false },
+    { key: "note", label: "Note" },
+    ...productFields.map((f) => ({ key: `product:${f.name}`, label: f.caption, groupable: true })),
+    ...stockFields.map((f) => ({ key: `stock:${f.name}`, label: f.caption, groupable: true })),
+  ];
+
+  const options = useTableOptions(
+    "stockentries-table",
+    tableColumns,
+    { key: "product_name", descending: false },
+    data.isSuccess && definitions.isSuccess,
+  );
+
+  const sort = options.sort;
+
+  const value = (row: EntryRow, key: string) => {
+    switch (key) {
+      case "product_id":
+        return row.product_id;
       case "product_name":
         return row.product_name ?? "";
       case "amount":
@@ -150,6 +199,7 @@ export function StockEntries({
       case "price":
         return row.price ?? 0;
       case "purchased_date":
+      case "purchased_date_group":
         return row.purchased_date ?? "";
       case "row_created_timestamp":
         return row.row_created_timestamp ?? "";
@@ -157,9 +207,9 @@ export function StockEntries({
         // The pinned string sorter compares the cell's HTML, including this ID.
         return `<span id="stock-${row.id}-note">${row.note ?? ""}</span>`;
       default:
-        return sort.key.startsWith("product:")
-          ? (row.product_values[sort.key.slice(8)] ?? "")
-          : (row.stock_values[sort.key.slice(6)] ?? "");
+        return key.startsWith("product:")
+          ? (row.product_values[key.slice(8)] ?? "")
+          : (row.stock_values[key.slice(6)] ?? "");
     }
   };
 
@@ -170,37 +220,24 @@ export function StockEntries({
         matchesTableSearch(row.location_name ?? "", locationName),
     )
     .sort((a, b) => {
-      const first = value(a);
-      const second = value(b);
+      for (const sort of options.sorters) {
+        const first = value(a, sort.key);
+        const second = value(b, sort.key);
 
-      const order =
-        sort.key === "amount"
-          ? a.amount - b.amount
-          : sort.key === "price"
-            ? (a.price ?? 0) - (b.price ?? 0)
+        const order =
+          sort.key === "amount" || sort.key === "price" || sort.key === "product_id"
+            ? Number(first) - Number(second)
             : String(first).localeCompare(String(second));
 
-      return sort.descending ? -order : order;
+        if (order) return sort.descending ? -order : order;
+      }
+
+      return 0;
     });
 
-  const columns = [
-    ["product_name", "Product"],
-    ["amount", "Amount"],
-    ...(features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING")
-      ? [["best_before_date", "Due date"]]
-      : []),
-    ...(features.enabled("STOCK_LOCATION_TRACKING") ? [["location_name", "Location"]] : []),
-    ...(features.enabled("STOCK_PRICE_TRACKING")
-      ? [
-          ["shopping_location_name", "Store"],
-          ["price", "Price"],
-        ]
-      : []),
-    ["purchased_date", "Purchased date"],
-    ["note", "Note"],
-    ...productFields.map((f) => [`product:${f.name}`, f.caption]),
-    ...stockFields.map((f) => [`stock:${f.name}`, f.caption]),
-  ];
+  const columns = tableColumns.flatMap((c) =>
+    c.key !== "actions" && c.rendered !== false ? [[c.key, c.label]] : [],
+  );
 
   const error = data.error || definitions.error || action.error || undo.error;
 
@@ -227,6 +264,7 @@ export function StockEntries({
           }}
         />
       ) : null}
+      <StockTableStatus options={options} />
       <div className="toolbar journal-filters">
         {search.embedded === undefined ? (
           <label className="field">
@@ -297,7 +335,7 @@ export function StockEntries({
       {data.isPending || definitions.isPending ? (
         <LoadingBlock label={t("Loading stock entries…")} />
       ) : null}
-      {data.isSuccess && definitions.isSuccess ? (
+      {data.isSuccess && definitions.isSuccess && options.ready ? (
         <>
           <p className="toolbar-note" role="status">
             {t("%s rows", String(rows.length))}
@@ -313,31 +351,41 @@ export function StockEntries({
               <caption className="sr-only">{t("Stock entries")}</caption>
               <thead>
                 <tr>
-                  <th scope="col">
-                    <span className="sr-only">{t("Actions")}</span>
-                  </th>
-                  {columns.map(([key, label]) => (
-                    <th
-                      key={key}
-                      scope="col"
-                      aria-sort={
-                        sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="journal-sort"
-                        onClick={() =>
-                          setSort({ key, descending: sort.key === key ? !sort.descending : false })
+                  <StockTableCells options={options} headers>
+                    <th scope="col">
+                      <StockTableOptions
+                        options={options}
+                        onReset={() => {
+                          setLocation("");
+                          setRefreshedProducts([]);
+                          setLastBooking(undefined);
+                        }}
+                      />
+                    </th>
+                    {columns.map(([key, label]) => (
+                      <th
+                        key={key}
+                        scope="col"
+                        aria-sort={
+                          sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"
                         }
                       >
-                        {t(label)}
-                      </button>
-                    </th>
-                  ))}
+                        <button
+                          type="button"
+                          className="journal-sort"
+                          onClick={(event) => options.sortBy(key, event.shiftKey)}
+                        >
+                          {t(label)}
+                        </button>
+                      </th>
+                    ))}
+                  </StockTableCells>
                 </tr>
               </thead>
-              <tbody>
+              <StockTableRows
+                options={options}
+                groups={rows.map((row) => String(value(row, options.groupColumn ?? "")))}
+              >
                 {rows.map((row) => {
                   const expired = !!row.best_before_date && row.best_before_date < isoDay();
 
@@ -360,113 +408,116 @@ export function StockEntries({
                           : undefined
                       }
                     >
-                      <td>
-                        <div className="row-actions">
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            aria-label={t("Consume stock entry %s", String(row.id))}
-                            disabled={pending}
-                            onClick={() => action.mutate({ row, kind: "consume" })}
-                          >
-                            {t("Consume")}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            aria-label={t("Consume stock entry %s as spoiled", String(row.id))}
-                            disabled={pending}
-                            onClick={() => action.mutate({ row, kind: "spoiled" })}
-                          >
-                            {t("Spoiled")}
-                          </button>
-                          {features.enabled("STOCK_PRODUCT_OPENED_TRACKING") ? (
+                      <StockTableCells options={options}>
+                        <td>
+                          <div className="row-actions">
                             <button
                               type="button"
                               className="btn btn-ghost btn-sm"
-                              aria-label={t("Open stock entry %s", String(row.id))}
-                              disabled={
-                                pending ||
-                                row.open === 1 ||
-                                row.enable_tare_weight_handling === 1 ||
-                                row.disable_open === 1
-                              }
-                              onClick={() => action.mutate({ row, kind: "open" })}
+                              aria-label={t("Consume stock entry %s", String(row.id))}
+                              disabled={pending}
+                              onClick={() => action.mutate({ row, kind: "consume" })}
                             >
-                              {t("Open")}
+                              {t("Consume")}
                             </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            disabled={pending}
-                            aria-label={t("Edit stock entry %s", String(row.id))}
-                            onClick={() => setEditing(row.id)}
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              aria-label={t("Consume stock entry %s as spoiled", String(row.id))}
+                              disabled={pending}
+                              onClick={() => action.mutate({ row, kind: "spoiled" })}
+                            >
+                              {t("Spoiled")}
+                            </button>
+                            {features.enabled("STOCK_PRODUCT_OPENED_TRACKING") ? (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                aria-label={t("Open stock entry %s", String(row.id))}
+                                disabled={
+                                  pending ||
+                                  row.open === 1 ||
+                                  row.enable_tare_weight_handling === 1 ||
+                                  row.disable_open === 1
+                                }
+                                onClick={() => action.mutate({ row, kind: "open" })}
+                              >
+                                {t("Open")}
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              disabled={pending}
+                              aria-label={t("Edit stock entry %s", String(row.id))}
+                              onClick={() => setEditing(row.id)}
+                            >
+                              {t("Edit")}
+                            </button>
+                            <GrocycodeActions
+                              kind="stock-entry"
+                              id={row.id}
+                              name={t("Stock entry %s", String(row.id))}
+                              compact
+                            />
+                          </div>
+                        </td>
+                        <th scope="row">
+                          <Link
+                            to="/products/$productId"
+                            params={{ productId: String(row.product_id) }}
                           >
-                            {t("Edit")}
-                          </button>
-                          <GrocycodeActions
-                            kind="stock-entry"
-                            id={row.id}
-                            name={t("Stock entry %s", String(row.id))}
-                            compact
-                          />
-                        </div>
-                      </td>
-                      <th scope="row">
-                        <Link
-                          to="/products/$productId"
-                          params={{ productId: String(row.product_id) }}
-                        >
-                          {row.product_name}
-                        </Link>
-                      </th>
-                      <td>
-                        {amount(row)} {unit(row)}
-                        {features.enabled("STOCK_PRODUCT_OPENED_TRACKING") && row.open === 1 ? (
-                          <small> {t("Opened")}</small>
-                        ) : null}
-                      </td>
-                      {features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") ? (
+                            {row.product_name}
+                          </Link>
+                        </th>
                         <td>
-                          {row.best_before_date === "2999-12-31"
-                            ? t("Never")
-                            : row.best_before_date}
+                          {amount(row)} {unit(row)}
+                          {features.enabled("STOCK_PRODUCT_OPENED_TRACKING") && row.open === 1 ? (
+                            <small> {t("Opened")}</small>
+                          ) : null}
                         </td>
-                      ) : null}
-                      {features.enabled("STOCK_LOCATION_TRACKING") ? (
-                        <td>{row.location_name}</td>
-                      ) : null}
-                      {features.enabled("STOCK_PRICE_TRACKING") ? (
-                        <>
-                          <td>{row.shopping_location_name}</td>
-                          <td
-                            title={t(
-                              "%1$s per %2$s",
-                              preferences.formatCurrency(row.price ?? 0, currency),
-                              row.qu_name ?? "",
-                            )}
-                          >
-                            {price(row)}
+                        {features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") ? (
+                          <td>
+                            {row.best_before_date === "2999-12-31"
+                              ? t("Never")
+                              : row.best_before_date}
                           </td>
-                        </>
-                      ) : null}
-                      <td>{row.purchased_date}</td>
-                      <td>{row.note}</td>
-                      {productFields.map((f) => (
-                        <td key={f.id}>
-                          <UserfieldValue field={f} value={row.product_values[f.name] ?? null} />
-                        </td>
-                      ))}
-                      {stockFields.map((f) => (
-                        <td key={f.id}>
-                          <UserfieldValue field={f} value={row.stock_values[f.name] ?? null} />
-                        </td>
-                      ))}
+                        ) : null}
+                        {features.enabled("STOCK_LOCATION_TRACKING") ? (
+                          <td>{row.location_name}</td>
+                        ) : null}
+                        {features.enabled("STOCK_PRICE_TRACKING") ? (
+                          <>
+                            <td>{row.shopping_location_name}</td>
+                            <td
+                              title={t(
+                                "%1$s per %2$s",
+                                preferences.formatCurrency(row.price ?? 0, currency),
+                                row.qu_name ?? "",
+                              )}
+                            >
+                              {price(row)}
+                            </td>
+                          </>
+                        ) : null}
+                        <td>{row.purchased_date}</td>
+                        <td>{row.row_created_timestamp}</td>
+                        <td>{row.note}</td>
+                        {productFields.map((f) => (
+                          <td key={f.id}>
+                            <UserfieldValue field={f} value={row.product_values[f.name] ?? null} />
+                          </td>
+                        ))}
+                        {stockFields.map((f) => (
+                          <td key={f.id}>
+                            <UserfieldValue field={f} value={row.stock_values[f.name] ?? null} />
+                          </td>
+                        ))}
+                      </StockTableCells>
                     </tr>
                   );
                 })}
-              </tbody>
+              </StockTableRows>
             </table>
           </div>
           {!rows.length ? <p className="empty-state">{t("No stock entries.")}</p> : null}

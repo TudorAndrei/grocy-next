@@ -8,6 +8,13 @@ import { matchesTableSearch } from "@/lib/table-search";
 import type { SummarySearch } from "@/lib/stock-journal";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
+import { useTableOptions, type TableColumn } from "@/lib/table-options";
+import {
+  StockTableCells,
+  StockTableOptions,
+  StockTableRows,
+  StockTableStatus,
+} from "./StockTableOptions";
 
 const columns = [
   ["product_name", "Product"],
@@ -16,6 +23,11 @@ const columns = [
   ["amount", "Amount"],
 ] as const;
 
+const tableColumns: TableColumn[] = [
+  { key: "actions", label: "", configurable: false },
+  ...columns.map(([key, label]) => ({ key, label, groupable: key !== "amount" })),
+];
+
 export function StockJournalSummary({ search }: { search: SummarySearch }) {
   const { t, pluralIndex } = useI18n();
   const preferences = usePreferences();
@@ -23,11 +35,6 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
   const [product, setProduct] = useState("");
   const [transaction, setTransaction] = useState("");
   const [user, setUser] = useState("");
-
-  const [sort, setSort] = useState<{
-    key: (typeof columns)[number][0];
-    descending: boolean;
-  }>({ key: "product_name", descending: false });
 
   const data = useQuery({
     queryKey: [
@@ -43,22 +50,47 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
     refetchOnWindowFocus: false,
   });
 
+  const options = useTableOptions(
+    "stock-journal-summary-table",
+    tableColumns,
+    { key: "product_name", descending: false },
+    data.isSuccess,
+  );
+
+  const sort = options.sort;
+
   const productName = data.data?.products.find((row) => String(row.id) === product)?.name ?? "";
   const userName = data.data?.users.find((row) => String(row.id) === user)?.name ?? "";
 
-  const rows = (data.data?.rows ?? [])
-    .map((row) => ({
-      ...row,
-      transaction_type: t(row.transaction_type ?? ""),
-      display_amount: `${row.amount.toLocaleString(undefined, {
-        maximumFractionDigits: preferences.amountPrecision,
-      })} ${unitLabel(
-        { name: row.qu_name ?? "", name_plural: row.qu_name_plural },
-        row.amount,
-        pluralIndex,
-        false,
-      )}`,
-    }))
+  const formatted = (data.data?.rows ?? []).map((row) => ({
+    ...row,
+    transaction_type: t(row.transaction_type ?? ""),
+    display_amount: `${row.amount.toLocaleString(undefined, {
+      maximumFractionDigits: preferences.amountPrecision,
+    })} ${unitLabel(
+      { name: row.qu_name ?? "", name_plural: row.qu_name_plural },
+      row.amount,
+      pluralIndex,
+      false,
+    )}`,
+  }));
+
+  const value = (row: (typeof formatted)[number], key: string): string => {
+    switch (key) {
+      case "product_name":
+        return row.product_name ?? "";
+      case "transaction_type":
+        return row.transaction_type;
+      case "user_display_name":
+        return row.user_display_name ?? "";
+      case "amount":
+        return row.display_amount;
+      default:
+        return "";
+    }
+  };
+
+  const rows = formatted
     .filter(
       (row) =>
         (!product || (row.product_name ?? "").toLowerCase() === productName.toLowerCase()) &&
@@ -72,12 +104,21 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
         ),
     )
     .sort((left, right) => {
-      const first = sort.key === "amount" ? left.display_amount : (left[sort.key] ?? "");
-      const second = sort.key === "amount" ? right.display_amount : (right[sort.key] ?? "");
-      const order = first.localeCompare(second);
+      for (const order of options.sorters) {
+        const comparison = value(left, order.key).localeCompare(value(right, order.key));
 
-      return sort.descending ? -order : order;
+        if (comparison) return order.descending ? -comparison : comparison;
+      }
+
+      return 0;
     });
+
+  const clearFilters = () => {
+    setText("");
+    setProduct("");
+    setTransaction("");
+    setUser("");
+  };
 
   return (
     <>
@@ -121,19 +162,11 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => {
-            setText("");
-            setProduct("");
-            setTransaction("");
-            setUser("");
-          }}
-        >
+        <button type="button" className="btn" onClick={clearFilters}>
           {t("Clear filter")}
         </button>
       </div>
+      <StockTableStatus options={options} />
       {data.error ? (
         <>
           <ErrorBlock message={data.error.message} />
@@ -143,7 +176,7 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
         </>
       ) : null}
       {data.isPending ? <LoadingBlock label={t("Loading journal summary…")} /> : null}
-      {data.isSuccess ? (
+      {data.isSuccess && options.ready ? (
         <>
           <p className="toolbar-note" role="status">
             {t("%s rows", String(rows.length))}
@@ -158,42 +191,54 @@ export function StockJournalSummary({ search }: { search: SummarySearch }) {
               <caption className="sr-only">{t("Stock journal summary")}</caption>
               <thead>
                 <tr>
-                  {columns.map(([key, label]) => (
-                    <th
-                      key={key}
-                      scope="col"
-                      aria-sort={
-                        sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="journal-sort"
-                        onClick={() =>
-                          setSort({ key, descending: sort.key === key ? !sort.descending : false })
+                  <StockTableCells options={options} headers>
+                    <th scope="col">
+                      <StockTableOptions options={options} onReset={clearFilters} />
+                    </th>
+                    {columns.map(([key, label]) => (
+                      <th
+                        key={key}
+                        className={key === "amount" ? "journal-summary-amount" : undefined}
+                        scope="col"
+                        aria-sort={
+                          sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"
                         }
                       >
-                        {t(label)}
-                      </button>
-                    </th>
-                  ))}
+                        <button
+                          type="button"
+                          className="journal-sort"
+                          onClick={(event) => options.sortBy(key, event.shiftKey)}
+                        >
+                          {t(label)}
+                        </button>
+                      </th>
+                    ))}
+                  </StockTableCells>
                 </tr>
               </thead>
-              <tbody>
+              <StockTableRows
+                options={options}
+                groups={rows.map((row) => value(row, options.groupColumn ?? ""))}
+              >
                 {rows.map((row) => (
                   <tr key={`${row.product_id}:${row.user_id}:${row.transaction_type}`}>
-                    <th scope="row">{row.product_name}</th>
-                    <td>{row.transaction_type}</td>
-                    <td>{row.user_display_name}</td>
-                    <td className="journal-summary-amount">{row.display_amount}</td>
+                    <StockTableCells options={options}>
+                      <td />
+                      <th scope="row">{row.product_name}</th>
+                      <td>{row.transaction_type}</td>
+                      <td>{row.user_display_name}</td>
+                      <td className="journal-summary-amount">{row.display_amount}</td>
+                    </StockTableCells>
                   </tr>
                 ))}
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>{t("No matching records found")}</td>
+                    <td colSpan={Math.max(1, options.visibleColumns.length)}>
+                      {t("No matching records found")}
+                    </td>
                   </tr>
                 ) : null}
-              </tbody>
+              </StockTableRows>
             </table>
           </div>
         </>

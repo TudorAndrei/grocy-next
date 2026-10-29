@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import type { JournalRow } from "@/lib/stock-journal";
+import type { UserSettings } from "@/lib/types";
 import { supportProductOptions } from "./fixtures/product-options";
 import { supportDescriptionEditors } from "./fixtures/editor";
 
@@ -24,7 +25,18 @@ beforeEach(() => {
   }
 });
 
-function mount(path: string, fail = false, stock = true) {
+function mount(
+  path: string,
+  fail = false,
+  stock = true,
+  savedSettings: UserSettings = {},
+  failTableWrites = false,
+) {
+  const settings: UserSettings = { stock_decimal_places_amounts: "2", ...savedSettings };
+  const tableWrites: { method: string; key: string; value?: string }[] = [];
+  let failedLayout = false;
+  let failedReset = false;
+
   const rows: JournalRow[] = [
     {
       id: 101,
@@ -209,8 +221,41 @@ function mount(path: string, fail = false, stock = true) {
 
       if (path === "/api/system/config") return Response.json({ FEATURE_FLAG_STOCK: stock });
 
-      if (path === "/api/user/settings")
-        return Response.json({ stock_decimal_places_amounts: "2" });
+      if (path === "/api/user/settings") return Response.json(settings);
+
+      if (path.startsWith("/api/user/settings/")) {
+        const key = decodeURIComponent(path.slice("/api/user/settings/".length));
+        const value = init?.method === "PUT" ? JSON.parse(String(init.body)).value : undefined;
+        tableWrites.push({ method: init?.method ?? "GET", key, value });
+
+        if (
+          failTableWrites &&
+          init?.method === "PUT" &&
+          key.startsWith("datatables_state_") &&
+          !JSON.parse(value).columns[3].visible &&
+          !failedLayout
+        ) {
+          failedLayout = true;
+
+          return Response.json({ error_message: "Table save failed" }, { status: 500 });
+        }
+
+        if (
+          failTableWrites &&
+          init?.method === "DELETE" &&
+          key.startsWith("datatables_state_") &&
+          !failedReset
+        ) {
+          failedReset = true;
+
+          return Response.json({ error_message: "Table reset failed" }, { status: 500 });
+        }
+
+        if (init?.method === "DELETE") delete settings[key];
+        else settings[key] = value;
+
+        return new Response(null, { status: 204 });
+      }
 
       if (path.includes("/shopping-lists/")) return Response.json({ items: [] });
 
@@ -375,8 +420,145 @@ function mount(path: string, fail = false, stock = true) {
     client.clear();
   });
 
-  return { writes, router };
+  return { writes, router, tableWrites, settings };
 }
+
+function nativeLayout(
+  count: number,
+  order: number[],
+  hidden: number[] = [],
+  sorts: [number, "asc" | "desc"][] = [[1, "desc"]],
+) {
+  const search = { search: "", smart: true, regex: false, caseInsensitive: true };
+
+  return JSON.stringify({
+    time: 1793231338715,
+    start: 0,
+    length: 10,
+    order: sorts,
+    search,
+    columns: Array.from({ length: count }, (_, i) => ({ visible: !hidden.includes(i), search })),
+    ColReorder: order,
+    select: { rows: [], columns: [], cells: [] },
+    childRows: [],
+  });
+}
+
+test("summary imports a native layout and saves retryable visibility, order, groups, and reset", async () => {
+  const key = "datatables_state_stock-journal-summary-table";
+  const groupKey = "datatables_rowGroup_stock-journal-summary-table";
+
+  const { router, tableWrites, settings } = mount(
+    "/stockjournal/summary",
+    false,
+    true,
+    {
+      [key]: nativeLayout(
+        5,
+        [0, 3, 1, 2, 4],
+        [4],
+        [
+          [1, "desc"],
+          [3, "desc"],
+        ],
+      ),
+    },
+    true,
+  );
+
+  const user = userEvent.setup();
+  const table = await screen.findByRole("table", { name: "Stock journal summary" });
+
+  const headers = () =>
+    within(table)
+      .getAllByRole("columnheader")
+      .slice(1)
+      .map((header) => header.textContent);
+
+  expect(headers()).toEqual(["User", "Product", "Transaction type"]);
+  expect(within(within(table).getAllByRole("row")[3]!).getByText("Bob")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  let dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(dialog.getByRole("checkbox", { name: "User" }));
+  await dialog.findByText("Table save failed");
+  await user.click(dialog.getByRole("button", { name: "Retry table options" }));
+  await waitFor(() => expect(JSON.parse(String(settings[key])).columns[3].visible).toBe(false));
+  await user.click(dialog.getByRole("checkbox", { name: "Amount" }));
+  await user.click(dialog.getByRole("button", { name: "Move Product earlier" }));
+  await user.click(dialog.getByRole("radio", { name: "Product" }));
+  await waitFor(() => expect(settings[groupKey]).toBe('{"enable":true,"dataSrc":"1"}'));
+  await user.click(dialog.getByRole("button", { name: "OK" }));
+  expect(headers()).toEqual(["Product", "Transaction type", "Amount"]);
+  await user.click(within(table).getByRole("button", { name: "Coffee" }));
+  expect(within(table).queryAllByRole("rowheader", { name: "Coffee" })).toHaveLength(0);
+  await router.navigate({ to: "/journal" });
+  await router.navigate({ to: "/stockjournal/summary" });
+  await screen.findByRole("button", { name: "Coffee" });
+  await user.type(screen.getByRole("searchbox", { name: "Search summary" }), "Tea");
+  await user.click(screen.getByRole("button", { name: "Amount" }));
+  await waitFor(() => expect(JSON.parse(String(settings[key])).order).toEqual([[4, "asc"]]));
+  expect(JSON.parse(String(settings[key])).search.search).toBe("");
+  expect(
+    JSON.parse(String(settings[key])).columns.every(
+      (column: { search: { search: string } }) => column.search.search === "",
+    ),
+  ).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  dialog = within(await screen.findByRole("dialog", { name: "Table options" }));
+  await user.click(dialog.getByRole("button", { name: "Reset" }));
+
+  const confirmation = within(
+    await screen.findByRole("dialog", {
+      name: "Are you sure you want to reset the table options?",
+    }),
+  );
+
+  await user.click(confirmation.getByRole("button", { name: "Yes" }));
+  await confirmation.findByText("Table reset failed");
+  await user.click(confirmation.getByRole("button", { name: "Yes" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  const restored = screen.getByRole("table", { name: "Stock journal summary" });
+  expect(
+    within(restored)
+      .getAllByRole("columnheader")
+      .slice(1)
+      .map((header) => header.textContent),
+  ).toEqual(["Product", "Transaction type", "User", "Amount"]);
+  expect(screen.getByRole<HTMLInputElement>("searchbox", { name: "Search summary" }).value).toBe(
+    "",
+  );
+  expect(settings[groupKey]).toBeUndefined();
+  expect(
+    tableWrites.filter((write) => write.method === "DELETE").map((write) => write.key),
+  ).toEqual([groupKey, key, key]);
+});
+
+test("journal imports its native column numbers and keeps filters on a hidden column", async () => {
+  mount("/stockjournal?product=7&months=9999", false, true, {
+    "datatables_state_stock-journal-table": nativeLayout(9, [0, 7, 1, 2, 3, 4, 5, 6, 8], [5]),
+    "datatables_rowGroup_stock-journal-table": '{"enable":true,"dataSrc":"2"}',
+  });
+  const user = userEvent.setup();
+  const table = await screen.findByRole("table", { name: "Stock journal" });
+
+  const headers = within(table)
+    .getAllByRole("columnheader")
+    .slice(1)
+    .map((header) => header.textContent);
+
+  expect(headers.slice(0, 2)).toEqual(["Note", "Product"]);
+  expect(within(table).queryByRole("columnheader", { name: "Location" })).toBeNull();
+  await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "2");
+  expect(within(table).getAllByRole("button", { name: /^Undo transaction/ })).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Table options" }));
+  const dialog = await screen.findByRole("dialog", { name: "Table options" });
+  expect(within(dialog).getByRole<HTMLInputElement>("radio", { name: "Product" }).checked).toBe(
+    true,
+  );
+  fireEvent(dialog, new Event("cancel", { cancelable: true, bubbles: true }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Table options" }));
+});
 
 test("product journal keeps the draft through read retry, filters, linked undo, and closing", async () => {
   const { writes, router } = mount("/product/7", true);
@@ -424,6 +606,13 @@ test("product journal keeps the draft through read retry, filters, linked undo, 
     "POST /api/stock/bookings/103/undo",
     "POST /api/stock/bookings/103/undo",
   ]);
+  const optionsTrigger = view.getByRole("button", { name: "Table options" });
+  await user.click(optionsTrigger);
+  const tableOptions = await screen.findByRole("dialog", { name: "Table options" });
+  fireEvent(tableOptions, new Event("cancel", { cancelable: true, bubbles: true }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Table options" })).toBeNull());
+  expect(screen.getByRole("dialog", { name: "Stock journal" })).toBe(dialog);
+  expect(document.activeElement).toBe(optionsTrigger);
   fireEvent(dialog, new Event("cancel", { cancelable: true }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(document.activeElement).toBe(trigger);

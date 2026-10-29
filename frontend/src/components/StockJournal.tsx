@@ -14,6 +14,13 @@ import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { matchesTableSearch } from "@/lib/table-search";
+import { useTableOptions, type TableColumn } from "@/lib/table-options";
+import {
+  StockTableCells,
+  StockTableOptions,
+  StockTableRows,
+  StockTableStatus,
+} from "./StockTableOptions";
 
 const ranges = [
   ["1", "1 month"],
@@ -39,7 +46,6 @@ export function StockJournal({
   const [transaction, setTransaction] = useState("");
   const [location, setLocation] = useState("");
   const [user, setUser] = useState("");
-  const [sort, setSort] = useState({ key: "row_created_timestamp", descending: true });
 
   const data = useQuery({
     queryKey: ["stock", "journal-view", search.product, search.months],
@@ -76,6 +82,57 @@ export function StockJournal({
       maximumFractionDigits: preferences.amountPrecision,
     });
 
+  const tableColumns: TableColumn[] = [
+    { key: "actions", label: "", configurable: false },
+    { key: "product_name", label: "Product", groupable: true },
+    { key: "amount", label: "Amount" },
+    { key: "row_created_timestamp", label: "Transaction time" },
+    { key: "transaction_type", label: "Transaction type", groupable: true },
+    {
+      key: "location_name",
+      label: "Location",
+      groupable: true,
+      rendered: features.enabled("STOCK_LOCATION_TRACKING"),
+    },
+    { key: "user_display_name", label: "Done by", groupable: true },
+    { key: "note", label: "Note" },
+    ...fields.map((field) => ({
+      key: `custom:${field.name}`,
+      label: field.caption,
+      groupable: true,
+    })),
+  ];
+
+  const options = useTableOptions(
+    "stock-journal-table",
+    tableColumns,
+    { key: "row_created_timestamp", descending: true },
+    data.isSuccess && definitions.isSuccess,
+  );
+
+  const sort = options.sort;
+
+  const value = (row: JournalRow, key: string): string => {
+    switch (key) {
+      case "amount":
+        return `${amount(row)} ${unit(row)}`;
+      case "product_name":
+        return row.product_name ?? "";
+      case "row_created_timestamp":
+        return row.row_created_timestamp ?? "";
+      case "transaction_type":
+        return type(row);
+      case "location_name":
+        return row.location_name ?? "";
+      case "user_display_name":
+        return row.user_display_name ?? "";
+      case "note":
+        return row.note ?? "";
+      default:
+        return row.custom_values[key.slice(7)] ?? "";
+    }
+  };
+
   const rows = (() => {
     const locationName =
       data.data?.locations.find((item) => String(item.id) === location)?.name ?? "";
@@ -103,49 +160,22 @@ export function StockJournal({
       );
     });
 
-    const value = (row: JournalRow) => {
-      switch (sort.key) {
-        case "amount":
-          return `${amount(row)} ${unit(row)}`;
-        case "product_name":
-          return row.product_name ?? "";
-        case "row_created_timestamp":
-          return row.row_created_timestamp ?? "";
-        case "transaction_type":
-          return type(row);
-        case "location_name":
-          return row.location_name ?? "";
-        case "user_display_name":
-          return row.user_display_name ?? "";
-        case "note":
-          return row.note ?? "";
-        default:
-          return row.custom_values[sort.key.slice(7)] ?? "";
-      }
-    };
-
     return filtered.sort((a, b) => {
-      const first = value(a);
-      const second = value(b);
+      for (const sort of options.sorters) {
+        const order = value(a, sort.key).localeCompare(value(b, sort.key));
 
-      const order = String(first).localeCompare(String(second));
+        if (order) return sort.descending ? -order : order;
+      }
 
-      return sort.descending ? -order : order;
+      return 0;
     });
   })();
 
   const error = data.error || definitions.error || undo.error;
 
-  const columns = [
-    ["product_name", "Product"],
-    ["amount", "Amount"],
-    ["row_created_timestamp", "Transaction time"],
-    ["transaction_type", "Transaction type"],
-    ...(features.enabled("STOCK_LOCATION_TRACKING") ? [["location_name", "Location"]] : []),
-    ["user_display_name", "Done by"],
-    ["note", "Note"],
-    ...fields.map((field) => [`custom:${field.name}`, field.caption]),
-  ];
+  const columns = tableColumns.flatMap((c) =>
+    c.key !== "actions" && c.rendered !== false ? [[c.key, c.label]] : [],
+  );
 
   return (
     <>
@@ -247,7 +277,6 @@ export function StockJournal({
             setTransaction("");
             setLocation("");
             setUser("");
-            setSort({ key: "row_created_timestamp", descending: true });
             onChange({
               ...search,
               months: undefined,
@@ -258,6 +287,7 @@ export function StockJournal({
           {t("Clear filter")}
         </button>
       </div>
+      <StockTableStatus options={options} />
       {error ? <ErrorBlock message={error.message} /> : null}
       {data.error || definitions.error ? (
         <button
@@ -273,7 +303,7 @@ export function StockJournal({
       {data.isPending || definitions.isPending ? (
         <LoadingBlock label={t("Loading journal…")} />
       ) : null}
-      {data.isSuccess && definitions.isSuccess ? (
+      {data.isSuccess && definitions.isSuccess && options.ready ? (
         <>
           <p className="toolbar-note" role="status">
             {t("%s rows", String(rows.length))}
@@ -288,86 +318,99 @@ export function StockJournal({
               <caption className="sr-only">{t("Stock journal")}</caption>
               <thead>
                 <tr>
-                  <th scope="col">
-                    <span className="sr-only">{t("Actions")}</span>
-                  </th>
-                  {columns.map(([key, label]) => (
-                    <th
-                      key={key}
-                      scope="col"
-                      aria-sort={
-                        sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="journal-sort"
-                        onClick={() =>
-                          setSort({ key, descending: sort.key === key ? !sort.descending : false })
+                  <StockTableCells options={options} headers>
+                    <th scope="col">
+                      <StockTableOptions
+                        options={options}
+                        onReset={() => {
+                          setText("");
+                          setTransaction("");
+                          setLocation("");
+                          setUser("");
+                        }}
+                      />
+                    </th>
+                    {columns.map(([key, label]) => (
+                      <th
+                        key={key}
+                        scope="col"
+                        aria-sort={
+                          sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"
                         }
                       >
-                        {t(label)}
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} data-undone={row.undone ? true : undefined}>
-                    <td>
-                      <div className="row-actions">
                         <button
                           type="button"
-                          className="btn btn-ghost btn-sm"
-                          disabled={undo.isPending || !!row.undone}
-                          aria-label={t("Undo transaction %s", String(row.id))}
-                          onClick={() => undo.mutate(row.id)}
+                          className="journal-sort"
+                          onClick={(event) => options.sortBy(key, event.shiftKey)}
                         >
-                          {t("Undo")}
+                          {t(label)}
                         </button>
-                        <GrocycodeActions
-                          kind="product"
-                          id={row.product_id}
-                          name={row.product_name ?? ""}
-                          compact
-                        />
-                      </div>
-                    </td>
-                    <th scope="row">
-                      <Link
-                        to="/products/$productId"
-                        params={{ productId: String(row.product_id) }}
-                      >
-                        {row.undone ? <s>{row.product_name}</s> : row.product_name}
-                      </Link>
-                      {row.undone ? (
-                        <small>
-                          {t("Undone on")} {row.undone_timestamp}
-                        </small>
-                      ) : null}
-                    </th>
-                    <td>
-                      {amount(row)} {unit(row)}
-                    </td>
-                    <td>{row.row_created_timestamp}</td>
-                    <td>{type(row)}</td>
-                    {features.enabled("STOCK_LOCATION_TRACKING") ? (
-                      <td>{row.location_name}</td>
-                    ) : null}
-                    <td>{row.user_display_name}</td>
-                    <td>{row.note}</td>
-                    {fields.map((field) => (
-                      <td key={field.id}>
-                        <UserfieldValue
-                          field={field}
-                          value={row.custom_values[field.name] ?? null}
-                        />
-                      </td>
+                      </th>
                     ))}
+                  </StockTableCells>
+                </tr>
+              </thead>
+              <StockTableRows
+                options={options}
+                groups={rows.map((row) => value(row, options.groupColumn ?? ""))}
+              >
+                {rows.map((row) => (
+                  <tr key={row.id} data-undone={row.undone ? true : undefined}>
+                    <StockTableCells options={options}>
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={undo.isPending || !!row.undone}
+                            aria-label={t("Undo transaction %s", String(row.id))}
+                            onClick={() => undo.mutate(row.id)}
+                          >
+                            {t("Undo")}
+                          </button>
+                          <GrocycodeActions
+                            kind="product"
+                            id={row.product_id}
+                            name={row.product_name ?? ""}
+                            compact
+                          />
+                        </div>
+                      </td>
+                      <th scope="row">
+                        <Link
+                          to="/products/$productId"
+                          params={{ productId: String(row.product_id) }}
+                        >
+                          {row.undone ? <s>{row.product_name}</s> : row.product_name}
+                        </Link>
+                        {row.undone ? (
+                          <small>
+                            {t("Undone on")} {row.undone_timestamp}
+                          </small>
+                        ) : null}
+                      </th>
+                      <td>
+                        {amount(row)} {unit(row)}
+                      </td>
+                      <td>{row.row_created_timestamp}</td>
+                      <td>{type(row)}</td>
+                      {features.enabled("STOCK_LOCATION_TRACKING") ? (
+                        <td>{row.location_name}</td>
+                      ) : null}
+                      <td>{row.user_display_name}</td>
+                      <td>{row.note}</td>
+                      {fields.map((field) => (
+                        <td key={field.id}>
+                          <UserfieldValue
+                            field={field}
+                            value={row.custom_values[field.name] ?? null}
+                          />
+                        </td>
+                      ))}
+                    </StockTableCells>
                   </tr>
                 ))}
-              </tbody>
+              </StockTableRows>
             </table>
           </div>
           {!rows.length ? (

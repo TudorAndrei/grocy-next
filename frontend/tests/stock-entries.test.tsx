@@ -21,6 +21,7 @@ function mount(
     printer = false,
     precision = 2,
     deferSavedRead = false,
+    tableState = "",
   } = {},
 ) {
   const base: EntryRow = {
@@ -154,6 +155,7 @@ function mount(
           stock_decimal_places_amounts: precision,
           stock_decimal_places_prices_input: precision,
           stock_decimal_places_prices_display: 2,
+          "datatables_state_stockentries-table": tableState,
         });
 
       if (path.includes("/shopping-lists/")) return Response.json({ items: [] });
@@ -494,6 +496,36 @@ test("entry location filters match words in either order and retain native amoun
   await user.click(screen.getByRole("button", { name: "Note" }));
   expect(entries()).toEqual(["Consume stock entry 56", "Consume stock entry 57"]);
 });
+
+test.each([14, 13])(
+  "entry layout retains hidden indexes and resets changed column counts (%s)",
+  async (count) => {
+    const search = { search: "", smart: true, regex: false, caseInsensitive: true };
+
+    const tableState = JSON.stringify({
+      time: 1793231338715,
+      order: [[2, "asc"]],
+      search,
+      columns: Array.from({ length: count }, (_, i) => ({ visible: i !== 12, search })),
+      ColReorder: [0, 10, 2, 1, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13].filter((i) => i < count),
+    });
+
+    mount("/stockentries?product=7&embedded=", { tracking: false, tableState });
+    const table = await screen.findByRole("table", { name: "Stock entries" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .slice(1)
+        .map((header) => header.textContent),
+    ).toEqual(
+      count === 14
+        ? ["Timestamp", "Product", "Amount", "Purchased date", "Note", "Batch"]
+        : ["Product", "Amount", "Purchased date", "Note", "Origin", "Batch"],
+    );
+
+    if (count === 14) expect(within(table).getAllByText("2026-10-20 12:00:00")).toHaveLength(4);
+  },
+);
 
 test.each(["/stockentries", "/stockentry/51"])("%s obeys the stock feature flag", async (path) => {
   mount(path, { stock: false });
