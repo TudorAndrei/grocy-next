@@ -623,6 +623,24 @@ The 1440-pixel and 390-pixel views retained the existing layout. The phone form 
 
 The initial consume callback difference recorded above is corrected. Overlapping product and manual location changes, scan-mode reply timing, scan sounds, recipe text, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
 
+### Consume scan feedback and first booking
+
+Scan mode now captures a valid booking from the first stock reply. It retains the scanned stock ID instead of waiting for later replies to toggle the specific-item checkbox. The form keeps the current product, location, amount, and unit factor for this capture. A scan setting change applies at once. It remains active if the setting write fails. The scan button also remains available while a booking reply is pending. Turning scan mode off before that reply suppresses the consumption success sound.
+
+The four original MP3 files are included unchanged from the pinned Grocy release, with its MIT license. Enabling scan mode plays the permission clip. Barcode and stock-code commits retain the two native scan beeps. Successful consumption plays its success clip when scan mode is still active. Invalid scan amounts play the error clip. Open and Undo do not play the consumption success clip. Embedded consume forms keep scan mode off.
+
+Exact-name typing in scan mode now waits for confirmation. The tested Enter path matches the native page: no consumption occurs while typing, and Enter starts one booking. Product-picker pointer selection still needs work. The current browser-list selection also waits for Enter or blur, while a native pointer selection submits at once.
+
+All 428 frontend tests passed in 45 files. Seven local checks failed with the previous form. Two focused checks also failed before the name-confirmation and pending-toggle corrections. Lint, formatting, all three type checks, and root and `/house` builds passed. No backend application source changed.
+
+The native and Linux release browsers matched stored-barcode amounts, stock codes with one to three locations, invalid amounts, and failed setting writes. Their sound sequences, successful booking fields, and saved stock fields matched. A proxy held a booking reply while scan mode was turned off; both pages retained the booking and suppressed its success sound. Name entry, Open, corrected invalid amounts, and visible Undo also passed. All stable saved records and Undo booking fields matched.
+
+The first release check found that prefixed sound links returned the application HTML. The web server now serves `/uisounds/` under its configured prefix. The public resource checker verifies GET and HEAD status, MPEG content type, exact source bytes, and content length for all four clips. It failed before the route correction. The corrected release passed 37 resource and form responses under `/house`, plus eight root-path sound responses. All four sound types reached playback in the native and release browsers.
+
+The 1440-pixel and 390-pixel views retained the existing layout. Both phone action buttons remained reachable after scrolling, with no horizontal overflow. All 154 frontend source files matched the build snapshot, and all 93 web build files matched the release image. All 177 Python source files matched the API image. PHP was disabled and absent from the release images. Saved stock and booking records remained unchanged after restart. The database integrity check passed.
+
+Late disabled-form events remain different. The native page can send failed product-details reads with an undefined product while an earlier automatic booking has disabled its inputs. Python retains the first booking and skips further scan attempts until it ends. These late events, pointer selection, overlapping product and location changes, recipe text, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash

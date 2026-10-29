@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -82,7 +83,33 @@ def compare(api: str, web: str, path: str, headers: dict[str, str], method: str)
     return actual
 
 
+def check_sounds(web: str) -> int:
+    source = Path(__file__).resolve().parents[1] / "frontend" / "public" / "uisounds"
+    count = 0
+    for name in ["silence", "barcodescannerbeep", "success", "error"]:
+        path = f"/uisounds/{name}.mp3"
+        expected = (source / f"{name}.mp3").read_bytes()
+        for method in ["GET", "HEAD"]:
+            result = fetch(web, path, {}, method)
+            require(result.status == 200, f"{method} {web}{path}: audio access failed")
+            require(
+                result.headers.get("content-type", "").split(";")[0] == "audio/mpeg",
+                f"{method} {web}{path}: expected MPEG audio",
+            )
+            require(
+                result.body == (expected if method == "GET" else b""),
+                f"{method} {web}{path}: wrong audio bytes",
+            )
+            require(
+                result.headers.get("content-length") == str(len(expected)),
+                f"{method} {web}{path}: wrong audio length",
+            )
+            count += 1
+    return count
+
+
 def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
+    count = check_sounds(web)
     catalog = fetch(api, "/api/objects/stock", credentials[0])
     require(catalog.status == 200, "The API stock catalog could not be read")
     stock = json.loads(catalog.body)
@@ -90,7 +117,6 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
     paths = [f"/{entity}/17/grocycode" for entity in ["product", "recipe", "chore", "battery"]] + [
         f"/stockentry/{entry}/grocycode"
     ]
-    count = 0
     for headers in credentials:
         for path in paths:
             for query in ["", "?size=40&download=false"]:

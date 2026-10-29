@@ -11,6 +11,7 @@ import { unitLabel } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { stockEditorUnits } from "@/lib/stock-editor";
+import { playUiSound } from "@/lib/ui-sound";
 import {
   getConsumeCatalog,
   getConsumeBarcode,
@@ -128,9 +129,22 @@ function ConsumeFields({
   const sourceRead = useRef<AbortController>(undefined);
   const version = useRef(0);
   const sourceVersion = useRef(0);
+
   // Native callbacks share these values before React renders their changes.
-  const sourceValues = useRef({ sum: 0, specific: false, factor: NaN, amount: "" });
-  const autoSubmit = useRef(false);
+  const sourceValues = useRef({
+    sum: 0,
+    specific: false,
+    factor: NaN,
+    amount: "",
+    product: "",
+    location: "",
+    stockId: "",
+  });
+
+  const bookingBusy = useRef(false);
+  const initialScanMode = initialOptions.embedded === undefined && preferences.scanConsume;
+  const scanState = useRef(initialScanMode);
+  const [scanEnabled, setScanEnabled] = useState(initialScanMode);
   const alive = useRef(true);
   const [options, setOptions] = useState(initialOptions);
   const prefill = options["product-name"];
@@ -151,14 +165,14 @@ function ConsumeFields({
       ? named
       : catalog.products.find((row) => String(row.id) === options.product);
 
-  const [product, setProduct] = useState(initial ? String(initial.id) : "");
+  const [product, updateProduct] = useState(initial ? String(initial.id) : "");
   const [selection, setSelection] = useState<ConsumeSelection>();
   const [code, setCode] = useState<ProductCode>();
   const [amount, updateAmount] = useState(String(preferences.consumeAmount));
   const [conversionAmount, setConversionAmount] = useState(String(preferences.consumeAmount));
   const [unitId, setUnitId] = useState("");
   const [unitRestored, setUnitRestored] = useState(false);
-  const [location, setLocation] = useState("");
+  const [location, updateLocation] = useState("");
 
   const [sources, setSources] = useState(() =>
     catalog.locations.map((row) => ({ location_id: row.id, location_name: row.name })),
@@ -169,7 +183,7 @@ function ConsumeFields({
   const [maximum, setMaximum] = useState<string>();
   const [specific, updateSpecific] = useState(false);
   const [stockItemDisabled, setStockItemDisabled] = useState(true);
-  const [stockId, setStockId] = useState("");
+  const [stockId, updateStockId] = useState("");
   const [exact, setExact] = useState(false);
   const [spoiled, setSpoiled] = useState(false);
   const [recipe, setRecipe] = useState("");
@@ -184,7 +198,6 @@ function ConsumeFields({
   const details = selection?.details;
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const recipesEnabled = features.enabled("RECIPES");
-  const scanEnabled = options.embedded === undefined && preferences.scanConsume;
   const precision = preferences.amountPrecision;
   const minimum = precision > 0 ? 10 ** -precision : 1;
 
@@ -197,6 +210,21 @@ function ConsumeFields({
   const tare = details?.product.enable_tare_weight_handling === 1;
   const tareWeight = details?.product.tare_weight ?? 0;
   const minimumAmount = tare && !exact ? tareWeight : minimum;
+
+  function setProduct(value: string) {
+    sourceValues.current.product = value;
+    updateProduct(value);
+  }
+
+  function setLocation(value: string) {
+    sourceValues.current.location = value;
+    updateLocation(value);
+  }
+
+  function setStockId(value: string) {
+    sourceValues.current.stockId = value;
+    updateStockId(value);
+  }
 
   function setAmount(value: string) {
     sourceValues.current.amount = value;
@@ -213,9 +241,11 @@ function ConsumeFields({
     updateSpecific(value);
   }
 
-  const postedAmount = (Number(conversionAmount) / factor)
-    .toFixed(Math.max(1, precision))
-    .replace(/0*$/g, "");
+  function bookingAmount(value: string, unitFactor: number) {
+    return (Number(value) / unitFactor).toFixed(Math.max(1, precision)).replace(/0*$/g, "");
+  }
+
+  const postedAmount = bookingAmount(conversionAmount, factor);
 
   function limit(data: ConsumeDetails, total: number, nextFactor: number, nextExact = exact) {
     if (data.has_childs) return undefined;
@@ -225,6 +255,204 @@ function ConsumeFields({
         ? total + (data.product.tare_weight ?? 0)
         : total * nextFactor
     ).toFixed(precision);
+  }
+
+  async function changed(identity: number) {
+    await invalidate();
+    await client.invalidateQueries({ queryKey: ["product-overview", identity] });
+  }
+
+  const save = useMutation({
+    mutationFn: async (vars: { product: string; body: JsonObject; open: boolean }) => {
+      const fresh = await getConsumeDetails(vars.product);
+
+      const bookings = await request<Booking[]>(
+        `/api/stock/products/${vars.product}/${vars.open ? "open" : "consume"}`,
+        { method: "POST", body: JSON.stringify(vars.body) },
+      );
+
+      if (!bookings[0]) throw new Error(t("The stock booking could not be read."));
+
+      return { vars, fresh, transaction: bookings[0].transaction_id };
+    },
+    onSuccess: async ({ vars, fresh, transaction }) => {
+      if (!vars.open && scanState.current) playUiSound("success");
+
+      if (
+        !vars.open &&
+        options.flow === "InplaceAddBarcodeToExistingProduct" &&
+        options.barcode !== undefined
+      ) {
+        void api
+          .action("/api/objects/product_barcodes", {
+            barcode: options.barcode,
+            product_id: vars.product,
+          })
+          .then(() => {
+            if (!alive.current || options.embedded !== undefined) return;
+            setOptions({});
+            onOptionsChange?.({});
+          })
+          .catch((reason: Error) => notify({ message: reason.message, tone: "error" }));
+      }
+
+      const posted = Number(vars.body.amount);
+
+      const removed = Math.abs(
+        posted -
+          (!vars.open && fresh.product.enable_tare_weight_handling === 1 && !vars.body.exact_amount
+            ? (fresh.product.tare_weight ?? 0) + fresh.stock_amount
+            : 0),
+      );
+
+      const stockUnit = {
+        ...fresh.quantity_unit_stock,
+        plural_forms: catalog.units.find((row) => row.id === fresh.quantity_unit_stock.id)
+          ?.plural_forms,
+      };
+
+      const message = t(
+        vars.open ? "Marked %1$s of %2$s as opened" : "Removed %1$s of %2$s from stock",
+        `${vars.open ? posted.toLocaleString() : removed} ${unitLabel(stockUnit, posted, pluralIndex, false)}`,
+        fresh.product.name,
+      );
+
+      notify({
+        message,
+        undo: async () => {
+          await api.undoTransaction(transaction);
+        },
+      });
+
+      setEntries([]);
+      setSpecific(false);
+      setStockId("");
+      bookingBusy.current = false;
+
+      if (vars.open || options.embedded === undefined) {
+        // EndUiBusy enables all native controls, including an unchecked item picker.
+        setUnitRestored(true);
+        setStockItemDisabled(false);
+      }
+
+      if (!vars.open && options.embedded !== undefined) {
+        setFinished(true);
+
+        if (window.parent !== window) {
+          const undo = `<br><a class="btn btn-secondary btn-sm mt-2" href="#" onclick="UndoStockTransaction(${tableAttribute(JSON.stringify(transaction))})"><i class="fa-solid fa-undo"></i> ${tableText(t("Undo"))}</a>`;
+          window.top?.postMessage(
+            {
+              Message: "BroadcastMessage",
+              Payload: { Message: "ProductChanged", Payload: vars.product },
+            },
+            window.location.origin,
+          );
+          window.parent.postMessage(
+            { Message: "ShowSuccessMessage", Payload: tableText(message) + undo },
+            window.location.origin,
+          );
+          window.parent.postMessage(
+            { Message: "CloseLastModal", Payload: null },
+            window.location.origin,
+          );
+        }
+      } else {
+        setProduct("");
+
+        const nextAmount = preferences.useQuickConsumeAmount
+          ? vars.open
+            ? String((fresh.product.quick_consume_amount ?? 0) * factor)
+            : ""
+          : String(preferences.consumeAmount);
+
+        setAmount(nextAmount);
+        setConversionAmount(nextAmount);
+
+        if (vars.open) {
+          if (fresh.product.move_on_open === 1 && fresh.default_consume_location)
+            notify({ message: t("Moved to %1$s", fresh.default_consume_location.name) });
+        } else {
+          setSelection(undefined);
+          setUnitId("");
+          sourceValues.current.factor = NaN;
+          setMaximum(undefined);
+          setLocation("");
+          setSources([]);
+          setRecipe("");
+          setRecipeText("");
+          const next = { ...options };
+          delete next.flow;
+          delete next.barcode;
+          delete next["product-name"];
+          setOptions(next);
+          onOptionsChange?.(next);
+        }
+
+        requestAnimationFrame(() => picker.current?.querySelector("input")?.focus());
+      }
+
+      if (!vars.open) await changed(fresh.product.id);
+
+      if (!vars.open) onClose?.();
+    },
+    onError: (reason: Error) => {
+      bookingBusy.current = false;
+      setUnitRestored(true);
+      setStockItemDisabled(false);
+      setError({ message: reason.message });
+    },
+  });
+
+  function scanSubmit(data: ConsumeSelection, singleUnit = true) {
+    if (!scanState.current || bookingBusy.current) return;
+
+    if (singleUnit) {
+      setAmount("1");
+      setConversionAmount("1");
+    }
+
+    const current = sourceValues.current;
+    const display = Number(current.amount);
+    const ceiling = limit(data.details, current.sum, current.factor);
+
+    const floor =
+      data.details.product.enable_tare_weight_handling === 1 && !exact
+        ? (data.details.product.tare_weight ?? 0)
+        : minimum;
+
+    if (
+      !current.product ||
+      !Number.isFinite(current.factor) ||
+      !current.amount ||
+      display < floor ||
+      display !== Number(display.toFixed(precision)) ||
+      (ceiling !== undefined && display > Number(ceiling)) ||
+      (locationsEnabled && !current.location) ||
+      (current.specific && !current.stockId)
+    ) {
+      notify({
+        message: t("Scan mode is on but not all required fields could be populated automatically"),
+        tone: "error",
+      });
+      playUiSound("error");
+
+      return;
+    }
+
+    const body: JsonObject = {
+      amount: bookingAmount(current.amount, current.factor),
+      allow_subproduct_substitution: true,
+      exact_amount: exact,
+      spoiled,
+    };
+
+    if (current.specific) body.stock_entry_id = current.stockId;
+
+    if (locationsEnabled) body.location_id = current.location;
+
+    if (recipesEnabled && recipe) body.recipe_id = recipe;
+    bookingBusy.current = true;
+    save.mutate({ product: current.product, body, open: false });
   }
 
   async function refreshLocation(
@@ -300,17 +528,14 @@ function ConsumeFields({
         setStockId(forced);
       }
 
-      const fresh = await getConsumeDetails(String(data.details.product.id), signal);
+      const freshRead = getConsumeDetails(String(data.details.product.id), signal);
+
+      if (!selectedCode || selectedCode.barcode.startsWith("grcy")) scanSubmit(data);
+      const fresh = await freshRead;
 
       if (signal.aborted || current !== sourceVersion.current) return;
       setSelection({ ...data, details: fresh });
       setMaximum(limit(fresh, sourceValues.current.sum, sourceValues.current.factor));
-
-      if (scanEnabled && (!selectedCode || selectedCode.barcode.startsWith("grcy"))) {
-        setAmount("1");
-        setConversionAmount("1");
-        autoSubmit.current = true;
-      }
     } catch (reason) {
       if (!signal.aborted && current === sourceVersion.current)
         setError({
@@ -324,11 +549,12 @@ function ConsumeFields({
 
   async function selectProduct(value: string, selectedCode?: ProductCode) {
     if (value === product && !selectedCode && (selection || (loading && read.current))) return;
+
+    if (value && scanState.current) playUiSound("barcodescannerbeep");
     read.current?.abort();
     sourceRead.current?.abort();
     const current = ++version.current;
     sourceVersion.current++;
-    autoSubmit.current = false;
     setProduct(value);
     setCode(selectedCode);
     setSelection(undefined);
@@ -420,12 +646,9 @@ function ConsumeFields({
         }),
       );
 
-      let barcodeFound = false;
-
       const barcodeRead = selectedCode
         ? getConsumeBarcode(selectedCode.barcode, signal).then((barcode) => {
             if (signal.aborted || current !== version.current || !barcode) return;
-            barcodeFound = true;
 
             if (barcode.amount != null) setAmount(String(barcode.amount));
 
@@ -436,6 +659,7 @@ function ConsumeFields({
             }
 
             setConversionAmount(sourceValues.current.amount);
+            scanSubmit(data, false);
           })
         : undefined;
 
@@ -443,7 +667,6 @@ function ConsumeFields({
 
       if (signal.aborted || current !== version.current) return;
 
-      if (scanEnabled && barcodeFound) autoSubmit.current = true;
       requestAnimationFrame(() =>
         form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.focus(),
       );
@@ -474,147 +697,6 @@ function ConsumeFields({
       sourceRead.current?.abort();
     };
   }, []);
-
-  async function changed(identity: number) {
-    await invalidate();
-    await client.invalidateQueries({ queryKey: ["product-overview", identity] });
-  }
-
-  const save = useMutation({
-    mutationFn: async (vars: { product: string; body: JsonObject; open: boolean }) => {
-      const fresh = await getConsumeDetails(vars.product);
-
-      const bookings = await request<Booking[]>(
-        `/api/stock/products/${vars.product}/${vars.open ? "open" : "consume"}`,
-        { method: "POST", body: JSON.stringify(vars.body) },
-      );
-
-      if (!bookings[0]) throw new Error(t("The stock booking could not be read."));
-
-      return { vars, fresh, transaction: bookings[0].transaction_id };
-    },
-    onSuccess: async ({ vars, fresh, transaction }) => {
-      if (
-        !vars.open &&
-        options.flow === "InplaceAddBarcodeToExistingProduct" &&
-        options.barcode !== undefined
-      ) {
-        void api
-          .action("/api/objects/product_barcodes", {
-            barcode: options.barcode,
-            product_id: vars.product,
-          })
-          .then(() => {
-            if (!alive.current || options.embedded !== undefined) return;
-            setOptions({});
-            onOptionsChange?.({});
-          })
-          .catch((reason: Error) => notify({ message: reason.message, tone: "error" }));
-      }
-
-      const posted = Number(vars.body.amount);
-
-      const removed = Math.abs(
-        posted -
-          (!vars.open && fresh.product.enable_tare_weight_handling === 1 && !vars.body.exact_amount
-            ? (fresh.product.tare_weight ?? 0) + fresh.stock_amount
-            : 0),
-      );
-
-      const stockUnit = {
-        ...fresh.quantity_unit_stock,
-        plural_forms: catalog.units.find((row) => row.id === fresh.quantity_unit_stock.id)
-          ?.plural_forms,
-      };
-
-      const message = t(
-        vars.open ? "Marked %1$s of %2$s as opened" : "Removed %1$s of %2$s from stock",
-        `${vars.open ? posted.toLocaleString() : removed} ${unitLabel(stockUnit, posted, pluralIndex, false)}`,
-        fresh.product.name,
-      );
-
-      notify({
-        message,
-        undo: async () => {
-          await api.undoTransaction(transaction);
-        },
-      });
-
-      setEntries([]);
-      setSpecific(false);
-      setStockId("");
-
-      if (vars.open || options.embedded === undefined) {
-        // EndUiBusy enables all native controls, including an unchecked item picker.
-        setUnitRestored(true);
-        setStockItemDisabled(false);
-      }
-
-      if (!vars.open && options.embedded !== undefined) {
-        setFinished(true);
-
-        if (window.parent !== window) {
-          const undo = `<br><a class="btn btn-secondary btn-sm mt-2" href="#" onclick="UndoStockTransaction(${tableAttribute(JSON.stringify(transaction))})"><i class="fa-solid fa-undo"></i> ${tableText(t("Undo"))}</a>`;
-          window.top?.postMessage(
-            {
-              Message: "BroadcastMessage",
-              Payload: { Message: "ProductChanged", Payload: vars.product },
-            },
-            window.location.origin,
-          );
-          window.parent.postMessage(
-            { Message: "ShowSuccessMessage", Payload: tableText(message) + undo },
-            window.location.origin,
-          );
-          window.parent.postMessage(
-            { Message: "CloseLastModal", Payload: null },
-            window.location.origin,
-          );
-        }
-      } else {
-        setProduct("");
-
-        const nextAmount = preferences.useQuickConsumeAmount
-          ? vars.open
-            ? String((fresh.product.quick_consume_amount ?? 0) * factor)
-            : ""
-          : String(preferences.consumeAmount);
-
-        setAmount(nextAmount);
-        setConversionAmount(nextAmount);
-
-        if (vars.open) {
-          if (fresh.product.move_on_open === 1 && fresh.default_consume_location)
-            notify({ message: t("Moved to %1$s", fresh.default_consume_location.name) });
-        } else {
-          setSelection(undefined);
-          setUnitId("");
-          setMaximum(undefined);
-          setLocation("");
-          setSources([]);
-          setRecipe("");
-          setRecipeText("");
-          const next = { ...options };
-          delete next.flow;
-          delete next.barcode;
-          delete next["product-name"];
-          setOptions(next);
-          onOptionsChange?.(next);
-        }
-
-        requestAnimationFrame(() => picker.current?.querySelector("input")?.focus());
-      }
-
-      if (!vars.open) await changed(fresh.product.id);
-
-      if (!vars.open) onClose?.();
-    },
-    onError: (reason: Error) => {
-      setUnitRestored(true);
-      setStockItemDisabled(false);
-      setError({ message: reason.message });
-    },
-  });
 
   const busy = loading || sourceLoading || pickerBusy || save.isPending || finished;
 
@@ -647,29 +729,15 @@ function ConsumeFields({
       if (recipesEnabled && recipe) body.recipe_id = recipe;
     }
 
+    bookingBusy.current = true;
     save.mutate({ product, body, open });
   }
 
   const scan = useMutation({
-    mutationFn: () => api.putUserSetting("scan_mode_consume_enabled", !preferences.scanConsume),
+    mutationFn: (enabled: boolean) => api.putUserSetting("scan_mode_consume_enabled", enabled),
     onSuccess: () => client.invalidateQueries({ queryKey: userSettingsQuery().queryKey }),
+    onError: (reason: Error) => console.error(reason),
   });
-
-  const scanReady = useEffectEvent(() => {
-    if (!autoSubmit.current || busy || !details || !form.current) return;
-    autoSubmit.current = false;
-
-    if (valid && form.current.checkValidity()) form.current.requestSubmit();
-    else
-      notify({
-        message: t("Scan mode is on but not all required fields could be populated automatically"),
-        tone: "error",
-      });
-  });
-
-  useEffect(() => {
-    scanReady();
-  }, [busy, details]);
 
   const preferred = details?.product.default_consume_location_id || details?.location?.id;
 
@@ -689,13 +757,18 @@ function ConsumeFields({
             type="button"
             className="btn"
             aria-pressed={scanEnabled}
-            disabled={scan.isPending || save.isPending}
-            onClick={() => scan.mutate()}
+            onClick={() => {
+              const enabled = !scanState.current;
+              scanState.current = enabled;
+              setScanEnabled(enabled);
+
+              if (enabled) playUiSound("silence");
+              scan.mutate(enabled);
+            }}
           >
             {t("Scan mode")} {t(scanEnabled ? "on" : "off")}
           </button>
         ) : null}
-        {scan.error ? <ErrorBlock message={scan.error.message} /> : null}
         <fieldset disabled={save.isPending || finished}>
           <div ref={picker}>
             <ProductPicker
@@ -708,8 +781,12 @@ function ConsumeFields({
               lookupDisabled={options.flow !== undefined}
               autoFocus
               allowCreate={false}
+              deferSelection={scanEnabled}
               workflowPath={`/consume${options.embedded === undefined ? "" : "?embedded"}`}
               onChange={(value, nextCode) => void selectProduct(value, nextCode)}
+              onBarcodeCommit={() => {
+                if (scanState.current) playUiSound("barcodescannerbeep");
+              }}
               onResolved={() =>
                 requestAnimationFrame(() => {
                   if (

@@ -27,8 +27,10 @@ export function ProductPicker({
   itemId,
   allowCreate = true,
   workflowPath,
+  deferSelection = false,
   onChange,
   onResolved,
+  onBarcodeCommit,
   onAssignBarcode,
   onBusyChange,
 }: {
@@ -44,8 +46,10 @@ export function ProductPicker({
   itemId?: number;
   allowCreate?: boolean;
   workflowPath?: string;
+  deferSelection?: boolean;
   onChange: (value: string, code?: ProductCode) => void;
   onResolved: () => void;
+  onBarcodeCommit?: () => void;
   onAssignBarcode: (barcode: string) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
@@ -243,12 +247,14 @@ export function ProductPicker({
     found ??= products.find((product) => product.name.includes(code));
 
     if (found) {
+      if (resolvedCode) onBarcodeCommit?.();
       choose(found, resolvedCode);
 
       return;
     }
 
     selection.current = "";
+    onBarcodeCommit?.();
     onChange("");
 
     if (!lookupDisabled) check.mutate(code);
@@ -292,7 +298,11 @@ export function ProductPicker({
           lookupCode.current = next;
           setText(next);
           setMessage("");
-          const product = products.find((product) => product.name === next);
+
+          const product = deferSelection
+            ? undefined
+            : products.find((product) => product.name === next);
+
           selection.current = product ? String(product.id) : "";
           onChange(selection.current);
         }}

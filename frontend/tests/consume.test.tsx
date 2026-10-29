@@ -25,6 +25,8 @@ function mount(
     singleUnit = false,
     stockLocations,
     delayThirdStockLookup = false,
+    failScanSetting = false,
+    delayBooking = false,
   }: {
     scan?: boolean;
     quick?: boolean;
@@ -38,9 +40,19 @@ function mount(
     singleUnit?: boolean;
     stockLocations?: number[];
     delayThirdStockLookup?: boolean;
+    failScanSetting?: boolean;
+    delayBooking?: boolean;
   } = {},
 ) {
   const writes: { path: string; body: JsonObject }[] = [];
+  const sounds: string[] = [];
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (
+    this: HTMLMediaElement,
+  ) {
+    sounds.push(new URL(this.src).pathname);
+
+    return Promise.resolve();
+  });
   const reads: string[] = [];
   let detailReads = 0;
   let entryReads = 0;
@@ -53,6 +65,12 @@ function mount(
 
   const thirdStockLookup = new Promise<void>((resolve) => {
     releaseThirdStockLookup = resolve;
+  });
+
+  let releaseBooking!: () => void;
+
+  const bookingReply = new Promise<void>((resolve) => {
+    releaseBooking = resolve;
   });
 
   const rows = [
@@ -101,7 +119,11 @@ function mount(
       const body = JSON.parse(String(init.body ?? "{}"));
       writes.push({ path, body });
 
-      if (path.endsWith("/scan_mode_consume_enabled")) scanEnabled = body.value;
+      if (path.endsWith("/scan_mode_consume_enabled")) {
+        if (failScanSetting)
+          return Response.json({ error_message: "Scan setting unavailable" }, { status: 503 });
+        scanEnabled = body.value;
+      }
 
       if (path.endsWith("/objects/product_barcodes") && failBarcode)
         return Response.json({ error_message: "Barcode unavailable" }, { status: 400 });
@@ -116,6 +138,8 @@ function mount(
           if (path.endsWith("/consume")) stock.amount -= Number(body.amount);
           else stock.opened += Number(body.amount);
         }
+
+        if (delayBooking) await bookingReply;
 
         return Response.json([
           {
@@ -292,11 +316,13 @@ function mount(
   });
 
   return {
+    sounds,
     writes,
     reads,
     router,
     entries: rows,
     releaseThirdStockLookup,
+    releaseBooking,
   };
 }
 
@@ -576,28 +602,146 @@ test("an entry read failure has a separate retry and hidden tracking controls do
 });
 
 test("full-page scan mode saves its setting and consumes one display unit", async () => {
-  const { writes } = mount("/consume");
+  const { writes, sounds } = mount("/consume");
   await userEvent.click(await screen.findByRole("button", { name: "Scan mode off" }));
   await screen.findByRole("button", { name: "Scan mode on" });
-  await choose();
+  const picker = screen.getByLabelText("Product");
+  await userEvent.type(picker, "Coffee");
+  expect(writes).toEqual([
+    {
+      path: "/api/user/settings/scan_mode_consume_enabled",
+      body: { value: true },
+    },
+  ]);
+  expect(sounds).toEqual(["/uisounds/silence.mp3"]);
+  fireEvent.keyDown(picker, { key: "Enter" });
   await screen.findByText("Removed 8 Pieces of Coffee from stock");
   expect(writes.find((row) => row.path.endsWith("/consume"))?.body.amount).toBe("8.");
+  expect(sounds).toEqual([
+    "/uisounds/silence.mp3",
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/success.mp3",
+  ]);
+});
+
+test.each([{ locations: [1] }, { locations: [1, 2] }, { locations: [1, 3, 2] }])(
+  "scan mode books the scanned stock item from the first location reply in $locations",
+  async ({ locations }) => {
+    const { writes, sounds } = mount("/consume", {
+      scan: true,
+      singleUnit: true,
+      stockLocations: locations,
+    });
+
+    await choose("grcy:p:7:shelf-stock");
+    await screen.findByText("Removed 1 Piece of Coffee from stock");
+    expect(writes.filter((row) => row.path.endsWith("/consume"))).toEqual([
+      {
+        path: "/api/stock/products/7/consume",
+        body: {
+          amount: "1.",
+          allow_subproduct_substitution: true,
+          stock_entry_id: "shelf-stock",
+          exact_amount: false,
+          spoiled: false,
+          location_id: "1",
+        },
+      },
+    ]);
+    expect(sounds).toEqual([
+      "/uisounds/barcodescannerbeep.mp3",
+      "/uisounds/barcodescannerbeep.mp3",
+      "/uisounds/success.mp3",
+    ]);
+  },
+);
+
+test("scan mode remains active after its setting cannot be saved", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const { writes, sounds } = mount("/consume", { failScanSetting: true, singleUnit: true });
+  await userEvent.click(await screen.findByRole("button", { name: "Scan mode off" }));
+  const toggle = await screen.findByRole<HTMLButtonElement>("button", { name: "Scan mode on" });
+  expect(toggle.disabled).toBe(false);
+  await choose("grcy:p:7:shelf-stock");
+  await screen.findByText("Removed 1 Piece of Coffee from stock");
+  expect(writes[0]).toEqual({
+    path: "/api/user/settings/scan_mode_consume_enabled",
+    body: { value: true },
+  });
+  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.stock_entry_id).toBe(
+    "shelf-stock",
+  );
+  expect(sounds).toEqual([
+    "/uisounds/silence.mp3",
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/success.mp3",
+  ]);
+});
+
+test("scan mode can stop while a booking reply is pending and suppress its success sound", async () => {
+  const { writes, sounds, releaseBooking } = mount("/consume", { scan: true, delayBooking: true });
+  const picker = await screen.findByLabelText("Product");
+  fireEvent.change(picker, { target: { value: "COFFEE-2" } });
+  fireEvent.keyDown(picker, { key: "Enter" });
+  await waitFor(() => expect(writes.some((row) => row.path.endsWith("/consume"))).toBe(true));
+  const toggle = screen.getByRole<HTMLButtonElement>("button", { name: "Scan mode on" });
+  expect(toggle.disabled).toBe(false);
+  await userEvent.click(toggle);
+  await screen.findByRole("button", { name: "Scan mode off" });
+  releaseBooking();
+  await screen.findByText("Removed 2 Pieces of Coffee from stock");
+  expect(sounds).toEqual(["/uisounds/barcodescannerbeep.mp3", "/uisounds/barcodescannerbeep.mp3"]);
+  expect(writes.find((row) => row.path.endsWith("/scan_mode_consume_enabled"))?.body).toEqual({
+    value: false,
+  });
+});
+
+test("an invalid scan sounds an error and a corrected manual amount can be consumed", async () => {
+  const { entries, writes, sounds } = mount("/consume", {
+    scan: true,
+    singleUnit: true,
+    stockLocations: [1],
+  });
+
+  entries[0]!.amount = 0.25;
+  const amount = await choose("grcy:p:7:shelf-stock");
+  await screen.findByText(
+    "Scan mode is on but not all required fields could be populated automatically",
+  );
+  expect(writes).toEqual([]);
+  expect(sounds).toEqual([
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/error.mp3",
+  ]);
+  fireEvent.change(amount, { target: { value: "0.1" } });
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 0.1 Pieces of Coffee from stock");
+  expect(writes[0]?.body.amount).toBe("0.1");
+  expect(sounds.at(-1)).toBe("/uisounds/success.mp3");
 });
 
 test("embedded scan mode stays off while quick consume amounts use the selected factor", async () => {
-  const { writes } = mount("/consume?embedded&product=7", { scan: true, quick: true });
+  const { writes, sounds } = mount("/consume?embedded&product=7", { scan: true, quick: true });
   const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
   await waitFor(() => expect(amount.disabled).toBe(false));
   expect(amount.value).toBe("0.5");
   expect(screen.queryByRole("button", { name: /Scan mode/ })).toBeNull();
   expect(writes).toEqual([]);
+  expect(sounds).toEqual([]);
 });
 
 test("barcode amounts survive scan mode and stock codes choose their entry location", async () => {
-  const { writes } = mount("/consume", { scan: true });
+  const { writes, sounds } = mount("/consume", { scan: true });
   await choose("COFFEE-2");
   await screen.findByText("Removed 2 Pieces of Coffee from stock");
   expect(writes[0]?.body.amount).toBe("2.");
+  expect(sounds).toEqual([
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/barcodescannerbeep.mp3",
+    "/uisounds/success.mp3",
+  ]);
   await userEvent.click(screen.getByRole("button", { name: "Scan mode on" }));
   await screen.findByRole("button", { name: "Scan mode off" });
   const amount = await choose("grcy:p:7:shelf-stock");
@@ -628,12 +772,18 @@ test("full-page bookmarks retain native empty defaults until the product is sele
 test.each(["open", "consume"] as const)(
   "the consume card retains its native values after %s and Undo until selection",
   async (action) => {
-    mount("/consume");
+    const { sounds } = mount("/consume");
     const amount = await choose();
     fireEvent.change(screen.getByLabelText("Quantity unit"), { target: { value: "1" } });
     fireEvent.change(amount, { target: { value: "2" } });
     const facts = () => screen.getByText("Stock amount").nextElementSibling!.textContent;
     await waitFor(() => expect(facts()).toBe("10 Pieces 2 opened"));
+
+    if (action === "open") {
+      await userEvent.click(screen.getByRole("button", { name: "Scan mode off" }));
+      await screen.findByRole("button", { name: "Scan mode on" });
+    }
+
     await userEvent.click(
       screen.getByRole("button", { name: action === "open" ? "Mark as opened" : "OK" }),
     );
@@ -642,12 +792,19 @@ test.each(["open", "consume"] as const)(
         ? "Marked 2 Pieces of Coffee as opened"
         : "Removed 2 Pieces of Coffee from stock",
     );
+    expect(sounds).toEqual(action === "open" ? ["/uisounds/silence.mp3"] : []);
     await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("Product").value).toBe(""));
     const retained = action === "open" ? "10 Pieces 2 opened" : "8 Pieces 2 opened";
     await waitFor(() => expect(facts()).toBe(retained));
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: "Undo" })).toBeNull());
     expect(facts()).toBe(retained);
+
+    if (action === "open") {
+      await userEvent.click(screen.getByRole("button", { name: "Scan mode on" }));
+      await screen.findByRole("button", { name: "Scan mode off" });
+    }
+
     await choose();
     await waitFor(() => expect(facts()).toBe("10 Pieces 2 opened"));
   },
