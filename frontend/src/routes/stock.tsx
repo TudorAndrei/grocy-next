@@ -7,7 +7,6 @@ import { openedStockAmount, stockAmount, stockMinimumAmount, useCatalog } from "
 import { daysUntil, dueLabel, dueTone } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
 import { stockVolatileQuery } from "@/hooks/queries";
-import { useCommandBar } from "@/components/CommandBar";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
@@ -17,6 +16,7 @@ import { useFeatures } from "@/lib/features";
 import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { TransferDialog } from "@/components/TransferForm";
 import { PurchaseDialog } from "@/components/PurchaseForm";
+import { ConsumeDialog } from "@/components/ConsumeForm";
 import { usePermissions } from "@/lib/permissions";
 
 export const Route = createFileRoute("/stock")({
@@ -44,11 +44,11 @@ function StockPage() {
   const can = usePermissions();
   const [transfer, setTransfer] = useState<number>();
   const [purchase, setPurchase] = useState<number>();
+  const [consume, setConsume] = useState<number>();
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const { dueSoonDays, formatAmount } = usePreferences();
   const catalog = useCatalog();
-  const command = useCommandBar();
   const [search, setSearch] = useState("");
   const [selection, setFilter] = useState<StockFilter>("all");
 
@@ -167,6 +167,12 @@ function StockPage() {
           onClose={() => setPurchase(undefined)}
         />
       ) : null}
+      {consume !== undefined ? (
+        <ConsumeDialog
+          options={{ embedded: "", product: String(consume) }}
+          onClose={() => setConsume(undefined)}
+        />
+      ) : null}
       <PageHeader
         title={tr("Stock overview")}
         lead={tr(
@@ -183,9 +189,9 @@ function StockPage() {
             <Link to="/barcode" className="btn btn-ghost">
               {tr("Barcode")}
             </Link>
-            <button type="button" className="btn" onClick={() => command.open("consume")}>
+            <Link to="/consume" className="btn">
               {tr("Consume")}
-            </button>
+            </Link>
             <Link to="/purchase" className="btn btn-primary">
               {tr("Purchase")}
             </Link>
@@ -326,6 +332,15 @@ function StockPage() {
                         onClick={() => setPurchase(row.productId)}
                       >
                         {tr("Purchase")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        aria-label={tr("Consume %s", row.name)}
+                        disabled={row.amount <= 0 || !can("STOCK_CONSUME")}
+                        onClick={() => setConsume(row.productId)}
+                      >
+                        {tr("Consume")}
                       </button>
                       {locationsEnabled ? (
                         <button

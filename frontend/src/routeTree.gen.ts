@@ -15,6 +15,7 @@ import { Route as BarcodeRouteImport } from './routes/barcode'
 import { Route as BatteriesRouteImport } from './routes/batteries'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as ChoresRouteImport } from './routes/chores'
+import { Route as ConsumeRouteImport } from './routes/consume'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as HouseholdRouteImport } from './routes/household'
@@ -72,6 +73,11 @@ const CalendarRoute = CalendarRouteImport.update({
 const ChoresRoute = ChoresRouteImport.update({
   id: '/chores',
   path: '/chores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsumeRoute = ConsumeRouteImport.update({
+  id: '/consume',
+  path: '/consume',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
   '/chores': typeof ChoresRoute
+  '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
   '/chores': typeof ChoresRoute
+  '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
   '/chores': typeof ChoresRoute
+  '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/batteries'
     | '/calendar'
     | '/chores'
+    | '/consume'
     | '/dashboard'
     | '/equipment'
     | '/household'
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/batteries'
     | '/calendar'
     | '/chores'
+    | '/consume'
     | '/dashboard'
     | '/equipment'
     | '/household'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/batteries'
     | '/calendar'
     | '/chores'
+    | '/consume'
     | '/dashboard'
     | '/equipment'
     | '/household'
@@ -443,6 +455,7 @@ export interface RootRouteChildren {
   BatteriesRoute: typeof BatteriesRoute
   CalendarRoute: typeof CalendarRoute
   ChoresRoute: typeof ChoresRoute
+  ConsumeRoute: typeof ConsumeRoute
   DashboardRoute: typeof DashboardRoute
   EquipmentRoute: typeof EquipmentRoute
   HouseholdRoute: typeof HouseholdRoute
@@ -515,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/chores'
       fullPath: '/chores'
       preLoaderRoute: typeof ChoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consume': {
+      id: '/consume'
+      path: '/consume'
+      fullPath: '/consume'
+      preLoaderRoute: typeof ConsumeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -723,6 +743,7 @@ const rootRouteChildren: RootRouteChildren = {
   BatteriesRoute: BatteriesRoute,
   CalendarRoute: CalendarRoute,
   ChoresRoute: ChoresRoute,
+  ConsumeRoute: ConsumeRoute,
   DashboardRoute: DashboardRoute,
   EquipmentRoute: EquipmentRoute,
   HouseholdRoute: HouseholdRoute,

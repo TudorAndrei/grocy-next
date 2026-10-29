@@ -14,6 +14,7 @@ import { Route } from "@/routes/index";
 test.each([
   ["stock", "/stock", "/"],
   ["purchase", "/purchase", "/grocy"],
+  ["consume", "/consume", "/grocy"],
   ["tasks", "/tasks", "/"],
   ["shoppinglist", "/shopping", "/grocy"],
   ["mealplan", "/meal-plan", "/grocy"],

@@ -9,6 +9,7 @@ export const Route = createFileRoute("/")({ component: EntryPage });
 const ENTRY_PAGES = new Map([
   ["stock", "/stock"],
   ["purchase", "/purchase"],
+  ["consume", "/consume"],
   ["shoppinglist", "/shopping"],
   ["recipes", "/recipes"],
   ["chores", "/chores"],
