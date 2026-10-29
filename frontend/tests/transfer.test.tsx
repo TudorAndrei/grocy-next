@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { createAppRouter } from "@/router";
@@ -267,6 +267,73 @@ test("barcode metadata prefills the amount and unit and unknown codes can be ass
   ]);
   expect(writes[1]?.body).toEqual({ product_id: "7", barcode: "NEW-CODE" });
 });
+
+test.each(["stock first", "locations first"])(
+  "stock Grocycodes keep native source and stock choices when %s finishes",
+  async (order) => {
+    mount("/transfer?embedded");
+    const fetchData = fetch;
+    const requested = new Set<string>();
+    let finishLocations!: (response: Response) => void;
+    let finishStock!: (response: Response) => void;
+
+    const locations = new Promise<Response>((resolve) => {
+      finishLocations = resolve;
+    });
+
+    const stock = new Promise<Response>((resolve) => {
+      finishStock = resolve;
+    });
+
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(input), "http://localhost").pathname;
+
+      if (path.endsWith("/products/7/locations")) {
+        requested.add("locations");
+
+        return locations;
+      }
+
+      if (path.endsWith("/objects/stock")) {
+        requested.add("stock");
+
+        return stock;
+      }
+
+      return fetchData(input, init);
+    });
+
+    const product = await screen.findByLabelText<HTMLInputElement>("Product");
+    fireEvent.change(product, { target: { value: "grcy:p:7:other" } });
+    await userEvent.type(product, "{Enter}");
+    await waitFor(() => expect([...requested].sort()).toEqual(["locations", "stock"]));
+
+    const completeLocations = () =>
+      finishLocations(
+        Response.json([
+          { location_id: 1, location_name: "Old shelf", location_is_freezer: 0 },
+          { location_id: 2, location_name: "Freezer", location_is_freezer: 1 },
+        ]),
+      );
+
+    const completeStock = () => finishStock(Response.json([{ location_id: 2 }]));
+    await act(async () => (order === "stock first" ? completeStock() : completeLocations()));
+    await act(async () => (order === "stock first" ? completeLocations() : completeStock()));
+    const amount = screen.getByLabelText<HTMLInputElement>("Amount");
+    await waitFor(() => expect(amount.disabled).toBe(false));
+    const from = screen.getByLabelText<HTMLSelectElement>("From location");
+    const item = screen.getByLabelText<HTMLSelectElement>("Specific stock item");
+    expect(from.value).toBe(order === "stock first" ? "1" : "2");
+    expect(amount.max).toBe("5.00");
+    expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(true);
+    expect(item.value).toBe("");
+    expect([...item.options].map((option) => option.value)).toEqual(["", "mint"]);
+    await userEvent.selectOptions(from, "1");
+    await userEvent.selectOptions(from, "2");
+    await waitFor(() => expect(item.value).toBe("other"));
+    expect(amount.max).toBe("4.00");
+  },
+);
 
 test("failed reads and transfers can be retried with the draft and tare products are rejected", async () => {
   const { writes } = mount("/transfer?embedded&product=7", {

@@ -303,10 +303,16 @@ function TransferFields({
           (row) => String(row.location_id) === options.locationId,
         )?.location_id;
 
-      if (data.stockLocation !== undefined)
-        source = data.locations.find((row) => row.location_id === data.stockLocation)?.location_id;
       const value = source === undefined ? "" : String(source);
-      setFrom(value);
+
+      // The native stock-code lookup sets the source without a change event.
+      // Stock choices and their limit still come from the location callback.
+      const displayedSource =
+        data.stockLocation === undefined
+          ? source
+          : data.locations.find((row) => row.location_id === data.stockLocation)?.location_id;
+
+      setFrom(displayedSource === undefined ? "" : String(displayedSource));
       const nextUnits = transferUnits(catalog, vars.product, data.details.quantity_unit_stock.id);
       const requestedUnit = data.barcode?.qu_id ?? data.details.quantity_unit_stock.id;
       const nextUnit = nextUnits.find((row) => row.id === requestedUnit);

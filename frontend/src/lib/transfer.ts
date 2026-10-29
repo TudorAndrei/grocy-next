@@ -93,26 +93,36 @@ export async function getTransferSelection(
 ) {
   const details = await getTransferDetails(productId, signal);
 
-  const locations = locationsSchema.parse(
-    await request(`/api/stock/products/${productId}/locations`, { signal }),
-  );
-
-  let barcode: { amount: number | null; qu_id: number | null } | undefined;
   let stockLocation: number | undefined;
 
-  if (code) {
+  const readLocations = request(`/api/stock/products/${productId}/locations`, { signal }).then(
+    (result) => {
+      // The native location callback replaces an earlier stock-code source value.
+      stockLocation = undefined;
+
+      return locationsSchema.parse(result);
+    },
+  );
+
+  const readBarcode = (async () => {
+    if (!code) return undefined;
     const params = new URLSearchParams([["query[]", `barcode=${code.barcode}`]]);
-    barcode = z
+
+    return z
       .array(z.object({ amount: z.number().nullable(), qu_id: z.number().nullable() }))
       .parse(await request(`/api/objects/product_barcodes_view?${params}`, { signal }))[0];
+  })();
 
-    if (code.stockId !== undefined) {
-      const params = new URLSearchParams([["query[]", `stock_id=${code.stockId}`]]);
-      stockLocation = z
-        .array(z.object({ location_id: z.number() }))
-        .parse(await request(`/api/objects/stock?${params}`, { signal }))[0]?.location_id;
-    }
-  }
+  const readStockLocation = (async () => {
+    if (code?.stockId === undefined) return;
+    const params = new URLSearchParams([["query[]", `stock_id=${code.stockId}`]]);
+
+    stockLocation = z
+      .array(z.object({ location_id: z.number() }))
+      .parse(await request(`/api/objects/stock?${params}`, { signal }))[0]?.location_id;
+  })();
+
+  const [locations, barcode] = await Promise.all([readLocations, readBarcode, readStockLocation]);
 
   return { details, locations, barcode, stockLocation };
 }
