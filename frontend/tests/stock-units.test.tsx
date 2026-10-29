@@ -17,6 +17,7 @@ function stockForm({ totalPrice = false, consume = false, tare = false, quick = 
           {
             id: 1,
             name: "Flour",
+            default_best_before_days: 5,
             qu_id_stock: 1,
             qu_id_purchase: 2,
             qu_id_consume: tare ? 1 : 2,

@@ -81,7 +81,14 @@ test.each([true, false])(
 
         if (path === "/api/objects/products") {
           return Response.json([
-            { id: 1, name: "Milk", qu_id_stock: 1, location_id: 1, min_stock_amount: 1 },
+            {
+              id: 1,
+              name: "Milk",
+              qu_id_stock: 1,
+              location_id: 1,
+              min_stock_amount: 1,
+              default_best_before_days: 5,
+            },
           ]);
         }
 
@@ -164,14 +171,33 @@ test.each([
   { freezerDays: 90, editedDate: undefined, expectedDate: () => isoDay(90) },
   { freezerDays: -1, editedDate: undefined, expectedDate: () => "2999-12-31" },
   { freezerDays: 90, editedDate: "2027-03-04", expectedDate: () => "2027-03-04" },
+  { freezerDays: 90, editedBefore: "2027-03-04", expectedDate: () => isoDay(90) },
+  { freezerDays: 0, editedBefore: "2027-03-04", expectedDate: () => "2027-03-04" },
+  { freezerDays: 0, normalDays: 0, editedDate: "2027-03-04", expectedDate: () => "2027-03-04" },
+  {
+    freezerDays: 90,
+    freezing: false,
+    editedBefore: "2027-03-04",
+    expectedDate: () => "2027-03-04",
+  },
 ])(
   "purchase saves the displayed due date and preferences: %j",
-  async ({ freezerDays, editedDate, expectedDate }) => {
+  async ({
+    freezerDays,
+    editedDate,
+    editedBefore,
+    normalDays = 5,
+    freezing = true,
+    expectedDate,
+  }) => {
     let purchase: Record<string, string | number | null> | null = null;
     vi.stubGlobal(
       "fetch",
       vi.fn<typeof fetch>(async (input, init) => {
         const path = String(input);
+
+        if (path === "/api/system/config")
+          return Response.json({ FEATURE_FLAG_STOCK_PRODUCT_FREEZING: freezing });
 
         if (path === "/api/objects/products") {
           return Response.json([
@@ -181,7 +207,7 @@ test.each([
               qu_id_stock: 1,
               location_id: 1,
               min_stock_amount: 1,
-              default_best_before_days: 5,
+              default_best_before_days: normalDays,
               default_best_before_days_after_freezing: freezerDays,
             },
           ]);
@@ -234,9 +260,38 @@ test.each([
     );
     const user = userEvent.setup();
     await screen.findByText("12.346");
-    await user.selectOptions(screen.getByLabelText("Location"), "2");
     const dueDate = screen.getByLabelText<HTMLInputElement>("Best before");
-    expect(dueDate.value).toBe(freezerDays === -1 ? "2999-12-31" : isoDay(90));
+    expect(dueDate.value).toBe(normalDays === 0 ? "" : isoDay(normalDays));
+    expect(dueDate.required).toBe(true);
+
+    if (normalDays === 0) {
+      await user.click(screen.getByRole("button", { name: "Purchase 2 pcs" }));
+      expect(purchase).toBeNull();
+    }
+
+    if (editedBefore) fireEvent.change(dueDate, { target: { value: editedBefore } });
+    await user.selectOptions(screen.getByLabelText("Location"), "2");
+    expect(dueDate.value).toBe(
+      !freezing
+        ? (editedBefore ?? isoDay(normalDays))
+        : freezerDays === -1
+          ? "2999-12-31"
+          : freezerDays === 0
+            ? (editedBefore ?? "")
+            : isoDay(freezerDays),
+    );
+
+    if (freezerDays === -1) {
+      const never = screen.getByRole<HTMLInputElement>("checkbox", { name: "Never overdue" });
+      expect(never.checked).toBe(true);
+      expect(dueDate.readOnly).toBe(true);
+      await user.click(never);
+      expect(dueDate.value).toBe("");
+      expect(dueDate.readOnly).toBe(false);
+      expect(document.activeElement).toBe(dueDate);
+      await user.click(never);
+      expect(dueDate.value).toBe("2999-12-31");
+    }
 
     if (editedDate) fireEvent.change(dueDate, { target: { value: editedDate } });
     await user.click(screen.getByText("Purchase details"));

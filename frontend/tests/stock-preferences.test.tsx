@@ -116,7 +116,9 @@ test.each([
           });
 
         if (path === "/api/objects/products")
-          return Response.json([{ id: 1, name: "Milk", qu_id_stock: 1 }]);
+          return Response.json([
+            { id: 1, name: "Milk", qu_id_stock: 1, default_best_before_days: 5 },
+          ]);
 
         if (path === "/api/objects/quantity_units")
           return Response.json([{ id: 1, name: "Piece", name_plural: "Pieces" }]);

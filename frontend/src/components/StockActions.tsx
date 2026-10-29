@@ -1,6 +1,6 @@
 import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api, queryKeys, type ConsumeOptions, type PurchaseOptions } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { isoDay, unitLabel } from "@/lib/format";
@@ -49,6 +49,7 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
 
   const [amount, setAmount] = useState<string | null>(null);
   const [bestBefore, setBestBefore] = useState<string | null>(null);
+  const dueDate = useRef<HTMLInputElement>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [spoiled, setSpoiled] = useState(false);
   const [price, setPrice] = useState<string | null>(null);
@@ -73,15 +74,34 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
   const location = catalog.location(Number(locationValue));
   const freezerDays = product?.default_best_before_days_after_freezing;
 
+  const freezingEnabled = features.enabled("STOCK_PRODUCT_FREEZING");
+
   const defaultDays =
-    features.enabled("STOCK_PRODUCT_FREEZING") &&
-    location?.is_freezer &&
-    freezerDays != null &&
-    freezerDays >= -1
-      ? freezerDays
+    freezingEnabled && location?.is_freezer
+      ? (freezerDays ?? 0)
       : (product?.default_best_before_days ?? 0);
 
-  const bestBeforeValue = bestBefore ?? (defaultDays === -1 ? "2999-12-31" : isoDay(defaultDays));
+  const dateLocation = freezingEnabled ? locationValue : "";
+  const readyProduct = product?.id;
+
+  const dateDefaults = { readyProduct, datesEnabled, move, defaultDays, dateLocation };
+  const [previousDateDefaults, setPreviousDateDefaults] = useState<typeof dateDefaults>();
+
+  if (
+    previousDateDefaults === undefined ||
+    previousDateDefaults.readyProduct !== readyProduct ||
+    previousDateDefaults.datesEnabled !== datesEnabled ||
+    previousDateDefaults.move !== move ||
+    previousDateDefaults.defaultDays !== defaultDays ||
+    previousDateDefaults.dateLocation !== dateLocation
+  ) {
+    setPreviousDateDefaults(dateDefaults);
+
+    if (readyProduct !== undefined && datesEnabled && move === "purchase" && defaultDays !== 0)
+      setBestBefore(defaultDays === -1 ? "2999-12-31" : isoDay(defaultDays));
+  }
+
+  const bestBeforeValue = bestBefore ?? "";
   const onHand = stock.data?.stock_amount_aggregated ?? stock.data?.stock_amount ?? 0;
   const opened = stock.data?.stock_amount_opened_aggregated ?? stock.data?.stock_amount_opened ?? 0;
   const min = product?.min_stock_amount ?? 0;
@@ -288,15 +308,32 @@ export function StockActions({ productId, initialMove = "purchase" }: StockActio
           {move === "purchase" ? (
             <>
               {datesEnabled ? (
-                <label className="field">
-                  <span>{tr("Best before")}</span>
-                  <input
-                    type="date"
-                    value={bestBeforeValue}
-                    data-empty={bestBeforeValue ? undefined : "true"}
-                    onChange={(e) => setBestBefore(e.target.value)}
-                  />
-                </label>
+                <div>
+                  <label className="field">
+                    <span>{tr("Best before")}</span>
+                    <input
+                      ref={dueDate}
+                      type="date"
+                      required
+                      readOnly={bestBeforeValue === "2999-12-31"}
+                      value={bestBeforeValue}
+                      data-empty={bestBeforeValue ? undefined : "true"}
+                      onChange={(e) => setBestBefore(e.target.value)}
+                    />
+                  </label>
+                  <label className="check-field">
+                    <input
+                      type="checkbox"
+                      checked={bestBeforeValue === "2999-12-31"}
+                      onChange={(event) => {
+                        setBestBefore(event.target.checked ? "2999-12-31" : "");
+
+                        if (!event.target.checked) dueDate.current?.focus();
+                      }}
+                    />
+                    {tr("Never overdue")}
+                  </label>
+                </div>
               ) : null}
               {locationsEnabled ? (
                 <label className="field">
