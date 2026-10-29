@@ -82,9 +82,11 @@ def _saved(database: Path, *, precise: bool = False, integer_check: bool = False
             );
             INSERT INTO recipes_nestings VALUES (10,2.5),(11,NULL);
             CREATE TABLE stock (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, purchased_date TEXT, opened_date TEXT
+                id INTEGER PRIMARY KEY AUTOINCREMENT, purchased_date TEXT, opened_date TEXT,
+                product_id INTEGER, amount REAL, best_before_date TEXT, open INTEGER
             );
-            INSERT INTO stock VALUES (15,'2027-01-04','2027-01-04 15:16:17'),(16,NULL,'');
+            INSERT INTO stock(id,purchased_date,opened_date)
+                VALUES (15,'2027-01-04','2027-01-04 15:16:17'),(16,NULL,'');
             CREATE TRIGGER conversion_update AFTER UPDATE ON quantity_unit_conversions BEGIN
                 INSERT INTO conversion_audit VALUES (NEW.factor);
             END;
@@ -122,7 +124,9 @@ def test_storage_upgrade_keeps_values_counters_and_custom_sql(tmp_path, monkeypa
             (10, 2.5),
             (11, None),
         ]
-        assert db.execute("SELECT * FROM stock ORDER BY id").fetchall() == [
+        assert db.execute(
+            "SELECT id,purchased_date,opened_date FROM stock ORDER BY id"
+        ).fetchall() == [
             (15, "2027-01-04", "2027-01-04 15:16:17"),
             (16, None, ""),
         ]

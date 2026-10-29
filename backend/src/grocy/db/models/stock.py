@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from grocy.db.dates import NativeDate
@@ -13,6 +13,7 @@ from grocy.db.types import DateOrDateTime
 class StockEntry(Base, TimestampMixin):
     __tablename__ = "stock"
     __table_args__ = (
+        Index("ix_stock_performance1", "product_id", "open", "best_before_date", "amount"),
         *native_checks("stock"),
         {"sqlite_autoincrement": True},
     )

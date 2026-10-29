@@ -7,6 +7,55 @@ import sys
 from pathlib import Path
 
 
+def test_stock_index_upgrade_keeps_saved_rows_counters_and_custom_indexes(tmp_path: Path):
+    database = tmp_path / "stock-order.db"
+    environment = {**os.environ, "GROCY_DATABASE_URL": f"sqlite+aiosqlite:///{database}"}
+    command = [sys.executable, "-m", "alembic", "upgrade"]
+    backend = Path(__file__).parents[2]
+    created = subprocess.run(
+        [*command, "20261016_0023"],
+        cwd=backend,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    with sqlite3.connect(database) as db:
+        db.executescript("""
+            DROP INDEX IF EXISTS ix_stock_performance1;
+            CREATE INDEX project_stock_note ON stock(note);
+            INSERT INTO stock(id,product_id,amount,best_before_date,stock_id,open,note)
+                VALUES (15,1,2.5,'2027-01-01','saved-order',0,'Saved');
+            UPDATE sqlite_sequence SET seq=9000 WHERE name='stock';
+        """)
+        saved = db.execute("SELECT * FROM stock ORDER BY id").fetchall()
+    upgraded = subprocess.run(
+        [*command, "head"],
+        cwd=backend,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert upgraded.returncode == 0, upgraded.stdout + upgraded.stderr
+    with sqlite3.connect(database) as db:
+        assert db.execute("SELECT * FROM stock ORDER BY id").fetchall() == saved
+        assert [row[2] for row in db.execute("PRAGMA index_info(ix_stock_performance1)")] == [
+            "product_id",
+            "open",
+            "best_before_date",
+            "amount",
+        ]
+        assert db.execute(
+            "SELECT name FROM sqlite_master WHERE name='project_stock_note'"
+        ).fetchone()
+        inserted = db.execute(
+            "INSERT INTO stock(product_id,amount,stock_id,open) VALUES (1,1,'next-order',0)"
+        )
+        assert inserted.lastrowid == 9001
+
+
 def test_native_logic_upgrade_rolls_back_name_conflicts(tmp_path: Path):
     database = tmp_path / "saved.db"
     environment = {**os.environ, "GROCY_DATABASE_URL": f"sqlite+aiosqlite:///{database}"}

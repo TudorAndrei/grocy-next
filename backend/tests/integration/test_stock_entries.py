@@ -1,6 +1,58 @@
 """Stock entry reads retain active lookups, stock identity, and booking actions."""
 
 
+def test_entry_source_order_matches_the_native_page_before_client_sorting(client, api_headers):
+    client.headers.update(api_headers)
+
+    def create(table, **values):
+        response = client.post(f"/api/objects/{table}", json=values)
+        response.raise_for_status()
+        return int(response.json()["created_object_id"])
+
+    unit = create("quantity_units", name="Order piece")
+    locations = [
+        create("locations", name=name) for name in ("North Shelf", "Shelf North", "Basement")
+    ]
+    product = create(
+        "products",
+        name="Order tea",
+        location_id=locations[0],
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+        qu_id_price=unit,
+    )
+    for amount, location, due, note in (
+        (2, locations[0], "2027-01-01", "Zulu batch"),
+        (10, locations[1], "2027-01-01", "Alpha batch"),
+        (4, locations[2], "2027-01-01", "Middle batch"),
+        (1, locations[0], "2999-12-31", "Never label"),
+        (1, locations[0], "2888-12-31", "Unknown label"),
+    ):
+        client.post(
+            f"/api/stock/products/{product}/add",
+            json={
+                "amount": amount,
+                "location_id": location,
+                "best_before_date": due,
+                "purchased_date": "2026-10-01",
+                "note": note,
+            },
+        ).raise_for_status()
+
+    response = client.get("/api/v2/stock/entries")
+    response.raise_for_status()
+    rows = [row for row in response.json()["rows"] if row["product_id"] == product]
+
+    # Captured from the pinned PHP page after the same five purchases and Reset.
+    assert [row["note"] for row in rows] == [
+        "Zulu batch",
+        "Middle batch",
+        "Alpha batch",
+        "Unknown label",
+        "Never label",
+    ]
+
+
 def test_entries_fields_choices_and_exact_booking_actions(client, api_headers):
     client.headers.update(api_headers)
 
