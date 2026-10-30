@@ -25,6 +25,7 @@ import type { Booking } from "@/lib/types";
 import { ProductPicker, type ProductCode } from "./ProductPicker";
 import { ProductCard } from "./ProductOverview";
 import { NumberPicker } from "./NumberPicker";
+import { BookingDateInput } from "./BookingDateInput";
 import { UserfieldsEditor } from "./UserfieldsEditor";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
@@ -734,37 +735,48 @@ function PurchaseFields({
             </p>
           ) : null}
           {preferences.showPurchaseDate ? (
-            <label className="field">
-              <span>{t("Purchased date")}</span>
-              <input
-                type="date"
+            <div className="field">
+              <label htmlFor={`${id}-purchased-date`}>{t("Purchased date")}</label>
+              <BookingDateInput
+                id={`${id}-purchased-date`}
+                label={t("Purchased date")}
                 required
+                numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
+                initialCalendarValue={purchased}
                 value={purchased}
-                onChange={(event) => setPurchased(event.target.value)}
+                onChange={setPurchased}
               />
-            </label>
+            </div>
           ) : null}
           {datesEnabled ? (
             <div>
-              <label className="field">
-                <span>{t("Due date")}</span>
-                <input
-                  ref={dueInput}
-                  type="date"
+              <div className="field">
+                <label htmlFor={`${id}-due-date`}>{t("Due date")}</label>
+                <BookingDateInput
+                  inputRef={dueInput}
+                  id={`${id}-due-date`}
+                  label={t("Due date")}
                   required
+                  numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
                   readOnly={due === "2999-12-31"}
                   value={due}
-                  onChange={(event) => setDue(event.target.value)}
+                  onChange={setDue}
+                  onShortcut={() =>
+                    form.current?.querySelector<HTMLInputElement>(`[id="${id}-price"]`)?.focus()
+                  }
                 />
-              </label>
+              </div>
               <label className="check-field">
                 <input
                   type="checkbox"
+                  tabIndex={-1}
                   checked={due === "2999-12-31"}
                   onChange={(event) => {
                     setDue(event.target.checked ? "2999-12-31" : "");
 
-                    if (!event.target.checked) dueInput.current?.focus();
+                    if (event.target.checked)
+                      form.current?.querySelector<HTMLInputElement>(`[id="${id}-price"]`)?.focus();
+                    else dueInput.current?.focus();
                   }}
                 />
                 {t("Never overdue")}

@@ -502,3 +502,39 @@ test("untouched optional stock fields retain their native unsaved state", async 
   );
   expect(writes.map((row) => row.path)).toEqual(["/api/stock/products/7/add"]);
 });
+
+test("purchase date shortcuts retain their values and move focus before booking", async () => {
+  const { writes } = mount("/purchase");
+  fireEvent.change(await screen.findByLabelText("Product"), { target: { value: "Coffee" } });
+  await waitFor(() =>
+    expect(screen.getByLabelText<HTMLInputElement>("Amount").disabled).toBe(false),
+  );
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Amount")));
+  const purchased = screen.getByLabelText<HTMLInputElement>("Purchased date");
+  const due = screen.getByLabelText<HTMLInputElement>("Due date");
+  await userEvent.clear(purchased);
+  await userEvent.type(purchased, "20320229");
+  expect(purchased.value).toBe("2032-02-29");
+  expect(document.activeElement).toBe(purchased);
+  await userEvent.clear(due);
+  await userEvent.type(due, "x");
+  expect(due.value).toBe("2999-12-31");
+  expect(due.readOnly).toBe(true);
+  expect(screen.getByLabelText<HTMLInputElement>("Never overdue").checked).toBe(true);
+  expect(document.activeElement).toBe(screen.getByLabelText("Price"));
+  await userEvent.click(screen.getByLabelText("Never overdue"));
+  expect(due.value).toBe("");
+  expect(document.activeElement).toBe(due);
+  await userEvent.type(due, "203511e");
+  expect(due.value).toBe("2035-11-30");
+  expect(document.activeElement).toBe(screen.getByLabelText("Price"));
+  due.focus();
+  await userEvent.tab();
+  expect(document.activeElement).toBe(screen.getByLabelText("Price"));
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await waitFor(() => expect(writes.some((row) => row.path.endsWith("/add"))).toBe(true));
+  expect(writes.find((row) => row.path.endsWith("/add"))?.body).toMatchObject({
+    best_before_date: "2035-11-30",
+    purchased_date: "2032-02-29",
+  });
+});

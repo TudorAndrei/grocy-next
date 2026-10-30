@@ -693,7 +693,21 @@ The container service recovered. The pending eleven recipe cases were repeated o
 
 A further native and Python case counted 1,011 stock units. Both forms sent the same count, retained the native final-count text without a thousands separator, and completed visible Undo. The final Linux images matched all 177 Python source files and all 95 web build files. PHP was disabled and absent from the API image. All 39 public resource and form responses passed. The 1440-pixel desktop and 390-pixel phone views were inspected. The phone page had no horizontal overflow, and its custom field and OK button were reachable above the fixed navigation. Restart retained all 70 stock rows and 177 booking rows with the same data hashes. SQLite integrity passed. Both owned browser sessions, the local fallback servers, the test iframe host, all four test containers, and their network were stopped or removed.
 
-Full legacy compliance remains incomplete. Late and overlapping product responses, date keyboard shortcuts, native error recovery, physical camera and printer use, and the remaining application workflows still need work or comparison.
+Full legacy compliance remains incomplete. Late and overlapping product responses, native error recovery, physical camera and printer use, and the remaining application workflows still need work or comparison.
+
+### Booking date keyboard controls
+
+Purchase and inventory now share a text date control with the native keyboard rules. It accepts `x` and `X` for Never overdue, `MMDD`, `YYYYMMDD`, `YYYYMMe`, `YYYYMM+`, and relative day, month, and year values. Arrow keys change days or weeks. Shift with an arrow changes months or years. Month and year changes retain valid month-end dates. An empty field starts at today when an arrow is pressed.
+
+The control retains the native focus rules. Purchase due-date shortcuts move focus to Price. Inventory due dates and purchased dates keep focus in the field. Tab moves from Due date to Price without extra calendar or checkbox stops. Never overdue makes the due field read-only. Clearing its checkbox clears and focuses the field. The number-pad feature flag controls the input mode. Invalid required dates retain the native custom validity. Removing the required setting does not clear an earlier custom error. A valid date clears it. On blur, the calendar parser can restore its last accepted value, as in the native purchase form.
+
+The primary keyboard checks use 27 values captured from Grocy 4.5.0. All 489 frontend tests passed in 47 files. Two routed checks failed with the previous date inputs. A separate Tab check failed before the calendar and checkbox stops were removed. Lint, formatting, all three type checks, and root and `/house` builds passed. No Python backend source changed.
+
+The Linux browser replay matched all 108 native states across purchase and inventory, for both due and purchased dates. It compared values, required and read-only settings, custom validity, Never state, and focus. Live bookings in both runtimes used compact dates, month-end dates, and the Never checkbox. Request values, saved entries, booking values, and stock custom fields matched after generated IDs and timestamps were excluded. Every visible Undo link restored empty stock. These booking checks used active units; the separate native inactive-unit initialization defect remains open.
+
+The browser calendar selected the next day and set the field to `2026-10-31`. The 1440-pixel desktop and 390-pixel phone views were inspected. The phone view had no horizontal overflow. All 96 web build files and 177 Python source files matched their release images. All 39 public resource and form responses passed. SQLite integrity passed. PHP remained disabled and absent from the API image. The owned browser, four containers, and private network were removed.
+
+Full legacy compliance remains incomplete. The browser calendar menu, week numbers, contextual date text, other locales, and mobile keyboard behavior still need comparison. The broader stock-form and application differences remain open.
 
 Run the normal tests without PHP:
 

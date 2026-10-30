@@ -1051,6 +1051,41 @@ input[type="date"][data-empty="true"]::-webkit-datetime-edit {
   color: var(--ink-3);
 }
 
+.booking-date-input {
+  display: flex;
+  position: relative;
+  min-width: 0;
+}
+
+.booking-date-input > input[type="text"] {
+  padding-inline-end: 48px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-date-input > .booking-date-calendar {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.booking-date-button.btn {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 44px;
+  padding: 8px;
+  border: 0;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-radius: var(--radius-sm);
+  color: var(--cobalt);
+  background: transparent;
+}
+
 input[type="checkbox"] {
   width: 18px;
   height: 18px;

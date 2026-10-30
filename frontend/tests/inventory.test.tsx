@@ -535,3 +535,27 @@ test("the stock feature flag controls the inventory route and navigation", async
   ).toBeNull();
   expect(writes).toEqual([]);
 });
+
+test("inventory books relative due dates and compact purchase dates without moving focus", async () => {
+  const { writes } = mount();
+  const amount = await choose();
+  await waitFor(() => expect(document.activeElement).toBe(amount));
+  fireEvent.change(amount, { target: { value: "12" } });
+  await screen.findByText("This means 2 Pieces will be added to stock");
+  const due = screen.getByLabelText<HTMLInputElement>("Due date");
+  await userEvent.clear(due);
+  await userEvent.type(due, "+2d");
+  expect(due.value).toBe(isoDay(2));
+  expect(document.activeElement).toBe(due);
+  const purchased = screen.getByLabelText<HTMLInputElement>("Purchased date");
+  await userEvent.clear(purchased);
+  await userEvent.type(purchased, "20320229");
+  expect(purchased.value).toBe("2032-02-29");
+  expect(document.activeElement).toBe(purchased);
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Stock amount of Coffee is now 12 Pieces");
+  expect(writes.find((row) => row.path.endsWith("/inventory"))?.body).toMatchObject({
+    best_before_date: isoDay(2),
+    purchased_date: "2032-02-29",
+  });
+});
