@@ -729,6 +729,22 @@ The 1440-pixel desktop view and 390-pixel phone view passed the open-menu resize
 
 Full legacy compliance remains incomplete. Late and overlapping product responses, native error recovery, other stock forms and application workflows, physical camera and printer use, mobile keyboard behavior, and further locale and time-zone cases still need work or comparison. The native inactive-unit initialization defect remains open.
 
+### Stock entry date controls
+
+The shared stock entry editor now uses the booking date control. This applies to the direct `/stockentry/{id}` page, the stock entry table, and the product ledger. Both dates support the native keyboard shortcuts and calendar menu. Purchased-date shortcuts move focus to OK. Due-date shortcuts retain focus in the date field. The due-date number-pad flag, calendar week settings, and contextual date text apply.
+
+Saved dates retain the native initial state. Date help starts empty. A saved Never date does not select its checkbox or make the input read-only until it is validated. Clearing Never clears and focuses the input. Closing the due-date calendar selects label reprint, including when the selected date is unchanged. Editing the purchased date does not select label reprint. A typed due date selects reprint when it loses focus. The empty Store request value is now the native empty string.
+
+The second native date input does not parse typed text on blur. It retains invalid text and its validation error until further input or a calendar action. Purchase, inventory, and stock entry purchased dates now retain this rule. Due dates keep the primary parser and its cached-value restoration rule.
+
+All 497 frontend tests passed in 47 files. Both new regressions failed with the previous source. The shared control owns the second-input parsing check. The routed stock entry check covers shortcut focus, saved Never state, calendar selection, label reprint, and the dates and empty Store value in the edit request. Existing nested-editor retry, parent-draft, disabled-tracking, and Undo checks also passed. Lint, formatting, all three type checks, and root and `/house` builds passed. No Python backend source changed.
+
+The built Python form matched all 22 recorded native date states. These checks include initial values, shorthand and arrow changes, focus, validation, date help, Never, calendar selection, and label reprint. An arrow change from Never clears the checkbox and read-only state. Both runtimes saved a real edit with purchased date `2032-04-02` and due date `2032-03-01`. Requests, stock entries, edit bookings, and stock custom values matched after generated IDs and timestamps were excluded. The source row references and paired correlation IDs were checked within each edit. Native API Undo and the visible Python Undo control restored the original amount and dates.
+
+Separate browser checks confirmed that purchase and inventory retain invalid purchased-date text and its validation error after blur in both runtimes. The 1440-pixel stock entry view and the 390- and 320-pixel stock entry dialogs were inspected. Both phone dialogs kept the calendar within their bounds without horizontal overflow. Day selection retained the parent dialog. Escape closed the editor and returned focus without a stock write. The browser reported no script errors.
+
+All 39 public resource and form responses passed. All 95 web build files and 177 Python source files matched the final release images. PHP remained disabled and absent from the API image. SQLite integrity passed, with 71 stock rows and 188 booking rows after the test edit and Undo. The owned browser session, four test containers, and private network were removed. Full legacy compliance remains incomplete; the broader stock-form, callback, error-recovery, device, and application checks remain open.
+
 Run the normal tests without PHP:
 
 ```bash

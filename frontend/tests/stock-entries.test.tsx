@@ -793,6 +793,66 @@ test("entry editing keeps the parent draft and retries an upload on the saved tr
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Stock entries" }));
 });
 
+test("entry dates retain legacy shortcut focus, calendar values, and label reprint rules", async () => {
+  const { writes, labels } = mount("/stockentry/51", { printer: true });
+  const user = userEvent.setup();
+  await screen.findByRole("spinbutton", { name: /^Amount/ });
+  const purchased = screen.getByLabelText<HTMLInputElement>("Purchased date");
+  const due = screen.getByLabelText<HTMLInputElement>("Due date");
+  const never = screen.getByRole<HTMLInputElement>("checkbox", { name: "Never overdue" });
+
+  const reprint = screen.getByRole<HTMLInputElement>("checkbox", {
+    name: "Reprint stock entry label",
+  });
+
+  expect(never.checked).toBe(false);
+  expect(due.readOnly).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Due date: Calendar" }));
+  await user.click(screen.getByRole("button", { name: "Close the picker" }));
+  expect(never.checked).toBe(true);
+  expect(due.readOnly).toBe(true);
+  expect(reprint.checked).toBe(true);
+  await user.click(reprint);
+  await user.click(due);
+  await user.keyboard("{ArrowUp}");
+  expect(due.value).toBe("2999-12-30");
+  expect(never.checked).toBe(false);
+  expect(due.readOnly).toBe(false);
+  expect(reprint.checked).toBe(true);
+  await user.click(never);
+  await user.click(never);
+  await user.click(reprint);
+  await user.type(due, "20320229");
+  expect(due.value).toBe("2032-02-29");
+  expect(document.activeElement).toBe(due);
+  expect(reprint.checked).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Due date: Calendar" }));
+  await user.click(screen.getByRole("button", { name: "March 1, 2032" }));
+  expect(due.value).toBe("2032-03-01");
+  expect(reprint.checked).toBe(true);
+  await user.click(reprint);
+  await user.clear(purchased);
+  await user.type(purchased, "20320229");
+  expect(purchased.value).toBe("2032-02-29");
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "OK" }));
+  expect(reprint.checked).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Purchased date: Calendar" }));
+  await user.click(screen.getByRole("button", { name: "Next Month" }));
+  await user.click(screen.getByRole("button", { name: "April 2, 2032" }));
+  expect(purchased.value).toBe("2032-04-02");
+  expect(reprint.checked).toBe(false);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Location" }), "2");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Store" }), "");
+  await user.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Stock entry successfully updated");
+  expect(writes.find((write) => write.path === "/api/stock/entry/51")?.body).toMatchObject({
+    best_before_date: "2032-03-01",
+    purchased_date: "2032-04-02",
+    shopping_location_id: "",
+  });
+  expect(labels).toHaveLength(0);
+});
+
 test("the legacy entry editor applies disabled tracking values and reloads saved data", async () => {
   const { writes, releaseSavedRead } = mount("/stockentry/51", {
     tracking: false,

@@ -27,6 +27,9 @@ type Props = {
   inputRef?: RefObject<HTMLInputElement | null>;
   initialCalendarValue?: string;
   onShortcut?: () => void;
+  onCommit?: () => void;
+  parseOnBlur?: boolean;
+  showInitialContext?: boolean;
   firstDayOfWeek?: JsonValue;
   weekNumbers?: boolean;
 };
@@ -42,6 +45,9 @@ export function BookingDateInput({
   inputRef,
   initialCalendarValue = "",
   onShortcut,
+  onCommit,
+  parseOnBlur = true,
+  showInitialContext = true,
   firstDayOfWeek,
   weekNumbers = true,
 }: Props) {
@@ -53,6 +59,7 @@ export function BookingDateInput({
   const [calendarView, setCalendarView] = useState<CalendarView>("days");
   const [viewDate, setViewDate] = useState(Date.now);
   const [above, setAbove] = useState(false);
+  const [contextReady, setContextReady] = useState(showInitialContext);
   const cached = useRef(initialCalendarValue);
   const observed = useRef(value);
   const dirty = useRef(false);
@@ -73,6 +80,7 @@ export function BookingDateInput({
   }
 
   function change(next: string) {
+    setContextReady(true);
     observed.current = next;
 
     if (input.current) input.current.value = next;
@@ -106,6 +114,7 @@ export function BookingDateInput({
   }, [id, open, input]);
 
   function keyUp(event: KeyboardEvent<HTMLInputElement>) {
+    setContextReady(true);
     closeCalendar();
     const source = event.currentTarget.value;
     const arrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key);
@@ -156,6 +165,7 @@ export function BookingDateInput({
 
   function commit(force = false) {
     if (!dirty.current && !force) return;
+    const changed = dirty.current;
     dirty.current = false;
     const source = input.current?.value.trim() ?? value;
     const date = parse(source, false);
@@ -164,6 +174,8 @@ export function BookingDateInput({
     else if (date.isValid() && !date.isAfter(moment("2999-12-31 23:59:59")))
       cached.current = date.format(FORMAT);
     change(cached.current);
+
+    if (changed) onCommit?.();
   }
 
   function closeCalendar() {
@@ -171,6 +183,7 @@ export function BookingDateInput({
     calendarOpen.current = false;
     setOpen(false);
     commit(true);
+    onCommit?.();
     validate(input.current?.value ?? value);
 
     input.current?.blur();
@@ -206,7 +219,7 @@ export function BookingDateInput({
   }
 
   const calendarLabel = `${label}: ${t("Calendar")}`;
-  const context = contextualDateText(value, new Date(), locale, t).relative;
+  const context = contextReady ? contextualDateText(value, new Date(), locale, t).relative : "";
 
   return (
     <div className="booking-date-control">
@@ -229,7 +242,7 @@ export function BookingDateInput({
           onKeyUp={keyUp}
           onBlur={() => {
             if (calendarOpen.current) closeCalendar();
-            else commit();
+            else if (parseOnBlur) commit();
           }}
         />
         <button

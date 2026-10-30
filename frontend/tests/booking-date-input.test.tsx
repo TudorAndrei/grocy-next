@@ -21,6 +21,7 @@ function Field({
   numeric = true,
   firstDayOfWeek = "",
   weekNumbers = true,
+  parseOnBlur = true,
 } = {}) {
   const [value, setValue] = useState("");
   const next = useRef<HTMLInputElement>(null);
@@ -37,6 +38,7 @@ function Field({
         numeric={numeric}
         firstDayOfWeek={firstDayOfWeek}
         weekNumbers={weekNumbers}
+        parseOnBlur={parseOnBlur}
         readOnly={value === "2999-12-31"}
         onShortcut={advance ? () => next.current?.focus() : undefined}
       />
@@ -82,6 +84,25 @@ test("invalid shorthand restores the last calendar value when the next field get
   expect(document.activeElement).toBe(screen.getByLabelText("Price"));
   expect(input.value).toBe("2031-07-14");
   expect(input.checkValidity()).toBe(true);
+});
+
+test("the native second date input retains typed text on blur until its calendar opens", async () => {
+  render(<Field parseOnBlur={false} />);
+  const user = userEvent.setup();
+  const input = screen.getByLabelText<HTMLInputElement>("Due date");
+  await user.type(input, "20320229");
+  await user.click(screen.getByLabelText("Price"));
+  expect(input.value).toBe("2032-02-29");
+  await user.clear(input);
+  await user.paste("bad-date");
+  await user.keyboard("{End}");
+  await user.click(screen.getByLabelText("Price"));
+  expect(input.value).toBe("bad-date");
+  expect(input.checkValidity()).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Due date: Calendar" }));
+  expect(input.value).toBe("");
+  await user.click(screen.getByRole("button", { name: "Close the picker" }));
+  expect(input.checkValidity()).toBe(false);
 });
 
 test("native custom validity remains set after required is removed until a valid date is entered", () => {

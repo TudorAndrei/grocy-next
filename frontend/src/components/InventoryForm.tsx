@@ -692,6 +692,7 @@ function InventoryFields({
                 firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
                 weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
                 initialCalendarValue={purchased}
+                parseOnBlur={false}
                 value={purchased}
                 onChange={setPurchased}
               />

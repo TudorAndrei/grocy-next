@@ -19,6 +19,7 @@ import { initialUserfields, saveUserfields } from "@/lib/userfields";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { NumberPicker } from "./NumberPicker";
+import { BookingDateInput } from "./BookingDateInput";
 import { UserfieldsEditor } from "./UserfieldsEditor";
 import { useNotify } from "./Toaster";
 
@@ -104,6 +105,7 @@ function EntryFields({ data, onSaved, onCancel, onPendingChange }: Props & { dat
   const invalidate = useInvalidateStock();
   const id = useId();
   const dueInput = useRef<HTMLInputElement>(null);
+  const saveButton = useRef<HTMLButtonElement>(null);
   const saved = useRef<EntryBookings | undefined>(undefined);
   const labelStarted = useRef(false);
   const [recordSaved, setRecordSaved] = useState(false);
@@ -169,7 +171,7 @@ function EntryFields({ data, onSaved, onCancel, onPendingChange }: Props & { dat
           open: features.enabled("STOCK_PRODUCT_OPENED_TRACKING") && opened,
         };
 
-        if (features.enabled("STOCK_PRICE_TRACKING")) body.shopping_location_id = store || null;
+        if (features.enabled("STOCK_PRICE_TRACKING")) body.shopping_location_id = store;
         saved.current = await saveStockEntry(data.entry.id, body);
         setRecordSaved(true);
         await invalidate();
@@ -196,11 +198,14 @@ function EntryFields({ data, onSaved, onCancel, onPendingChange }: Props & { dat
     onSettled: () => onPendingChange?.(false),
   });
 
-  const changeDue = (value: string) => {
+  function changeDue(value: string) {
     setDue(value);
-    setNever(value === "2999-12-31");
-    setReprint(true);
-  };
+
+    if (never && value !== "2999-12-31") {
+      setNever(false);
+      setReprint(true);
+    }
+  }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -231,36 +236,57 @@ function EntryFields({ data, onSaved, onCancel, onPendingChange }: Props & { dat
             onChange={setAmount}
           />
         </div>
-        <label className="field">
-          <span>{t("Purchased date")}</span>
-          <input
-            type="date"
+        <div className="field">
+          <label htmlFor={`${id}-purchased`}>{t("Purchased date")}</label>
+          <BookingDateInput
+            id={`${id}-purchased`}
+            label={t("Purchased date")}
             required
             value={purchased}
-            onChange={(event) => setPurchased(event.target.value)}
+            initialCalendarValue={purchased}
+            parseOnBlur={false}
+            showInitialContext={false}
+            firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
+            weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
+            onChange={setPurchased}
+            onShortcut={() => saveButton.current?.focus()}
           />
-        </label>
+        </div>
         {features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") ? (
           <div className="field">
             <label htmlFor={`${id}-due`}>{t("Due date")}</label>
-            <input
-              ref={dueInput}
+            <BookingDateInput
+              inputRef={dueInput}
               id={`${id}-due`}
-              type="date"
-              inputMode={
-                features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD") ? "numeric" : undefined
-              }
+              label={t("Due date")}
+              numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
               required
               readOnly={never}
               value={due}
-              onChange={(event) => changeDue(event.target.value)}
+              initialCalendarValue={due}
+              showInitialContext={false}
+              firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
+              weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
+              onChange={changeDue}
+              onCommit={() => setReprint(true)}
+              onShortcut={() => {
+                if (dueInput.current?.value === "2999-12-31") {
+                  setNever(true);
+                  setReprint(true);
+                }
+
+                dueInput.current?.focus();
+              }}
             />
             <label className="check-field">
               <input
                 type="checkbox"
+                tabIndex={-1}
                 checked={never}
                 onChange={(event) => {
-                  changeDue(event.target.checked ? "2999-12-31" : "");
+                  setNever(event.target.checked);
+                  setReprint(true);
+                  setDue(event.target.checked ? "2999-12-31" : "");
 
                   if (!event.target.checked) dueInput.current?.focus();
                 }}
@@ -346,7 +372,12 @@ function EntryFields({ data, onSaved, onCancel, onPendingChange }: Props & { dat
         </label>
       ) : null}
       <div className="actions">
-        <button type="submit" className="btn btn-primary" disabled={save.isPending}>
+        <button
+          ref={saveButton}
+          type="submit"
+          className="btn btn-primary"
+          disabled={save.isPending}
+        >
           {t(recordSaved ? "Retry" : "OK")}
         </button>
         <button
