@@ -1,0 +1,47 @@
+{
+  "baseline": "Grocy 4.5.0, 21aa5eab218c8466f90729154cb293fffbe10c21",
+  "date": "2026-10-30",
+  "query": "start_date=2027-01-01&end_date=2027-01-31",
+  "cases": [
+    {
+      "name": "english-monday",
+      "locale": "en",
+      "firstDay": "1",
+      "weekNumbers": true,
+      "weekdays": ["W", "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+      "weeks": ["1", "2", "3", "4", "5", "6"],
+      "first": "28",
+      "last": "7"
+    },
+    {
+      "name": "week-numbers-off",
+      "locale": "en",
+      "firstDay": "1",
+      "weekNumbers": false,
+      "weekdays": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+      "weeks": [],
+      "first": "28",
+      "last": "7"
+    },
+    {
+      "name": "german",
+      "locale": "de",
+      "firstDay": "",
+      "weekNumbers": true,
+      "weekdays": ["W", "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+      "weeks": ["53", "1", "2", "3", "4", "5"],
+      "first": "28",
+      "last": "7"
+    },
+    {
+      "name": "german-sunday",
+      "locale": "de",
+      "firstDay": "0",
+      "weekNumbers": true,
+      "weekdays": ["W", "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+      "weeks": ["53", "1", "2", "3", "4", "5"],
+      "first": "27",
+      "last": "6"
+    }
+  ]
+}

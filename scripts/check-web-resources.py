@@ -83,33 +83,39 @@ def compare(api: str, web: str, path: str, headers: dict[str, str], method: str)
     return actual
 
 
-def check_sounds(web: str) -> int:
-    source = Path(__file__).resolve().parents[1] / "frontend" / "public" / "uisounds"
+def check_assets(web: str) -> int:
+    source = Path(__file__).resolve().parents[1] / "frontend" / "public"
+    assets = [
+        (f"/uisounds/{name}.mp3", {"audio/mpeg"})
+        for name in ["silence", "barcodescannerbeep", "success", "error"]
+    ] + [
+        (f"/vendor/daterangepicker/{name}.js", {"application/javascript", "text/javascript"})
+        for name in ["jquery.min", "daterangepicker"]
+    ]
     count = 0
-    for name in ["silence", "barcodescannerbeep", "success", "error"]:
-        path = f"/uisounds/{name}.mp3"
-        expected = (source / f"{name}.mp3").read_bytes()
+    for path, content_types in assets:
+        expected = (source / path.lstrip("/")).read_bytes()
         for method in ["GET", "HEAD"]:
             result = fetch(web, path, {}, method)
-            require(result.status == 200, f"{method} {web}{path}: audio access failed")
+            require(result.status == 200, f"{method} {web}{path}: asset access failed")
             require(
-                result.headers.get("content-type", "").split(";")[0] == "audio/mpeg",
-                f"{method} {web}{path}: expected MPEG audio",
+                result.headers.get("content-type", "").split(";")[0] in content_types,
+                f"{method} {web}{path}: wrong asset type",
             )
             require(
                 result.body == (expected if method == "GET" else b""),
-                f"{method} {web}{path}: wrong audio bytes",
+                f"{method} {web}{path}: wrong asset bytes",
             )
             require(
                 result.headers.get("content-length") == str(len(expected)),
-                f"{method} {web}{path}: wrong audio length",
+                f"{method} {web}{path}: wrong asset length",
             )
             count += 1
     return count
 
 
 def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
-    count = check_sounds(web)
+    count = check_assets(web)
     catalog = fetch(api, "/api/objects/stock", credentials[0])
     require(catalog.status == 200, "The API stock catalog could not be read")
     stock = json.loads(catalog.body)

@@ -763,7 +763,21 @@ The 1440-pixel desktop and 390- and 320-pixel phone views were inspected. Neithe
 
 All 96 web build files and 178 Python source files matched the final release images. All 41 public resource and form responses passed, including the report and its embedded store view. Restart retained the same product, group, store, stock, and booking hashes. SQLite integrity passed, with 112 stock rows and 251 booking rows. PHP was disabled and absent from the API image. The owned browser session, four test containers, and private network were removed.
 
-The native date-range calendar's configured week start, week-number display, and further keyboard states still need comparison and implementation. Other utility pages, callback timing, error recovery, device behavior, and the broader application audit remain open. Full legacy compliance remains incomplete.
+### Spending report calendar
+
+The report now uses the pinned Date Range Picker 3.1 and jQuery 3.7.1 scripts. Both scripts retain their original bytes and include their MIT licenses. They load only when the report needs the calendar. The application supplies its existing Moment library. The API and release image remain Python.
+
+The calendar uses the configured first weekday and week-number setting. It retains the selected locale's week-year rules. English with a Monday start therefore differs from German at the start of 2027. An explicit Sunday setting of `0` also applies to German. Month and year controls keep the native linked-month and year-option rules. Closing the report removes the calendar and its handlers and restores the prior Moment locale and week settings. A failed script load has a Retry control.
+
+Apply, presets, keyboard entry, hover, and outside clicks retain the checked native behavior. Escape and Tab apply a completed changed range when the input has focus. An incomplete range reverts. A changed range returns focus to the page after Tab; an unchanged range keeps normal Tab movement. Cancel retains the native difference between default date strings and explicit query dates. With explicit dates, its input text contains Unix timestamps. The native Apply and Cancel labels remain English in the German calendar.
+
+All 507 frontend tests passed in 48 files in the Linux build environment. The report owns ten focused cases, including four recorded locale and week-setting cases. The tests execute the actual release scripts, with only their HTTP delivery replaced. The new week-setting check failed with the previous report. Separate Cancel and Tab checks failed before their corrections. Frontend lint, formatting, all three type checks, and root and `/house` builds passed. The resource checker also passed Python lint, formatting, and types. No Python backend source changed.
+
+The final browser comparison covers 29 native states. It compares date text, URL values, focus, popup visibility, range choices, month and year controls, weekdays, week numbers, day cells, and Apply state. These states include linked navigation, hover, earlier-start selection, complete and incomplete dismissal, Apply, Cancel, presets, four calendar settings, and dates outside the year options.
+
+The 1440-pixel desktop and 390- and 320-pixel phone views were inspected. The calendar stayed within the viewport without horizontal overflow. Both phone views support keyboard entry, Escape, presets, Clear filter, day selection, and Apply. No browser script errors were reported. All 45 public resource and form responses passed, including GET and HEAD for both calendar scripts under `/house`. All 102 web build files and 178 Python source files matched the final release images. Restart retained the product, group, store, stock, and booking hashes. SQLite integrity passed, with 112 stock rows and 251 booking rows. PHP remained disabled and absent. The owned browser session, four test containers, and private network were removed.
+
+Other utility pages, callback timing, error recovery, device behavior, and the broader application audit remain open. Full legacy compliance remains incomplete.
 
 Run the normal tests without PHP:
 

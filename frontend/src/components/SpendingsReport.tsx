@@ -1,6 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import moment from "moment/min/moment-with-locales.js";
 import { useI18n } from "@/lib/i18n";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
@@ -23,6 +22,7 @@ import {
 } from "./StockTableOptions";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
+import { DateRangeInput } from "./DateRangeInput";
 
 type Props = { search: SpendingsSearch; onChange: (search: SpendingsSearch) => void };
 
@@ -36,63 +36,11 @@ function hasGroupName(value: string | null) {
   return value !== null && value !== "" && value !== "0";
 }
 
-const presetKeys = [
-  "today",
-  "yesterday",
-  "7",
-  "14",
-  "30",
-  "month",
-  "last-month",
-  "year",
-  "last-year",
-];
-
-function rangeBounds(value: string): [string, string] {
-  const from = moment();
-  const to = moment();
-
-  if (value === "yesterday") {
-    from.subtract(1, "day");
-    to.subtract(1, "day");
-  } else if (["7", "14", "30"].includes(value)) from.subtract(Number(value) - 1, "days");
-  else if (value === "month") {
-    from.startOf("month");
-    to.endOf("month");
-  } else if (value === "last-month") {
-    from.subtract(1, "month").startOf("month");
-    to.subtract(1, "month").endOf("month");
-  } else if (value === "year") {
-    from.startOf("year");
-    to.endOf("year");
-  } else if (value === "last-year") {
-    from.subtract(1, "year").startOf("year");
-    to.subtract(1, "year").endOf("year");
-  }
-
-  return [from.format("YYYY-MM-DD"), to.format("YYYY-MM-DD")];
-}
-
 export function SpendingsReport({ search, onChange }: Props) {
-  const { t, n } = useI18n();
+  const { t } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
   const [text, setText] = useState("");
-  const [custom, setCustom] = useState(false);
-  const start = moment(search.start_date, "YYYY-MM-DD", true);
-  const end = moment(search.end_date, "YYYY-MM-DD", true);
-
-  const appliedStart = start.isValid() ? start.format("YYYY-MM-DD") : rangeBounds("month")[0];
-  const appliedEnd = end.isValid() ? end.format("YYYY-MM-DD") : rangeBounds("month")[1];
-  const [draftStart, setDraftStart] = useState(appliedStart);
-  const [draftEnd, setDraftEnd] = useState(appliedEnd);
-
-  const preset =
-    presetKeys.find((key) => {
-      const [from, to] = rangeBounds(key);
-
-      return from === appliedStart && to === appliedEnd;
-    }) ?? "custom";
 
   const data = useQuery({
     queryKey: ["stock", "spendings", search],
@@ -154,31 +102,8 @@ export function SpendingsReport({ search, onChange }: Props) {
     ),
   );
 
-  function range(value: string) {
-    if (value === "custom") {
-      setCustom(true);
-
-      return;
-    }
-
-    const [start_date, end_date] = rangeBounds(value);
-
-    onChange({
-      ...search,
-      start_date,
-      end_date,
-    });
-  }
-
-  function apply(event: FormEvent) {
-    event.preventDefault();
-    onChange({ ...search, start_date: draftStart, end_date: draftEnd });
-    setCustom(false);
-  }
-
   function clear() {
     setText("");
-    setCustom(false);
     options.reload();
 
     if (
@@ -207,34 +132,11 @@ export function SpendingsReport({ search, onChange }: Props) {
         ))}
       </div>
       <div className="toolbar spending-filters">
-        <label className="field">
-          <span>{t("Date range")}</span>
-          <select
-            value={custom ? "custom" : preset}
-            onChange={(event) => range(event.target.value)}
-          >
-            <option value="today">{t("Today")}</option>
-            <option value="yesterday">{t("Yesterday")}</option>
-            {[7, 14, 30].map((days) => (
-              <option key={days} value={days}>
-                {n(days, "Last %1$s day", "Last %1$s days")}
-              </option>
-            ))}
-            <option value="month">{t("This month")}</option>
-            <option value="last-month">{t("Last month")}</option>
-            <option value="year">{t("This year")}</option>
-            <option value="last-year">{t("Last year")}</option>
-            <option value="custom">{t("Custom range")}</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => setCustom(!custom)}
-          aria-expanded={custom}
-        >
-          {appliedStart} – {appliedEnd}
-        </button>
+        <DateRangeInput
+          start={search.start_date}
+          end={search.end_date}
+          onChange={(start_date, end_date) => onChange({ ...search, start_date, end_date })}
+        />
         {grouping === "product" ? (
           <label className="field">
             <span>{t("Product group")}</span>
@@ -256,42 +158,6 @@ export function SpendingsReport({ search, onChange }: Props) {
           {t("Clear filter")}
         </button>
       </div>
-      {custom ? (
-        <form className="toolbar spending-date-range" onSubmit={apply}>
-          <label className="field">
-            <span>{t("Start date")}</span>
-            <input
-              type="date"
-              required
-              value={draftStart}
-              onChange={(event) => setDraftStart(event.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>{t("End date")}</span>
-            <input
-              type="date"
-              required
-              value={draftEnd}
-              onChange={(event) => setDraftEnd(event.target.value)}
-            />
-          </label>
-          <button type="submit" className="btn btn-primary">
-            {t("Apply")}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setDraftStart(appliedStart);
-              setDraftEnd(appliedEnd);
-              setCustom(false);
-            }}
-          >
-            {t("Cancel")}
-          </button>
-        </form>
-      ) : null}
       {data.isPending ? <LoadingBlock label={t("Loading…")} /> : null}
       {data.error ? (
         <>
