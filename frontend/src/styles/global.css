@@ -3639,6 +3639,60 @@ a.btn[aria-disabled="true"] {
   min-width: 0;
 }
 
+.recipe-picker {
+  position: relative;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.recipe-picker-input {
+  display: flex;
+}
+
+.recipe-picker-input > input {
+  flex: 1;
+  min-width: 0;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.recipe-picker-toggle {
+  flex: 0 0 44px;
+  border: 1px solid var(--line);
+  border-inline-start: 0;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+.recipe-picker-arrow {
+  transform: rotate(-90deg);
+}
+
+.recipe-picker-choices {
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  z-index: 5;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.recipe-picker-choices > li {
+  min-height: 44px;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.recipe-picker-choices > li[aria-selected="true"] {
+  background: var(--cobalt-soft);
+}
+
 .transfer-product h3,
 .product-overview-dialog h3,
 .product-overview-facts dd {

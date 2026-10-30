@@ -1,6 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { createAppRouter } from "@/router";
@@ -27,6 +35,8 @@ function mount(
     delayThirdStockLookup = false,
     failScanSetting = false,
     delayBooking = false,
+    recipes = [{ id: 4, name: "Coffee cake" }],
+    camera = false,
   }: {
     scan?: boolean;
     quick?: boolean;
@@ -42,6 +52,8 @@ function mount(
     delayThirdStockLookup?: boolean;
     failScanSetting?: boolean;
     delayBooking?: boolean;
+    recipes?: { id: number; name: string }[];
+    camera?: boolean;
   } = {},
 ) {
   const writes: { path: string; body: JsonObject }[] = [];
@@ -180,7 +192,7 @@ function mount(
         FEATURE_FLAG_STOCK_LOCATION_TRACKING: tracking,
         FEATURE_FLAG_RECIPES: tracking,
         FEATURE_FLAG_STOCK_PRODUCT_OPENED_TRACKING: true,
-        FEATURE_FLAG_DISABLE_BROWSER_BARCODE_CAMERA_SCANNING: true,
+        FEATURE_FLAG_DISABLE_BROWSER_BARCODE_CAMERA_SCANNING: !camera,
       });
 
     if (path.endsWith("/api/v2/stock/consume/editor"))
@@ -197,7 +209,7 @@ function mount(
         ],
         units: [{ id: 1, name: "Piece", name_plural: "Pieces" }],
         barcodes: [{ product_id: 7, barcodes: "COFFEE-2" }],
-        recipes: [{ id: 4, name: "Coffee cake" }],
+        recipes,
         conversions: [7, 8, 9]
           .flatMap((product_id) => [
             {
@@ -336,6 +348,14 @@ async function choose(name = "Coffee") {
   return amount;
 }
 
+async function recipeField() {
+  await choose();
+  // Complete the form's scheduled focus before the user edits the next field.
+  await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+
+  return screen.getByLabelText<HTMLInputElement>("Recipe");
+}
+
 test("consume uses saved units, child-stock readers, recipes, spoiled state, reset, and Undo", async () => {
   const { writes, reads } = mount("/consume");
   const amount = await choose();
@@ -349,6 +369,7 @@ test("consume uses saved units, child-stock readers, recipes, spoiled state, res
   expect(reads).toContain("/api/stock/products/7/entries?include_sub_products=true");
   fireEvent.click(screen.getByLabelText("Spoiled"));
   fireEvent.change(screen.getByLabelText("Recipe"), { target: { value: "Coffee cake" } });
+  fireEvent.keyDown(screen.getByLabelText("Recipe"), { key: "Tab" });
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
   await screen.findByText("Removed 4 Pieces of Coffee from stock");
   expect(writes[0]).toEqual({
@@ -370,6 +391,127 @@ test("consume uses saved units, child-stock readers, recipes, spoiled state, res
   await waitFor(() =>
     expect(writes.at(-1)?.path).toBe("/api/stock/transactions/consume-transaction/undo"),
   );
+});
+
+test.each([
+  { text: "cake", confirm: "Enter", expected: undefined },
+  { text: "CAKE", confirm: "Tab", expected: "4" },
+  { text: "Coffee cake", confirm: "blur", expected: undefined },
+  { text: "Other recipe", confirm: "blur", expected: undefined },
+  { text: "grcy:r:4", confirm: "blur", expected: "4" },
+  { text: "grcy:p:4", confirm: "blur", expected: undefined },
+])(
+  "consume recipe text $text with $confirm books recipe $expected",
+  async ({ text, confirm, expected }) => {
+    const { writes } = mount("/consume");
+    const picker = await recipeField();
+    await userEvent.type(picker, text);
+
+    if (confirm === "blur") fireEvent.blur(picker);
+    else fireEvent.keyDown(picker, { key: confirm });
+
+    if (confirm === "blur" && text === "Coffee cake") {
+      fireEvent.click(screen.getByRole("button", { name: "OK" }));
+      expect(writes).toEqual([]);
+      await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+    }
+
+    if (confirm === "Enter") await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+
+    expect(writes).toEqual([]);
+    expect(picker.value).toBe(expected ? "Coffee cake" : text.startsWith("grcy") ? "" : text);
+    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    await screen.findByText("Removed 4 Pieces of Coffee from stock");
+    expect(writes.filter((row) => row.path.endsWith("/consume"))).toHaveLength(1);
+    expect(writes.find((row) => row.path.endsWith("/consume"))?.body.recipe_id).toBe(expected);
+  },
+);
+
+test("consume recipe choices retain native matching order, navigation, pointer selection, and clear", async () => {
+  const { writes } = mount("/consume", {
+    recipes: [
+      { id: 1, name: "A cake" },
+      { id: 2, name: "cake one" },
+      { id: 3, name: "A CAKE" },
+      { id: 4, name: "cake two" },
+    ],
+  });
+
+  const picker = await recipeField();
+  await userEvent.type(picker, "cake");
+  expect(
+    within(screen.getByRole("listbox", { name: "Recipes" }))
+      .getAllByRole("option")
+      .map((row) => row.textContent),
+  ).toEqual(["cake one", "cake two", "A cake", "A CAKE"]);
+  await userEvent.keyboard("{ArrowUp}{Tab}");
+  expect(picker.value).toBe("A CAKE");
+  await userEvent.click(screen.getByRole("button", { name: "Recipe: Clear" }));
+  expect(picker.value).toBe("");
+  await userEvent.type(picker, "cake{Escape}");
+  await userEvent.click(screen.getByRole("button", { name: "Recipes" }));
+  expect(picker.value).toBe("");
+  await userEvent.click(screen.getByRole("option", { name: "cake two" }));
+  expect(picker.value).toBe("cake two");
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.recipe_id).toBe("4");
+});
+
+test("editing or dismissing a recipe choice retains text and clears its booking ID", async () => {
+  const { writes } = mount("/consume");
+  const picker = await recipeField();
+  await userEvent.type(picker, "cake{Tab}");
+  expect(picker.value).toBe("Coffee cake");
+  await userEvent.type(picker, "x");
+  await userEvent.keyboard("{Backspace}{Escape}{Tab}");
+  expect(picker.value).toBe("Coffee cake");
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.recipe_id).toBeUndefined();
+});
+
+test("Enter selects a recipe before the consume form has a product", async () => {
+  const { writes } = mount("/consume");
+  const picker = await screen.findByLabelText<HTMLInputElement>("Recipe");
+  await userEvent.type(picker, "cake{Enter}");
+  expect(picker.value).toBe("Coffee cake");
+  expect(writes).toEqual([]);
+  await choose();
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.recipe_id).toBe("4");
+});
+
+test("scan mode waits for an open recipe list before it can book", async () => {
+  const { writes } = mount("/consume", { scan: true, singleUnit: true });
+  const recipe = await screen.findByLabelText("Recipe");
+  await userEvent.type(recipe, "cake");
+  fireEvent.blur(recipe);
+  await choose("grcy:p:7");
+  expect(writes).toEqual([]);
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 1 Piece of Coffee from stock");
+  expect(writes.filter((row) => row.path.endsWith("/consume"))).toHaveLength(1);
+  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.recipe_id).toBeUndefined();
+});
+
+test("the recipe camera action retains the selected recipe when camera access fails", async () => {
+  const { writes } = mount("/consume", { camera: true });
+  const picker = await recipeField();
+  await userEvent.type(picker, "cake{Tab}");
+  const camera = screen.getByRole("button", { name: "Recipe: Scan with camera" });
+  await userEvent.click(camera);
+  const dialog = await screen.findByRole("dialog", { name: "Scan a barcode" });
+  await within(dialog).findByText(/Camera access failed:/);
+  await userEvent.click(within(dialog).getByRole("button", { name: "Close camera" }));
+  expect(document.activeElement).toBe(camera);
+  expect(picker.value).toBe("Coffee cake");
+  expect(writes).toEqual([]);
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  expect(writes.find((row) => row.path.endsWith("/consume"))?.body.recipe_id).toBe("4");
 });
 
 test("specific stock limits use raw entry amounts and persist after switching the item off", async () => {

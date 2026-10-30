@@ -29,6 +29,7 @@ import { tableAttribute, tableText } from "@/lib/native-table-cell";
 import type { Booking } from "@/lib/types";
 import type { JsonObject } from "@/lib/json";
 import { ProductPicker, type ProductCode } from "./ProductPicker";
+import { RecipePicker } from "./RecipePicker";
 import { ProductCard } from "./ProductOverview";
 import { NumberPicker } from "./NumberPicker";
 import { ErrorBlock } from "./ErrorBlock";
@@ -188,6 +189,14 @@ function ConsumeFields({
   const [spoiled, setSpoiled] = useState(false);
   const [recipe, setRecipe] = useState("");
   const [recipeText, setRecipeText] = useState("");
+  const [recipeMenu, setRecipeMenu] = useState(false);
+  const recipeMenuState = useRef(false);
+
+  const changeRecipeMenu = (open: boolean) => {
+    recipeMenuState.current = open;
+    setRecipeMenu(open);
+  };
+
   const [loading, setLoading] = useState(initial !== undefined && options.embedded !== undefined);
   const [sourceLoading, setSourceLoading] = useState(false);
   const [pickerBusy, setPickerBusy] = useState(false);
@@ -438,6 +447,8 @@ function ConsumeFields({
 
       return;
     }
+
+    if (recipeMenuState.current) return;
 
     const body: JsonObject = {
       amount: bookingAmount(current.amount, current.factor),
@@ -714,7 +725,7 @@ function ConsumeFields({
   useEffect(() => onPendingChange?.(save.isPending), [save.isPending, onPendingChange]);
 
   function submit(open = false) {
-    if (busy || !valid || !form.current?.reportValidity()) return;
+    if (busy || !valid || !form.current?.reportValidity() || recipeMenu) return;
     setError(undefined);
     const body: JsonObject = { amount: postedAmount, allow_subproduct_substitution: true };
 
@@ -1002,40 +1013,18 @@ function ConsumeFields({
             </select>
           </label>
           {recipesEnabled ? (
-            <div className="field">
-              <label htmlFor={`${id}-recipe`}>{t("Recipe")}</label>
-              <input
-                id={`${id}-recipe`}
-                list={`${id}-recipes`}
-                aria-describedby={`${id}-recipe-hint`}
-                value={recipeText}
-                disabled={busy}
-                onChange={(event) => {
-                  const text = event.target.value;
-                  setRecipeText(text);
-                  const found = catalog.recipes.find((row) => row.name === text);
-                  setRecipe(found ? String(found.id) : "");
-                }}
-                onBlur={() => {
-                  if (!recipeText.startsWith("grcy")) return;
-                  const parts = recipeText.split(":");
-
-                  const found =
-                    parts[1] === "r"
-                      ? catalog.recipes.find((row) => String(row.id) === parts[2])
-                      : undefined;
-
-                  setRecipe(found ? String(found.id) : "");
-                  setRecipeText(found?.name ?? "");
-                }}
-              />
-              <datalist id={`${id}-recipes`}>
-                {catalog.recipes.map((row) => (
-                  <option key={row.id} value={row.name} />
-                ))}
-              </datalist>
-              <small id={`${id}-recipe-hint`}>{t("This is for statistical purposes only")}</small>
-            </div>
+            <RecipePicker
+              recipes={catalog.recipes}
+              value={recipe}
+              text={recipeText}
+              disabled={busy}
+              open={recipeMenu}
+              onOpenChange={changeRecipeMenu}
+              onChange={(value, text) => {
+                setRecipe(value);
+                setRecipeText(text);
+              }}
+            />
           ) : null}
         </fieldset>
         {loading || sourceLoading ? <LoadingBlock /> : null}

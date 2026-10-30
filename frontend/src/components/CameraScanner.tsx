@@ -16,11 +16,13 @@ export function CameraScanner({
   disabled = false,
   open: controlledOpen,
   onOpenChange,
+  label,
 }: {
   onScan: (code: string) => void;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  label?: string;
 }) {
   const { t: tr } = useI18n();
 
@@ -46,6 +48,7 @@ export function CameraScanner({
       <button
         type="button"
         className="btn btn-ghost"
+        aria-label={label}
         disabled={disabled}
         onClick={() => setOpen(true)}
       >

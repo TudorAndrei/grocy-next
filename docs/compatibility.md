@@ -639,7 +639,7 @@ The first release check found that prefixed sound links returned the application
 
 The 1440-pixel and 390-pixel views retained the existing layout. Both phone action buttons remained reachable after scrolling, with no horizontal overflow. All 154 frontend source files matched the build snapshot, and all 93 web build files matched the release image. All 177 Python source files matched the API image. PHP was disabled and absent from the release images. Saved stock and booking records remained unchanged after restart. The database integrity check passed.
 
-Late disabled-form events remain different. The native page can send failed product-details reads with an undefined product while an earlier automatic booking has disabled its inputs. Python retains the first booking and skips further scan attempts until it ends. These late events, overlapping product and location changes, recipe text, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
+Late disabled-form events remain different. The native page can send failed product-details reads with an undefined product while an earlier automatic booking has disabled its inputs. Python retains the first booking and skips further scan attempts until it ends. These late events, overlapping product and location changes, embedded host behavior, purchase gaps, and inventory page behavior remain open. Full legacy compliance remains incomplete.
 
 ### Confirmed product-list choices
 
@@ -648,6 +648,24 @@ A confirmed browser-list choice now starts a scan booking at once. Typing still 
 The input distinction comes from Chromium's [datalist selection handler](https://github.com/chromium/chromium/blob/main/components/autofill/content/renderer/autofill_agent.cc) and its form-control event path. A list choice dispatches a plain input event. Text edits use `InputEvent`. The consume request check covers both this list event and typed-name confirmation. The list case failed before the correction; the Enter control passed.
 
 All 429 frontend tests passed in 45 files. The 29 consume checks include both confirmation paths. Lint, formatting, all three type checks, and root and `/house` builds passed. The separate browser probe confirmed the typed event but could not select the browser popup through automation. This batch therefore does not claim a completed browser check of the popup or full parity across browsers. No backend source or release-runtime setting changed.
+
+### Consume recipe selection
+
+The consume form now has an explicit recipe list. It retains the native matching order: name prefixes first, then matches with the same letter case, then other matches. Arrow keys move through the list and wrap at each end. Pointer selection, Tab, the clear action, and the list toggle retain their native results. Text that is not confirmed stays visible with an empty recipe ID. Editing a selected name clears its ID. Recipe Grocycodes resolve on blur. Invalid code types clear the input.
+
+The browser check found a native interaction between Enter and form validity. If the consume form is valid, Enter clicks OK and blurs the recipe input before its keyup handler can select a recipe. The recipe stays unselected, and that keypress makes no booking. If the form has no product, Enter can select the highlighted recipe. Tab selects it in both cases. The Python control retains these observed results.
+
+An open recipe list blocks manual booking and automatic scan booking. The blur path retains the native 200-millisecond list delay. Scan callbacks read the current menu flag. They cannot book from an earlier render while that flag is still set. The focused scan regression failed before this guard was added.
+
+The recipe field also exposes the shared camera action. Its accessible name identifies the recipe field. A camera error retains the selected recipe, returns focus to the camera button, and makes no booking. The existing camera-disable flag applies. Physical camera decoding through this field remains unverified.
+
+All 440 frontend tests passed in 45 files, including 40 consume checks. Seven focused cases failed with the previous form, while four controls passed. Lint, formatting, all three type checks, and root and `/house` builds passed. No backend source changed.
+
+Eleven native and Linux release browser cases passed before the final scan-menu guard. They covered Enter with and without a product, Tab, unconfirmed exact names, unknown names, valid and invalid codes, arrow navigation, pointer selection, editing, and clearing. Every case completed a booking and visible Undo. Request fields, saved stock, recipe booking fields, and Undo fields matched after new IDs and timestamps were excluded. All 93 web build files and 177 Python source files matched their release artifacts. PHP was absent and disabled. The Linux release passed 37 resource and form responses. Its 1440-pixel and 390-pixel views were inspected. All recipe choices and both action buttons were reachable on the phone, with no horizontal overflow. Restart retained all 64 stock rows and 135 booking rows, and SQLite integrity passed.
+
+The container API then stopped responding. Its read-only health request timed out, although OrbStack reported that it was running. The final image build and container cleanup remain pending. The stalled test commands were stopped without restarting the shared container service. Test resources use the `grocy-recipe-` container prefix and the `grocy-recipe-qa` network.
+
+The final built frontend, including the scan-menu guard, was also checked against a local Python API and an immutable reference snapshot. All eleven browser cases and visible Undo passed. Saved fields matched the native cases, with each booking checked against its actual UTC test date. The final bundle passed 37 resource and form responses. A later phone screenshot repeat stopped on a browser-tool read error. The source and booking checks completed. Camera denial is covered by the consume form tests; no physical camera result is claimed.
 
 Run the normal tests without PHP:
 
