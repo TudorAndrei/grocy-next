@@ -779,6 +779,24 @@ The 1440-pixel desktop and 390- and 320-pixel phone views were inspected. The ca
 
 Other utility pages, callback timing, error recovery, device behavior, and the broader application audit remain open. Full legacy compliance remains incomplete.
 
+### Location content sheet
+
+The web application now provides `/locationcontentsheet`, with a Location Content Sheet link on the stock overview. Stock and location tracking settings control the link and page. The authenticated Python reader at `/api/v2/stock/location-content-sheet` permits the native read-only user.
+
+The reader uses `stock_current_location_content`. It lists active products at their actual stock locations, including inactive locations and units. Locations use the native name order without case distinctions. Products use the native case-sensitive name order. Imported zero and negative stock rows remain visible. Child products retain their own rows. A product with no stock rows appears at its default location only when out-of-stock products are included. Empty locations have no page.
+
+The presence of `include_out_of_stock` includes out-of-stock products, even with an empty, `0`, or `false` value. The checkbox retains the separate native text rule: an empty query value leaves Show only in stock products checked. Filter changes keep other query values and `embedded`. They reload saved data and reset prior print selection and timestamps. Amounts use the saved display precision. Unit labels include full names, custom plural forms, inactive-unit rules, and number placeholders. Opened amounts appear next to the total without its display rounding.
+
+Print (this location) selects one location for the print dialog. Print (all locations) selects every location. The selected print scope stays set until another selection or a filter reload. The timestamp is set before the browser print call and uses the selected Moment locale. The print layout retains the native 992-pixel minimum body width, one page break per location, blank Notes cells, and Grocy logo. The copied logo retains its original bytes and project license. Print styles are limited to this page.
+
+All 290 Python integration tests passed; five optional checks were skipped. All 513 frontend tests passed in 49 files in the Linux build environment. Two new HTTP cases cover saved row selection and read access. Six new routed cases cover read retry, formatting, print timing, query values, and feature settings. The new API and routed workflow checks failed with the previous source. Python and frontend lint, formatting, types, and root and `/house` builds passed.
+
+Five rendered cases matched the legacy page. The default case has 35 locations and 70 product rows. Included out-of-stock cases have 36 locations and 86 product rows. Separate English, German, and Russian comparisons matched custom unit forms and four-decimal display. Actual PDFs matched all printed text and page counts: one selected location produced one page, and all 36 locations produced 36 pages. The dense 18-row location also stayed on one page.
+
+The 1440-pixel desktop and 390- and 320-pixel phone views were inspected. Long location names wrap within the page. Both phone views had no horizontal overflow and retained filter and print controls. The overview link opened the sheet under `/house`. No browser script errors were reported. All 49 public resource and form responses passed, including the plain and embedded sheet routes and GET and HEAD for the logo. All 107 web build files and 179 Python source files matched the final release images.
+
+Restart retained the product, group, store, stock, booking, unit, and location hashes. SQLite integrity passed, with 121 stock rows and 260 booking rows. PHP remained disabled and absent from the API image. The owned browser session, four test containers, and private network were removed. Very long fractional amounts, additional unit format errors, and further print cases still need comparison. Other utility pages and the broader application audit remain open. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash

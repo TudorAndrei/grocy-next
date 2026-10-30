@@ -11,10 +11,20 @@ from grocy.domains.stock.journal import (
     journal_summary,
     journal_view,
 )
+from grocy.domains.stock.location_sheet import LocationSheetView, location_sheet_view
 from grocy.domains.stock.spendings import SpendingsView, spendings_view
 from grocy.domains.stock.transfer import transfer_editor
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/location-content-sheet")
+async def get_location_content_sheet(
+    actor: AuthenticatedActor,
+    session: DbSession,
+    include_out_of_stock: str | None = None,
+) -> LocationSheetView:
+    return await location_sheet_view(session, include_out_of_stock is not None)
 
 
 @router.get("/stock/reports/spendings")

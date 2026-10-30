@@ -22,6 +22,7 @@ import { Route as HouseholdRouteImport } from './routes/household'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as LabelsRouteImport } from './routes/labels'
+import { Route as LocationcontentsheetRouteImport } from './routes/locationcontentsheet'
 import { Route as LocationsRouteImport } from './routes/locations'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as MealPlanRouteImport } from './routes/meal-plan'
@@ -110,6 +111,11 @@ const JournalRoute = JournalRouteImport.update({
 const LabelsRoute = LabelsRouteImport.update({
   id: '/labels',
   path: '/labels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationcontentsheetRoute = LocationcontentsheetRouteImport.update({
+  id: '/locationcontentsheet',
+  path: '/locationcontentsheet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationsRoute = LocationsRouteImport.update({
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
+  '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
+  '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
+  '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
@@ -368,6 +377,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/journal'
     | '/labels'
+    | '/locationcontentsheet'
     | '/locations'
     | '/manage'
     | '/meal-plan'
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/journal'
     | '/labels'
+    | '/locationcontentsheet'
     | '/locations'
     | '/manage'
     | '/meal-plan'
@@ -446,6 +457,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/journal'
     | '/labels'
+    | '/locationcontentsheet'
     | '/locations'
     | '/manage'
     | '/meal-plan'
@@ -486,6 +498,7 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   JournalRoute: typeof JournalRoute
   LabelsRoute: typeof LabelsRoute
+  LocationcontentsheetRoute: typeof LocationcontentsheetRoute
   LocationsRoute: typeof LocationsRoute
   ManageRoute: typeof ManageRoute
   MealPlanRoute: typeof MealPlanRoute
@@ -603,6 +616,13 @@ declare module '@tanstack/react-router' {
       path: '/labels'
       fullPath: '/labels'
       preLoaderRoute: typeof LabelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/locationcontentsheet': {
+      id: '/locationcontentsheet'
+      path: '/locationcontentsheet'
+      fullPath: '/locationcontentsheet'
+      preLoaderRoute: typeof LocationcontentsheetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/locations': {
@@ -790,6 +810,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   JournalRoute: JournalRoute,
   LabelsRoute: LabelsRoute,
+  LocationcontentsheetRoute: LocationcontentsheetRoute,
   LocationsRoute: LocationsRoute,
   ManageRoute: ManageRoute,
   MealPlanRoute: MealPlanRoute,

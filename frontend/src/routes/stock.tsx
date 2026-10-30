@@ -194,6 +194,11 @@ function StockPage() {
             <Link to="/stockentries" className="btn btn-ghost">
               {tr("Stock entries")}
             </Link>
+            {features.enabled("STOCK_LOCATION_TRACKING") ? (
+              <Link to="/locationcontentsheet" className="btn btn-ghost">
+                {tr("Location Content Sheet")}
+              </Link>
+            ) : null}
             {features.enabled("STOCK_PRICE_TRACKING") ? (
               <Link to="/stockreports/spendings" className="btn btn-ghost">
                 {tr("Spendings")}

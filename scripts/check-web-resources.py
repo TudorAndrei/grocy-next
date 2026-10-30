@@ -85,13 +85,17 @@ def compare(api: str, web: str, path: str, headers: dict[str, str], method: str)
 
 def check_assets(web: str) -> int:
     source = Path(__file__).resolve().parents[1] / "frontend" / "public"
-    assets = [
-        (f"/uisounds/{name}.mp3", {"audio/mpeg"})
-        for name in ["silence", "barcodescannerbeep", "success", "error"]
-    ] + [
-        (f"/vendor/daterangepicker/{name}.js", {"application/javascript", "text/javascript"})
-        for name in ["jquery.min", "daterangepicker"]
-    ]
+    assets = (
+        [
+            (f"/uisounds/{name}.mp3", {"audio/mpeg"})
+            for name in ["silence", "barcodescannerbeep", "success", "error"]
+        ]
+        + [
+            (f"/vendor/daterangepicker/{name}.js", {"application/javascript", "text/javascript"})
+            for name in ["jquery.min", "daterangepicker"]
+        ]
+        + [("/vendor/grocy/logo.svg", {"image/svg+xml"})]
+    )
     count = 0
     for path, content_types in assets:
         expected = (source / path.lstrip("/")).read_bytes()
@@ -151,6 +155,8 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
         "/inventory?embedded&product=17",
         "/stockreports/spendings",
         "/stockreports/spendings?embedded&group-by=store",
+        "/locationcontentsheet",
+        "/locationcontentsheet?embedded&include_out_of_stock=false",
     ]:
         form = fetch(web, path, {})
         require(
