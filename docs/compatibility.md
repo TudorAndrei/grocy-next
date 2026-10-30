@@ -825,7 +825,19 @@ The built Python reader matched every source row, source order, filter choice, a
 
 All 49 public resource and form responses passed. All 109 web files and 182 Python source files matched the release images. Restart retained the checked stock, catalog, booking, and user setting hashes. SQLite integrity passed. PHP remained disabled and absent from the API image.
 
-The overview still needs the native saved table columns, grouping, full search text, number and date presentation, quick actions, product dialogs, statistics, and row refresh rules. Further date-setting and time-zone cases also need comparison. Full legacy compliance remains incomplete.
+### Stock overview table columns and values
+
+The overview now uses the legacy column positions and saved table settings. Users can show, hide, and move columns, select a group, collapse a group, and reset the table. Product fields retain their captions. The calorie column uses the translated stock-unit label. Product and parent links open the product dialog.
+
+Search uses the legacy cell text, including hidden barcode and filter values. Number sorting uses the original stored text and native empty-cell rules. Own and aggregate quantities retain their separate unit rules. Prices use the price-to-stock conversion for display. Product descriptions pass through the HTML sanitizer. Numeric custom-field names and object aliases retain the first matching legacy value.
+
+The final browser comparison matched all 86 displayed amount and due-date cells, all 34 checked sort orders, all 23 search cases, saved columns, groups, and column order after reload. The amount cells contain tab characters as whitespace. They do not display literal tab escape text. The new API and interface regression tests failed on the previous implementation and pass with this repair.
+
+All 516 frontend tests pass in 50 files. Frontend lint, formatting, and type checks pass. All 302 Python integration and unit tests pass; five optional checks are skipped. Changed Python lint, formatting, and Python type checks pass. All 109 web build files and 182 Python source files match the tested release images. The release API uses Python with PHP disabled.
+
+The desktop and 390- and 320-pixel phone layouts have no page or dialog overflow. The focused table scrolls with Arrow Right. Escape closes the product dialog and restores focus to its link. All 49 resource and form checks pass under `/house`. Restart retains the checked data hashes, and SQLite integrity passes. The release image contains no PHP executable.
+
+Quick actions, complete product dialog behavior, statistics, and row refresh rules still need comparison. Further date-setting and time-zone cases also need comparison. Full legacy compliance remains incomplete.
 
 Run the normal tests without PHP:
 

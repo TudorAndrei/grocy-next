@@ -101,3 +101,127 @@ def test_overview_selection_settings_and_actual_locations(client, api_headers):
     assert [row["name"] for row in data["product_groups"] if row["id"] in groups] == [
         "Overview reader Group"
     ]
+
+
+def test_overview_table_values_keep_native_number_text_units_and_fields(client, api_headers):
+    client.headers.update(api_headers)
+
+    def create(table, **values):
+        response = client.post(f"/api/objects/{table}", json=values)
+        response.raise_for_status()
+        return int(response.json()["created_object_id"])
+
+    unit = create(
+        "quantity_units",
+        name="%s product expires",
+        name_plural="%s products expiring",
+        plural_forms="%s unit few\n%s unit many\n%s unit fraction",
+    )
+    box = create("quantity_units", name="Overview table box")
+    parent = create(
+        "products",
+        name="Overview table parent",
+        location_id=1,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    child = create(
+        "products",
+        name="Overview table child",
+        location_id=1,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+        parent_product_id=parent,
+    )
+    create("quantity_unit_conversions", product_id=parent, from_qu_id=box, to_qu_id=unit, factor=6)
+    client.put(
+        f"/api/objects/products/{parent}",
+        json={
+            "qu_id_price": box,
+            "description": "<p>Dark <strong>cocoa</strong></p>",
+        },
+    ).raise_for_status()
+    for product, amount in [(parent, 1.2345678901234567), (child, 2.5)]:
+        client.post(
+            f"/api/stock/products/{product}/add",
+            json={
+                "amount": amount,
+                "price": 1.25,
+                "best_before_date": "2999-12-31",
+            },
+        ).raise_for_status()
+    create(
+        "userfields",
+        entity="products",
+        name="origin",
+        caption="Origin",
+        type="text-single-line",
+        show_as_column_in_tables=1,
+    )
+    client.put(
+        f"/api/userfields/products/{parent}", json={"origin": "Shared brew"}
+    ).raise_for_status()
+    create("shopping_list", product_id=parent, amount=1, shopping_list_id=1)
+    client.put(
+        "/api/user/settings/show_icon_on_stock_overview_page_when_product_is_on_shopping_list",
+        json={"value": "false"},
+    ).raise_for_status()
+
+    client.put(
+        f"/api/objects/products/{parent}", json={"calories": "not numeric"}
+    ).raise_for_status()
+
+    # Imported stock can retain more precision than a booking request.
+    async def saved_amount():
+        from sqlalchemy import text
+
+        from grocy.db.session import get_session_factory
+
+        async with get_session_factory()() as session:
+            await session.execute(
+                text("UPDATE stock SET amount=1.2345678901234567 WHERE product_id=:id"),
+                {"id": parent},
+            )
+            await session.commit()
+
+    client.portal.call(saved_amount)
+    for locale, own, aggregate in [
+        ("en", "1.2345678901235 products expiring", "3.7345678901235 unit few"),
+        ("ru", "1.2345678901235 продукт испортится", "3.7345678901235 unit few"),
+    ]:
+        client.put("/api/user/settings/locale", json={"value": locale}).raise_for_status()
+        response = client.get("/api/v2/stock/overview")
+        response.raise_for_status()
+        data = response.json()
+        row = next(row for row in data["rows"] if row["product_id"] == parent)
+        assert row["number_text"]["product_calories"] == "not numeric"
+        assert row["number_text"]["amount"] == "1.2345678901235"
+        assert row["number_text"]["last_price_display"] == "7.5"
+        assert row["unit_label"] == own
+        assert row["unit_label_aggregated"] == aggregate
+        assert row["product_values"] == {"origin": "Shared brew"}
+        assert row["product_description"] == "<p>Dark <strong>cocoa</strong></p>"
+        assert row["on_shopping_list"] == 1
+        assert data["show_shopping_icon"] is True
+
+    client.put(
+        f"/api/userfields/products/0{parent}", json={"origin": "Numeric alias"}
+    ).raise_for_status()
+    for name, caption in [("1", "Number"), ("01", "Padded number")]:
+        create(
+            "userfields",
+            entity="products",
+            name=name,
+            caption=caption,
+            type="text-single-line",
+            show_as_column_in_tables=1,
+        )
+    client.put(f"/api/userfields/products/{parent}", json={"1": "Number choice"}).raise_for_status()
+    response = client.get("/api/v2/stock/overview")
+    response.raise_for_status()
+    row = next(row for row in response.json()["rows"] if row["product_id"] == parent)
+    assert row["product_values"] == {
+        "origin": "Numeric alias",
+        "1": "Number choice",
+        "01": "Number choice",
+    }

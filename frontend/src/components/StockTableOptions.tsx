@@ -166,6 +166,9 @@ function OptionsDialog({
   const [confirm, setConfirm] = useState(false);
   const ordered = options.order.flatMap((i) => (options.columns[i] ? [options.columns[i]] : []));
 
+  const label = (column: TableOptions["columns"][number]) =>
+    column.labelIsLiteral ? column.label : t(column.label);
+
   return (
     <dialog
       ref={dialog}
@@ -199,14 +202,14 @@ function OptionsDialog({
                     checked={options.visible(column.key)}
                     onChange={(e) => options.show(column.key, e.target.checked)}
                   />
-                  {t(column.label)}
+                  {label(column)}
                 </label>
                 <div className="row-actions">
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
                     disabled={position === 0}
-                    aria-label={t("Move %s earlier", t(column.label))}
+                    aria-label={t("Move %s earlier", label(column))}
                     onClick={() => {
                       const previous = ordered[position - 1];
 
@@ -219,7 +222,7 @@ function OptionsDialog({
                     type="button"
                     className="btn btn-ghost btn-sm"
                     disabled={position === ordered.length - 1}
-                    aria-label={t("Move %s later", t(column.label))}
+                    aria-label={t("Move %s later", label(column))}
                     onClick={() => {
                       const next = ordered[position + 1];
 
@@ -259,7 +262,7 @@ function OptionsDialog({
                 }
                 onChange={() => options.groupBy(column.key)}
               />
-              {t(column.label)}
+              {label(column)}
             </label>
           ),
         )}

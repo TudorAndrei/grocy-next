@@ -8,6 +8,7 @@ import type { UserSettings } from "./types";
 export type TableColumn = {
   key: string;
   label: string;
+  labelIsLiteral?: boolean;
   rendered?: boolean;
   configurable?: boolean;
   groupable?: boolean;

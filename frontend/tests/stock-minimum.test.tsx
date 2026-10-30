@@ -126,10 +126,12 @@ test.each([
         <RouterProvider router={router} />
       </QueryClientProvider>,
     );
-    await screen.findByRole("img", { name: "Milk, 0% of minimum" });
+
+    if (page === "Today") await screen.findByRole("img", { name: "Milk, 0% of minimum" });
+    else await screen.findByRole("link", { name: "Milk" });
 
     if (page === "Stock") {
-      expect(screen.getByRole("img", { name: "Family, 200% of minimum" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Family" })).toBeTruthy();
       await userEvent.setup().click(screen.getByRole("button", { name: /Below min\s*1/ }));
     }
 

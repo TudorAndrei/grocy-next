@@ -1393,6 +1393,14 @@ input[type="checkbox"] {
   font-weight: 400;
 }
 
+.overview-table .d-none {
+  display: none;
+}
+
+.overview-table svg {
+  vertical-align: middle;
+}
+
 .stock-table-relative {
   font-size: 0.8em;
   font-style: italic;
@@ -3787,6 +3795,27 @@ a.btn[aria-disabled="true"] {
   letter-spacing: normal;
   text-transform: none;
   background: transparent;
+}
+
+.overview-table tr[data-due="soon"] {
+  background: var(--mustard-soft);
+}
+
+.overview-table tr[data-due="expired"] {
+  background: var(--tomato-soft);
+}
+
+.overview-table tr[data-due="best-before"] {
+  background: var(--surface-sunk);
+}
+
+.overview-table tr[data-low="true"]:not([data-due]) {
+  background: var(--cobalt-soft);
+}
+
+.overview-table .small {
+  font-size: 0.8em;
+  font-style: italic;
 }
 
 .entries-table tr[data-due="soon"] {

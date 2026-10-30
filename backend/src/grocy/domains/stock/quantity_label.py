@@ -4,6 +4,7 @@ import gettext
 import math
 import re
 from functools import lru_cache
+from typing import Any
 
 from grocy.compatibility.php import empty
 from grocy.compatibility.sprintf import sprintf_number
@@ -71,6 +72,29 @@ def quantity_label(
     message = (
         labels[index]
         if 0 <= index < len(labels) and labels[index] != ""
+        else name
+        if index == 0
+        else plural
+    )
+    return sprintf_number(message or "", amount)
+
+
+def catalog_quantity_label(
+    amount: int | float, name: str | None, plural: str | None, catalog: dict[str, Any]
+) -> str:
+    """The native overview's own amount uses the general translation domain."""
+    name = name or ""
+    plural = name if empty(plural) else plural
+    labels = catalog["messages"].get("", {}).get(name)
+    index = 0 if abs(amount) == 1 else 1
+    if labels is not None and catalog["plural-forms"]:
+        count, choose = _plural(catalog["plural-forms"])
+        index = choose(_QuantityCount(abs(amount)))
+        if count <= 2:
+            index = int(bool(index))
+    message = (
+        labels[index]
+        if labels and 0 <= index < len(labels) and labels[index]
         else name
         if index == 0
         else plural

@@ -2,11 +2,9 @@ import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useCatalog } from "@/lib/catalog";
-import { daysUntil, dueLabel, dueTone } from "@/lib/format";
+import { daysUntil } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
 import { ErrorBlock } from "@/components/ErrorBlock";
-import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { QuickMoves } from "@/components/QuickMoves";
@@ -18,21 +16,32 @@ import { ConsumeDialog } from "@/components/ConsumeForm";
 import { InventoryDialog } from "@/components/InventoryForm";
 import { usePermissions } from "@/lib/permissions";
 
-import { getStockOverview } from "@/lib/stock-overview";
+import { getStockOverview, type StockOverviewRow } from "@/lib/stock-overview";
 import { matchesTableSearch } from "@/lib/table-search";
+import { overviewColumns, overviewCells } from "@/lib/stock-overview-table";
+import { userfieldsQuery } from "@/lib/userfields";
+import { useTableOptions } from "@/lib/table-options";
+import { useTableOrder } from "@/lib/table-order";
+import { tablePlainText } from "@/lib/native-table-cell";
+import {
+  StockTableCells,
+  StockTableRows,
+  StockTableOptions,
+  StockTableStatus,
+} from "./StockTableOptions";
+import { UserfieldValue } from "./UserfieldValue";
+import { EntityPicture } from "./EntityPicture";
+import { ProductOverview } from "./ProductOverview";
 
 type StockFilter = "all" | "due" | "overdue" | "expired" | "low" | "in-stock";
 
 type Row = {
+  source: StockOverviewRow;
   productId: number;
   name: string;
   amount: number;
   ownAmount: number;
-  minimumAmount: number;
-  opened: number;
-  min: number;
   bestBefore: string | null;
-  locationName: string | null;
   locations: string;
   groupName: string | null;
   missing: boolean;
@@ -40,18 +49,20 @@ type Row = {
 };
 
 export function StockOverviewPage() {
-  const { t: tr } = useI18n();
+  const { t: tr, locale, ready: translationsReady } = useI18n();
 
   const features = useFeatures();
   const can = usePermissions();
+  const [overview, setOverview] = useState<number>();
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [transfer, setTransfer] = useState<number>();
   const [purchase, setPurchase] = useState<number>();
   const [consume, setConsume] = useState<number>();
   const [inventory, setInventory] = useState<number>();
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
-  const { dueSoonDays, formatAmount } = usePreferences();
-  const catalog = useCatalog();
+  const preferences = usePreferences();
+  const { dueSoonDays } = preferences;
   const [search, setSearch] = useState("");
   const [selection, setFilter] = useState<StockFilter>("all");
 
@@ -62,38 +73,28 @@ export function StockOverviewPage() {
   const [group, setGroup] = useState("");
 
   const stock = useQuery({
-    queryKey: ["stock", "overview-view"],
+    queryKey: ["stock", "overview-view", locale],
     queryFn: ({ signal }) => getStockOverview(signal),
     retry: false,
+    enabled: translationsReady,
   });
 
-  const rows: Row[] = (stock.data?.rows ?? [])
-    .map((item) => {
-      const amount = item.is_aggregated_amount === 1 ? item.amount_aggregated : item.amount;
+  const rows: Row[] = (stock.data?.rows ?? []).map((item) => {
+    const amount = item.is_aggregated_amount === 1 ? item.amount_aggregated : item.amount;
 
-      const opened =
-        item.is_aggregated_amount === 1 ? item.amount_opened_aggregated : item.amount_opened;
-
-      return {
-        productId: item.product_id,
-        name: item.product_name ?? "",
-        amount,
-        ownAmount: item.amount,
-        minimumAmount:
-          catalog.product(item.product_id)?.treat_opened_as_out_of_stock === 1
-            ? amount - opened
-            : amount,
-        opened,
-        min: item.min_stock_amount,
-        bestBefore: item.best_before_date,
-        locationName: item.product_default_location_name,
-        locations: item.location_names.map((name) => `xx${name ?? ""}xx`).join(" "),
-        groupName: item.product_group_name,
-        missing: item.product_missing === 1,
-        dueType: item.due_type,
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    return {
+      source: item,
+      productId: item.product_id,
+      name: item.product_name ?? "",
+      amount,
+      ownAmount: item.amount,
+      bestBefore: item.best_before_date,
+      locations: item.location_names.map((name) => `xx${name ?? ""}xx`).join(" "),
+      groupName: item.product_group_name,
+      missing: item.product_missing === 1,
+      dueType: item.due_type,
+    };
+  });
 
   const isDue = (row: Row) => {
     const days = daysUntil(row.bestBefore);
@@ -106,8 +107,49 @@ export function StockOverviewPage() {
   const isExpired = (row: Row) => isPast(row) && row.dueType !== 1;
   const isLow = (row: Row) => row.missing;
 
-  const anyOpened =
-    features.enabled("STOCK_PRODUCT_OPENED_TRACKING") && rows.some((row) => row.opened > 0);
+  const definitions = useQuery(userfieldsQuery);
+
+  const fields =
+    definitions.data?.filter((f) => f.entity === "products" && f.show_as_column_in_tables === 1) ??
+    [];
+
+  const columns = overviewColumns(
+    datesEnabled,
+    features.enabled("STOCK_PRICE_TRACKING"),
+    fields,
+    tr,
+  );
+
+  const options = useTableOptions(
+    "stock-overview-table",
+    columns,
+    { key: "best_before_date", descending: false },
+    stock.isSuccess && definitions.isSuccess,
+  );
+
+  const now = new Date(stock.dataUpdatedAt || 0);
+
+  const cells = new Map(
+    rows.map((row) => [
+      row,
+      overviewCells(row.source, fields, {
+        now,
+        locale: tr("moment_locale"),
+        t: tr,
+        amountPrecision: preferences.amountPrecision,
+        pricePrecision: preferences.priceDisplayPrecision,
+        currency: String(features.query.data?.CURRENCY ?? "USD"),
+        showShoppingIcon: stock.data?.show_shopping_icon ?? false,
+        dueDays: dueSoonDays,
+      }),
+    ]),
+  );
+
+  const ordered = useTableOrder(
+    rows.map((row) => ({ key: String(row.productId), row, cells: cells.get(row)! })),
+    options,
+    stock.isSuccess && definitions.isSuccess,
+  );
 
   const counts = {
     all: rows.length,
@@ -118,7 +160,7 @@ export function StockOverviewPage() {
     low: rows.filter(isLow).length,
   };
 
-  const visible = rows.filter((row) => {
+  const visible = ordered.filter((row) => {
     if (filter === "due" && !isDue(row)) return false;
 
     if (filter === "overdue" && !isOverdue(row)) return false;
@@ -134,9 +176,13 @@ export function StockOverviewPage() {
 
     if (!matchesTableSearch(`xx${row.groupName ?? ""}xx`, group ? `xx${group}xx` : ""))
       return false;
-    const q = search.trim().toLowerCase();
 
-    return !q || row.name.toLowerCase().includes(q);
+    return matchesTableSearch(
+      Object.values(cells.get(row)!)
+        .map((cell) => cell.search)
+        .join("  "),
+      search,
+    );
   });
 
   const filters: Array<[StockFilter, string]> = [
@@ -220,7 +266,10 @@ export function StockOverviewPage() {
             type="search"
             placeholder={tr("Search products")}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              options.draw();
+              setSearch(e.target.value);
+            }}
           />
         </label>
         <div className="chips" role="group" aria-label={tr("Stock filter")}>
@@ -234,7 +283,10 @@ export function StockOverviewPage() {
                     className="chip"
                     data-tone={id}
                     aria-pressed={filter === id}
-                    onClick={() => setFilter(id)}
+                    onClick={() => {
+                      options.draw();
+                      setFilter(id);
+                    }}
                   >
                     {tr(label)}
                     <span className="chip-count">{counts[id]}</span>
@@ -245,7 +297,13 @@ export function StockOverviewPage() {
         {locationsEnabled ? (
           <label className="select-field">
             <span className="sr-only">{tr("Location")}</span>
-            <select value={location} onChange={(e) => setLocation(e.target.value)}>
+            <select
+              value={location}
+              onChange={(e) => {
+                options.draw();
+                setLocation(e.target.value);
+              }}
+            >
               <option value="">{tr("All locations")}</option>
               {(stock.data?.locations ?? []).map((location) => (
                 <option key={location.id} value={location.name ?? ""}>
@@ -257,7 +315,13 @@ export function StockOverviewPage() {
         ) : null}
         <label className="select-field">
           <span className="sr-only">{tr("Product group")}</span>
-          <select value={group} onChange={(e) => setGroup(e.target.value)}>
+          <select
+            value={group}
+            onChange={(e) => {
+              options.draw();
+              setGroup(e.target.value);
+            }}
+          >
             <option value="">{tr("All product groups")}</option>
             {(stock.data?.product_groups ?? []).map((item) => (
               <option key={item.id} value={item.name ?? ""}>
@@ -270,6 +334,7 @@ export function StockOverviewPage() {
           type="button"
           className="btn btn-ghost"
           onClick={() => {
+            options.draw();
             setSearch("");
             setFilter("all");
             setLocation("");
@@ -298,79 +363,94 @@ export function StockOverviewPage() {
         </p>
       ) : null}
 
-      {visible.length > 0 ? (
+      <StockTableStatus options={options} />
+      {definitions.isPending ? <LoadingBlock label={tr("Loading custom fields…")} /> : null}
+      {definitions.error ? (
+        <>
+          <ErrorBlock message={definitions.error.message} />
+          <button type="button" className="btn" onClick={() => void definitions.refetch()}>
+            {tr("Retry custom fields")}
+          </button>
+        </>
+      ) : null}
+      {stock.isSuccess && definitions.isSuccess && options.ready ? (
         <div
           className="panel journal-table-scroll"
           tabIndex={0}
           role="region"
           aria-label={tr("Stock overview")}
         >
-          <table className="stock-table">
+          <table id="stock-overview-table" className="stock-table journal-table overview-table">
+            <caption className="sr-only">{tr("Stock overview")}</caption>
             <thead>
               <tr>
-                <th scope="col">{tr("Product")}</th>
-                <th scope="col">{tr("Level")}</th>
-                <th scope="col" className="num">
-                  {tr("Amount")}
-                </th>
-                {anyOpened ? (
-                  <th scope="col" className="num">
-                    {tr("Opened")}
+                <StockTableCells options={options} headers>
+                  <th scope="col">
+                    <StockTableOptions
+                      options={options}
+                      onReset={() => {
+                        options.draw();
+                        setSearch("");
+                        setLocation("");
+                        setGroup("");
+                        setFilter("all");
+                        void stock.refetch();
+                        options.reload();
+                      }}
+                    />
                   </th>
-                ) : null}
-                {datesEnabled ? <th scope="col">{tr("Best before")}</th> : null}
-                <th scope="col">
-                  <span className="sr-only">{tr("Actions")}</span>
-                </th>
+                  {columns
+                    .filter((c) => c.key !== "actions" && c.rendered !== false)
+                    .map((column) => (
+                      <th
+                        key={column.key}
+                        scope="col"
+                        aria-sort={
+                          options.sort.key === column.key
+                            ? options.sort.descending
+                              ? "descending"
+                              : "ascending"
+                            : "none"
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="journal-sort"
+                          onClick={(e) => options.sortBy(column.key, e.shiftKey)}
+                        >
+                          {column.labelIsLiteral ? column.label : tr(column.label)}
+                        </button>
+                      </th>
+                    ))}
+                </StockTableCells>
               </tr>
             </thead>
-            <tbody>
-              {visible.map((row) => {
-                const tone = dueTone(row.bestBefore, dueSoonDays);
+            <StockTableRows
+              options={options}
+              groups={visible.map((row) => {
+                const cell = cells.get(row)![options.groupColumn ?? ""];
+                const name = cell ? tablePlainText(cell.html) : "";
 
-                return (
-                  <tr key={row.productId} data-low={isLow(row) ? "true" : undefined}>
-                    <td className="stock-name">
-                      <Link to="/products/$productId" params={{ productId: String(row.productId) }}>
-                        {row.name}
-                      </Link>
-                      <small>
-                        {locationsEnabled ? (row.locationName ?? tr("No location")) : null}
-                        {row.min > 0
-                          ? tr(
-                              "%1$smin %2$s",
-                              String(locationsEnabled ? " · " : ""),
-                              String(catalog.amountText(row.productId, row.min)),
-                            )
-                          : ""}
-                      </small>
-                    </td>
-                    <td className="level">
-                      <Gauge amount={row.minimumAmount} min={row.min} label={row.name} />
-                    </td>
-                    <td className="num amount">{catalog.amountText(row.productId, row.amount)}</td>
-                    {anyOpened ? (
-                      <td className="num opened">
-                        {row.opened > 0 ? (
-                          formatAmount(row.opened)
-                        ) : (
-                          <span className="faint">—</span>
-                        )}
-                      </td>
-                    ) : null}
-                    {datesEnabled ? (
-                      <td className="date">
-                        {tone ? (
-                          <span className="badge" data-tone={tone}>
-                            {row.dueType === 1 && isOverdue(row)
-                              ? tr("Overdue")
-                              : dueLabel(row.bestBefore, dueSoonDays)}
-                          </span>
-                        ) : (
-                          <span className="faint">—</span>
-                        )}
-                      </td>
-                    ) : null}
+                return { key: cell?.html ?? "", label: name, name };
+              })}
+            >
+              {visible.map((row) => (
+                <tr
+                  key={row.productId}
+                  data-low={isLow(row) ? "true" : undefined}
+                  data-due={
+                    datesEnabled
+                      ? isOverdue(row)
+                        ? "best-before"
+                        : isExpired(row)
+                          ? "expired"
+                          : isDue(row)
+                            ? "soon"
+                            : undefined
+                      : undefined
+                  }
+                >
+                  <StockTableCells options={options}>
                     <td className="row-actions">
                       <QuickMoves productId={row.productId} name={row.name} amount={row.amount} />
                       <button
@@ -413,12 +493,89 @@ export function StockOverviewPage() {
                       </button>
                       <GrocycodeActions kind="product" id={row.productId} name={row.name} compact />
                     </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                    {columns
+                      .filter((c) => c.key !== "actions" && c.rendered !== false)
+                      .map((column) => {
+                        const raw = row.source;
+
+                        if (column.key === "product_name" || column.key === "parent_product_name") {
+                          const parent = column.key === "parent_product_name";
+                          const id = parent ? raw.parent_product_id : row.productId;
+                          const name = parent ? raw.parent_product_name : row.name;
+
+                          return (
+                            <td key={column.key} className={parent ? undefined : "stock-name"}>
+                              {id === null ? (
+                                name
+                              ) : (
+                                <a
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setOverview(id);
+                                  }}
+                                >
+                                  {name}
+                                </a>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        if (column.key === "product_picture")
+                          return (
+                            <td key={column.key}>
+                              {raw.product_picture_file_name &&
+                              raw.product_picture_file_name !== "0" ? (
+                                <EntityPicture
+                                  group="productpictures"
+                                  source={raw.product_picture_file_name}
+                                  label={row.name}
+                                  width={64}
+                                  height={64}
+                                />
+                              ) : null}
+                            </td>
+                          );
+                        const field = fields.find((f) => column.key === "product:" + f.name);
+
+                        if (field)
+                          return (
+                            <td key={column.key}>
+                              <UserfieldValue
+                                field={field}
+                                value={raw.product_values[field.name] ?? null}
+                              />
+                            </td>
+                          );
+
+                        return (
+                          <td
+                            key={column.key}
+                            dangerouslySetInnerHTML={{
+                              __html: cells.get(row)![column.key]?.html ?? "",
+                            }}
+                          />
+                        );
+                      })}
+                  </StockTableCells>
+                </tr>
+              ))}
+            </StockTableRows>
           </table>
         </div>
+      ) : null}
+      {overview !== undefined ? (
+        <ProductOverview
+          productId={overview}
+          embedded={false}
+          expanded={overviewExpanded}
+          onExpandedChange={setOverviewExpanded}
+          onReturn={async () => {
+            await stock.refetch();
+          }}
+          onClose={() => setOverview(undefined)}
+        />
       ) : null}
     </>
   );

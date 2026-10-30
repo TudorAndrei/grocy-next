@@ -21,8 +21,13 @@ router = APIRouter(tags=["stock"])
 
 
 @router.get("/stock/overview")
-async def get_overview(actor: AuthenticatedActor, session: DbSession) -> OverviewView:
-    return await overview_view(session, actor.user_id)
+async def get_overview(
+    request: Request, actor: AuthenticatedActor, session: DbSession
+) -> OverviewView:
+    locale = await SystemService(session).locale(
+        actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
+    return await overview_view(session, actor.user_id, locale)
 
 
 @router.get("/stock/location-content-sheet")

@@ -37,6 +37,8 @@ function mount(
     const url = new URL(String(input), "http://localhost");
     const path = url.pathname;
 
+    if (path.includes("/api/user/settings/")) return Response.json({});
+
     if (init?.method === "POST" || init?.method === "PUT") {
       const body = JSON.parse(String(init.body ?? "{}"));
       writes.push({ path, body });
