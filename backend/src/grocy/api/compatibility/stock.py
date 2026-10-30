@@ -227,6 +227,21 @@ async def stock_transfer(
 async def stock_inventory(
     product_id: str, body: StockInput, actor: AuthenticatedActor, stock: StockSvc
 ) -> list[dict[str, Any]]:
+    details = await stock.product_details(body.record_id, compatibility=True)
+    product = details["product"]
+    tare = product["enable_tare_weight_handling"] == 1
+    container = float(product["tare_weight"]) if tare else 0.0
+    current = float(details["stock_amount"])
+    counted = float(body.new_amount)
+    if counted < current + container:
+        legacy = LegacyStockConsumption(stock.session)
+        transaction = await legacy.consume(
+            actor,
+            body.record_id,
+            counted if tare else current - counted,
+            transaction_type="inventory-correction",
+        )
+        return await legacy.bookings(transaction)
     return await stock.inventory(
         actor,
         body.record_id,

@@ -2282,3 +2282,61 @@ def test_reference_native_openapi_specification_includes_user_entities(
         assert spec["servers"][0]["url"] == base + "/api"
         results.append(json.loads(json.dumps(spec).replace(base, "BASE")))
     assert results[0] == results[1]
+
+
+@pytest.mark.parametrize("tare,count,removed", [(0, 0, [8, 2]), (0, 5, [5]), (3, 8, [5])])
+def test_reference_inventory_reduction_retains_entry_metadata_and_undo(
+    client, api_headers, reference, tare, count, removed
+):
+    from datetime import date
+
+    client.headers.update(api_headers)
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": uuid4().hex})
+        location = create(app, "locations", {"name": uuid4().hex})
+        product = create(
+            app,
+            "products",
+            {
+                "name": uuid4().hex,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "enable_tare_weight_handling": int(tare > 0),
+                "tare_weight": tare,
+            },
+        )
+        base = f"/api/stock/products/{product}"
+        for amount, day, note, price in [
+            (8, "01", "First batch", 1.5),
+            (2, "02", "Next batch", 1.6),
+        ]:
+            added = app.post(
+                base + "/add",
+                json={
+                    "amount": amount + (tare + (8 if day == "02" else 0) if tare else 0),
+                    "purchased_date": "2026-01-" + day,
+                    "best_before_date": "2033-01-01",
+                    "price": price,
+                    "note": note,
+                },
+            )
+            assert added.status_code == 200, added.text
+        response = app.post(base + "/inventory", json={"new_amount": count, "note": "Count note"})
+        assert response.status_code == 200, response.text
+        bookings = response.json()
+        assert [row["amount"] for row in bookings] == [-amount for amount in removed]
+        assert [row["note"] for row in bookings] == ["First batch", "Next batch"][: len(removed)]
+        assert all(row["used_date"] == date.today().isoformat() for row in bookings)
+        assert all(row["stock_row_id"] is None for row in bookings)
+        transaction = bookings[0]["transaction_id"]
+        saved = app.get(
+            "/api/objects/stock_log", params={"query[]": "transaction_id=" + transaction}
+        )
+        assert saved.status_code == 200
+        assert saved.json() == bookings
+        assert app.post(f"/api/stock/transactions/{transaction}/undo").status_code == 204
+        restored = app.get(base + "/entries").json()
+        expected = [(2, "Next batch", 1.6)]
+        expected.extend((amount, "First batch", 1.5) for amount in ([8] if count == 0 else [3, 5]))
+        assert sorted((row["amount"], row["note"], row["price"]) for row in restored) == expected
