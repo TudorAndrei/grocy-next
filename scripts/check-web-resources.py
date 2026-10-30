@@ -138,9 +138,12 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
         compare(api, web, path, {}, "GET")
         count += 1
     index = fetch(web, "/", {})
-    for path in ["/product/new", "/product/17"]:
+    for path in ["/product/new", "/product/17", "/inventory", "/inventory?embedded&product=17"]:
         form = fetch(web, path, {})
-        require(form.status == 200 and form.body == index.body, "Product form routing changed")
+        require(
+            form.status == 200 and form.body == index.body,
+            f"Application form routing changed: {path}",
+        )
         count += 1
     parsed_web = urlsplit(web)
     prefix = parsed_web.path

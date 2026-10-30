@@ -19,6 +19,7 @@ import { Route as ConsumeRouteImport } from './routes/consume'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as HouseholdRouteImport } from './routes/household'
+import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LocationsRouteImport } from './routes/locations'
@@ -93,6 +94,11 @@ const EquipmentRoute = EquipmentRouteImport.update({
 const HouseholdRoute = HouseholdRouteImport.update({
   id: '/household',
   path: '/household',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JournalRoute = JournalRouteImport.update({
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
   '/locations': typeof LocationsRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
   '/locations': typeof LocationsRoute
@@ -308,6 +316,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
   '/locations': typeof LocationsRoute
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/inventory'
     | '/journal'
     | '/labels'
     | '/locations'
@@ -384,6 +394,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/inventory'
     | '/journal'
     | '/labels'
     | '/locations'
@@ -421,6 +432,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/inventory'
     | '/journal'
     | '/labels'
     | '/locations'
@@ -459,6 +471,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   EquipmentRoute: typeof EquipmentRoute
   HouseholdRoute: typeof HouseholdRoute
+  InventoryRoute: typeof InventoryRoute
   JournalRoute: typeof JournalRoute
   LabelsRoute: typeof LabelsRoute
   LocationsRoute: typeof LocationsRoute
@@ -556,6 +569,13 @@ declare module '@tanstack/react-router' {
       path: '/household'
       fullPath: '/household'
       preLoaderRoute: typeof HouseholdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/journal': {
@@ -747,6 +767,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   EquipmentRoute: EquipmentRoute,
   HouseholdRoute: HouseholdRoute,
+  InventoryRoute: InventoryRoute,
   JournalRoute: JournalRoute,
   LabelsRoute: LabelsRoute,
   LocationsRoute: LocationsRoute,

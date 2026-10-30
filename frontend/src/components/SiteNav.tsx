@@ -60,6 +60,13 @@ export const NAV_GROUPS: NavGroup[] = [
         match: starts("/products"),
       },
       {
+        to: "/inventory",
+        label: "Inventory",
+        icon: "journal",
+        domain: "stock",
+        match: starts("/inventory"),
+      },
+      {
         to: "/recipes",
         label: "Recipes",
         icon: "recipes",

@@ -673,7 +673,27 @@ Python now provides `/api/v2/stock/inventory/editor`. It returns active products
 
 The endpoint requires authentication. An authenticated reader can load it without a stock permission, as with the other legacy editor catalogs. Stock writes keep their own permission checks.
 
-Five related Python HTTP checks passed. The new inventory case failed with the previous routes, while the purchase control passed. The shared checks cover product scope, inactive choices, saved conversion text and names, disconnected cache rows, custom-field order, and authenticated read access. Python lint, formatting, and type checks passed. No PHP code is used by the endpoint. The inventory page and a live native replay remain open work.
+Five related Python HTTP checks passed. The new inventory case failed with the previous routes, while the purchase control passed. The shared checks cover product scope, inactive choices, saved conversion text and names, disconnected cache rows, custom-field order, and authenticated read access. Python lint, formatting, and type checks passed. No PHP code is used by the endpoint. A live catalog comparison also matched all 46 product choices, 8 stores, 26 locations, 32 units, and 84 saved conversion rows.
+
+### Inventory page and stock dialog
+
+The web application now has `/inventory`, an Inventory navigation item, and an Inventory action on each stock row. The row action requires the inventory permission. Its dialog keeps the stock filter and returns focus after cancellation. The page supports embedded use, product bookmarks, and the two product creation and barcode assignment flows.
+
+The form uses the counted total. It retains stock-unit and barcode-unit conversion, gross tare counts, the unchanged-count guard, and the configured amount and price precision. Barcode amount, unit, and note values apply. Barcode price and store values do not replace the stock defaults. The form includes purchase and due dates, price, store, location, notes, stock custom fields, and label choices. A decrease can have an empty due date. A location remains required when location tracking is on. The native hidden select keeps this rule even when the visible location input is no longer required.
+
+A successful booking shows the saved stock total and Undo. A failed custom-field save can be retried without a second stock booking. Feature flags control the tracked fields and label requests. The form has no scan mode.
+
+The live comparison found that the previous Python inventory decrease lost the stock note and use date. The legacy API now uses the existing legacy consume engine for a decrease. It retains each source note, sets the use date, and uses the native separate stock writes and shopping-list update. Undo retains the native split rows. The separate application stock service keeps its own rules.
+
+All 458 frontend tests passed in 46 files, including 18 inventory cases. All 18 inventory cases failed with the previous UI. The two location cases also failed before the hidden-select rule was added. The large-count success case failed before the final count text was corrected. Lint, formatting, all three type checks, and root and `/house` builds passed. Three native reference cases cover zero counts, partial decreases, tare weight, saved booking metadata, and Undo row shape. All three failed with the previous API and passed with the correction. All 286 Python integration tests passed; five environment-specific cases were skipped.
+
+The Linux browser check covered five cases in each runtime: a barcode count in boxes, an addition, a zero count, a gross tare decrease, and barcode assignment. Request fields, saved stock, booking fields, stock custom fields, and visible Undo matched. New IDs and timestamps were excluded. Stock IDs were mapped to their source entries, and each nonempty use date was checked against the actual test day. The new barcode fields also matched. The real iframe check covered the three inventory completion messages and the host Undo link in each runtime. The Python stock-row dialog passed cancellation, focus return, count save, close, and Undo. Global native iframe resize messages were outside this completion-message comparison.
+
+The container service recovered. The pending eleven recipe cases were repeated on the corrected Linux images. Every request, saved field, and Undo field matched the native result after new IDs and timestamps were excluded. This closes the earlier container replay limit for that recipe batch.
+
+A further native and Python case counted 1,011 stock units. Both forms sent the same count, retained the native final-count text without a thousands separator, and completed visible Undo. The final Linux images matched all 177 Python source files and all 95 web build files. PHP was disabled and absent from the API image. All 39 public resource and form responses passed. The 1440-pixel desktop and 390-pixel phone views were inspected. The phone page had no horizontal overflow, and its custom field and OK button were reachable above the fixed navigation. Restart retained all 70 stock rows and 177 booking rows with the same data hashes. SQLite integrity passed. Both owned browser sessions, the local fallback servers, the test iframe host, all four test containers, and their network were stopped or removed.
+
+Full legacy compliance remains incomplete. Late and overlapping product responses, date keyboard shortcuts, native error recovery, physical camera and printer use, and the remaining application workflows still need work or comparison.
 
 Run the normal tests without PHP:
 

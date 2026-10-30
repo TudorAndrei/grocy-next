@@ -17,6 +17,7 @@ import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { TransferDialog } from "@/components/TransferForm";
 import { PurchaseDialog } from "@/components/PurchaseForm";
 import { ConsumeDialog } from "@/components/ConsumeForm";
+import { InventoryDialog } from "@/components/InventoryForm";
 import { usePermissions } from "@/lib/permissions";
 
 export const Route = createFileRoute("/stock")({
@@ -45,6 +46,7 @@ function StockPage() {
   const [transfer, setTransfer] = useState<number>();
   const [purchase, setPurchase] = useState<number>();
   const [consume, setConsume] = useState<number>();
+  const [inventory, setInventory] = useState<number>();
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
   const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
   const { dueSoonDays, formatAmount } = usePreferences();
@@ -173,6 +175,12 @@ function StockPage() {
           onClose={() => setConsume(undefined)}
         />
       ) : null}
+      {inventory !== undefined ? (
+        <InventoryDialog
+          options={{ embedded: "", product: String(inventory) }}
+          onClose={() => setInventory(undefined)}
+        />
+      ) : null}
       <PageHeader
         title={tr("Stock overview")}
         lead={tr(
@@ -191,6 +199,9 @@ function StockPage() {
             </Link>
             <Link to="/consume" className="btn">
               {tr("Consume")}
+            </Link>
+            <Link to="/inventory" className="btn">
+              {tr("Inventory")}
             </Link>
             <Link to="/purchase" className="btn btn-primary">
               {tr("Purchase")}
@@ -353,6 +364,15 @@ function StockPage() {
                           {tr("Transfer")}
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        aria-label={tr("Inventory %s", row.name)}
+                        disabled={!can("STOCK_INVENTORY")}
+                        onClick={() => setInventory(row.productId)}
+                      >
+                        {tr("Inventory")}
+                      </button>
                       <GrocycodeActions kind="product" id={row.productId} name={row.name} compact />
                     </td>
                   </tr>
