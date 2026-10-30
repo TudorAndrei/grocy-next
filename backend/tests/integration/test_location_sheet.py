@@ -1,9 +1,63 @@
 """Location sheets use own-stock rows and presence-based out-of-stock limits."""
 
+import json
+from pathlib import Path
+
 from sqlalchemy import text
 
 from grocy.core.config import get_settings
 from grocy.db.session import get_session_factory
+
+
+def test_location_sheet_formats_saved_quantities_and_unit_errors_like_native(client, api_headers):
+    client.headers.update(api_headers)
+
+    def create(table, **values):
+        response = client.post(f"/api/objects/{table}", json=values)
+        response.raise_for_status()
+        return int(response.json()["created_object_id"])
+
+    unit = create("quantity_units", name="Formatting fixture")
+    product = create(
+        "products", name="Formatting fixture", location_id=1, qu_id_stock=unit, qu_id_purchase=unit
+    )
+    client.post(
+        f"/api/stock/products/{product}/add", json={"amount": 1, "best_before_date": "2999-12-31"}
+    ).raise_for_status()
+    cases = json.loads(
+        (Path(__file__).parents[1] / "fixtures" / "legacy-unit-formats.json").read_text()
+    )["cases"]
+
+    async def saved_case(case):
+        async with get_session_factory()() as session:
+            await session.execute(
+                text("UPDATE stock SET amount=:amount,open=1 WHERE product_id=:id"),
+                {"amount": case["value"], "id": product},
+            )
+            await session.execute(
+                text("UPDATE quantity_units SET name=:name,name_plural=:name WHERE id=:id"),
+                {"name": case["format"], "id": unit},
+            )
+            await session.commit()
+
+    assert client.portal is not None
+    for case in cases:
+        client.portal.call(saved_case, case)
+        response = client.get("/api/v2/stock/location-content-sheet")
+        if "error" in case:
+            assert response.status_code == 500, case
+            assert response.json()["error_message"] == case["error"], case
+        else:
+            response.raise_for_status()
+            row = next(
+                row
+                for location in response.json()["locations"]
+                for row in location["products"]
+                if row["id"] == product
+            )
+            assert row["unit_label"] == case["text"], case
+            assert row["amount_text"] == row["amount_opened_text"] == case["amount_text"], case
+            assert row["amount"] == case["value"], case
 
 
 def test_location_sheet_keeps_native_locations_order_units_and_zero_stock(client, api_headers):
@@ -93,6 +147,63 @@ def test_location_sheet_keeps_native_locations_order_units_and_zero_stock(client
     assert with_empty[0]["products"][1]["amount"] == 0
     for value in ["", "0", "false"]:
         assert read("?include_out_of_stock=" + value) == with_empty
+
+
+def test_location_sheet_uses_native_plural_rules_and_inactive_unit_fallbacks(client, api_headers):
+    client.headers.update(api_headers)
+
+    def create(table, **values):
+        response = client.post(f"/api/objects/{table}", json=values)
+        response.raise_for_status()
+        return int(response.json()["created_object_id"])
+
+    unit = create("quantity_units", name="Plural fixture")
+    product = create(
+        "products", name="Plural fixture", location_id=1, qu_id_stock=unit, qu_id_purchase=unit
+    )
+    client.post(
+        f"/api/stock/products/{product}/add", json={"amount": 1, "best_before_date": "2999-12-31"}
+    ).raise_for_status()
+    cases = json.loads(
+        (Path(__file__).parents[1] / "fixtures" / "legacy-unit-plurals.json").read_text()
+    )["cases"]
+
+    async def saved_case(case):
+        async with get_session_factory()() as session:
+            await session.execute(
+                text("UPDATE stock SET amount=:amount WHERE product_id=:id"),
+                {"amount": case["value"], "id": product},
+            )
+            await session.execute(
+                text(
+                    "UPDATE quantity_units SET name_plural=:plural,plural_forms=:forms,"
+                    "active=:active WHERE id=:id"
+                ),
+                {
+                    "plural": case["plural"],
+                    "forms": case["forms"],
+                    "active": case["active"],
+                    "id": unit,
+                },
+            )
+            await session.commit()
+
+    locale = None
+    assert client.portal is not None
+    for case in cases:
+        if locale != case["locale"]:
+            locale = case["locale"]
+            client.put("/api/user/settings/locale", json={"value": locale}).raise_for_status()
+        client.portal.call(saved_case, case)
+        response = client.get("/api/v2/stock/location-content-sheet")
+        response.raise_for_status()
+        row = next(
+            row
+            for location in response.json()["locations"]
+            for row in location["products"]
+            if row["id"] == product
+        )
+        assert row["unit_label"] == case["text"], case
 
 
 def test_location_sheet_requires_login_and_allows_native_read_only_users(

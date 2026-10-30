@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from grocy.core.auth import AuthenticatedActor
 from grocy.core.deps import DbSession
@@ -14,17 +14,22 @@ from grocy.domains.stock.journal import (
 from grocy.domains.stock.location_sheet import LocationSheetView, location_sheet_view
 from grocy.domains.stock.spendings import SpendingsView, spendings_view
 from grocy.domains.stock.transfer import transfer_editor
+from grocy.domains.system.service import SystemService
 
 router = APIRouter(tags=["stock"])
 
 
 @router.get("/stock/location-content-sheet")
 async def get_location_content_sheet(
+    request: Request,
     actor: AuthenticatedActor,
     session: DbSession,
     include_out_of_stock: str | None = None,
 ) -> LocationSheetView:
-    return await location_sheet_view(session, include_out_of_stock is not None)
+    locale = await SystemService(session).locale(
+        actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
+    return await location_sheet_view(session, include_out_of_stock is not None, locale)
 
 
 @router.get("/stock/reports/spendings")

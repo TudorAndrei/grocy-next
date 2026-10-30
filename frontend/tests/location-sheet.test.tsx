@@ -13,7 +13,7 @@ beforeEach(() => {
   });
 });
 
-function mount(path: string, { fail = false, stock = true, locations = true } = {}) {
+function mount(path: string, { fail = false, stock = true, locations = true, precision = 3 } = {}) {
   const reads: URL[] = [];
   const writes: string[] = [];
   vi.stubGlobal(
@@ -34,7 +34,7 @@ function mount(path: string, { fail = false, stock = true, locations = true } = 
         });
 
       if (url.pathname === "/api/user/settings")
-        return Response.json({ stock_decimal_places_amounts: 3 });
+        return Response.json({ stock_decimal_places_amounts: precision });
 
       if (url.pathname.includes("/shopping-lists/")) return Response.json({ items: [] });
 
@@ -47,8 +47,11 @@ function mount(path: string, { fail = false, stock = true, locations = true } = 
         const product = {
           id: 1,
           name: "Apple",
-          amount: 1234.56789,
-          amount_opened: 0.25,
+          amount: 1234.5678901234567,
+          amount_opened: 0.12345678901234566,
+          amount_text: "1234.5678901235",
+          amount_opened_text: "0.12345678901235",
+          unit_label: "Sheet pieces",
           unit_name: "Sheet piece",
           unit_name_plural: "Sheet pieces",
           unit_plural_forms: null,
@@ -63,7 +66,17 @@ function mount(path: string, { fail = false, stock = true, locations = true } = 
               products: [
                 product,
                 ...(url.searchParams.has("include_out_of_stock")
-                  ? [{ ...product, id: 3, name: "Empty jar", amount: 0, amount_opened: 0 }]
+                  ? [
+                      {
+                        ...product,
+                        id: 3,
+                        name: "Empty jar",
+                        amount: 0,
+                        amount_opened: 0,
+                        amount_text: "0",
+                        amount_opened_text: "0",
+                      },
+                    ]
                   : []),
               ],
             },
@@ -77,8 +90,11 @@ function mount(path: string, { fail = false, stock = true, locations = true } = 
                   name: "Coffee",
                   amount: 2,
                   amount_opened: 0,
+                  amount_text: "2",
+                  amount_opened_text: "0",
+                  unit_label: "%q\0 bags",
                   unit_name: "%s bag",
-                  unit_name_plural: "%s bags",
+                  unit_name_plural: "%%q bags",
                   unit_plural_forms: "old",
                   unit_active: 0,
                 },
@@ -128,10 +144,7 @@ test("the location sheet retries reads, formats stock, and prepares timestamps b
   await user.click(screen.getByRole("button", { name: "Retry" }));
   const shelf = await screen.findByRole("table", { name: "Shelf" });
   expect(within(shelf).getByText(/1,234.568 Sheet pieces/)).toBeTruthy();
-  expect(within(shelf).getByText("0.25 opened")).toBeTruthy();
-  expect(
-    within(screen.getByRole("table", { name: "Old shelf" })).getByText("2 2 bags"),
-  ).toBeTruthy();
+  expect(within(shelf).getByText("0.12345678901235 opened")).toBeTruthy();
   await user.click(
     within(screen.getByRole("region", { name: "Old shelf" })).getByRole("button", {
       name: "Print (this location)",
@@ -157,6 +170,15 @@ test("the location sheet retries reads, formats stock, and prepares timestamps b
   );
   expect(reads.at(-1)?.searchParams.has("include_out_of_stock")).toBe(false);
   expect(writes.every((path) => path.startsWith("/api/user/settings/"))).toBe(true);
+});
+
+test("the sheet uses native amount text and retains literal percent text in resolved unit labels", async () => {
+  mount("/locationcontentsheet?embedded", { precision: 20 });
+  const shelf = await screen.findByRole("table", { name: "Shelf" });
+  expect(within(shelf).getByText(/1,234.5678901235 Sheet pieces/)).toBeTruthy();
+  expect(
+    within(screen.getByRole("table", { name: "Old shelf" })).getByText("2 %q bags"),
+  ).toBeTruthy();
 });
 
 test.each(["", "0", "false"])(

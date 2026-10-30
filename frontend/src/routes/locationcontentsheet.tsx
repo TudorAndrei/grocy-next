@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import moment from "moment/min/moment-with-locales.js";
-import { sprintf } from "sprintf-js";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
-import { unitLabel } from "@/lib/format";
 import { userSettingsQuery } from "@/hooks/queries";
 import {
   getLocationSheet,
@@ -43,14 +41,15 @@ function LocationSheet({
   search: LocationSheetSearch;
   onChange: (search: LocationSheetSearch) => void;
 }) {
-  const { t, pluralIndex, ready: translationsReady } = useI18n();
+  const { t, locale, ready: translationsReady } = useI18n();
   const preferences = usePreferences();
   const settings = useQuery(userSettingsQuery());
   const [printing, setPrinting] = useState<{ location?: number; timestamp: string }>();
 
   const report = useQuery({
-    queryKey: ["stock", "location-content-sheet", search],
+    queryKey: ["stock", "location-content-sheet", search, locale],
     queryFn: ({ signal }) => getLocationSheet(search, signal),
+    enabled: translationsReady,
     retry: false,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -166,25 +165,12 @@ function LocationSheet({
                     <tr key={product.id}>
                       <th scope="row">{product.name}</th>
                       <td>
-                        {product.amount.toLocaleString(undefined, {
+                        {Number(product.amount_text).toLocaleString(undefined, {
                           maximumFractionDigits: preferences.amountPrecision,
                         })}{" "}
-                        {sprintf(
-                          unitLabel(
-                            {
-                              name: product.unit_name ?? "",
-                              name_plural: product.unit_name_plural,
-                              plural_forms: product.unit_plural_forms,
-                              active: product.unit_active ?? 0,
-                            },
-                            product.amount,
-                            pluralIndex,
-                            false,
-                          ),
-                          product.amount,
-                        )}
+                        {product.unit_label.replaceAll("\0", "")}
                         {product.amount_opened > 0 ? (
-                          <small> {t("%s opened", String(product.amount_opened))}</small>
+                          <small> {t("%s opened", product.amount_opened_text)}</small>
                         ) : null}
                       </td>
                       <td />

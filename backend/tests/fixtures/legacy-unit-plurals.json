@@ -1,0 +1,3590 @@
+{
+  "baseline": "Grocy 4.5.0 Gettext translator and pinned locale rules",
+  "php_version": "8.4.26",
+  "cases": [
+    {
+      "locale": "bg_BG",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "bg_BG",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "cs",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "cs",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "cs",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "es",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "es",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "es",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "es",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "fr",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "fr",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "fr",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "fr",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "he_IL",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "he_IL",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "he_IL",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ja",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ja",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "lt",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "lt",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "lt",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "lt",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "lt",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "lt",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "lt",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "pl",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "pl",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "pl",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "pl",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "pl",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ro_RO",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ru",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ru",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ru",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ru",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ru",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "ru",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "ru",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "ru",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "ru",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "ru",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sk_SK",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sl",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sl",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sl",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sl",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sl",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "sl",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "sl",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "sl",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "tr",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "tr",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "tr",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "tr",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "tr",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "tr",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "tr",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 0,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "uk",
+      "value": 0,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "uk",
+      "value": 0,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 0,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 0.5,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "uk",
+      "value": 0.5,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "uk",
+      "value": 0.5,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 0.5,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1.2345678901234567,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 1.2345678901234567,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 21,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 21,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 21,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 21,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1e20,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "uk",
+      "value": 1e20,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "many"
+    },
+    {
+      "locale": "uk",
+      "value": 1e20,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 1e20,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 1e30,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "few"
+    },
+    {
+      "locale": "uk",
+      "value": 1e30,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 1e30,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 1e30,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    },
+    {
+      "locale": "uk",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "extra"
+    },
+    {
+      "locale": "uk",
+      "value": 9223372036854775807,
+      "active": 1,
+      "forms": "\nmany",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": "few\nmany\nextra",
+      "plural": "fallback",
+      "text": "fallback"
+    },
+    {
+      "locale": "uk",
+      "value": 9223372036854775807,
+      "active": 0,
+      "forms": null,
+      "plural": "0",
+      "text": "Plural fixture"
+    }
+  ]
+}
