@@ -1,3 +1,4 @@
+import { overviewFixture } from "./fixtures/stock-overview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -134,6 +135,33 @@ function mount(
       if (path.endsWith("/api/objects/locations"))
         return Response.json([{ id: 2, name: "Freezer" }]);
 
+      if (path.endsWith("/api/v2/stock/overview"))
+        return Response.json(
+          overviewFixture(
+            [
+              {
+                product_id: 7,
+                product: { id: 7, name: "Coffee", location_id: 2 },
+                amount: 5,
+                amount_aggregated: 9,
+                amount_opened: 0,
+                amount_opened_aggregated: 0,
+                is_aggregated_amount: true,
+              },
+              {
+                product_id: 9,
+                product: { id: 9, name: "Parent", location_id: 2 },
+                amount: 0,
+                amount_aggregated: 4,
+                amount_opened: 0,
+                amount_opened_aggregated: 0,
+                is_aggregated_amount: true,
+              },
+            ],
+            "Freezer",
+          ),
+        );
+
       if (path.endsWith("/api/stock"))
         return Response.json([
           {
@@ -223,7 +251,7 @@ test("overview transfer uses own stock and retains the page filters and focus", 
   );
   const search = screen.getByRole<HTMLInputElement>("searchbox", { name: "Search stock" });
   await userEvent.type(search, "Coffee");
-  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Location" }), "2");
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Location" }), "Freezer");
   await userEvent.click(trigger);
   await screen.findByRole("dialog", { name: "Transfer" });
   const amount = screen.getByLabelText<HTMLInputElement>("Amount");
@@ -233,7 +261,9 @@ test("overview transfer uses own stock and retains the page filters and focus", 
   await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(document.activeElement).toBe(trigger);
   expect(search.value).toBe("Coffee");
-  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("2");
+  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe(
+    "Freezer",
+  );
   expect(writes).toEqual([]);
   await userEvent.click(trigger);
   await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("Amount").max).toBe("5.00"));
@@ -244,7 +274,9 @@ test("overview transfer uses own stock and retains the page filters and focus", 
   expect(writes.map((row) => row.path)).toEqual(["/api/stock/products/7/transfer"]);
   expect(document.activeElement).toBe(trigger);
   expect(search.value).toBe("Coffee");
-  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe("2");
+  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Location" }).value).toBe(
+    "Freezer",
+  );
 });
 
 test.each([

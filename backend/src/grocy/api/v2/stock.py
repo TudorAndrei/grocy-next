@@ -12,11 +12,17 @@ from grocy.domains.stock.journal import (
     journal_view,
 )
 from grocy.domains.stock.location_sheet import LocationSheetView, location_sheet_view
+from grocy.domains.stock.overview import OverviewView, overview_view
 from grocy.domains.stock.spendings import SpendingsView, spendings_view
 from grocy.domains.stock.transfer import transfer_editor
 from grocy.domains.system.service import SystemService
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/overview")
+async def get_overview(actor: AuthenticatedActor, session: DbSession) -> OverviewView:
+    return await overview_view(session, actor.user_id)
 
 
 @router.get("/stock/location-content-sheet")

@@ -1,3 +1,4 @@
+import { overviewFixture } from "./fixtures/stock-overview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -50,6 +51,24 @@ test.each([
 
         if (path === "/api/objects/quantity_units")
           return Response.json([{ id: 1, name: "Piece" }]);
+
+        if (path === "/api/v2/stock/overview") {
+          const view = overviewFixture([
+            { product_id: 1, product: milk, amount: 3, amount_opened: 3 },
+            { product_id: 2, product: bread, amount: 1 },
+            {
+              product_id: 3,
+              product: family,
+              amount: 0,
+              amount_aggregated: 4,
+              is_aggregated_amount: true,
+            },
+          ]);
+
+          view.rows[0]!.product_missing = 1;
+
+          return Response.json(view);
+        }
 
         if (path === "/api/stock")
           return Response.json([

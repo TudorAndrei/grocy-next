@@ -1,3 +1,4 @@
+import { overviewFixture } from "./fixtures/stock-overview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -24,6 +25,13 @@ test("the due-soon filter uses the saved number of days", async () => {
       if (path === "/api/objects/products") return Response.json([product]);
 
       if (path === "/api/objects/quantity_units") return Response.json([{ id: 1, name: "Piece" }]);
+
+      if (path.endsWith("/api/v2/stock/overview"))
+        return Response.json(
+          overviewFixture([
+            { product_id: 1, product, amount: 1, amount_opened: 0, best_before_date: isoDay(10) },
+          ]),
+        );
 
       if (path === "/api/stock")
         return Response.json([

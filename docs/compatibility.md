@@ -811,6 +811,22 @@ The built application matched 33 browser and HTTP cases for precise positive, ze
 
 All 49 public resource and form responses passed. All 107 web build files and 181 Python source files matched the final release images. Restart retained the test data hashes, and SQLite integrity passed. PHP remained disabled and absent from the API image. The owned browser session, four test containers, and private network were removed. Non-finite imported amounts, further format combinations, other utility pages, and the broader application audit remain open. Full legacy compliance remains incomplete.
 
+### Stock overview product selection and filters
+
+The `/stock` and `/stockoverview` paths now share the Python overview reader at `/api/v2/stock/overview`. It reads the pinned overview view. Hidden products stay hidden. Products with no stock appear when the saved `stock_overview_show_all_out_of_stock_products` setting permits them. The setting retains native boolean conversion: the text `false` enables it, and the text `0` disables it.
+
+Location filters use actual stock locations. A product's default location does not select its stock rows. A parent does not inherit its children's location markers. Inactive locations retain an empty marker and have no filter choice. Product group choices use active records and native name order. Rows can retain an inactive group name.
+
+The web controls now include product groups, Overdue, and In stock. Overdue and Expired use the product's due type. Date status filters require positive own stock. Clear filter resets the text, location, group, and status controls. The page retains a failed read and permits Retry. Legacy URL fields do not set these local filters.
+
+The new HTTP regression checks selection, saved settings, child stock, inactive references, and location markers. It fails with status 404 on the previous route table. All 293 Python integration tests passed; five optional checks were skipped. All 515 frontend tests passed in 50 files. Existing transfer, inventory, minimum-stock, due-window, and Grocycode tests now supply the overview response.
+
+The built Python reader matched every source row, source order, filter choice, and location marker on the legacy page for eight saved-setting values. These checks used 71 or 84 rows. All 56 browser filter selections matched the legacy page. They covered all active locations, product groups, six statuses, and combined filters. The desktop and 390- and 320-pixel phone views had no page overflow. The table has its own scroll region. Arrow Right scrolls the focused region to reach the remaining actions. The browser reported no script errors.
+
+All 49 public resource and form responses passed. All 109 web files and 182 Python source files matched the release images. Restart retained the checked stock, catalog, booking, and user setting hashes. SQLite integrity passed. PHP remained disabled and absent from the API image.
+
+The overview still needs the native saved table columns, grouping, full search text, number and date presentation, quick actions, product dialogs, statistics, and row refresh rules. Further date-setting and time-zone cases also need comparison. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash

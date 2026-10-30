@@ -1294,6 +1294,10 @@ input[type="checkbox"] {
   min-width: 170px;
 }
 
+.stock-overview-filters .select-field {
+  max-inline-size: 100%;
+}
+
 .select-field.grow {
   flex: 1 1 220px;
 }

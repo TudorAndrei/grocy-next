@@ -1,3 +1,4 @@
+import { overviewFixture } from "./fixtures/stock-overview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -155,6 +156,21 @@ function mount(
 
     if (path.endsWith("/api/objects/locations"))
       return Response.json([{ id: 1, name: "Shelf", is_freezer: 0 }]);
+
+    if (path.endsWith("/api/v2/stock/overview"))
+      return Response.json(
+        overviewFixture([
+          {
+            product_id: 7,
+            product: { ...productOverview.product, id: 7, name: "Coffee" },
+            amount: stock,
+            amount_aggregated: stock,
+            amount_opened: 0,
+            amount_opened_aggregated: 0,
+            is_aggregated_amount: false,
+          },
+        ]),
+      );
 
     if (path.endsWith("/api/stock"))
       return Response.json([
