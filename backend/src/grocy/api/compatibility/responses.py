@@ -65,7 +65,7 @@ def native_configuration(session: AsyncSession) -> dict[str, Any]:
         GROCY_MODE=settings.mode,
         GROCY_CURRENCY=settings.currency,
         GROCY_STOCK_BARCODE_LOOKUP_PLUGIN=settings.stock_barcode_lookup_plugin,
-        NATIVE_FILES_ROOT=str(settings.files_root.resolve()),
+        NATIVE_FILES_ROOT=str(settings.active_files_root()),
         GROCY_LABEL_PRINTER_WEBHOOK=settings.label_printer_webhook,
         GROCY_LABEL_PRINTER_RUN_SERVER=settings.label_printer_run_server,
         GROCY_LABEL_PRINTER_HOOK_JSON=settings.label_printer_hook_json,

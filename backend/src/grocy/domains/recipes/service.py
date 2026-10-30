@@ -101,55 +101,6 @@ class RecipesService:
         await self.session.commit()
         return await self.get(recipe.id)
 
-    async def copy(self, recipe_id: int) -> Recipe:
-        recipe = await self.get(recipe_id)
-        nestings = list(
-            (
-                await self.session.execute(
-                    select(RecipeNesting).where(RecipeNesting.recipe_id == recipe.id)
-                )
-            )
-            .scalars()
-            .all()
-        )
-        copy = Recipe(
-            name=f"Copy of {recipe.name}",
-            description=recipe.description,
-            picture_file_name=recipe.picture_file_name,
-            base_servings=recipe.base_servings,
-            desired_servings=recipe.desired_servings,
-            not_check_shoppinglist=recipe.not_check_shoppinglist,
-            type=recipe.type,
-            product_id=recipe.product_id,
-        )
-        self.session.add(copy)
-        await self.session.flush()
-        for pos in recipe.positions:
-            self.session.add(
-                RecipePosition(
-                    recipe_id=copy.id,
-                    product_id=pos.product_id,
-                    amount=pos.amount,
-                    note=pos.note,
-                    qu_id=pos.qu_id,
-                    only_check_single_unit_in_stock=pos.only_check_single_unit_in_stock,
-                    ingredient_group=pos.ingredient_group,
-                    not_check_stock_fulfillment=pos.not_check_stock_fulfillment,
-                    variable_amount=pos.variable_amount,
-                    price_factor=pos.price_factor,
-                )
-            )
-        for nesting in nestings:
-            self.session.add(
-                RecipeNesting(
-                    recipe_id=copy.id,
-                    includes_recipe_id=nesting.includes_recipe_id,
-                    servings=nesting.servings,
-                )
-            )
-        await self.session.commit()
-        return await self.get(copy.id)
-
     async def fulfillment(
         self,
         recipe_id: int,

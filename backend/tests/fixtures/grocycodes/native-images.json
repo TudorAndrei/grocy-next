@@ -1,0 +1,350 @@
+{
+  "source": "Grocy 4.5.0, commit 21aa5eab218c8466f90729154cb293fffbe10c21; pinned GrocycodeTrait, DatamatrixFactory and BarcodeFactory",
+  "cases": [
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "36cab89ecd254dac5b59b55d28e4f9acd795e238956eaa9bb0dcd7e6f8b2ec3e",
+      "png": "502e2916edd1a9c7c4405aee544b95aa7b37d1b755c4c4a547c4d214823ebb21"
+    },
+    {
+      "id": "17",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "0a09921cb9d5124a3731675d65aa5ab95336744cd9845a131671c584ca7cf7ea",
+      "png": "3f4149720c52d0b0bbcf2c7dd653ada385a27bd5a9548ae75e6c8f5e9f0432cd"
+    },
+    {
+      "id": "001",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "9b5e9e6e64dde29ef8fe459a2055e5d5d99e5ee2f04e747b0e21360919836cac",
+      "png": "275f80a79c753f8bb2c6589fa7d805db07f32f0e977d2558cd2bcdde82a3b006"
+    },
+    {
+      "id": "2147483647",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "332f2936d789249b7e8180a10503f3d0598751c9f672a2f762d2d33d48cc3841",
+      "png": "ed691a36f8ef2017b41270f01cf098bc4c4d911e528868cf51793b5fa81fc044"
+    },
+    {
+      "id": "1e0",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "ff76f8905aed262e0ea852320a598021aab917344958098462c1f1aaaad9709c",
+      "png": "c02e068f1bbbe3df35ac47ee334f557e385a4581b3be7611f488d815a1f2d718"
+    },
+    {
+      "id": "é",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "512a0d1682f7162c1ddfce7de16ac64a28535c9cbfd22f403765f59f8ad5ca02",
+      "png": "f25c970483ca21d29afe2b4e70b8110628d95ffc313bf9e70ccf45b4d376aef7"
+    },
+    {
+      "id": "ABCdef12345678901234567890",
+      "kind": "2D",
+      "size": null,
+      "width": 100,
+      "height": 100,
+      "pixels": "d2bef2b596e06ad826880dac679944c2ba348ce9530515cbe991ef682a4d22f3",
+      "png": "d656bc19a8ae8563914f14c6c6f1dba7f568cfa5cab07c473668a264ea6e03fe"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "50",
+      "width": 50,
+      "height": 50,
+      "pixels": "d55b776543968441e9a5e0d45c9fcf259580bde0b53ddf1eb72e2271e902a006",
+      "png": "ee5ffbe04ba58b64913504b61e2d35928a1212078228662434b241ce954f34ea"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "101",
+      "width": 101,
+      "height": 101,
+      "pixels": "2d33df67bcad3a55d8dc35fb0e6d87ca6fa16b548341742d4da51a0f2d58fc8e",
+      "png": "96c13666258177a038c131fdbee4e0cb3d14f0a9da9aa1f0673b3d42a74f7b15"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "100.75",
+      "width": 100,
+      "height": 100,
+      "pixels": "36cab89ecd254dac5b59b55d28e4f9acd795e238956eaa9bb0dcd7e6f8b2ec3e",
+      "png": "502e2916edd1a9c7c4405aee544b95aa7b37d1b755c4c4a547c4d214823ebb21"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "250.5",
+      "width": 250,
+      "height": 250,
+      "pixels": "d99b364c2577848b3d1684914bbe125d332e2c70ccc2e3077af6058b68b2d628",
+      "png": "3130236e053e09730f3008ea27dacef28cc16cc53c3109bcf2ee8edf2868d5a6"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "0",
+      "error": "imagecreate(): Argument #1 ($width) must be greater than 0"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "foo",
+      "error": "Unsupported operand types: string * int"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "10.01",
+      "error": "imagecreate(): Argument #1 ($width) must be greater than 0"
+    },
+    {
+      "id": "1",
+      "kind": "2D",
+      "size": "30.5",
+      "width": 30,
+      "height": 30,
+      "pixels": "7c18bf7a29e101728b929cf0763685f16f516ad7692e388ad21bd575c274132a",
+      "png": "8c0d5bf2d0f0d27d764387c8a1207e52a4273ac84206cf1dd081c95e0b3fded3"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": null,
+      "width": 123,
+      "height": 30,
+      "pixels": "49c52798670f68c98351a12ca4d52001de0249454d35b236e3a083ae70cb9ac1",
+      "png": "88f8879d33e053b9bca25ad2ff966058599974fb680d9caa6bc21915ddc4cad0"
+    },
+    {
+      "id": "17",
+      "kind": "1D",
+      "size": null,
+      "width": 134,
+      "height": 30,
+      "pixels": "906155e39b477446377dfd11c772aba3907e41c98f156508f0dc3e1e83550be1",
+      "png": "fbb338d519bee4257ce39f857d80c1f347017412465661bf108b9e5a30575ab1"
+    },
+    {
+      "id": "001",
+      "kind": "1D",
+      "size": null,
+      "width": 145,
+      "height": 30,
+      "pixels": "ad20f3849432f7757c7b1d46abaf50e33267e2410810fa85125ea967320fd914",
+      "png": "939056405ddb3d1d1dbdcd66b61179341f2d69e01466a7073ec05e0ce796d0d6"
+    },
+    {
+      "id": "2147483647",
+      "kind": "1D",
+      "size": null,
+      "width": 178,
+      "height": 30,
+      "pixels": "1fedcec7e93db0c02f2d9cc2930d0da996fc202acb77d8b1c610975274ae1317",
+      "png": "846b52feb67348ab02175d18e53ea3f15a34f6b660ad41419499a230baf6f304"
+    },
+    {
+      "id": "1e0",
+      "kind": "1D",
+      "size": null,
+      "width": 145,
+      "height": 30,
+      "pixels": "f852bf9698fc9bf38fa5cfe71ace2c2f23221bad36442dba59a99e7bd9242152",
+      "png": "c82843ba45de8b210681839e1772bae87c8362ffaf8b0d7edb7006dc3134d23d"
+    },
+    {
+      "id": "é",
+      "kind": "1D",
+      "size": null,
+      "width": 134,
+      "height": 30,
+      "pixels": "e74e49ce44f754444ac42023fc16362c8c78647f0c917c40fcdc2b26684b657f",
+      "png": "f50b92b4787c6db49243edb8b39c644012519c1344bc0b8eab7e393ff1f3a8dc"
+    },
+    {
+      "id": "ABCdef12345678901234567890",
+      "kind": "1D",
+      "size": null,
+      "width": 299,
+      "height": 30,
+      "pixels": "494be34a6d71bac329b9961bb5ceb3853de018fa72db970033c04dc96c0ad546",
+      "png": "a05b13f9d0c77b673cc0c5551de828b6eae41c3b2d5d0af875689afa90fbbc22"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "50",
+      "width": 123,
+      "height": 50,
+      "pixels": "20418b88898f23f82d8861c2ce256d312f7da6675e67dd4f861160829030d487",
+      "png": "8767854ac855f1a5b171336f1fe92eda0a9fb57f3bbc3ec739fe24a01b0d626e"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "101",
+      "width": 123,
+      "height": 101,
+      "pixels": "dfac182480c154403d7d94178ac82eefbfb37354cb0d662f31f382f930c53a7e",
+      "png": "764e6e2655de2a2ed79882c78715ab20d979a23bb6167e20ad4f427d678859ab"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "100.75",
+      "width": 123,
+      "height": 100,
+      "pixels": "f26d21a1f48fbaae69fea3a0e83cd94d22b9a0d8287c146439fba36b794de1aa",
+      "png": "b027c66f51f6cca657728bb7fc9352ee5d03719742f19184b57d180f4444a2f3"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "250.5",
+      "width": 123,
+      "height": 250,
+      "pixels": "b9ab93aaa7084bc1245a2fad3b95f3e33437c703448206d426ba4c7fdec98c50",
+      "png": "4ebccee7af95c6b911d4e6b2f58de066cea273c40be2c3c0af75575600f51303"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "0",
+      "error": "imagecreate(): Argument #2 ($height) must be greater than 0"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "foo",
+      "error": "Unsupported operand types: string * int"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "10.01",
+      "width": 123,
+      "height": 10,
+      "pixels": "4f415204524e3eb6610091dc35fcf8080b4c9d3c33463fa432e21408d285aef1",
+      "png": "d3bbcdd6d28d06b3cb5a461133277f1a608aef86f91ecbd6c41b70b5d2b702cc"
+    },
+    {
+      "id": "1",
+      "kind": "1D",
+      "size": "30.5",
+      "width": 123,
+      "height": 30,
+      "pixels": "49c52798670f68c98351a12ca4d52001de0249454d35b236e3a083ae70cb9ac1",
+      "png": "88f8879d33e053b9bca25ad2ff966058599974fb680d9caa6bc21915ddc4cad0"
+    },
+    {
+      "id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "2D",
+      "size": "250",
+      "width": 250,
+      "height": 250,
+      "pixels": "f4b850bf10f53c10ef4bcef09570477d114f0a0f09ae4c93e2c4a0129fa30eec",
+      "png": "a791ca13ba07629150d1d774396d0a93159c8c1bb63f4de5d347bd3b1ccb9d60"
+    },
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "2D",
+      "size": "250",
+      "width": 250,
+      "height": 250,
+      "pixels": "2cf8707d6784e6f287b12be6a4ca9b4270fa43e6f3a885e0dffe011dd427fb6d",
+      "png": "d16d909babc77355d6865ee7686ed586edfbea82ab8eeab7642c88d7ad5a9575"
+    },
+    {
+      "id": "*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123",
+      "kind": "2D",
+      "size": "250",
+      "width": 250,
+      "height": 250,
+      "pixels": "731f93741cbc96dc7dbd756d2bf6212a5ea24dfcaa63ba7616719e42d72f14b6",
+      "png": "d593fe870aa8111866629496986ca37383b9088761005f978d254c8054cfe4ea"
+    },
+    {
+      "id": "!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@",
+      "kind": "2D",
+      "size": "250",
+      "width": 250,
+      "height": 250,
+      "pixels": "60f1170ca36143e6fd40c8148c9ba9006ab4760c6ca4f316faaea8a7f5e621aa",
+      "png": "ece994ae2cddfdbe59cad01e7be971f742a0a9995c55c62ec3bc2ccc3a983e4c"
+    },
+    {
+      "id": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "kind": "2D",
+      "size": "250",
+      "width": 250,
+      "height": 250,
+      "pixels": "8fcc4d0c4150746a9fe31a321568695567f632b65cca2f73efb327db51533ad4",
+      "png": "b122b13ebde92fc91d1002e233c63b81fa24b7c6284d7be4ae00a201e087237c"
+    },
+    {
+      "id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "1D",
+      "size": "250",
+      "width": 992,
+      "height": 250,
+      "pixels": "7baae97a4db70dc2b664ee7f98d7f7ad259c19a83430dbb9209f04dffeef74b0",
+      "png": "ba1f41cff46c92bf039f036a792e4063449dde1746c831ff0850d1742c6e5785"
+    },
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "1D",
+      "size": "250",
+      "width": 992,
+      "height": 250,
+      "pixels": "6694e3b5e6083ee7278516465e0bc76aa861141f186e236d5e82d77d5f531d7f",
+      "png": "75fa19d79099fd055046e2a98de1e99d02e42b1bbf99544e950a8663aa0eb982"
+    },
+    {
+      "id": "*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123*>\r ABC 123",
+      "kind": "1D",
+      "size": "250",
+      "width": 1432,
+      "height": 250,
+      "pixels": "7cf7a46f613c3b9f8ac7706510b990877acfb46a75121ed72b807f2f2c4088fc",
+      "png": "64079a906310566b934dcebbe0242939aa5c025c82cf7c5c68e8d0768deb898a"
+    },
+    {
+      "id": "!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@!?+<>@",
+      "kind": "1D",
+      "size": "250",
+      "width": 1102,
+      "height": 250,
+      "pixels": "2a4ee58babb29850a7558c47b54fcd4e4aa42b0144a298ac279d49107b20bb3d",
+      "png": "fd7bed523b26ad66167f06196fe55bd60ec616dccfb3d9ec41bc377be25a7f1c"
+    },
+    {
+      "id": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "kind": "1D",
+      "size": "250",
+      "width": 2312,
+      "height": 250,
+      "pixels": "6e5e469704bc349307919db26717cf8da0c03cd025c7e3ef7561dc0d7166fc6e",
+      "png": "923f739be9f56fe80c80a68bd718dcb2a0649512d219c88a7b236003fb352017"
+    }
+  ]
+}

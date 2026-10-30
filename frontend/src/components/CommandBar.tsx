@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,9 +13,10 @@ import {
   type ReactNode,
 } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { useCatalog } from "@/lib/catalog";
-import { formatAmount } from "@/lib/format";
+import { stockAmount, useCatalog } from "@/lib/catalog";
+import { usePreferences } from "@/lib/preferences";
 import { useStockMove } from "@/lib/stockActions";
+import { useFeatures } from "@/lib/features";
 import { Icon, type IconName } from "./Icon";
 import { useNotify } from "./Toaster";
 import { NAV_GROUPS } from "./SiteNav";
@@ -66,6 +68,8 @@ type Result =
   | { kind: "product"; key: string; productId: number };
 
 export function CommandProvider({ children }: { children: ReactNode }) {
+  const { t: tr } = useI18n();
+
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [initialVerb, setInitialVerb] = useState<Verb>("find");
@@ -112,7 +116,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       <dialog
         ref={dialogRef}
         className="command"
-        aria-label="Quick actions"
+        aria-label={tr("Quick actions")}
         onClose={() => setIsOpen(false)}
         onClick={(e) => {
           if (e.target === dialogRef.current) setIsOpen(false);
@@ -127,11 +131,23 @@ export function CommandProvider({ children }: { children: ReactNode }) {
 }
 
 function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: () => void }) {
+  const { t: tr } = useI18n();
+
+  const { formatAmount } = usePreferences();
   const navigate = useNavigate();
   const notify = useNotify();
   const queryClient = useQueryClient();
-  const catalog = useCatalog();
-  const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
+  const features = useFeatures();
+  const stockEnabled = features.enabled("STOCK");
+  const shoppingEnabled = features.enabled("SHOPPINGLIST");
+  const catalog = useCatalog(stockEnabled);
+
+  const stock = useQuery({
+    queryKey: queryKeys.stockOverview,
+    queryFn: api.listStock,
+    enabled: stockEnabled,
+  });
+
   const [text, setText] = useState("");
   const [tabVerb, setTabVerb] = useState<Verb>(initialVerb);
   const [active, setActive] = useState(0);
@@ -139,17 +155,27 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
 
   const parsed = parseCommand(text);
   const verb = parsed.verb ?? tabVerb;
+  const verbEnabled = verb === "find" || (stockEnabled && (verb !== "list" || shoppingEnabled));
+
+  const verbs = VERBS.filter(
+    (item) => item.id === "find" || (stockEnabled && (item.id !== "list" || shoppingEnabled)),
+  );
+
   const amount = parsed.amount ?? 1;
 
-  const purchase = useStockMove("purchase");
-  const consume = useStockMove("consume");
+  const purchase = useStockMove("purchase", stockEnabled);
+  const consume = useStockMove("consume", stockEnabled);
 
   const addToList = useMutation({
     mutationFn: (productId: number) => api.addShoppingProduct(productId, amount),
     onSuccess: async (_data, productId) => {
       await queryClient.invalidateQueries({ queryKey: ["shopping"] });
       notify({
-        message: `Added ${catalog.amountText(productId, amount)} ${catalog.productName(productId)} to the list`,
+        message: tr(
+          "Added %1$s %2$s to the list",
+          String(catalog.amountText(productId, amount)),
+          String(catalog.productName(productId)),
+        ),
         undo: async () => {
           await api.removeShoppingProduct(productId, amount);
           await queryClient.invalidateQueries({ queryKey: ["shopping"] });
@@ -160,14 +186,14 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
   });
 
   const onHand = useMemo(
-    () => new Map((stock.data ?? []).map((item) => [item.product_id, item.amount])),
+    () => new Map((stock.data ?? []).map((item) => [item.product_id, stockAmount(item)])),
     [stock.data],
   );
 
-  const results = useMemo<Result[]>(() => {
+  const results: Result[] = (() => {
     const q = parsed.query;
 
-    const products: Result[] = catalog.products
+    const products: Result[] = (stockEnabled && verbEnabled ? catalog.products : [])
       .filter(
         (p) =>
           !q ||
@@ -180,17 +206,19 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
     if (verb !== "find") return products;
 
     const pages: Result[] = NAV_GROUPS.flatMap((group) => group.links)
-      .filter((link) => q && link.label.toLowerCase().includes(q))
+      .filter(
+        (link) => features.routeEnabled(link.to) && q && tr(link.label).toLowerCase().includes(q),
+      )
       .map((link) => ({
         kind: "page",
         key: `n${link.to}`,
-        label: link.label,
+        label: tr(link.label),
         to: link.to,
         icon: link.icon,
       }));
 
     return [...pages, ...products];
-  }, [catalog.products, parsed.query, verb]);
+  })();
 
   useEffect(() => {
     listRef.current
@@ -199,7 +227,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
   }, [active]);
 
   function run(result: Result | undefined) {
-    if (!result) return;
+    if (!result || !verbEnabled) return;
 
     if (result.kind === "page") {
       void navigate({ to: result.to });
@@ -236,7 +264,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
     }
   }
 
-  const verbLabel = VERBS.find((v) => v.id === verb)?.label ?? "Find";
+  const verbLabel = tr(VERBS.find((v) => v.id === verb)?.label ?? "Find");
 
   return (
     <div className="command-panel">
@@ -250,8 +278,8 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
             setActive(0);
           }}
           onKeyDown={onKeyDown}
-          placeholder="buy 2 milk · use oats · list coffee · or search"
-          aria-label="Command"
+          placeholder={stockEnabled ? tr("buy 2 milk · use oats · or search") : tr("Search pages")}
+          aria-label={tr("Command")}
           aria-controls="command-results"
           aria-activedescendant={results[active] ? `cmd-${results[active].key}` : undefined}
           role="combobox"
@@ -261,8 +289,8 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
         />
         <kbd>esc</kbd>
       </div>
-      <div className="command-verbs" role="group" aria-label="Action">
-        {VERBS.map((v) => (
+      <div className="command-verbs" role="group" aria-label={tr("Action")}>
+        {verbs.map((v) => (
           <button
             key={v.id}
             type="button"
@@ -275,13 +303,17 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
               if (parsed.verb) setText(text.trim().split(/\s+/).slice(1).join(" "));
             }}
           >
-            {v.label}
+            {tr(v.label)}
           </button>
         ))}
       </div>
       <ul className="command-results" id="command-results" role="listbox" ref={listRef}>
         {results.length === 0 ? (
-          <li className="command-empty">No product matches “{parsed.query}”.</li>
+          <li className="command-empty">
+            {verbEnabled
+              ? tr("No results for “%s”.", String(parsed.query))
+              : tr("This action is disabled in the server configuration.")}
+          </li>
         ) : null}
         {results.map((result, index) => (
           <li
@@ -297,7 +329,7 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
               <>
                 <Icon name={result.icon} />
                 <span className="command-name">{result.label}</span>
-                <span className="command-hint">Go to</span>
+                <span className="command-hint">{tr("Go to")}</span>
               </>
             ) : (
               <>
@@ -305,15 +337,15 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
                   {catalog.productName(result.productId)}
                   <small>
                     {catalog.location(catalog.product(result.productId)?.location_id)?.name ??
-                      "No location"}
+                      tr("No location")}
                     {" · "}
-                    {catalog.amountText(result.productId, onHand.get(result.productId) ?? 0)} on
-                    hand
+                    {catalog.amountText(result.productId, onHand.get(result.productId) ?? 0)}{" "}
+                    {tr("on hand")}
                   </small>
                 </span>
                 <span className="command-hint">
                   {verb === "find"
-                    ? "Open"
+                    ? tr("Open")
                     : `${verbLabel} ${formatAmount(amount)} ${catalog.stockUnitText(result.productId, amount)}`}
                 </span>
               </>
@@ -324,13 +356,14 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
       <p className="command-foot">
         <span>
           <kbd>↑</kbd>
-          <kbd>↓</kbd> choose
+          <kbd>↓</kbd> {tr("choose")}
         </span>
         <span>
           <kbd>↵</kbd> {verbLabel.toLowerCase()}
         </span>
         <span>
-          Start with <b>buy</b>, <b>use</b> or <b>list</b>, then an amount
+          {tr("Start with")} <b>{tr("buy")}</b>, <b>{tr("use")}</b> {tr("or")} <b>{tr("list")}</b>
+          {tr(", then an amount")}
         </span>
       </p>
     </div>

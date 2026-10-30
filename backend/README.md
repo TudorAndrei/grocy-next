@@ -1,15 +1,11 @@
-# grocy backend
+# Grocy backend
 
-Python package for the Grocy Next API and MCP adapters.
+The release uses Python 3.13, FastAPI, SQLAlchemy, Alembic, and SQLite. PHP is not required. Keep `GROCY_USE_NATIVE_PHP=false`.
 
-## Default runtime (Python)
-
-Compatibility and `/api/v2` routes run in FastAPI with SQLAlchemy, Alembic, and SQLite. `GROCY_USE_NATIVE_PHP` defaults to `false`. Local `uv run grocy`, `mise run dev`, and `docker compose up` use this path. PHP is not required.
-
-Bundled assets under `_vendor/grocy-core` (OpenAPI, locales, ESC/POS tables, and related release files) remain available to the Python path. See `.env.example` for `GROCY_` settings.
+## Run and check
 
 ```bash
-uv sync
+uv sync --frozen
 uv run grocy
 uv run pytest
 uv run ruff check --config pyproject.toml . ../scripts
@@ -17,12 +13,38 @@ uv run ruff format --config pyproject.toml --check . ../scripts
 uv run ty check . ../scripts --error-on-warning
 ```
 
-## Optional native PHP parity
+Use `GROCY_` environment variables or `.env` for configuration. See [.env.example](.env.example). The Python release does not execute `config.php` or PHP plugins. Missing legacy features must be implemented in Python.
 
-Set `GROCY_USE_NATIVE_PHP=true` to run pinned Grocy controllers for differential parity against Grocy 4.5.0. That mode needs PHP 8.1 through 8.4 with `bcmath`, `ctype`, `dom`, `fileinfo`, `gd`, `iconv`, `intl`, `libxml`, `mbstring`, `pdo_sqlite`, and `simplexml`. Set `GROCY_PHP_EXECUTABLE` if PHP is not available as `php` on `PATH`. The Docker image includes this runtime for CI and parity jobs; Compose does not enable native PHP.
+Configuration is checked at process startup. Invalid modes, locales, currency codes, week starts, entry pages, and default night mode times stop startup. Restart the process after a configuration change.
 
-In native PHP mode, each compatibility request uses a PHP HTTP process with the pinned HTMLPurifier, Slim, LessQL, Gumlet, and related packages from `_vendor/grocy-core`. A private Unix socket carries SQL to the application database. Responses keep PHP JSON encoding, native column order, status, and headers. Configuration loads `$GROCY_DATAPATH/config.php` and native setting overrides. Set `TZ` when comparing Python and PHP workers in the same time zone.
+Set `GROCY_BASE_PATH=/grocy` to serve API routes with that prefix. Set `GROCY_BASE_URL=/grocy/` for generated links. Configure the proxy to forward the prefixed API route to this service.
 
-User PHP plugins for barcode lookup go in `$GROCY_DATAPATH/plugins` (`GROCY_DATAPATH` defaults to `data`; Docker uses `/data`). `GROCY_STOCK_BARCODE_LOOKUP_PLUGIN` selects a plugin. Thermal printer and label settings (`GROCY_TPRINTER_*`, `GROCY_LABEL_PRINTER_*`, and their aliases) apply in both runtimes where those features are configured.
+Demo and prerelease modes use `<GROCY_DATAPATH>/grocy_<GROCY_DEFAULT_LOCALE>.db`. Set `GROCY_DEMO_DB_SUFFIX` to select another suffix. Production and development modes use `GROCY_DATABASE_URL`. Normal startup initializes the selected database. Reads and writes stay in that database.
 
-Environment variables use the `GROCY_` prefix (see `.env.example`).
+Use [Python barcode plugins](../docs/python-barcode-plugins.md) for custom lookup services.
+
+Set `GROCY_DEFAULT_USER_SETTINGS` to a JSON object to change the user defaults. For example, `GROCY_DEFAULT_USER_SETTINGS='{"stock_due_soon_days":14}'` sets the default due window to 14 days. Saved user values have priority. Delete a saved value to use the configured default again. These defaults also apply to recipe stock checks.
+
+Use `GROCY_AUTH_MODE=default` for API keys with a session cookie fallback. Use `api-key` for API keys only, or `session` for session cookies. In session mode, web setup and login issue a cookie. Logout removes that session.
+
+Use `GROCY_AUTH_MODE=reverse-proxy` to use an identity header. The default header is `Remote-User`. The proxy must replace this header. New proxy users receive `GROCY_DEFAULT_PERMISSIONS`. Use `GROCY_REVERSE_PROXY_AUTH_HEADER` to change the name. With `GROCY_REVERSE_PROXY_AUTH_USE_ENV=true`, an `HTTP_` name reads the corresponding request header; other names read the process environment.
+
+Use `GROCY_AUTH_MODE=ldap` for [LDAP login](../docs/python-ldap.md). This mode also accepts API keys and existing sessions. It does not use local passwords as a fallback. `GROCY_DISABLE_AUTH=true` and development modes use the first user in the database.
+
+File type detection uses libmagic. The release image includes this data library. On macOS, the application can also use the system `file` tool.
+
+Legacy picture responses use libgd through Python. The release image includes libgd3. Install libgd for identical image encoding in a local installation. If libgd is absent, local installations use Pillow; the image bytes can differ.
+
+The package uses pinned Grocy assets for database definitions, the OpenAPI contract, translations, and printer tables. PHP source remains available as a test reference.
+
+## Legacy comparison tests
+
+Run the Python API against a separate Grocy 4.5.0 test server:
+
+```bash
+GROCY_USE_NATIVE_PHP=false uv run python ../scripts/check-reference.py
+```
+
+This test command requires PHP with the modules listed in [compatibility](../docs/compatibility.md). The release image does not install PHP. The separate reference CI job installs it.
+
+The old `GROCY_USE_NATIVE_PHP=true` test mode runs original Grocy controllers. Its results do not prove that a Python feature is complete. Do not use this mode for a release.

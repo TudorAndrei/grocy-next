@@ -1,3 +1,4 @@
+import json
 import os
 import signal
 import sys
@@ -113,3 +114,18 @@ def test_missing_php_prevents_server_startup(tmp_path: Path, monkeypatch):
     clear_settings_cache()
     with pytest.raises(FileNotFoundError), TestClient(create_app()):
         pass
+
+
+_NATIVE_HTML = json.loads(
+    (Path(__file__).parents[1] / "fixtures/native-html-void-elements.json").read_text()
+)["cases"]
+
+
+@pytest.mark.parametrize("case", _NATIVE_HTML, ids=[row["name"] for row in _NATIVE_HTML])
+def test_saved_html_void_elements_match_native(client, api_headers, case):
+    path = "/api/objects/shopping_lists/1"
+    response = client.put(path, headers=api_headers, json={"description": case["input"]})
+    assert response.status_code == 204, response.text
+    stored = client.get(path, headers=api_headers)
+    assert stored.status_code == 200
+    assert stored.json()["description"] == case["expected"]

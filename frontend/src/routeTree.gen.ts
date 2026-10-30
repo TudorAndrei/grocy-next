@@ -15,23 +15,39 @@ import { Route as BarcodeRouteImport } from './routes/barcode'
 import { Route as BatteriesRouteImport } from './routes/batteries'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as ChoresRouteImport } from './routes/chores'
+import { Route as ConsumeRouteImport } from './routes/consume'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as HouseholdRouteImport } from './routes/household'
+import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as LabelsRouteImport } from './routes/labels'
+import { Route as LocationcontentsheetRouteImport } from './routes/locationcontentsheet'
 import { Route as LocationsRouteImport } from './routes/locations'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as MealPlanRouteImport } from './routes/meal-plan'
+import { Route as PurchaseRouteImport } from './routes/purchase'
+import { Route as QuantityunitconversionsresolvedRouteImport } from './routes/quantityunitconversionsresolved'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
+import { Route as ShoppinglistRouteImport } from './routes/shoppinglist'
 import { Route as StockRouteImport } from './routes/stock'
+import { Route as StockoverviewRouteImport } from './routes/stockoverview'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as TodayRouteImport } from './routes/today'
+import { Route as TransferRouteImport } from './routes/transfer'
+import { Route as ProductProductIdRouteImport } from './routes/product/$productId'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes/$recipeId'
+import { Route as ShoppinglistitemItemIdRouteImport } from './routes/shoppinglistitem/$itemId'
+import { Route as StockentriesIndexRouteImport } from './routes/stockentries/index'
+import { Route as StockentryEntryIdRouteImport } from './routes/stockentry/$entryId'
+import { Route as StockjournalIndexRouteImport } from './routes/stockjournal/index'
+import { Route as StockjournalSummaryRouteImport } from './routes/stockjournal/summary'
+import { Route as StockreportsSpendingsRouteImport } from './routes/stockreports/spendings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -63,6 +79,11 @@ const ChoresRoute = ChoresRouteImport.update({
   path: '/chores',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsumeRoute = ConsumeRouteImport.update({
+  id: '/consume',
+  path: '/consume',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -78,6 +99,11 @@ const HouseholdRoute = HouseholdRouteImport.update({
   path: '/household',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JournalRoute = JournalRouteImport.update({
   id: '/journal',
   path: '/journal',
@@ -86,6 +112,11 @@ const JournalRoute = JournalRouteImport.update({
 const LabelsRoute = LabelsRouteImport.update({
   id: '/labels',
   path: '/labels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationcontentsheetRoute = LocationcontentsheetRouteImport.update({
+  id: '/locationcontentsheet',
+  path: '/locationcontentsheet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationsRoute = LocationsRouteImport.update({
@@ -103,6 +134,17 @@ const MealPlanRoute = MealPlanRouteImport.update({
   path: '/meal-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PurchaseRoute = PurchaseRouteImport.update({
+  id: '/purchase',
+  path: '/purchase',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuantityunitconversionsresolvedRoute =
+  QuantityunitconversionsresolvedRouteImport.update({
+    id: '/quantityunitconversionsresolved',
+    path: '/quantityunitconversionsresolved',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ReviewsRoute = ReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
@@ -118,14 +160,39 @@ const ShoppingRoute = ShoppingRouteImport.update({
   path: '/shopping',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShoppinglistRoute = ShoppinglistRouteImport.update({
+  id: '/shoppinglist',
+  path: '/shoppinglist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockRoute = StockRouteImport.update({
   id: '/stock',
   path: '/stock',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StockoverviewRoute = StockoverviewRouteImport.update({
+  id: '/stockoverview',
+  path: '/stockoverview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransferRoute = TransferRouteImport.update({
+  id: '/transfer',
+  path: '/transfer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductProductIdRoute = ProductProductIdRouteImport.update({
+  id: '/product/$productId',
+  path: '/product/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
@@ -148,6 +215,36 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
   path: '/recipes/$recipeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShoppinglistitemItemIdRoute = ShoppinglistitemItemIdRouteImport.update({
+  id: '/shoppinglistitem/$itemId',
+  path: '/shoppinglistitem/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockentriesIndexRoute = StockentriesIndexRouteImport.update({
+  id: '/stockentries/',
+  path: '/stockentries/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockentryEntryIdRoute = StockentryEntryIdRouteImport.update({
+  id: '/stockentry/$entryId',
+  path: '/stockentry/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockjournalIndexRoute = StockjournalIndexRouteImport.update({
+  id: '/stockjournal/',
+  path: '/stockjournal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockjournalSummaryRoute = StockjournalSummaryRouteImport.update({
+  id: '/stockjournal/summary',
+  path: '/stockjournal/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockreportsSpendingsRoute = StockreportsSpendingsRouteImport.update({
+  id: '/stockreports/spendings',
+  path: '/stockreports/spendings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -156,23 +253,39 @@ export interface FileRoutesByFullPath {
   '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
   '/chores': typeof ChoresRoute
+  '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
+  '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/purchase': typeof PurchaseRoute
+  '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/shoppinglist': typeof ShoppinglistRoute
   '/stock': typeof StockRoute
+  '/stockoverview': typeof StockoverviewRoute
   '/tasks': typeof TasksRoute
+  '/today': typeof TodayRoute
+  '/transfer': typeof TransferRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/stockentry/$entryId': typeof StockentryEntryIdRoute
+  '/stockjournal/summary': typeof StockjournalSummaryRoute
+  '/stockreports/spendings': typeof StockreportsSpendingsRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
+  '/stockentries/': typeof StockentriesIndexRoute
+  '/stockjournal/': typeof StockjournalIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -181,23 +294,39 @@ export interface FileRoutesByTo {
   '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
   '/chores': typeof ChoresRoute
+  '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
+  '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/purchase': typeof PurchaseRoute
+  '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/shoppinglist': typeof ShoppinglistRoute
   '/stock': typeof StockRoute
+  '/stockoverview': typeof StockoverviewRoute
   '/tasks': typeof TasksRoute
+  '/today': typeof TodayRoute
+  '/transfer': typeof TransferRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/stockentry/$entryId': typeof StockentryEntryIdRoute
+  '/stockjournal/summary': typeof StockjournalSummaryRoute
+  '/stockreports/spendings': typeof StockreportsSpendingsRoute
   '/products': typeof ProductsIndexRoute
   '/recipes': typeof RecipesIndexRoute
+  '/stockentries': typeof StockentriesIndexRoute
+  '/stockjournal': typeof StockjournalIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -207,23 +336,39 @@ export interface FileRoutesById {
   '/batteries': typeof BatteriesRoute
   '/calendar': typeof CalendarRoute
   '/chores': typeof ChoresRoute
+  '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
   '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
+  '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
+  '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/purchase': typeof PurchaseRoute
+  '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/shoppinglist': typeof ShoppinglistRoute
   '/stock': typeof StockRoute
+  '/stockoverview': typeof StockoverviewRoute
   '/tasks': typeof TasksRoute
+  '/today': typeof TodayRoute
+  '/transfer': typeof TransferRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/stockentry/$entryId': typeof StockentryEntryIdRoute
+  '/stockjournal/summary': typeof StockjournalSummaryRoute
+  '/stockreports/spendings': typeof StockreportsSpendingsRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
+  '/stockentries/': typeof StockentriesIndexRoute
+  '/stockjournal/': typeof StockjournalIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -234,23 +379,39 @@ export interface FileRouteTypes {
     | '/batteries'
     | '/calendar'
     | '/chores'
+    | '/consume'
     | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/inventory'
     | '/journal'
     | '/labels'
+    | '/locationcontentsheet'
     | '/locations'
     | '/manage'
     | '/meal-plan'
+    | '/purchase'
+    | '/quantityunitconversionsresolved'
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/shoppinglist'
     | '/stock'
+    | '/stockoverview'
     | '/tasks'
+    | '/today'
+    | '/transfer'
+    | '/product/$productId'
     | '/products/$productId'
     | '/recipes/$recipeId'
+    | '/shoppinglistitem/$itemId'
+    | '/stockentry/$entryId'
+    | '/stockjournal/summary'
+    | '/stockreports/spendings'
     | '/products/'
     | '/recipes/'
+    | '/stockentries/'
+    | '/stockjournal/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -259,23 +420,39 @@ export interface FileRouteTypes {
     | '/batteries'
     | '/calendar'
     | '/chores'
+    | '/consume'
     | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/inventory'
     | '/journal'
     | '/labels'
+    | '/locationcontentsheet'
     | '/locations'
     | '/manage'
     | '/meal-plan'
+    | '/purchase'
+    | '/quantityunitconversionsresolved'
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/shoppinglist'
     | '/stock'
+    | '/stockoverview'
     | '/tasks'
+    | '/today'
+    | '/transfer'
+    | '/product/$productId'
     | '/products/$productId'
     | '/recipes/$recipeId'
+    | '/shoppinglistitem/$itemId'
+    | '/stockentry/$entryId'
+    | '/stockjournal/summary'
+    | '/stockreports/spendings'
     | '/products'
     | '/recipes'
+    | '/stockentries'
+    | '/stockjournal'
   id:
     | '__root__'
     | '/'
@@ -284,23 +461,39 @@ export interface FileRouteTypes {
     | '/batteries'
     | '/calendar'
     | '/chores'
+    | '/consume'
     | '/dashboard'
     | '/equipment'
     | '/household'
+    | '/inventory'
     | '/journal'
     | '/labels'
+    | '/locationcontentsheet'
     | '/locations'
     | '/manage'
     | '/meal-plan'
+    | '/purchase'
+    | '/quantityunitconversionsresolved'
     | '/reviews'
     | '/settings'
     | '/shopping'
+    | '/shoppinglist'
     | '/stock'
+    | '/stockoverview'
     | '/tasks'
+    | '/today'
+    | '/transfer'
+    | '/product/$productId'
     | '/products/$productId'
     | '/recipes/$recipeId'
+    | '/shoppinglistitem/$itemId'
+    | '/stockentry/$entryId'
+    | '/stockjournal/summary'
+    | '/stockreports/spendings'
     | '/products/'
     | '/recipes/'
+    | '/stockentries/'
+    | '/stockjournal/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -310,23 +503,39 @@ export interface RootRouteChildren {
   BatteriesRoute: typeof BatteriesRoute
   CalendarRoute: typeof CalendarRoute
   ChoresRoute: typeof ChoresRoute
+  ConsumeRoute: typeof ConsumeRoute
   DashboardRoute: typeof DashboardRoute
   EquipmentRoute: typeof EquipmentRoute
   HouseholdRoute: typeof HouseholdRoute
+  InventoryRoute: typeof InventoryRoute
   JournalRoute: typeof JournalRoute
   LabelsRoute: typeof LabelsRoute
+  LocationcontentsheetRoute: typeof LocationcontentsheetRoute
   LocationsRoute: typeof LocationsRoute
   ManageRoute: typeof ManageRoute
   MealPlanRoute: typeof MealPlanRoute
+  PurchaseRoute: typeof PurchaseRoute
+  QuantityunitconversionsresolvedRoute: typeof QuantityunitconversionsresolvedRoute
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
+  ShoppinglistRoute: typeof ShoppinglistRoute
   StockRoute: typeof StockRoute
+  StockoverviewRoute: typeof StockoverviewRoute
   TasksRoute: typeof TasksRoute
+  TodayRoute: typeof TodayRoute
+  TransferRoute: typeof TransferRoute
+  ProductProductIdRoute: typeof ProductProductIdRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
+  ShoppinglistitemItemIdRoute: typeof ShoppinglistitemItemIdRoute
+  StockentryEntryIdRoute: typeof StockentryEntryIdRoute
+  StockjournalSummaryRoute: typeof StockjournalSummaryRoute
+  StockreportsSpendingsRoute: typeof StockreportsSpendingsRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   RecipesIndexRoute: typeof RecipesIndexRoute
+  StockentriesIndexRoute: typeof StockentriesIndexRoute
+  StockjournalIndexRoute: typeof StockjournalIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -373,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChoresRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/consume': {
+      id: '/consume'
+      path: '/consume'
+      fullPath: '/consume'
+      preLoaderRoute: typeof ConsumeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -394,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HouseholdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/journal': {
       id: '/journal'
       path: '/journal'
@@ -406,6 +629,13 @@ declare module '@tanstack/react-router' {
       path: '/labels'
       fullPath: '/labels'
       preLoaderRoute: typeof LabelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/locationcontentsheet': {
+      id: '/locationcontentsheet'
+      path: '/locationcontentsheet'
+      fullPath: '/locationcontentsheet'
+      preLoaderRoute: typeof LocationcontentsheetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/locations': {
@@ -429,6 +659,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MealPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/purchase': {
+      id: '/purchase'
+      path: '/purchase'
+      fullPath: '/purchase'
+      preLoaderRoute: typeof PurchaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quantityunitconversionsresolved': {
+      id: '/quantityunitconversionsresolved'
+      path: '/quantityunitconversionsresolved'
+      fullPath: '/quantityunitconversionsresolved'
+      preLoaderRoute: typeof QuantityunitconversionsresolvedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reviews': {
       id: '/reviews'
       path: '/reviews'
@@ -450,6 +694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShoppingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shoppinglist': {
+      id: '/shoppinglist'
+      path: '/shoppinglist'
+      fullPath: '/shoppinglist'
+      preLoaderRoute: typeof ShoppinglistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stock': {
       id: '/stock'
       path: '/stock'
@@ -457,11 +708,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stockoverview': {
+      id: '/stockoverview'
+      path: '/stockoverview'
+      fullPath: '/stockoverview'
+      preLoaderRoute: typeof StockoverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transfer': {
+      id: '/transfer'
+      path: '/transfer'
+      fullPath: '/transfer'
+      preLoaderRoute: typeof TransferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product/$productId': {
+      id: '/product/$productId'
+      path: '/product/$productId'
+      fullPath: '/product/$productId'
+      preLoaderRoute: typeof ProductProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/': {
@@ -492,6 +771,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecipesRecipeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shoppinglistitem/$itemId': {
+      id: '/shoppinglistitem/$itemId'
+      path: '/shoppinglistitem/$itemId'
+      fullPath: '/shoppinglistitem/$itemId'
+      preLoaderRoute: typeof ShoppinglistitemItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stockentries/': {
+      id: '/stockentries/'
+      path: '/stockentries'
+      fullPath: '/stockentries/'
+      preLoaderRoute: typeof StockentriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stockentry/$entryId': {
+      id: '/stockentry/$entryId'
+      path: '/stockentry/$entryId'
+      fullPath: '/stockentry/$entryId'
+      preLoaderRoute: typeof StockentryEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stockjournal/': {
+      id: '/stockjournal/'
+      path: '/stockjournal'
+      fullPath: '/stockjournal/'
+      preLoaderRoute: typeof StockjournalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stockjournal/summary': {
+      id: '/stockjournal/summary'
+      path: '/stockjournal/summary'
+      fullPath: '/stockjournal/summary'
+      preLoaderRoute: typeof StockjournalSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stockreports/spendings': {
+      id: '/stockreports/spendings'
+      path: '/stockreports/spendings'
+      fullPath: '/stockreports/spendings'
+      preLoaderRoute: typeof StockreportsSpendingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -502,23 +823,39 @@ const rootRouteChildren: RootRouteChildren = {
   BatteriesRoute: BatteriesRoute,
   CalendarRoute: CalendarRoute,
   ChoresRoute: ChoresRoute,
+  ConsumeRoute: ConsumeRoute,
   DashboardRoute: DashboardRoute,
   EquipmentRoute: EquipmentRoute,
   HouseholdRoute: HouseholdRoute,
+  InventoryRoute: InventoryRoute,
   JournalRoute: JournalRoute,
   LabelsRoute: LabelsRoute,
+  LocationcontentsheetRoute: LocationcontentsheetRoute,
   LocationsRoute: LocationsRoute,
   ManageRoute: ManageRoute,
   MealPlanRoute: MealPlanRoute,
+  PurchaseRoute: PurchaseRoute,
+  QuantityunitconversionsresolvedRoute: QuantityunitconversionsresolvedRoute,
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
+  ShoppinglistRoute: ShoppinglistRoute,
   StockRoute: StockRoute,
+  StockoverviewRoute: StockoverviewRoute,
   TasksRoute: TasksRoute,
+  TodayRoute: TodayRoute,
+  TransferRoute: TransferRoute,
+  ProductProductIdRoute: ProductProductIdRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
+  ShoppinglistitemItemIdRoute: ShoppinglistitemItemIdRoute,
+  StockentryEntryIdRoute: StockentryEntryIdRoute,
+  StockjournalSummaryRoute: StockjournalSummaryRoute,
+  StockreportsSpendingsRoute: StockreportsSpendingsRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   RecipesIndexRoute: RecipesIndexRoute,
+  StockentriesIndexRoute: StockentriesIndexRoute,
+  StockjournalIndexRoute: StockjournalIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

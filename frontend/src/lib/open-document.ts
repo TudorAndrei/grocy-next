@@ -10,21 +10,46 @@ function resolveUrl(path: string): string {
   return `${baseUrl.replace(/\/$/, "")}${normalized}`;
 }
 
-export async function openApiDocument(path: string): Promise<void> {
+export async function fetchApiDocument(
+  path: string,
+  signal?: AbortSignal,
+  body?: string,
+): Promise<Blob> {
   const { apiKey } = readApiConfig();
   const headers: HeadersInit = {};
 
   if (apiKey) headers["GROCY-API-KEY"] = apiKey;
-  const response = await fetch(resolveUrl(path), { headers });
+
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  const response = await fetch(resolveUrl(path), {
+    headers,
+    signal,
+    method: body === undefined ? "GET" : "POST",
+    body,
+  });
 
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText || "Could not open document.", null);
   }
 
-  const blob = await response.blob();
+  return response.blob();
+}
+
+export async function openApiDocument(path: string): Promise<void> {
+  const blob = await fetchApiDocument(path);
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function downloadApiDocument(path: string, filename: string): Promise<void> {
+  const url = URL.createObjectURL(await fetchApiDocument(path));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function apiHref(path: string): string {

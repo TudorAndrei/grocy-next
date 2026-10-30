@@ -18,6 +18,7 @@ from grocy.compatibility.php import (
     loose_equals,
     numeric_value,
     pdo_parameter,
+    php_error,
     php_round,
     php_string,
     truthy,
@@ -25,6 +26,7 @@ from grocy.compatibility.php import (
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
+from grocy.db.native_schema import SCHEMA
 
 _ESCPOS_CHARACTERS = (
     Path(__file__).parents[1]
@@ -121,7 +123,26 @@ async def send_label(payload: dict[str, Any]) -> None:
         ):
             response = await client.post(settings.label_printer_webhook, **options)
             if 400 <= response.status_code < 600:
-                response.raise_for_status()
+                url = response.request.url
+                if b":" in url.userinfo:
+                    url = url.copy_with(username=url.username, password="***")
+                label = "Client error" if response.status_code < 500 else "Server error"
+                message = (
+                    f"{label}: `{response.request.method} {url}` resulted in a "
+                    f"`{response.status_code} {response.reason_phrase}` response"
+                )
+                try:
+                    summary = response.content[:120].decode()
+                except UnicodeDecodeError:
+                    summary = ""
+                if summary and all(
+                    unicodedata.category(character)[0] in "LMNPSZ" or character in "\n\r\t"
+                    for character in summary
+                ):
+                    if len(response.content) > 120:
+                        summary += " (truncated...)"
+                    message += ":\n" + summary + "\n"
+                raise GrocyError(message, code=None)
     except (httpx.HTTPError, httpx.InvalidURL, TimeoutError) as exc:
         raise GrocyError("Label printer request failed", code=None) from exc
 
@@ -179,7 +200,8 @@ async def _rows(session: AsyncSession, statement: str, *parameters: Any) -> list
 
 
 async def recipe_label(session: AsyncSession, recipe_id: str) -> dict[str, Any]:
-    recipes = await _rows(session, "SELECT * FROM `recipes` WHERE `id` = ?", recipe_id)
+    fields = ", ".join(f"`{field}`" for field in SCHEMA["tables"]["recipes"])
+    recipes = await _rows(session, f"SELECT {fields} FROM `recipes` WHERE `id` = ?", recipe_id)
     if not recipes:
         return await _object_label("recipe", "r", recipe_id, None, None)
     recipe = recipes[0]
@@ -366,6 +388,8 @@ def _connection_error(error: OSError) -> str:
 
 
 def _write_device(path: str, data: bytes) -> None:
+    if path == "":
+        raise php_error("Path must not be empty")
     try:
         with Path(path).open("wb+") as device:
             device.write(data)

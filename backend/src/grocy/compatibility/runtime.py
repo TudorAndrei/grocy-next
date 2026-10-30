@@ -1,5 +1,6 @@
-import json
 from typing import Any
+
+from grocy.compatibility.php import parse_request_body
 
 
 class PythonRuntime:
@@ -10,6 +11,4 @@ class PythonRuntime:
         return None
 
     async def purify(self, body: bytes) -> Any:
-        if not body:
-            return {}
-        return json.loads(body)
+        return parse_request_body(body)

@@ -1,4 +1,7 @@
 export type ProductSummary = {
+  picture_file_name?: string | null;
+  disable_open?: number;
+  treat_opened_as_out_of_stock?: number | boolean;
   id: number;
   name: string;
   barcode?: string | null;
@@ -8,7 +11,15 @@ export type ProductSummary = {
   location_id?: number | null;
   qu_id_stock?: number | null;
   qu_id_purchase?: number | null;
+  qu_id_consume?: number | null;
+  default_purchase_price_type?: number;
+  enable_tare_weight_handling?: number | boolean;
+  tare_weight?: number;
   default_best_before_days?: number | null;
+  default_best_before_days_after_freezing?: number | null;
+  default_consume_location_id?: number | null;
+  shopping_location_id?: number | null;
+  quick_consume_amount?: number | null;
   product_group_id?: number | null;
 };
 
@@ -23,6 +34,8 @@ export type QuantityUnit = {
   id: number;
   name: string;
   name_plural?: string | null;
+  plural_forms?: string | null;
+  active?: number;
   description?: string | null;
 };
 
@@ -129,6 +142,10 @@ export type CreateProposalPayload = {
 };
 
 export type StockProductDetails = ProductSummary & {
+  last_price?: number | null;
+  last_shopping_location_id?: number | null;
+  stock_amount_aggregated?: number;
+  stock_amount_opened_aggregated?: number;
   stock_amount?: number;
   stock_amount_opened?: number;
   location_id?: number;
@@ -137,6 +154,7 @@ export type StockProductDetails = ProductSummary & {
 export type SystemInfo = {
   grocy_version: { Version: string; ReleaseDate: string };
   php_version: string;
+  python_version: string;
   sqlite_version: string;
   db_version: number;
   os: string;
@@ -150,6 +168,7 @@ export type CurrentUser = {
   username: string;
   first_name: string;
   last_name: string;
+  picture_file_name?: string | null;
 };
 
 export type StockLogRow = {
@@ -201,6 +220,7 @@ export type ShoppingListItem = {
 export type ShoppingList = {
   id: number;
   name: string;
+  description?: string | null;
   items: ShoppingListItem[];
 };
 
@@ -213,6 +233,7 @@ export type RecipePosition = {
 };
 
 export type Recipe = {
+  picture_file_name?: string | null;
   id: number;
   name: string;
   description?: string | null;

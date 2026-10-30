@@ -12,6 +12,7 @@ from typing import Any
 
 from fastapi import Request, Response
 
+from grocy.compatibility.sanitizer import clean
 from grocy.core.actor import Actor
 from grocy.core.errors import GrocyError
 from grocy.core.time import server_timezone
@@ -125,7 +126,7 @@ def purified(value: Any) -> Any:
         return value
     if isinstance(value, int) and not INT_MIN <= value <= INT_MAX:
         return php_string(float(value) if abs(value) < 2**1023 else math.copysign(math.inf, value))
-    return php_string(value)
+    return clean(php_string(value))
 
 
 def _numeric_prefix(value: str) -> str | None:
@@ -311,15 +312,41 @@ async def request_body(request: Request, *, caught: bool = False) -> dict[Any, A
         if caught:
             raise GrocyError("Bad Content-Type", code=None)
         raise _failure("Bad Content-Type", 400, sys._getframe(1))
+    return parse_request_body(await request.body())
+
+
+def _valid_json_strings(value: Any, depth: int = 0) -> bool:
+    if depth >= 512:
+        return False
+    if isinstance(value, str):
+        value.encode()
+    elif isinstance(value, dict):
+        return all(
+            _valid_json_strings(key, depth + 1) and _valid_json_strings(item, depth + 1)
+            for key, item in value.items()
+        )
+    elif isinstance(value, list):
+        return all(_valid_json_strings(item, depth + 1) for item in value)
+    return True
+
+
+def _json_integer(value: str) -> int | float:
+    parsed = int(value)
+    return parsed if INT_MIN <= parsed <= INT_MAX else float(value)
+
+
+def parse_request_body(raw: bytes, *, filter_values: bool = True) -> dict[Any, Any] | None:
     try:
-        body = json.loads(await request.body(), parse_constant=_reject_constant)
+        body = json.loads(raw, parse_constant=_reject_constant, parse_int=_json_integer)
+        if not _valid_json_strings(body):
+            return None
     except (ValueError, RecursionError):
         return None
     if isinstance(body, list):
         body = dict(enumerate(body))
     if not isinstance(body, dict):
         return None
-    return {key: purified(value) for key, value in body.items()}
+    return {key: purified(value) for key, value in body.items()} if filter_values else body
 
 
 def body_array(body: dict[Any, Any] | None) -> dict[Any, Any]:
@@ -334,12 +361,14 @@ def body_array(body: dict[Any, Any] | None) -> dict[Any, Any]:
 
 def php_json(value: Any) -> bytes:
     try:
+        if not _valid_json_strings(value):
+            return b""
         text = json.dumps(
             value,
             ensure_ascii=True,
             separators=(",", ":"),
             allow_nan=False,
-            default=lambda item: item.decode() if isinstance(item, bytes) else str(item),
+            default=lambda item: (item.decode() or None) if isinstance(item, bytes) else str(item),
         )
     except (TypeError, ValueError):
         return b""
@@ -350,4 +379,7 @@ class PhpJSONResponse(Response):
     media_type = "application/json"
 
     def render(self, content: Any) -> bytes:
-        return php_json(content)
+        body = php_json(content)
+        if not body:
+            raise php_error("fwrite(): Argument #2 ($data) must be of type string, false given")
+        return body

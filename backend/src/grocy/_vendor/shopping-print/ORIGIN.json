@@ -1,0 +1,50 @@
+{
+  "version": "4.5.0",
+  "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "files": {
+    "bootstrap.css": {
+      "source": "public/packages/bootstrap/dist/css/bootstrap.min.css",
+      "sha256": "f886516f3d41e9e7bd994c7f7a39a89cafae9483f90396cb0ddeafe8d1ea5e72"
+    },
+    "datatables.css": {
+      "source": "public/packages/datatables.net-bs4/css/dataTables.bootstrap4.min.css",
+      "sha256": "68fde7cb424333dcbf8cc1e77d3f45229af5388249f144aec469db409e416f22"
+    },
+    "rowgroup.css": {
+      "source": "public/packages/datatables.net-rowgroup-bs4/css/rowGroup.bootstrap4.min.css",
+      "sha256": "ea51706d8a73d7dd4835bcbd173d3a295fc60d64134f3416a9965d6aef390cb1"
+    },
+    "grocy.css": {
+      "source": "public/css/grocy.css",
+      "sha256": "007e74cc0f0d257449e932602e3c00a86631b0a30d3de13b9a321760e16cf26e"
+    },
+    "menu.css": {
+      "source": "public/css/grocy_menu_layout.css",
+      "sha256": "31a8f49cac7b5a9cb61af6d7dd0f707f5df1a91c921e3aff8b4bf75071fa33a5"
+    },
+    "logo.svg": {
+      "source": "public/img/logo.svg",
+      "sha256": "4156ce0b3fc9526d8c4b86c539b665519eb5cbc4f2d6813887501cf688da4524"
+    },
+    "solid.woff2": {
+      "source": "public/packages/@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff2",
+      "sha256": "aa75998623a391e61c6901794ace832e3ecdd288b56d608f21bea0411acc0b8e"
+    },
+    "LICENSE.bootstrap": {
+      "source": "public/packages/bootstrap/LICENSE",
+      "sha256": "53d2513c8df48a817d70537cc906b8e9c7bf2513328ff66847894773e615b37e"
+    },
+    "LICENSE.datatables": {
+      "source": "public/packages/datatables.net/License.txt",
+      "sha256": "62b5fdd54371b4f6bd07a60dbc78b38814f49a8028213f540dc2733cad605382"
+    },
+    "LICENSE.fontawesome": {
+      "source": "public/packages/@fortawesome/fontawesome-free/LICENSE.txt",
+      "sha256": "9b914eae88817d63b576eab5aafde7068c7a1abae125d7cdfb034f1da43a9afc"
+    },
+    "LICENSE.grocy": {
+      "source": "LICENSE",
+      "sha256": "ca49d1dcaf24ce093ea748b781469a7ad2a58123a400d1a0f10a29f92ae8c218"
+    }
+  }
+}

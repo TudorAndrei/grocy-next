@@ -1,10 +1,17 @@
+import { useI18n } from "@/lib/i18n";
 import type { JsonObject } from "@/lib/json";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, request } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { formatAmount } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
+import { useFeatures } from "@/lib/features";
+import { isoDay } from "@/lib/format";
 import { ErrorBlock } from "./ErrorBlock";
+import { GrocycodeActions } from "./GrocycodeActions";
+import { StockEntryDialog } from "./StockEntryEditor";
+import { useNotify } from "./Toaster";
+import { useInvalidateStock } from "@/lib/catalog";
 
 type Entry = {
   id: number;
@@ -13,6 +20,9 @@ type Entry = {
   best_before_date: string | null;
   price: number | null;
   open: number;
+  purchased_date?: string | null;
+  shopping_location_id?: number | null;
+  note?: string | null;
 };
 
 type Booking = {
@@ -28,24 +38,34 @@ type Adjust = "transfer" | "inventory";
 
 /** Entry-level stock work: transfer, count, entry edits, prices and booking undo. */
 export function StockLedger({ productId }: { productId: number }) {
+  const { t: tr } = useI18n();
+
+  const features = useFeatures();
+  const priceEnabled = features.enabled("STOCK_PRICE_TRACKING");
+  const locationsEnabled = features.enabled("STOCK_LOCATION_TRACKING");
+  const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
+  const openingEnabled = features.enabled("STOCK_PRODUCT_OPENED_TRACKING");
+  const { formatAmount, formatPrice, showPurchaseDate } = usePreferences();
   const client = useQueryClient();
   const catalog = useCatalog();
-  const [adjust, setAdjust] = useState<Adjust>("transfer");
+  const [selection, setAdjust] = useState<Adjust>("transfer");
+  const adjust = locationsEnabled ? selection : "inventory";
   const [amount, setAmount] = useState("1");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [bestBefore, setBestBefore] = useState("");
+  const [purchasedDate, setPurchasedDate] = useState(isoDay);
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
-  const [entryAmount, setEntryAmount] = useState("");
-  const [entryExpiry, setEntryExpiry] = useState("");
+  const notify = useNotify();
+  const invalidate = useInvalidateStock();
 
   const entries = useQuery({
-    queryKey: ["stock-entries", productId],
+    queryKey: ["stock", "entries", productId],
     queryFn: () => request<Entry[]>(`/api/stock/products/${productId}/entries`),
   });
 
   const bookings = useQuery({
-    queryKey: ["stock-log", productId],
+    queryKey: ["stock", "log", productId],
     queryFn: () =>
       request<Booking[]>(
         `/api/objects/stock_log?query[]=product_id=${productId}&order=id:desc&limit=12`,
@@ -53,8 +73,9 @@ export function StockLedger({ productId }: { productId: number }) {
   });
 
   const prices = useQuery({
-    queryKey: ["stock-prices", productId],
+    queryKey: ["stock", "prices", productId],
     queryFn: () => request<PriceRow[]>(`/api/stock/products/${productId}/price-history`),
+    enabled: priceEnabled,
   });
 
   const action = useMutation({
@@ -82,27 +103,14 @@ export function StockLedger({ productId }: { productId: number }) {
       body.location_id_from = Number(from);
       body.location_id_to = Number(to);
     } else {
-      if (from) body.location_id = Number(from);
+      if (locationsEnabled && from) body.location_id = Number(from);
 
-      if (bestBefore) body.best_before_date = bestBefore;
+      if (datesEnabled && bestBefore) body.best_before_date = bestBefore;
+
+      if (showPurchaseDate) body.purchased_date = purchasedDate || null;
     }
 
     action.mutate(() => api.action(`/api/stock/products/${productId}/${adjust}`, body));
-  }
-
-  function submitEntry(e: FormEvent) {
-    e.preventDefault();
-
-    if (!editEntry) return;
-    action.mutate(() =>
-      request(`/api/stock/entry/${editEntry.id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          amount: Number(entryAmount),
-          best_before_date: entryExpiry || null,
-        }),
-      }),
-    );
   }
 
   const locationOptions = catalog.locations.map((l) => (
@@ -114,30 +122,34 @@ export function StockLedger({ productId }: { productId: number }) {
   return (
     <section className="panel" aria-labelledby="ledger-heading">
       <h2 className="panel-head" id="ledger-heading">
-        Entries and bookings
+        {tr("Entries and bookings")}
       </h2>
       {error ? <ErrorBlock message={error.message} /> : null}
 
       <form className="panel-body move-form" onSubmit={submitAdjust}>
-        <div className="seg-group" role="group" aria-label="Stock adjustment">
-          {(["transfer", "inventory"] as const).map((id) => (
-            <button
-              key={id}
-              type="button"
-              className="seg"
-              aria-pressed={adjust === id}
-              onClick={() => {
-                setAdjust(id);
-                action.reset();
-              }}
-            >
-              {{ transfer: "Transfer", inventory: "Count" }[id]}
-            </button>
-          ))}
+        <div className="seg-group" role="group" aria-label={tr("Stock adjustment")}>
+          {(["transfer", "inventory"] as const).flatMap((id) =>
+            id === "transfer" && !locationsEnabled
+              ? []
+              : [
+                  <button
+                    key={id}
+                    type="button"
+                    className="seg"
+                    aria-pressed={adjust === id}
+                    onClick={() => {
+                      setAdjust(id);
+                      action.reset();
+                    }}
+                  >
+                    {tr({ transfer: "Transfer", inventory: "Count" }[id])}
+                  </button>,
+                ],
+          )}
         </div>
         <div className="field-row">
           <label className="field">
-            <span>{adjust === "inventory" ? "New stock count" : "Amount"}</span>
+            <span>{adjust === "inventory" ? tr("New stock count") : tr("Amount")}</span>
             <input
               type="number"
               step="any"
@@ -147,123 +159,134 @@ export function StockLedger({ productId }: { productId: number }) {
               onChange={(e) => setAmount(e.target.value)}
             />
           </label>
-          <label className="field">
-            <span>{adjust === "transfer" ? "From" : "Location"}</span>
-            <select
-              required={adjust === "transfer"}
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            >
-              <option value="">
-                {adjust === "transfer" ? "Select location" : "All locations"}
-              </option>
-              {locationOptions}
-            </select>
-          </label>
-          {adjust === "transfer" ? (
+          {locationsEnabled ? (
             <label className="field">
-              <span>To</span>
-              <select required value={to} onChange={(e) => setTo(e.target.value)}>
-                <option value="">Select location</option>
+              <span>{adjust === "transfer" ? tr("From") : tr("Location")}</span>
+              <select
+                required={adjust === "transfer"}
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              >
+                <option value="">
+                  {adjust === "transfer" ? tr("Select location") : tr("All locations")}
+                </option>
                 {locationOptions}
               </select>
             </label>
-          ) : (
+          ) : null}
+          {adjust === "transfer" ? (
             <label className="field">
-              <span>Best before</span>
+              <span>{tr("To")}</span>
+              <select required value={to} onChange={(e) => setTo(e.target.value)}>
+                <option value="">{tr("Select location")}</option>
+                {locationOptions}
+              </select>
+            </label>
+          ) : datesEnabled ? (
+            <label className="field">
+              <span>{tr("Best before")}</span>
               <input
                 type="date"
                 value={bestBefore}
                 onChange={(e) => setBestBefore(e.target.value)}
               />
             </label>
-          )}
+          ) : null}
+          {adjust === "inventory" && showPurchaseDate ? (
+            <label className="field">
+              <span>{tr("Purchase date")}</span>
+              <input
+                type="date"
+                value={purchasedDate}
+                onChange={(event) => setPurchasedDate(event.target.value)}
+              />
+            </label>
+          ) : null}
         </div>
         <button type="submit" className="btn btn-primary" disabled={action.isPending}>
-          {adjust === "transfer" ? "Transfer" : "Save count"}
+          {adjust === "transfer" ? tr("Transfer") : tr("Save count")}
         </button>
       </form>
 
-      <h3 className="panel-sub">Stock entries</h3>
+      <h3 className="panel-sub">{tr("Stock entries")}</h3>
       {entries.isSuccess && entries.data.length === 0 ? (
-        <p className="panel-empty">No stock entries.</p>
+        <p className="panel-empty">{tr("No stock entries.")}</p>
       ) : null}
       <ol className="ledger">
         {entries.data?.map((entry) => (
           <li key={entry.id}>
             <span>
-              {formatAmount(entry.amount)} at {locationName(entry.location_id)}
-              {entry.open ? ", opened" : ""}
-              {entry.best_before_date ? `, best before ${entry.best_before_date}` : ""}
+              {formatAmount(entry.amount)}
+              {locationsEnabled ? tr(" at %s", String(locationName(entry.location_id))) : ""}
+              {openingEnabled && entry.open ? tr(", opened") : ""}
+              {datesEnabled && entry.best_before_date
+                ? tr(", best before %s", String(entry.best_before_date))
+                : ""}
             </span>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setEditEntry(entry);
-                setEntryAmount(String(entry.amount));
-                setEntryExpiry(entry.best_before_date ?? "");
-              }}
-            >
-              Edit
-            </button>
+            <div className="actions">
+              <GrocycodeActions
+                kind="stock-entry"
+                id={entry.id}
+                name={tr("Stock entry %s", String(entry.id))}
+                compact
+              />
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setEditEntry(entry);
+                }}
+              >
+                {tr("Edit")}
+              </button>
+            </div>
           </li>
         ))}
       </ol>
       {editEntry ? (
-        <form className="panel-body move-form" onSubmit={submitEntry}>
-          <div className="field-row">
-            <label className="field">
-              <span>Entry amount</span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                required
-                value={entryAmount}
-                onChange={(e) => setEntryAmount(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Best before</span>
-              <input
-                type="date"
-                value={entryExpiry}
-                onChange={(e) => setEntryExpiry(e.target.value)}
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button type="submit" className="btn btn-primary" disabled={action.isPending}>
-              Save entry
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setEditEntry(null)}>
-              Cancel
-            </button>
-          </div>
-        </form>
+        <StockEntryDialog
+          entryId={editEntry.id}
+          onCancel={() => setEditEntry(null)}
+          onSaved={(bookings) => {
+            const booking = bookings[0];
+            setEditEntry(null);
+            notify({
+              message: tr("Stock entry successfully updated"),
+              undo: booking
+                ? async () => {
+                    await api.action(`/api/stock/bookings/${booking.id}/undo`);
+                    await invalidate();
+                  }
+                : undefined,
+            });
+          }}
+        />
       ) : null}
 
-      <h3 className="panel-sub">Price history</h3>
-      {prices.isSuccess && prices.data.length === 0 ? (
-        <p className="panel-empty">No purchase prices recorded yet.</p>
+      {priceEnabled ? (
+        <>
+          <h3 className="panel-sub">{tr("Price history")}</h3>
+          {prices.isSuccess && prices.data.length === 0 ? (
+            <p className="panel-empty">{tr("No purchase prices recorded yet.")}</p>
+          ) : null}
+          <ol className="ledger">
+            {prices.data?.slice(0, 8).map((row, index) => (
+              <li key={index}>
+                <span>{formatPrice(row.price)}</span>
+                <span className="faint">{row.row_created_timestamp ?? ""}</span>
+              </li>
+            ))}
+          </ol>
+        </>
       ) : null}
-      <ol className="ledger">
-        {prices.data?.slice(0, 8).map((row, index) => (
-          <li key={index}>
-            <span>{row.price}</span>
-            <span className="faint">{row.row_created_timestamp ?? ""}</span>
-          </li>
-        ))}
-      </ol>
 
-      <h3 className="panel-sub">Recent bookings</h3>
+      <h3 className="panel-sub">{tr("Recent bookings")}</h3>
       <ol className="ledger">
         {bookings.data?.map((log) => (
           <li key={log.id}>
             <span>
               {log.transaction_type.replace(/_/g, " ")}: {formatAmount(log.amount)}
-              {log.undone ? " (undone)" : ""}
+              {log.undone ? tr(" (undone)") : ""}
             </span>
             {!log.undone ? (
               <button
@@ -274,7 +297,7 @@ export function StockLedger({ productId }: { productId: number }) {
                   action.mutate(() => api.action(`/api/stock/bookings/${log.id}/undo`))
                 }
               >
-                Undo
+                {tr("Undo")}
               </button>
             ) : null}
           </li>

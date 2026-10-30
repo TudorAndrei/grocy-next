@@ -1,6 +1,74 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+
+
+@pytest.mark.parametrize("configuration", [{"mode": "dev"}, {"disable_auth": True}])
+def test_configured_authentication_bypass_uses_the_first_user(client, monkeypatch, configuration):
+    from grocy.core.config import get_settings
+
+    for name, value in configuration.items():
+        monkeypatch.setattr(get_settings(), name, value)
+    for headers in ({}, {"GROCY-API-KEY": "invalid"}):
+        user = client.get("/api/user", headers=headers)
+        assert user.status_code == 200, user.text
+        assert user.json()[0]["id"] == 1
+        assert client.get("/api/v2/api-keys", headers=headers).status_code == 200
+
+
+@pytest.mark.parametrize("mode,suffix", [("demo", None), ("prerelease", "custom_mode")])
+def test_mode_startup_initializes_its_own_database(tmp_path, monkeypatch, mode, suffix):
+    import sqlite3
+
+    from grocy.core.config import clear_settings_cache
+    from grocy.db.session import reset_engine
+    from grocy.main import create_app
+
+    production = tmp_path / "production.db"
+    data = tmp_path / "mode"
+    monkeypatch.setenv("GROCY_DATABASE_URL", f"sqlite+aiosqlite:///{production}")
+    monkeypatch.setenv("GROCY_DATAPATH", str(data))
+    monkeypatch.setenv("GROCY_MODE", mode)
+    monkeypatch.setenv("GROCY_DEFAULT_LOCALE", "de")
+    if suffix is None:
+        monkeypatch.delenv("GROCY_DEMO_DB_SUFFIX", raising=False)
+    else:
+        monkeypatch.setenv("GROCY_DEMO_DB_SUFFIX", suffix)
+    clear_settings_cache()
+    reset_engine()
+    with TestClient(create_app()) as api:
+        task = api.post("/api/objects/tasks", json={"name": "Mode startup task"})
+        assert task.status_code == 200, task.text
+        identity = task.json()["created_object_id"]
+        assert api.post(f"/api/tasks/{identity}/complete", json={}).status_code == 204
+    path = data / f"grocy_{suffix or 'de'}.db"
+    assert path.is_file()
+    with sqlite3.connect(path) as database:
+        assert database.execute(
+            "SELECT done FROM tasks WHERE name='Mode startup task'"
+        ).fetchone() == (1,)
+    assert not production.exists()
+
+
+def test_api_base_path_preserves_extension_authentication_and_cors(
+    client, api_headers, monkeypatch
+):
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "base_path", "/grocy")
+    origin = {"Origin": "http://localhost:5173"}
+    legacy = client.get("/grocy/api/system/info", headers={**api_headers, **origin})
+    assert legacy.status_code == 200, legacy.text
+    assert legacy.headers["Access-Control-Allow-Origin"] == "*"
+    extension = client.get("/grocy/api/v2/api-keys", headers={**api_headers, **origin})
+    assert extension.status_code == 200, extension.text
+    assert extension.headers["Access-Control-Allow-Origin"] == origin["Origin"]
+    assert extension.headers["Cache-Control"] == "no-store"
+    denied = client.get("/grocy/api/v2/api-keys", headers=origin)
+    assert denied.status_code == 401, denied.text
+    assert denied.json()["error_code"] == "unauthorized"
+    assert denied.headers["Cache-Control"] == "no-store"
 
 
 def test_permissions_keys_and_mcp_use_stored_identity(
@@ -326,3 +394,75 @@ def test_native_key_use_preserves_file_time_and_credential_priority(tmp_path, mo
             params={"GROCY-API-KEY": "native-orphan"},
         )
         assert preferred.status_code == 200 and preferred.json()[0]["id"] == 1
+
+
+def test_named_file_links_accept_session_and_key_credentials_under_a_prefix(
+    client, api_headers, tmp_path, monkeypatch
+):
+    import base64
+    from urllib.parse import quote
+
+    from sqlalchemy import text
+
+    from grocy.core.config import get_settings
+    from grocy.db.session import get_session_factory
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "files_root", tmp_path)
+    monkeypatch.setattr(settings, "base_path", "/house")
+    monkeypatch.setattr(settings, "base_url", "http://testserver/house")
+    monkeypatch.setattr(settings, "default_permissions", [])
+    assert (
+        client.post(
+            "/house/api/users",
+            headers=api_headers,
+            json={"username": "File reader", "password": "secret"},
+        ).status_code
+        == 204
+    )
+    user_id = next(
+        user["id"]
+        for user in client.get("/house/api/users", headers=api_headers).json()
+        if user["username"] == "File reader"
+    )
+    key = client.post(
+        "/house/api/v2/api-keys", headers=api_headers, json={"user_id": user_id}
+    ).json()["api_key"]
+    source = base64.b64encode(b"saved.txt").decode()
+    display = base64.b64encode(b"A renamed manual.txt").decode()
+    link = f"/house/files/userfiles/{quote(source + '_' + display, safe='')}"
+    assert (
+        client.put(
+            f"/house/api/files/userfiles/{source}", headers=api_headers, content=b"Manual"
+        ).status_code
+        == 204
+    )
+    preflight = client.options(
+        link, headers={"Origin": "https://example.invalid", "Access-Control-Request-Method": "GET"}
+    )
+    assert preflight.status_code == 200 and preflight.headers["access-control-allow-origin"] == "*"
+    denied = client.get(link, follow_redirects=False)
+    assert (
+        denied.status_code == 302 and denied.headers["location"] == "http://testserver/house/login"
+    )
+    assert client.get(link, headers={"GROCY-API-KEY": key}).content == b"Manual"
+    assert client.get(link, params={"GROCY-API-KEY": key}).content == b"Manual"
+
+    async def save_session():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text(
+                    "INSERT INTO sessions(session_key,user_id,expires) "
+                    "VALUES ('file-browser-session',:user,'2999-12-31 23:59:59')"
+                ),
+                {"user": user_id},
+            )
+            await session.commit()
+
+    assert client.portal is not None
+    client.portal.call(save_session)
+    client.cookies.set("grocy_session", "file-browser-session")
+    assert client.get(link).content == b"Manual"
+    assert client.head(link).status_code == 200
+    client.cookies.clear()
+    assert client.get(link, follow_redirects=False).status_code == 302

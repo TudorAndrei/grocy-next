@@ -1,3 +1,4 @@
+import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -9,8 +10,8 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-from grocy.compatibility import client_defaults
 from grocy.compatibility.input import database_error
+from grocy.compatibility.php import argument_error, int_argument, php_error, php_string
 from grocy.compatibility.query import query_rows
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
@@ -19,29 +20,12 @@ from grocy.core.time import server_timezone
 from grocy.db.native_schema import SCHEMA
 
 
-def _text(payload: dict[str, Any], name: str) -> str | None:
-    value = payload.get(name)
-    if value is None or isinstance(value, str):
-        return value
-    if isinstance(value, bool):
-        return "1" if value else ""
-    if isinstance(value, int):
-        return str(value)
-    if isinstance(value, float):
-        return str(int(value)) if value.is_integer() and abs(value) < 1e15 else repr(value)
-    raise GrocyError(f"Invalid value for field {name}", code=None)
-
-
-def _required(values: dict[str, str | None], *names: str) -> None:
-    for name in names:
-        if values[name] is None:
-            raise GrocyError(f"Invalid value for field {name}", code=None)
-
-
 def _permission(value: Any) -> Any:
     if isinstance(value, (dict, list)):
-        raise GrocyError("Invalid permission", code=None)
-    return int(value) if isinstance(value, bool) else value
+        raise php_error("PDO::quote(): Argument #1 ($string) must be of type string, array given")
+    if value is None:
+        return None
+    return php_string(int(value) if isinstance(value, bool) else value).split("\x00", 1)[0]
 
 
 class UsersService:
@@ -65,7 +49,7 @@ class UsersService:
         return [dict(row) for row in result.mappings()]
 
     async def list_users(self, query_string: bytes = b"") -> list[dict[str, Any]]:
-        return await query_rows(self.session, "users_dto", query_string)
+        return await query_rows(self.session, "users_dto", query_string, caught=True)
 
     async def _password(self, value: str | None) -> str:
         if value is None or "\x00" in value:
@@ -73,13 +57,31 @@ class UsersService:
         hashed = await run_in_threadpool(bcrypt.hashpw, value.encode()[:72], bcrypt.gensalt())
         return hashed.decode().replace("$2b$", "$2y$", 1)
 
-    def _profile(self, payload: dict[str, Any]) -> dict[str, str | None]:
-        names = ("username", "first_name", "last_name", "picture_file_name", "password")
-        return {name: _text(payload, name) for name in names}
+    def _profile(self, payload: dict[str, Any], *, editing: bool = False) -> dict[str, str | None]:
+        values = {}
+        method = "EditUser" if editing else "CreateUser"
+        fields = (
+            ("username", "username", False),
+            ("first_name", "firstName", not editing),
+            ("last_name", "lastName", not editing),
+            ("password", "password", editing),
+            ("picture_file_name", "pictureFileName", True),
+        )
+        for position, (field, parameter, nullable) in enumerate(fields, start=2 if editing else 1):
+            value = payload.get(field)
+            if isinstance(value, (list, dict)) or (value is None and not nullable):
+                raise argument_error(
+                    "Grocy\\Services\\UsersService::" + method,
+                    position,
+                    parameter,
+                    "?string" if nullable else "string",
+                    value,
+                )
+            values[field] = None if value is None else php_string(value)
+        return values
 
     async def create_user(self, payload: dict[str, Any]) -> None:
         values = self._profile(payload)
-        _required(values, "username")
         values["password"] = await self._password(values["password"])
         async with self._write():
             connection = await self.session.connection()
@@ -102,13 +104,13 @@ class UsersService:
                     )
 
     async def update_user(self, user_id: str, payload: dict[str, Any]) -> None:
-        values = self._profile(payload)
-        _required(values, "username", "first_name", "last_name")
+        identity = int_argument(user_id, "Grocy\\Services\\UsersService::EditUser", "userId")
+        values = self._profile(payload, editing=True)
         password = values.pop("password")
         if password not in (None, "", "0"):
             values["password"] = await self._password(password)
         exists = await self.session.scalar(
-            text("SELECT 1 FROM users WHERE id=:user_id"), {"user_id": user_id}
+            text("SELECT 1 FROM users WHERE id=:user_id"), {"user_id": identity}
         )
         if not exists:
             raise GrocyError("User does not exist", code=None)
@@ -116,7 +118,7 @@ class UsersService:
         async with self._write():
             await self.session.execute(
                 text(f"UPDATE users SET {assignments} WHERE id=:user_id"),
-                {**values, "user_id": user_id},
+                {**values, "user_id": identity},
             )
 
     async def delete_user(self, user_id: str) -> None:
@@ -126,30 +128,41 @@ class UsersService:
                 text("DELETE FROM users WHERE id=:user_id"), {"user_id": user_id}
             )
             if not result.rowcount:
-                raise GrocyError("User does not exist", code=None)
+                raise php_error("Call to a member function delete() on null")
 
     async def settings(self, user_id: int) -> dict[str, Any]:
         result = await self.session.execute(
             text('SELECT "key",value FROM user_settings WHERE user_id=:user_id'),
             {"user_id": user_id},
         )
-        return {**client_defaults()["user_settings"], **dict(result.all())}
+        settings = get_settings().user_defaults()
+        next_index = 0
+        for key, value in result:
+            if re.fullmatch(r"0|-?[1-9][0-9]*", key) and -(2**63) <= int(key) < 2**63:
+                key = str(next_index)
+                next_index += 1
+            settings[key] = value
+        return settings
 
     async def setting(self, user_id: int, key: str) -> Any:
-        return (await self.settings(user_id)).get(key)
+        result = await self.session.execute(
+            text('SELECT value FROM user_settings WHERE user_id=:user_id AND "key"=:key'),
+            {"user_id": user_id, "key": key},
+        )
+        row = result.first()
+        return row[0] if row is not None else get_settings().user_defaults().get(key)
 
     async def set_setting(self, user_id: int, key: str, value: Any) -> None:
-        if isinstance(value, (dict, list)):
-            raise GrocyError("Invalid setting value", code=None)
         async with self._write():
             existing = await self.session.scalar(
                 text('SELECT id FROM user_settings WHERE user_id=:user_id AND "key"=:key'),
                 {"user_id": user_id, "key": key},
             )
+            column = "value_id" if isinstance(value, (dict, list)) else "value"
             statement = (
-                'INSERT INTO user_settings(user_id,"key",value) VALUES (:user_id,:key,:value)'
+                f'INSERT INTO user_settings(user_id,"key",{column}) VALUES (:user_id,:key,:value)'
                 if existing is None
-                else "UPDATE user_settings SET value=:value,row_updated_timestamp=:updated "
+                else f"UPDATE user_settings SET {column}=:value,row_updated_timestamp=:updated "
                 "WHERE id=:id"
             )
             await self.session.execute(
@@ -158,7 +171,7 @@ class UsersService:
                     "id": existing,
                     "user_id": user_id,
                     "key": key,
-                    "value": value,
+                    "value": None if isinstance(value, (dict, list)) else value,
                     "updated": datetime.now(server_timezone()).strftime("%Y-%m-%d %H:%M:%S"),
                 },
             )
@@ -179,17 +192,26 @@ class UsersService:
         return [dict(row) for row in result.mappings()]
 
     async def add_permission(self, user_id: str, value: Any) -> None:
-        permission_id = _permission(value)
         async with self._write():
+            column = "permission_id_id" if isinstance(value, (dict, list)) else "permission_id"
             await self.session.execute(
                 text(
-                    "INSERT INTO user_permissions(user_id,permission_id) "
+                    f"INSERT INTO user_permissions(user_id,{column}) "
                     "VALUES (:user_id,:permission_id)"
                 ),
-                {"user_id": user_id, "permission_id": permission_id},
+                {
+                    "user_id": user_id,
+                    "permission_id": None
+                    if isinstance(value, (dict, list))
+                    else _permission(value),
+                },
             )
 
     async def set_permissions(self, user_id: str, values: Any) -> None:
+        async with self._write():
+            await self.session.execute(
+                text("DELETE FROM user_permissions WHERE user_id=:user_id"), {"user_id": user_id}
+            )
         if get_settings().mode in {"demo", "prerelease"}:
             permissions = [1]
         elif isinstance(values, dict):
@@ -198,15 +220,13 @@ class UsersService:
             permissions = [_permission(value) for value in values]
         else:
             permissions = []
-        async with self._write():
-            await self.session.execute(
-                text("DELETE FROM user_permissions WHERE user_id=:user_id"), {"user_id": user_id}
-            )
-            for permission_id in permissions:
-                await self.session.execute(
-                    text(
-                        "INSERT INTO user_permissions(user_id,permission_id) "
-                        "VALUES (:user_id,:permission_id)"
+        if permissions:
+            async with self._write():
+                connection = await self.session.connection()
+                await connection.exec_driver_sql(
+                    "INSERT INTO user_permissions(user_id,permission_id) VALUES "
+                    + ",".join("(?,?)" for _ in permissions),
+                    tuple(
+                        value for permission_id in permissions for value in (user_id, permission_id)
                     ),
-                    {"user_id": user_id, "permission_id": permission_id},
                 )

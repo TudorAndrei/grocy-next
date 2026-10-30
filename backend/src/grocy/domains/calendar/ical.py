@@ -6,7 +6,7 @@ from typing import Any
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from grocy.compatibility.php import argument_error, empty, php_string
+from grocy.compatibility.php import argument_error, empty, php_error, php_string
 
 _EPOCH = datetime(1970, 1, 1)
 _UTC_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
@@ -127,6 +127,9 @@ def _transitions(zone: ZoneInfo, begin: int, end: int) -> list[tuple[int, tuple[
 def _timezone(zone: ZoneInfo, begin: int, end: int) -> list[str]:
     lines = ["BEGIN:VTIMEZONE", f"TZID:{_text(zone.key)}"]
     for instant, (offset, daylight, name) in _transitions(zone, begin, end):
+        # The pinned PHP ISO8601 parser cannot read signed or expanded UTC years.
+        if not 0 <= _civil(instant // 86400)[0] <= 9999:
+            raise php_error("Call to a member function setTimezone() on false")
         kind = "DAYLIGHT" if daylight else "STANDARD"
         lines += [
             f"BEGIN:{kind}",

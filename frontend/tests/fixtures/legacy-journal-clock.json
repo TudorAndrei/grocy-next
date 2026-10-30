@@ -1,0 +1,166 @@
+{
+  "at": "2026-10-28T14:00:00",
+  "baseline": "Grocy 4.5.0 / stockjournal Undo clock and RefreshContextualTimeago",
+  "cases": [
+    {
+      "locale": "bg",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "ca",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "cs",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "da",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "de",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "el",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "x",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "es",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "et",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "fi",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "fr",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "he",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "hu",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "it",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "ja",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "ko",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "lt",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "nl",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "nb",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "pl",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "pt-br",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "pt",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "ro",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "ru",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "sk",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "sl",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "sv",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "ta",
+      "relative": "Today",
+      "timestamp": "௨௦௨௬-௧௦-௨௮ ௧௪:௦௦:௦௦"
+    },
+    {
+      "locale": "tr",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "uk",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "zh-cn",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    },
+    {
+      "locale": "zh-tw",
+      "relative": "Today",
+      "timestamp": "2026-10-28 14:00:00"
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { flushSync } from "react-dom";
+import { useI18n } from "@/lib/i18n";
+import { Icon } from "./Icon";
+
+const FullscreenContext = createContext({ expanded: false, toggle: () => {}, print: () => {} });
+
+export function FullscreenPrint() {
+  const { print } = useContext(FullscreenContext);
+  const { t } = useI18n();
+
+  return (
+    <button type="button" className="btn btn-ghost" onClick={print}>
+      {t("Print")}
+    </button>
+  );
+}
+
+export function FullscreenToggle() {
+  const { expanded, toggle } = useContext(FullscreenContext);
+  const { t } = useI18n();
+
+  return (
+    <button type="button" className="btn btn-ghost" aria-pressed={expanded} onClick={toggle}>
+      <Icon name={expanded ? "close" : "expand"} />
+      {t(expanded ? "Leave fullscreen" : "Expand to fullscreen")}
+    </button>
+  );
+}
+
+export function FullscreenCard({
+  label,
+  children,
+  hash = false,
+  defaultExpanded = false,
+  onClose,
+  className,
+  expanded: controlledExpanded,
+  onExpandedChange,
+}: {
+  label: string;
+  children: ReactNode;
+  hash?: boolean;
+  defaultExpanded?: boolean;
+  onClose?: () => void;
+  className?: string;
+  expanded?: boolean;
+  onExpandedChange?: (value: boolean) => void;
+}) {
+  const [internalExpanded, setInternalExpanded] = useState(
+    () => defaultExpanded || (hash && window.location.hash === "#fullscreen"),
+  );
+
+  const expanded = controlledExpanded ?? internalExpanded;
+
+  const setExpanded = useCallback(
+    (value: boolean) => {
+      setInternalExpanded(value);
+      onExpandedChange?.(value);
+    },
+    [onExpandedChange],
+  );
+
+  const root = useRef<HTMLElement>(null);
+
+  const change = useCallback(
+    (value: boolean) => {
+      setExpanded(value);
+
+      if (!value) onClose?.();
+
+      if (hash) {
+        if (value) {
+          window.location.hash = "fullscreen";
+
+          return;
+        }
+
+        const url = new URL(window.location.href);
+        url.hash = "";
+        window.history.replaceState(window.history.state, "", url);
+      }
+    },
+    [hash, onClose, setExpanded],
+  );
+
+  useEffect(() => {
+    if (!hash) return;
+    const onHashChange = () => setExpanded(window.location.hash === "#fullscreen");
+    window.addEventListener("hashchange", onHashChange);
+
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [hash, setExpanded]);
+
+  useEffect(() => {
+    const card = root.current;
+
+    if (!expanded || !card) return;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    const hidden: Array<{ element: HTMLElement; inert: boolean }> = [];
+    let branch: HTMLElement = card;
+
+    while (branch.parentElement) {
+      for (const sibling of branch.parentElement.children) {
+        if (sibling instanceof HTMLElement && sibling !== branch) {
+          hidden.push({ element: sibling, inert: sibling.inert });
+          sibling.inert = true;
+        }
+      }
+
+      branch = branch.parentElement;
+
+      if (branch === document.body) break;
+    }
+
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("fullscreen-card");
+    card.focus();
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (document.querySelector("[popover][data-expanded]")) return;
+        event.preventDefault();
+        change(false);
+
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const controls = [
+        ...card!.querySelectorAll<HTMLElement>(
+          'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), summary, iframe, object, [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((element) => !element.closest("[hidden], [inert], [popover]:not([data-expanded])"));
+
+      const first = controls[0];
+      const last = controls.at(-1);
+
+      if (!first || !last) {
+        event.preventDefault();
+        card!.focus();
+      } else if (
+        event.shiftKey &&
+        (document.activeElement === first || document.activeElement === card)
+      ) {
+        event.preventDefault();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || document.activeElement === card)
+      ) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKey);
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      document.body.classList.remove("fullscreen-card");
+
+      for (const { element, inert } of hidden) element.inert = inert;
+
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [expanded, change]);
+
+  return (
+    <FullscreenContext.Provider
+      value={{
+        expanded,
+        toggle: () => change(!expanded),
+        print: () => {
+          flushSync(() => setExpanded(defaultExpanded));
+
+          if (hash) {
+            const url = new URL(window.location.href);
+            url.hash = "";
+            window.history.replaceState(window.history.state, "", url);
+          }
+
+          window.print();
+        },
+      }}
+    >
+      <section
+        ref={root}
+        className={className ? `fullscreen-surface ${className}` : "fullscreen-surface"}
+        data-expanded={expanded || undefined}
+        aria-label={label}
+        role={expanded ? "dialog" : undefined}
+        aria-modal={expanded || undefined}
+        tabIndex={expanded ? -1 : undefined}
+      >
+        {children}
+      </section>
+    </FullscreenContext.Provider>
+  );
+}

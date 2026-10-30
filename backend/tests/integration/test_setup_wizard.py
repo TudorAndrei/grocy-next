@@ -54,7 +54,11 @@ def test_setup_rejects_short_password(empty_client: TestClient):
     assert empty_client.get("/api/v2/setup").json() == {"needs_setup": True}
 
 
-def test_login_issues_key_and_logout_revokes_it(empty_client: TestClient):
+@pytest.mark.parametrize("auth_mode", ["default", "session"])
+def test_login_issues_key_and_logout_revokes_it(empty_client: TestClient, monkeypatch, auth_mode):
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "auth_mode", auth_mode)
     assert _setup(empty_client).status_code == 201
 
     wrong = {"username": "owner", "password": "wrong password"}
@@ -68,15 +72,25 @@ def test_login_issues_key_and_logout_revokes_it(empty_client: TestClient):
     assert login.status_code == 200
     headers = {"GROCY-API-KEY": login.json()["api_key"]}
     assert empty_client.get("/api/system/info", headers=headers).status_code == 200
+    if auth_mode == "session":
+        assert "grocy_session" in login.cookies
+        assert empty_client.get("/api/user").json()[0]["username"] == "owner"
+        assert empty_client.get("/api/v2/api-keys").status_code == 200
 
     assert empty_client.post("/api/v2/logout", headers=headers).status_code == 204
     assert empty_client.get("/api/system/info", headers=headers).status_code == 401
 
 
-def test_login_accepts_password_set_through_users_api(client: TestClient, api_headers: dict):
+@pytest.mark.parametrize("auth_mode", ["default", "ldap", "reverse-proxy"])
+def test_password_login_uses_the_configured_authentication_provider(
+    client: TestClient, api_headers: dict, monkeypatch, auth_mode
+):
+    from grocy.core.config import get_settings
+
     created = client.post(
         "/api/users", headers=api_headers, json={"username": "cook", "password": "pan-fried"}
     )
     assert created.status_code == 204
+    monkeypatch.setattr(get_settings(), "auth_mode", auth_mode)
     login = client.post("/api/v2/login", json={"username": "cook", "password": "pan-fried"})
-    assert login.status_code == 200
+    assert login.status_code == {"default": 200, "ldap": 401, "reverse-proxy": 403}[auth_mode]

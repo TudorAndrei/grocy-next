@@ -17,6 +17,10 @@ cp .env.example .env
 
 Set `VITE_API_KEY` to match your backend API key. Leave `VITE_API_BASE` empty to use the dev proxy.
 
+To deploy under a path such as `/grocy/`, set `VITE_BASE_PATH=/grocy/` when you build or start Vite. Set `GROCY_BASE_PATH=/grocy` on the Python API. Page links, static files, API requests, and document downloads use this prefix. A saved connection URL or an explicit `VITE_API_BASE` has priority over the default API prefix.
+
+For Docker Compose, set `GROCY_BASE_PATH=/grocy` and rebuild both services. Compose passes the path to the web build and the Python API. Open `/grocy/` on the web service.
+
 ## Development
 
 ```bash

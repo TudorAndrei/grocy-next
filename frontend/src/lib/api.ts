@@ -1,6 +1,15 @@
 import { z } from "zod";
+import {
+  stockJournalSchema,
+  stockSummarySchema,
+  type JournalSearch,
+  type SummarySearch,
+} from "./stock-journal";
+import { stockEntriesSchema } from "./stock-entries";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
 import { readApiConfig } from "./config";
+import { localizationSchema } from "./localization";
+import { recipeOverviewSchema, recipeViewSchema } from "./recipe-view";
 import type {
   BarcodeProduct,
   Battery,
@@ -45,11 +54,15 @@ export type PurchaseOptions = {
   best_before_date?: string | null;
   location_id?: number | null;
   price?: number | null;
+  shopping_location_id?: number | null;
+  purchased_date?: string | null;
+  note?: string | null;
 };
 
 export type ConsumeOptions = {
   spoiled?: boolean;
   location_id?: number | null;
+  exact_amount?: boolean;
 };
 
 function post<T>(path: string, body?: JsonValue): Promise<T> {
@@ -85,6 +98,20 @@ const errorBodySchema = z.object({
   error_message: z.string().optional().catch(undefined),
   detail: z.string().optional().catch(undefined),
 });
+
+const configuredLocaleSchema = z.string().optional().catch(undefined);
+const contentSchema = z.object({ html: z.string() });
+const createdObjectSchema = z.object({ created_object_id: z.coerce.number().int() });
+
+const mealPlanSectionsSchema = z.array(
+  z.object({
+    id: z.number(),
+    name: z
+      .string()
+      .nullable()
+      .transform((name) => name ?? ""),
+  }),
+);
 
 function errorMessage(body: JsonValue, fallback: string): string {
   const result = errorBodySchema.safeParse(body);
@@ -149,6 +176,53 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
 }
 
 export const api = {
+  getStockEntries: async (signal?: AbortSignal) =>
+    stockEntriesSchema.parse(await request("/api/v2/stock/entries", { signal })),
+  getStockJournal: async (search: JournalSearch, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+
+    for (const key of ["product", "months"] as const)
+      if (search[key] !== undefined) query.set(key, search[key]);
+
+    return stockJournalSchema.parse(await request(`/api/v2/stock/journal?${query}`, { signal }));
+  },
+  getStockJournalSummary: async (search: SummarySearch, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+
+    for (const key of ["product_id", "user_id", "transaction_type"] as const)
+      if (search[key] !== undefined) query.set(key, search[key]);
+
+    return stockSummarySchema.parse(
+      await request(`/api/v2/stock/journal/summary?${query}`, { signal }),
+    );
+  },
+  getMealPlanSections: async () =>
+    mealPlanSectionsSchema.parse(
+      await request<JsonValue>("/api/objects/meal_plan_sections?order=sort_number:asc"),
+    ),
+  getRecipeOverview: async () =>
+    recipeOverviewSchema.parse(await request<JsonValue>("/api/v2/recipes/overview")),
+  getRecipeView: async (id: number) =>
+    recipeViewSchema.parse(await request<JsonValue>(`/api/v2/recipes/${id}/view`)),
+  copyRecipe: async (id: number) =>
+    createdObjectSchema.parse(
+      await request<JsonValue>(`/api/recipes/${id}/copy`, {
+        method: "POST",
+        body: "{}",
+      }),
+    ).created_object_id,
+  getContentList: async (entity: "products" | "recipes" | "equipment") =>
+    z
+      .array(z.object({ id: z.number(), html: z.string() }))
+      .parse(await request<JsonValue>(`/api/v2/content/${entity}`)),
+  getContent: async (entity: "products" | "recipes" | "equipment", id: number) =>
+    contentSchema.parse(await request<JsonValue>(`/api/v2/content/${entity}/${id}`)),
+  getLocalization: async (locale?: string) =>
+    localizationSchema.parse(
+      await request<JsonValue>(
+        `/api/v2/localization${locale ? `?locale=${encodeURIComponent(locale)}` : ""}`,
+      ),
+    ),
   objects: (entity: string) => request<import("./entities").EntityRow[]>(`/api/objects/${entity}`),
   createObject: (entity: string, body: JsonObject) =>
     request<{ created_object_id: string }>(`/api/objects/${entity}`, {
@@ -175,6 +249,22 @@ export const api = {
     request<NutritionRecord>(`/api/v2/products/${id}/nutrition/revisions/${revision}/restore`, {
       method: "POST",
     }),
+  getProductFormOptions: async (id: number | null) =>
+    z
+      .object({
+        references: z.record(z.string(), z.array(z.number().int())),
+        parent_disabled: z.boolean(),
+        conversions: z.array(
+          z.object({
+            from_qu_id: z.number().int(),
+            to_qu_id: z.number().int(),
+            factor: z.number(),
+          }),
+        ),
+      })
+      .parse(
+        await request(`/api/v2/products/form-options${id === null ? "" : `?product_id=${id}`}`),
+      ),
   listProducts: () => request<ProductListResponse>("/api/objects/products"),
 
   listLocations: () => request<Location[]>("/api/objects/locations"),
@@ -209,26 +299,38 @@ export const api = {
     request<StockProductDetails>(`/api/stock/products/${productId}`),
 
   purchaseStock: (productId: number, amount: number, options: PurchaseOptions = {}) =>
-    post<Booking>(`/api/stock/products/${productId}/add`, { amount, ...options }),
+    post<Booking[]>(`/api/stock/products/${productId}/add`, { amount, ...options }),
 
   consumeStock: (productId: number, amount: number, options: ConsumeOptions = {}) =>
-    post<Booking>(`/api/stock/products/${productId}/consume`, { amount, ...options }),
+    post<Booking[]>(`/api/stock/products/${productId}/consume`, { amount, ...options }),
 
   openStock: (productId: number, amount: number) =>
-    post<Booking>(`/api/stock/products/${productId}/open`, { amount }),
+    post<Booking[]>(`/api/stock/products/${productId}/open`, { amount }),
 
   undoTransaction: (transactionId: string) =>
     post<void>(`/api/stock/transactions/${transactionId}/undo`),
 
   getShoppingList: (listId = 1) => request<ShoppingList>(`/api/v2/shopping-lists/${listId}`),
 
-  addShoppingProduct: (productId: number, amount: number, note?: string | null, listId = 1) =>
-    post<void>("/api/stock/shoppinglist/add-product", {
+  addShoppingProduct: (
+    productId: number,
+    amount: number,
+    note?: string | null,
+    listId = 1,
+    quId?: number | null,
+  ) =>
+    post<void>("/api/v2/shopping-lists/items", {
       product_id: productId,
-      product_amount: amount,
-      list_id: listId,
+      amount,
+      shopping_list_id: listId,
+      qu_id: quId ?? null,
       note: note || null,
     }),
+
+  purchaseShoppingItem: (listId: number, itemId: number) =>
+    post<{ purchased: boolean; bookings: Booking[] }>(
+      `/api/v2/shopping-lists/${listId}/items/${itemId}/purchase`,
+    ),
 
   removeShoppingProduct: (productId: number, amount: number, listId = 1) =>
     post<void>("/api/stock/shoppinglist/remove-product", {
@@ -250,17 +352,6 @@ export const api = {
     post<void>("/api/stock/shoppinglist/add-missing-products", { list_id: listId }),
 
   listRecipes: () => request<Recipe[]>("/api/objects/recipes"),
-
-  // The Grocy list route returns recipe rows, so ask the v2 route per recipe.
-  listRecipeFulfillment: async () => {
-    const recipes = await request<Recipe[]>("/api/objects/recipes");
-
-    return Promise.all(
-      recipes.map((recipe) =>
-        request<RecipeFulfillment>(`/api/v2/recipes/${recipe.id}/fulfillment`),
-      ),
-    );
-  },
 
   getRecipeFulfillment: (recipeId: number) =>
     request<RecipeFulfillment>(`/api/v2/recipes/${recipeId}/fulfillment`),
@@ -304,6 +395,11 @@ export const api = {
     ),
 
   getSystemInfo: () => request<SystemInfo>("/api/system/info"),
+  getSystemConfig: async (): Promise<JsonObject & { LOCALE?: string }> => {
+    const data = await request<JsonObject>("/api/system/config");
+
+    return { ...data, LOCALE: configuredLocaleSchema.parse(data.LOCALE) };
+  },
   setupStatus: () => request<{ needs_setup: boolean }>("/api/v2/setup"),
   runSetup: (body: { setup_token: string; username: string; password: string }) =>
     request<AuthResult>("/api/v2/setup", {
@@ -334,11 +430,13 @@ export const api = {
     }),
 
   getProductByBarcode: (barcode: string) =>
-    request<BarcodeProduct>(`/api/stock/products/by-barcode/${encodeURIComponent(barcode)}`),
+    request<Pick<BarcodeProduct, "product">>(
+      `/api/stock/products/by-barcode/${encodeURIComponent(barcode)}`,
+    ).then(({ product }): BarcodeProduct => ({ product, product_id: product.id })),
 
   externalBarcodeLookup: (barcode: string, add = false) =>
     request<ExternalBarcodeProduct | null>(
-      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}${add ? "?add=1" : ""}`,
+      `/api/stock/barcodes/external-lookup/${encodeURIComponent(barcode)}${add ? "?add=true" : ""}`,
     ),
 
   stockActionByBarcode: (
@@ -372,6 +470,9 @@ export const api = {
 };
 
 export const queryKeys = {
+  contentList: (entity: string) => ["content", entity] as const,
+  content: (entity: string, id: number) => ["content", entity, id] as const,
+  localization: (locale?: string) => ["localization", locale ?? "default"] as const,
   products: ["products"] as const,
   locations: ["locations"] as const,
   quantityUnits: ["quantity-units"] as const,
@@ -382,7 +483,6 @@ export const queryKeys = {
   stock: (id: number) => ["stock", id] as const,
   stockOverview: ["stock", "overview"] as const,
   stockVolatile: ["stock", "volatile"] as const,
-  stockJournal: (limit: number) => ["stock", "journal", limit] as const,
   shopping: (id = 1) => ["shopping", id] as const,
   recipes: ["recipes"] as const,
   recipesFulfillment: ["recipe-fulfillment"] as const,
@@ -391,8 +491,11 @@ export const queryKeys = {
   tasks: ["tasks"] as const,
   batteries: ["batteries"] as const,
   systemInfo: ["system", "info"] as const,
+  systemConfig: ["system", "config"] as const,
   setup: ["setup"] as const,
   userSettings: ["user", "settings"] as const,
+  recipeView: (id: number) => ["recipe-view", id] as const,
+  recipeOverview: ["recipe-overview"] as const,
   currentUser: ["user", "current"] as const,
   objects: (entity: string) => ["objects", entity] as const,
   calendarAgenda: ["calendar", "agenda"] as const,

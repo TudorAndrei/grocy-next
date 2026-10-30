@@ -1,0 +1,239 @@
+{
+  "grocy_version": "4.5.0",
+  "grocy_commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+  "summernote_version": "0.9.1",
+  "files": {
+    "jquery.min.js": {
+      "source": "public/packages/jquery/dist/jquery.min.js",
+      "sha256": "fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a"
+    },
+    "bootstrap.bundle.min.js": {
+      "source": "public/packages/bootstrap/dist/js/bootstrap.bundle.min.js",
+      "sha256": "19126b874a32753d42c12dfa6c17892bfd93820a5a5100ba1b34da4d07599b49"
+    },
+    "summernote.min.js": {
+      "source": "public/packages/summernote/dist/summernote-bs4.min.js",
+      "sha256": "b5d1b3963d49fe7849c2806fa2f7a7a4ac226a889fd79866375efbab29129b50"
+    },
+    "summernote.css": {
+      "source": "public/packages/summernote/dist/summernote-bs4.css",
+      "sha256": "a586dd1185e1662317a8b6e69609d284fed73fdb67dfe54274ece5caeb19f8b8"
+    },
+    "summernote.woff2": {
+      "source": "public/packages/summernote/dist/font/summernote.woff2",
+      "sha256": "9c7cb1a4e1341ce24398f7742ca9ea3014dac38829aaa0cc2d0c74a8195915de"
+    },
+    "grocy_summernote.js": {
+      "source": "public/js/grocy_summernote.js",
+      "sha256": "b22acb0d275dc9f009cbbdfb51459a52643f7e973b5f37a78edc26282e6009f3"
+    },
+    "LICENSE.summernote": {
+      "source": "public/packages/summernote/LICENSE",
+      "sha256": "946933b8728534096a3d272856c5c33c30ec2643a7400ac55c882775d16836eb"
+    },
+    "LICENSE.jquery": {
+      "source": "public/packages/jquery/LICENSE.txt",
+      "sha256": "d4db9ebe6f29f5168eac45ad713f055623ac5d0dcd5ba92da23d650ae012020d"
+    },
+    "lang/summernote-sk-SK.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-sk-SK.js",
+      "sha256": "25ab897422321b5ec72d3fb0203bfe8112965a3968c85f5d29dbabb6a53e0e48"
+    },
+    "lang/summernote-it-IT.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-it-IT.js",
+      "sha256": "e7ac5c488c0351a08d0610b545bcc03cb3405903bb59954cb08e5333bbd43b1b"
+    },
+    "lang/summernote-uz-UZ.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-uz-UZ.js",
+      "sha256": "3d43968c66d50b018d6b16223efc5e433f551839d3ae9d7183d21e91618d6b72"
+    },
+    "lang/summernote-id-ID.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-id-ID.js",
+      "sha256": "4a94548abd83ff6a33f63cc9810bafb0b56ac5c6f9ca4903eb6f9e547048850f"
+    },
+    "lang/summernote-lt-LV.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-lt-LV.js",
+      "sha256": "82f0087e89072f198d772cd8175ec17ed44a2c05b69100bc9294395ea08dfa81"
+    },
+    "lang/summernote-de-DE.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-de-DE.js",
+      "sha256": "3fc26b54c6d0a1c9cf0c485dcd99d858881f6b62f33e8b7d0cebf2938b3ba670"
+    },
+    "lang/summernote-az-AZ.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-az-AZ.js",
+      "sha256": "70ce5d0ab3c253b56434481d445f0867f974b3b5e5325a73365fc09d60d21577"
+    },
+    "lang/summernote-sr-RS.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-sr-RS.js",
+      "sha256": "e97f5452b046792d3ced6b889b5dbb30573a6ff102c499ed84b5844fdae44479"
+    },
+    "lang/summernote-ru-RU.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ru-RU.js",
+      "sha256": "c5fe10da418d4847d0475b0569e07c419eab56126754de60c9befee6b212dcf7"
+    },
+    "lang/summernote-uk-UA.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-uk-UA.js",
+      "sha256": "1931074b502d8374292c0f541bc4003d0a4473c3ebf159e5b1564400d64ec510"
+    },
+    "lang/summernote-pl-PL.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-pl-PL.js",
+      "sha256": "d264ed7d6b68f09fe76e4cdf4a9905a337de0df5e9ec5979d5abf9d0c3572eb0"
+    },
+    "lang/summernote-th-TH.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-th-TH.js",
+      "sha256": "71cd24bd8a28e09a19008a16332f226f4dc1ed5bebdce9f42daec25e9b4cd737"
+    },
+    "lang/summernote-ar-AR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ar-AR.js",
+      "sha256": "8cc0fad977bfd0bae552fed998b22b4f3b041dd8cc81bd3843da238626b0fddc"
+    },
+    "lang/summernote-fi-FI.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-fi-FI.js",
+      "sha256": "a9f21023e623d6ff103a6cc26dbbf7326dafa0cd7430208e715f05b8a32f34a7"
+    },
+    "lang/summernote-he-IL.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-he-IL.js",
+      "sha256": "83180cabe3d09d0402c401f796a5f7a457a1897ebf67debec1169693c479f406"
+    },
+    "lang/summernote-ja-JP.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ja-JP.js",
+      "sha256": "85e12fbc8fb36ccd89b726e18d1b085c1142a6f7f68f7482e10de54fc842a405"
+    },
+    "lang/summernote-el-GR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-el-GR.js",
+      "sha256": "7159e0c7a5932db950585f9a7c38c91a5000e2054058e7f65418bcb8c7fe1291"
+    },
+    "lang/summernote-es-ES.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-es-ES.js",
+      "sha256": "8f13e3e45c9de3e66654a81a3e80cc1a42748126b00dd688ec9108a28ca3bd9b"
+    },
+    "lang/summernote-sv-SE.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-sv-SE.js",
+      "sha256": "5b06099b4b4e1f2b7d84f69482b0d1e47c4a43e6970a7aad9351201c2104e6e0"
+    },
+    "lang/summernote-hr-HR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-hr-HR.js",
+      "sha256": "c928e019a8bb90bdd632835f169606764c676a052dee66dee8fbe9872d824541"
+    },
+    "lang/summernote-da-DK.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-da-DK.js",
+      "sha256": "b52a1b970828e6212d65b566cc60e04a0fd56c84547dc51432ad3c49aa13d053"
+    },
+    "lang/summernote-en-US.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-en-US.js",
+      "sha256": "0808cc7c1c728fbf3339faa9070584149021662f84b9935fa4b80a9ffb438494"
+    },
+    "lang/summernote-gl-ES.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-gl-ES.js",
+      "sha256": "3078ed5f2ef59a494d7de1ba974bcdcec2951f65108a57d8e26040c96ba98490"
+    },
+    "lang/summernote-pt-PT.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-pt-PT.js",
+      "sha256": "de73499862ceb781bac3a73a44ddb6f2522e08edbbe380b3ebe9a3b9e50b4059"
+    },
+    "lang/summernote-pt-BR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-pt-BR.js",
+      "sha256": "f0a58662ac14b388b6f9e04ecd463513ef3711b032217d434c3d9846f1cc72bb"
+    },
+    "lang/summernote-fa-IR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-fa-IR.js",
+      "sha256": "320f4f23ceb25fd53c474033d6774a9d18bfa2560494fd3295f3342ab71252f3"
+    },
+    "lang/summernote-de-CH.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-de-CH.js",
+      "sha256": "af0849b998ca4ecadea03bfef8ff50ad8a4371f9b36f446b4618bdd8edb12422"
+    },
+    "lang/summernote-zh-TW.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-zh-TW.js",
+      "sha256": "27ef60c342b383c6b908935107ee3e3fb75d0acdec526077b7c64a83c583976c"
+    },
+    "lang/summernote-bg-BG.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-bg-BG.js",
+      "sha256": "4121c912206da5eef0df5042d82f426cb76780e2eba122279fc1eba6bd775b2e"
+    },
+    "lang/summernote-sl-SI.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-sl-SI.js",
+      "sha256": "e9d2900268691cc0e969b95f4f748626d9755b796238e47a66c15187fa4eb6ef"
+    },
+    "lang/summernote-fr-FR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-fr-FR.js",
+      "sha256": "830f10c8f12d51cc42419ac5d67aa6b3c3bfcc03cecf238695643c01f0335492"
+    },
+    "lang/summernote-nl-NL.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-nl-NL.js",
+      "sha256": "142243b274512faf49f0b6737ad8162247bf83c56e7e38eaed50385e34dcdc83"
+    },
+    "lang/summernote-nb-NO.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-nb-NO.js",
+      "sha256": "2ae7f5456b2ee8d5adc6a05160b4750f9e266afda513b4cc972e08ae97694ff4"
+    },
+    "lang/summernote-cs-CZ.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-cs-CZ.js",
+      "sha256": "81d2aabaf390740e9d105739ba4e5f8c97b51e58fab5938db68c0cd572dee71a"
+    },
+    "lang/summernote-es-EU.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-es-EU.js",
+      "sha256": "2c3914ece1e6f351dfe8dadf8e875c8cfac7c70046dc83ccbd00942d1f88fc88"
+    },
+    "lang/summernote-zh-CN.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-zh-CN.js",
+      "sha256": "11460aa41d526c1b9c717c2c34472fa996f8e0a2f4d4d2d6b30c8b0a46ea4c6f"
+    },
+    "lang/summernote-ro-RO.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ro-RO.js",
+      "sha256": "aae5780452afb450332c6dae28e0104946f56a54db837c927ce0295b5758cef3"
+    },
+    "lang/summernote-ca-ES.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ca-ES.js",
+      "sha256": "1170a5c631de8e12f4fc23f41920ee889e4334602c1dcd65a7d595881e329033"
+    },
+    "lang/summernote-lt-LT.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-lt-LT.js",
+      "sha256": "dfb3121d0b7cf1dfb63fc7ab9ffa2841659f6a4aeeb165b01b231af7f08a950d"
+    },
+    "lang/summernote-ta-IN.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ta-IN.js",
+      "sha256": "25a01d75e6cc19f93ba8e470bc1f8567b3b9e7cc2875ba9982958affc88f3956"
+    },
+    "lang/summernote-tr-TR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-tr-TR.js",
+      "sha256": "a7115b59fd982dc9c995f154ceedc3f30f0ce6786b5b82f69061ec996f6b5894"
+    },
+    "lang/summernote-bn-BD.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-bn-BD.js",
+      "sha256": "c471b1aedf140f5beb2d722a53818af5b6fdac15e81beb9a2e815300c7b968df"
+    },
+    "lang/summernote-mn-MN.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-mn-MN.js",
+      "sha256": "b0527cff462b8e2d6e0171041b8444f1c1276c175ddae1e4269e0df3aaad3e5d"
+    },
+    "lang/summernote-sr-RS-Latin.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-sr-RS-Latin.js",
+      "sha256": "2970e9a25ecdf76314c54c2721fa9abd968b5740b6103796b028fca4cc3120ce"
+    },
+    "lang/summernote-ko-KR.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-ko-KR.js",
+      "sha256": "98c1a864ea5865e66b9ef372b0899f2a77531e5828f1913d68eee8b44b296f19"
+    },
+    "lang/summernote-hu-HU.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-hu-HU.js",
+      "sha256": "5b0fdd750dcc6ad0719005d95a97caf606cfcb33952de73c306742183f4b8c04"
+    },
+    "lang/summernote-vi-VN.js": {
+      "source": "public/packages/summernote/dist/lang/summernote-vi-VN.js",
+      "sha256": "05e28ab9d36c344b691777f915d90ef478d9a7e603a672b191b651d9bb225809"
+    },
+    "night.css": {
+      "source": "public/css/grocy_night_mode.css",
+      "sha256": "88a8c5f05f424f21d6dcb29547a350966dfcb6274d2cab664bb315cd52b92385"
+    },
+    "LICENSE.bootstrap": {
+      "source": "public/packages/bootstrap/LICENSE",
+      "sha256": "53d2513c8df48a817d70537cc906b8e9c7bf2513328ff66847894773e615b37e"
+    },
+    "LICENSE.grocy": {
+      "source": "LICENSE",
+      "sha256": "ca49d1dcaf24ce093ea748b781469a7ad2a58123a400d1a0f10a29f92ae8c218"
+    }
+  }
+}

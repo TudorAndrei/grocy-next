@@ -1,23 +1,30 @@
 from __future__ import annotations
 
+import importlib.util
+import inspect
 import re
-from decimal import Decimal
+import secrets
+import string
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from grocy.compatibility import client_defaults
+from grocy.compatibility.input import database_error
+from grocy.compatibility.php import empty, is_numeric, loose_equals, php_string
+from grocy.compatibility.rows import save_rows
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError
-from grocy.db.models.catalog import Location, Product, ProductBarcode, QuantityUnit
-from grocy.db.models.units import QuantityUnitConversion
+from grocy.db.models.catalog import Location, Product, QuantityUnit
 from grocy.domains.users.service import UsersService
+from grocy.plugins import BaseBarcodeLookupPlugin
 
 _OFF_USER_AGENT = "GrocyOpenFoodFactsBarcodeLookupPlugin/1.0 (https://grocy.info)"
 _IMAGE_USER_AGENT_PREFIX = "Grocy/"
@@ -113,20 +120,6 @@ async def lookup_open_food_facts(
     }
 
 
-def _is_numeric(value: Any) -> bool:
-    if isinstance(value, bool):
-        return False
-    if isinstance(value, (int, float, Decimal)):
-        return True
-    if isinstance(value, str):
-        try:
-            float(value)
-        except ValueError:
-            return False
-        return value.strip() != ""
-    return False
-
-
 def validate_plugin_output(
     output: dict[str, Any],
     *,
@@ -139,27 +132,24 @@ def validate_plugin_output(
         if prop not in output:
             raise GrocyError(f"Plugin output does not provide needed property {prop}", code=None)
     location_id = output["location_id"]
-    if location_id not in locations:
+    if not any(loose_equals(location_id, identity) for identity in locations):
         raise GrocyError(
             f"Provided location_id ({location_id}) is not a valid location id", code=None
         )
     qu_purchase = output["qu_id_purchase"]
-    if qu_purchase not in quantity_units:
+    if not any(loose_equals(qu_purchase, identity) for identity in quantity_units):
         raise GrocyError(
             f"Provided qu_id_purchase ({qu_purchase}) is not a valid quantity unit id",
             code=None,
         )
     qu_stock = output["qu_id_stock"]
-    if qu_stock not in quantity_units:
+    if not any(loose_equals(qu_stock, identity) for identity in quantity_units):
         raise GrocyError(
             f"Provided qu_id_stock ({qu_stock}) is not a valid quantity unit id",
             code=None,
         )
     factor = output["__qu_factor_purchase_to_stock"]
-    empty = factor in (None, "", 0, 0.0) or (
-        isinstance(factor, str) and factor.strip() in {"", "0"}
-    )
-    if empty or not _is_numeric(factor):
+    if empty(factor) or not is_numeric(factor):
         raise GrocyError(
             "Provided __qu_factor_purchase_to_stock is empty or not a number", code=None
         )
@@ -182,11 +172,13 @@ async def _download_image(image_url: str, barcode: str) -> str | None:
     except httpx.HTTPError:
         return None
     path_part = urlparse(image_url).path
-    extension = Path(path_part).suffix.lstrip(".") or "jpg"
+    extension = Path(path_part).suffix.lstrip(".")
     file_name = f"{barcode}.{extension}"
-    root = get_settings().files_root.resolve() / "productpictures"
+    root = get_settings().active_files_root() / "productpictures"
     root.mkdir(parents=True, exist_ok=True)
-    target = root / file_name
+    target = (root / file_name).resolve()
+    if not target.is_relative_to(root):
+        return None
 
     def _write() -> None:
         target.write_bytes(body)
@@ -206,32 +198,128 @@ async def create_product_from_lookup(
     if existing is not None:
         raise GrocyError(f'Product "{name}" already exists', code=None)
 
-    product_data = {key: value for key, value in plugin_output.items() if not key.startswith("__")}
+    product_data = {
+        key: value
+        for key, value in plugin_output.items()
+        if key not in {"__barcode", "__qu_factor_purchase_to_stock", "__image_url"}
+    }
     picture = await _download_image(
-        str(plugin_output.get("__image_url") or ""),
-        str(plugin_output["__barcode"]),
+        php_string(plugin_output.get("__image_url") or ""),
+        php_string(plugin_output["__barcode"]),
     )
     if picture:
         product_data["picture_file_name"] = picture
 
-    product = Product(**product_data)
-    session.add(product)
-    await session.flush()
-
-    session.add(ProductBarcode(product_id=product.id, barcode=str(plugin_output["__barcode"])))
-    if plugin_output["qu_id_stock"] != plugin_output["qu_id_purchase"]:
-        session.add(
-            QuantityUnitConversion(
-                product_id=product.id,
-                from_qu_id=int(plugin_output["qu_id_purchase"]),
-                to_qu_id=int(plugin_output["qu_id_stock"]),
-                factor=Decimal(str(plugin_output["__qu_factor_purchase_to_stock"])),
-            )
+    try:
+        identity = await save_rows(session, "products", product_data)
+        await save_rows(
+            session,
+            "product_barcodes",
+            {"product_id": identity, "barcode": plugin_output["__barcode"]},
         )
-    await session.commit()
+        if not loose_equals(plugin_output["qu_id_stock"], plugin_output["qu_id_purchase"]):
+            await save_rows(
+                session,
+                "quantity_unit_conversions",
+                {
+                    "product_id": identity,
+                    "from_qu_id": plugin_output["qu_id_purchase"],
+                    "to_qu_id": plugin_output["qu_id_stock"],
+                    "factor": plugin_output["__qu_factor_purchase_to_stock"],
+                },
+            )
+    except DBAPIError as error:
+        await session.rollback()
+        raise database_error(error) from error
     result = dict(plugin_output)
-    result["id"] = str(product.id)
+    result["id"] = identity
     return result
+
+
+def _load_plugin(path: Path, name: str) -> type[BaseBarcodeLookupPlugin]:
+    specification = importlib.util.spec_from_file_location("grocy_user_plugin_" + name, path)
+    if specification is None or specification.loader is None:
+        raise GrocyError(f"Plugin {name} was not found", code=None)
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    plugin = getattr(module, name, None)
+    if not isinstance(plugin, type) or not issubclass(plugin, BaseBarcodeLookupPlugin):
+        raise GrocyError(f"Plugin {name} must extend BaseBarcodeLookupPlugin", code=None)
+    return plugin
+
+
+async def _plugin_output(
+    session: AsyncSession,
+    actor: Actor,
+    name: str,
+    barcode: str,
+    locations: list[Location],
+    units: list[QuantityUnit],
+) -> Any:
+    path = get_settings().datapath / "plugins" / (name + ".py")
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and path.is_file():
+        try:
+            plugin_class = await run_in_threadpool(_load_plugin, path, name)
+            plugin = plugin_class(
+                [
+                    {column.key: getattr(row, column.key) for column in Location.__table__.columns}
+                    for row in locations
+                ],
+                [
+                    {
+                        column.key: getattr(row, column.key)
+                        for column in QuantityUnit.__table__.columns
+                    }
+                    for row in units
+                ],
+                await _user_settings(session, actor.user_id),
+            )
+            result = await run_in_threadpool(plugin.execute_lookup, barcode)
+            return await result if inspect.isawaitable(result) else result
+        except GrocyError:
+            raise
+        except Exception as error:
+            raise GrocyError(str(error), code=None) from error
+    if name == _OPEN_FOOD_FACTS:
+        return await lookup_open_food_facts(session, actor, barcode)
+    if name == "DemoBarcodeLookupPlugin":
+        if barcode == "nothing":
+            return None
+        if barcode == "error":
+            raise GrocyError("This is the error message from the plugin...", code=None)
+        settings = await _user_settings(session, actor.user_id)
+        return {
+            "name": "LookedUpProduct_"
+            + "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(5)),
+            "location_id": settings.get("product_presets_location_id")
+            if not loose_equals(settings.get("product_presets_location_id", -1), -1)
+            else locations[0].id,
+            "qu_id_purchase": settings.get("product_presets_qu_id")
+            if not loose_equals(settings.get("product_presets_qu_id", -1), -1)
+            else units[0].id,
+            "qu_id_stock": settings.get("product_presets_qu_id")
+            if not loose_equals(settings.get("product_presets_qu_id", -1), -1)
+            else units[0].id,
+            "__qu_factor_purchase_to_stock": 1,
+            "__barcode": barcode,
+        }
+    raise GrocyError(f"Plugin {name} was not found", code=None)
+
+
+async def barcode_lookup_plugin_name() -> str:
+    settings = get_settings()
+    name = settings.stock_barcode_lookup_plugin
+    path = settings.datapath / "plugins" / (name + ".py")
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and path.is_file():
+        try:
+            plugin = await run_in_threadpool(_load_plugin, path, name)
+            return php_string(plugin.plugin_name)
+        except Exception:
+            return ""
+    return {
+        _OPEN_FOOD_FACTS: "Open Food Facts",
+        "DemoBarcodeLookupPlugin": "Demo",
+    }.get(name, "")
 
 
 async def external_barcode_lookup(
@@ -242,28 +330,22 @@ async def external_barcode_lookup(
     add: bool,
 ) -> dict[str, Any] | None:
     plugin = get_settings().stock_barcode_lookup_plugin
-    if plugin == "":
+    if empty(plugin):
         raise GrocyError("No barcode lookup plugin defined", code=None)
-    if plugin != _OPEN_FOOD_FACTS:
-        raise GrocyError(f"Plugin {plugin} was not found", code=None)
-
-    raw = await lookup_open_food_facts(session, actor, barcode)
+    locations = list(
+        (await session.execute(select(Location).where(Location.active == 1))).scalars().all()
+    )
+    units = list(
+        (await session.execute(select(QuantityUnit).where(QuantityUnit.active == 1)))
+        .scalars()
+        .all()
+    )
+    raw = await _plugin_output(session, actor, plugin, barcode, locations, units)
     if raw is None:
         return None
-
-    locations = {
-        row.id
-        for row in (await session.execute(select(Location).where(Location.active == 1)))
-        .scalars()
-        .all()
-    }
-    units = {
-        row.id
-        for row in (await session.execute(select(QuantityUnit).where(QuantityUnit.active == 1)))
-        .scalars()
-        .all()
-    }
-    output = validate_plugin_output(raw, locations=locations, quantity_units=units)
+    output = validate_plugin_output(
+        raw, locations={row.id for row in locations}, quantity_units={row.id for row in units}
+    )
     if add:
         return await create_product_from_lookup(session, output)
     return output

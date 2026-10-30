@@ -1738,6 +1738,134 @@ def test_open_child_stock_follows_grocy_entry_conversion(api, catalog, factor, o
     assert sum(row["amount"] for row in response.json()) == opened
 
 
+@pytest.mark.parametrize("amount", [2, 5])
+@pytest.mark.parametrize("move_on_open", [0, 1])
+def test_open_booking_records_preserve_metadata_and_undo(api, catalog, amount, move_on_open):
+    product, _, _, location = catalog
+    target = create(api, "locations", name=uuid4().hex)
+    store = create(api, "shopping_locations", name=uuid4().hex)
+    today = datetime.now().date()
+    due = (today + timedelta(days=40)).isoformat()
+    opened_due = (today + timedelta(days=2)).isoformat()
+    assert (
+        api.put(
+            f"/api/objects/products/{product}",
+            json={
+                "default_best_before_days_after_open": 2,
+                "move_on_open": move_on_open,
+                "default_consume_location_id": target,
+            },
+        ).status_code
+        == 204
+    )
+    base = f"/api/stock/products/{product}"
+    purchase = api.post(
+        base + "/add",
+        json={
+            "amount": 5,
+            "best_before_date": due,
+            "purchased_date": "2026-01-02",
+            "price": 2.5,
+            "shopping_location_id": store,
+            "note": "Sealed batch",
+        },
+    )
+    assert purchase.status_code == 200, purchase.text
+    stock_id = api.get(base + "/entries").json()[0]["stock_id"]
+    response = api.post(base + "/open", json={"amount": amount, "stock_entry_id": stock_id})
+    assert response.status_code == 200, response.text
+    bookings = response.json()
+    expected_rows = [("product-opened", amount, location, due)]
+    if move_on_open:
+        expected_rows += [
+            ("transfer_from", -amount, location, opened_due),
+            ("transfer_to", amount, target, opened_due),
+        ]
+    assert len(bookings) == len(expected_rows)
+    transaction_id = bookings[0]["transaction_id"]
+    assert isinstance(transaction_id, str) and transaction_id
+    for booking, (kind, booked, place, expiry) in zip(bookings, expected_rows, strict=True):
+        booking_id = booking["id"]
+        assert isinstance(booking_id, int) and booking_id > 0
+        assert re.fullmatch(
+            r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", booking["row_created_timestamp"]
+        )
+        correlation = booking["correlation_id"]
+        if kind == "product-opened":
+            assert correlation is None
+        else:
+            assert isinstance(correlation, str) and correlation
+        assert {
+            key: value
+            for key, value in booking.items()
+            if key not in {"id", "row_created_timestamp", "correlation_id"}
+        } == {
+            "product_id": product,
+            "amount": booked,
+            "best_before_date": expiry,
+            "purchased_date": "2026-01-02",
+            "used_date": None,
+            "spoiled": 0,
+            "stock_id": stock_id,
+            "transaction_type": kind,
+            "price": 2.5,
+            "undone": 0,
+            "undone_timestamp": None,
+            "opened_date": today.isoformat(),
+            "location_id": place,
+            "transaction_id": transaction_id,
+            "stock_row_id": None,
+            "shopping_location_id": store,
+            "user_id": 1,
+            "note": "Sealed batch",
+            "recipe_id": None,
+        }
+        stored = api.get(f"/api/objects/stock_log/{booking_id}").json()
+        stored.pop("userfields", None)
+        assert stored == booking
+        assert api.get(f"/api/stock/bookings/{booking_id}").json() == booking
+    if move_on_open:
+        assert bookings[1]["correlation_id"] == bookings[2]["correlation_id"]
+    assert purchase.json()[0]["stock_row_id"] is None
+    entries = api.get(base + "/entries").json()
+    assert sum(row["amount"] for row in entries) == 5
+    assert sum(row["amount"] for row in entries if row["open"]) == amount
+    opened = next(row for row in entries if row["open"])
+    assert (opened["stock_id"], opened["best_before_date"], opened["location_id"]) == (
+        stock_id,
+        opened_due,
+        target if move_on_open else location,
+    )
+    assert api.post(f"/api/stock/transactions/{transaction_id}/undo").status_code == 204
+    restored = api.get(base + "/entries").json()
+    assert sum(row["amount"] for row in restored) == 5
+    assert all(row["open"] == 0 and row["opened_date"] is None for row in restored)
+    for booking in bookings:
+        saved = api.get(f"/api/stock/bookings/{booking['id']}").json()
+        assert saved["undone"] == 1
+        assert saved["stock_row_id"] is None
+        assert saved["opened_date"] == today.isoformat()
+        assert saved["undone_timestamp"]
+
+
+@pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
+@pytest.mark.parametrize(
+    "resource",
+    [
+        "stock/products/{product}",
+        "stock/products/{product}/entries",
+        "stock/products/{product}/locations",
+        "objects/locations",
+        "system/info",
+    ],
+)
+def test_legacy_api_reads_retain_native_http_cache_policy(api, catalog, method, resource):
+    product, *_ = catalog
+    response = api.request(method, "/api/" + resource.format(product=product))
+    assert response.status_code == 200, response.text
+    assert response.headers.get("cache-control") is None
+
+
 @pytest.mark.parametrize(
     "entity,action,log_entity",
     [
@@ -1944,6 +2072,7 @@ def test_inventory_increase_uses_last_price_and_store(api, catalog):
     assert inventory.status_code == 200, inventory.text
     assert inventory.json()[0]["price"] == 3
     assert inventory.json()[0]["shopping_location_id"] == store
+    assert inventory.json()[0]["stock_row_id"] is None
 
 
 def test_stock_entry_label_has_product_details_and_entry(api, catalog):
@@ -2115,10 +2244,9 @@ def test_inventory_counts_all_locations_and_rejects_an_unchanged_count(api, cata
             api.post(base + "/add", json={"amount": amount, "location_id": place}).status_code
             == 200
         )
-    assert (
-        api.post(base + "/inventory", json={"new_amount": 2, "location_id": location}).status_code
-        == 200
-    )
+    inventory = api.post(base + "/inventory", json={"new_amount": 2, "location_id": location})
+    assert inventory.status_code == 200, inventory.text
+    assert all(row["stock_row_id"] is None for row in inventory.json())
     assert api.get(base).json()["stock_amount"] == 2
     assert api.post(base + "/inventory", json={"new_amount": 2}).status_code == 400
 
@@ -2190,10 +2318,38 @@ def test_equivalent_purchases_compact_and_follow_reference_undo(api, catalog):
         assert api.get(base).json()["stock_amount"] == expected
 
 
-def test_stock_custom_fields_use_booking_transactions_and_prevent_compaction(api, catalog):
+def test_purchase_compaction_keeps_transferred_stock_identity_for_undo(api, catalog, execute_sql):
+    product, _, _, source = catalog
+    target = create(api, "locations", name=uuid4().hex)
+    base = f"/api/stock/products/{product}"
+    body = {"amount": 5, "price": 2, "best_before_date": "2037-01-01"}
+    assert api.post(base + "/add", json=body).status_code == 200
+    # Force the next generated hexadecimal stock ID to sort before the saved ID.
+    # This exercises the same compaction choice on both runtimes on every run.
+    saved_id = "z" + uuid4().hex
+    for table in ("stock", "stock_log"):
+        execute_sql(f"UPDATE {table} SET stock_id='{saved_id}' WHERE product_id={product}")
+    transfer = api.post(
+        base + "/transfer",
+        json={"amount": 2, "location_id_from": source, "location_id_to": target},
+    )
+    assert transfer.status_code == 200, transfer.text
+    assert api.post(base + "/add", json={**body, "amount": 3}).status_code == 200
+    entries = api.get(base + "/entries").json()
+    assert {(row["location_id"], row["amount"]) for row in entries} == {(source, 6), (target, 2)}
+    assert len({row["stock_id"] for row in entries}) == 1
+    undone = api.post(f"/api/stock/bookings/{transfer.json()[0]['id']}/undo")
+    assert undone.status_code == 204, undone.text
+    restored = api.get(base + "/entries").json()
+    assert [(row["location_id"], row["amount"]) for row in restored] == [(source, 8)]
+
+
+def test_stock_custom_fields_use_booking_transactions_and_prevent_compaction(
+    api, catalog, custom_field
+):
     product, _, _, _ = catalog
     field = "batch_" + uuid4().hex
-    create(api, "userfields", entity="stock", name=field, caption="Batch", type="text-single-line")
+    custom_field(entity="stock", name=field, caption="Batch", type="text-single-line")
     base = f"/api/stock/products/{product}"
     body = {"amount": 2, "price": 2, "best_before_date": "2037-02-01"}
     purchase = api.post(base + "/add", json=body)
@@ -2281,11 +2437,35 @@ def test_stock_edit_undo_after_consumption_restores_the_original_amount(api, cat
         json={"amount": 5, "price": 3, "open": False, "purchased_date": entry["purchased_date"]},
     )
     assert edited.status_code == 200, edited.text
+    assert [row["stock_row_id"] for row in edited.json()] == [entry["id"], entry["id"]]
     assert api.post(base + "/consume", json={"amount": 1}).status_code == 200
     undone = api.post(f"/api/stock/bookings/{edited.json()[0]['id']}/undo")
     assert undone.status_code == 204, undone.text
     assert api.get(base).json()["stock_amount"] == 3
     assert api.get(base + "/entries").json()[0]["price"] == 2
+
+
+def test_stock_edit_records_keep_the_original_row_reference_after_compaction(api, catalog):
+    product, _, _, location = catalog
+    base = f"/api/stock/products/{product}"
+    body = {"best_before_date": "2037-02-01", "purchased_date": "2026-01-02"}
+    for amount, price in ((2, 1), (3, 2)):
+        assert (
+            api.post(base + "/add", json={**body, "amount": amount, "price": price}).status_code
+            == 200
+        )
+    entry = next(row for row in api.get(base + "/entries").json() if row["price"] == 1)
+    edited = api.put(
+        f"/api/stock/entry/{entry['id']}",
+        json={**body, "amount": 2, "price": 2, "open": False, "location_id": location},
+    )
+    assert edited.status_code == 200, edited.text
+    remaining = api.get(base + "/entries").json()
+    assert len(remaining) == 1 and remaining[0]["amount"] == 5
+    for booking in edited.json():
+        assert booking["stock_row_id"] == entry["id"]
+        saved = api.get(f"/api/stock/bookings/{booking['id']}").json()
+        assert saved["stock_row_id"] == entry["id"]
 
 
 @pytest.mark.parametrize(
@@ -2368,6 +2548,13 @@ def test_chore_date_precision_survives_reads_and_recurrence(api):
             '<p style="color:#FF0000;">Hello</p>',
         ),
         ('<a href="javascript:alert(1)">Link</a>', "<a>Link</a>"),
+        *[
+            (
+                f'<a href="https://example.com" title="Read" target="{target}">Link</a>',
+                '<a href="https://example.com" title="Read">Link</a>',
+            )
+            for target in ("_blank", "_self", "_parent", "named-window")
+        ],
         ("Tom &amp; Jerry &lt;food&gt;", "Tom & Jerry <food>"),
         ("", None),
         (None, None),
@@ -2847,7 +3034,7 @@ def test_native_generic_query_parameters(api, parameters, status, expected, mess
         details = body["error_details"]
         assert set(details) == {"stack_trace", "file", "line"}
         assert isinstance(details["stack_trace"], str) and details["stack_trace"]
-        assert isinstance(details["file"], str) and details["file"].endswith(".php")
+        assert isinstance(details["file"], str) and details["file"].endswith((".py", ".php"))
         assert isinstance(details["line"], int) and details["line"] > 0
 
 
@@ -3170,8 +3357,9 @@ def test_native_stock_list_ids_keep_php_and_sql_conversion(api, catalog, action)
         assert "must be of type int, string given" in message
 
 
-def test_native_filtered_lists_keep_saved_dates_and_related_rows(api):
+def test_native_filtered_lists_keep_saved_dates_and_related_rows(api, request):
     category = create(api, "task_categories", name=uuid4().hex)
+    request.addfinalizer(lambda: api.delete(f"/api/objects/task_categories/{category}"))
     task = create(
         api,
         "tasks",
@@ -3181,6 +3369,7 @@ def test_native_filtered_lists_keep_saved_dates_and_related_rows(api):
         assigned_to_user_id=1,
         category_id=category,
     )
+    request.addfinalizer(lambda: api.delete(f"/api/objects/tasks/{task}"))
     response = api.get("/api/tasks")
     assert response.status_code == 200, response.text
     saved = next(row for row in response.json() if row["id"] == task)
@@ -3866,7 +4055,9 @@ def test_native_chore_assignment_error_keeps_earlier_execution_writes(api):
             f"/api/chores/{chore}/execute", json={"tracked_time": "2027-01-04 12:00:00"}
         )
         assert response.status_code == 500, response.text
-        version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
+        # Python retains the PHP 8.4 diagnostic wording without a PHP runtime.
+        php_version = api.get("/api/system/info").json()["php_version"] or "8.4"
+        version = tuple(map(int, php_version.split(".")[:2]))
         description = "must not" if version >= (8, 4) else "cannot"
         assert (
             response.json()["error_message"]
@@ -3892,7 +4083,9 @@ def test_native_chore_merge_failure_restores_all_rows_and_can_retry(api, failure
         )
         response = api.post(f"/api/chores/{keep}/merge/{remove}")
         assert response.status_code == 400, response.text
-        version = tuple(map(int, api.get("/api/system/info").json()["php_version"].split(".")[:2]))
+        # Python retains the PHP 8.4 diagnostic wording without a PHP runtime.
+        php_version = api.get("/api/system/info").json()["php_version"] or "8.4"
+        version = tuple(map(int, php_version.split(".")[:2]))
         assert response.json() == {
             "error_message": (
                 (
@@ -4191,6 +4384,42 @@ def test_native_shopping_null_body_keeps_php_type_error(api, action):
     assert set(response.json()) == {"error_message", "error_details"}
 
 
+def test_recipe_shopping_failure_keeps_earlier_items_and_allows_retry(api, catalog, execute_sql):
+    first, unit, _, location = catalog
+    second = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    recipe = create(api, "recipes", name=uuid4().hex)
+    for product in (first, second):
+        create(api, "recipes_pos", recipe_id=recipe, product_id=product, amount=1, qu_id=unit)
+    trigger = "shopping_failure_" + uuid4().hex
+    try:
+        execute_sql(
+            f"CREATE TRIGGER {trigger} BEFORE INSERT ON shopping_list "
+            f"WHEN NEW.product_id={second} BEGIN SELECT RAISE(ABORT,'Shopping blocked'); END"
+        )
+        path = f"/api/recipes/{recipe}/add-not-fulfilled-products-to-shoppinglist"
+        response = api.post(path, json={})
+        assert response.status_code == 500, response.text
+        assert response.json()["error_message"] == (
+            "SQLSTATE[23000]: Integrity constraint violation: 19 Shopping blocked"
+        )
+        assert "error_details" in response.json()
+        assert [row["amount"] for row in rows(api, "shopping_list", product_id=first)] == [1]
+        assert rows(api, "shopping_list", product_id=second) == []
+        execute_sql(f"DROP TRIGGER {trigger}")
+        assert api.post(path, json={}).status_code == 204
+        for product in (first, second):
+            assert [row["amount"] for row in rows(api, "shopping_list", product_id=product)] == [1]
+    finally:
+        execute_sql(f"DROP TRIGGER IF EXISTS {trigger}")
+
+
 def test_native_recipe_duplicate_ingredient_failure_restores_stock_and_log(api, catalog):
     product, unit, _, _ = catalog
     recipe = create(api, "recipes", name=uuid4().hex)
@@ -4278,6 +4507,14 @@ def test_native_stock_purchase_keeps_year_zero_dates(api, catalog, field):
     assert entries.status_code == 200 and entries.json()[0][field] == "0000-01-04"
     details = api.get(f"/api/stock/products/{product}")
     assert details.status_code == 200, details.text
+    consumed = api.post(f"/api/stock/products/{product}/consume", json={"amount": 0.5})
+    assert consumed.status_code == 200, consumed.text
+    assert consumed.json()[0][field] == "0000-01-04"
+    transaction = consumed.json()[0]["transaction_id"]
+    assert api.post(f"/api/stock/transactions/{transaction}/undo").status_code == 204
+    restored = api.get(f"/api/stock/products/{product}/entries").json()
+    assert all(row[field] == "0000-01-04" for row in restored)
+    assert sum(row["amount"] for row in restored) == 1
 
 
 @pytest.mark.parametrize("action", ["add", "consume", "open", "transfer", "inventory"])
@@ -4302,6 +4539,271 @@ def test_native_stock_consumption_uses_php_bool_argument_conversion(api, catalog
 
 
 @pytest.mark.parametrize(
+    "selection,amount,status,removed,message",
+    [
+        ("location", 4, 200, 2, None),
+        ("entry", 4, 200, 2, None),
+        ("both", 4, 200, 2, None),
+        ("missing", 1, 400, 0, "No transaction was found by the given transaction id"),
+        ("mismatch", 1, 400, 0, "No transaction was found by the given transaction id"),
+        (
+            "location",
+            6,
+            400,
+            0,
+            "Amount to be consumed cannot be > current stock amount "
+            "(if supplied, at the desired location)",
+        ),
+        ("none", 5.004, 200, 5, None),
+        (
+            "none",
+            5.005,
+            400,
+            0,
+            "Amount to be consumed cannot be > current stock amount "
+            "(if supplied, at the desired location)",
+        ),
+    ],
+)
+def test_native_consume_checks_total_stock_before_selection(
+    api, catalog, selection, amount, status, removed, message
+):
+    product, _, _, location = catalog
+    other = create(api, "locations", name=uuid4().hex)
+    path = f"/api/stock/products/{product}"
+    for quantity, place, due in [(2, location, "2027-01-01"), (3, other, "2027-02-01")]:
+        response = api.post(
+            path + "/add",
+            json={
+                "amount": quantity,
+                "location_id": place,
+                "best_before_date": due,
+            },
+        )
+        assert response.status_code == 200, response.text
+    first = next(
+        row for row in rows(api, "stock", product_id=product) if row["location_id"] == location
+    )
+    before = rows(api, "stock_log", product_id=product)
+    body = {"amount": amount, "exact_amount": True}
+    if selection in {"location", "both", "mismatch"}:
+        body["location_id"] = other if selection == "mismatch" else location
+    if selection in {"entry", "both", "mismatch", "missing"}:
+        body["stock_entry_id"] = (
+            "missing-" + uuid4().hex if selection == "missing" else first["stock_id"]
+        )
+    response = api.post(path + "/consume", json=body)
+    assert response.status_code == status, response.text
+    if message:
+        assert response.json() == {"error_message": message}
+        assert rows(api, "stock_log", product_id=product) == before
+    else:
+        bookings = response.json()
+        assert sum(-row["amount"] for row in bookings) == removed
+        assert {row["transaction_type"] for row in bookings} == {"consume"}
+        assert len({row["transaction_id"] for row in bookings}) == 1
+        assert api.get(path).json()["stock_amount"] == 5 - removed
+        if selection != "none":
+            assert {row["location_id"] for row in bookings} == {location}
+        transaction = bookings[0]["transaction_id"]
+        assert api.get(f"/api/stock/transactions/{transaction}").json() == bookings
+        assert api.post(f"/api/stock/transactions/{transaction}/undo").status_code == 204
+        assert api.get(path).json()["stock_amount"] == 5
+        return
+    assert api.get(path).json()["stock_amount"] == 5 - removed
+
+
+@pytest.mark.parametrize("substitute", [False, True])
+@pytest.mark.parametrize("factor", [2, None])
+def test_native_consume_total_includes_child_stock_without_forcing_substitution(
+    api, catalog, substitute, factor
+):
+    product, unit, other, location = catalog
+    child = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        parent_product_id=product,
+        location_id=location,
+        qu_id_stock=other,
+        qu_id_purchase=other,
+    )
+    if factor is not None:
+        create(
+            api,
+            "quantity_unit_conversions",
+            product_id=child,
+            from_qu_id=unit,
+            to_qu_id=other,
+            factor=factor,
+        )
+    for identity, amount in [(product, 1), (child, 6)]:
+        assert (
+            api.post(f"/api/stock/products/{identity}/add", json={"amount": amount}).status_code
+            == 200
+        )
+    response = api.post(
+        f"/api/stock/products/{product}/consume",
+        json={
+            "amount": 3,
+            "allow_subproduct_substitution": substitute,
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert [(row["product_id"], row["amount"]) for row in response.json()] == (
+        [(product, -1), (child, -2 * (factor or 1))] if substitute else [(product, -1)]
+    )
+    assert api.get(f"/api/stock/products/{child}").json()["stock_amount"] == (
+        6 - 2 * (factor or 1) if substitute else 6
+    )
+
+
+def test_native_consume_booking_reads_keep_pdo_fractional_precision(api, catalog):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    response = api.post(path + "/consume", json={"amount": 0.123456789123})
+    assert response.status_code == 200, response.text
+    booking = response.json()[0]
+    assert booking["amount"] == -0.123456789123
+    assert api.get(f"/api/stock/bookings/{booking['id']}").json() == booking
+    assert api.get(f"/api/stock/transactions/{booking['transaction_id']}").json() == [booking]
+    assert api.get(path + "/entries").json()[0]["amount"] == 1.876543210877
+
+
+@pytest.mark.parametrize(
+    "exact,amount,status,removed",
+    [
+        (False, 4, 200, 1),
+        (False, 5, 400, 0),
+        (False, 1, 400, 0),
+        (True, 3, 200, 3),
+        (True, 4, 400, 0),
+    ],
+)
+def test_native_consume_tare_keeps_exact_amount_and_zero_change_rules(
+    api, catalog, exact, amount, status, removed
+):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert (
+        api.put(
+            f"/api/objects/products/{product}",
+            json={
+                "enable_tare_weight_handling": 1,
+                "tare_weight": 2,
+            },
+        ).status_code
+        == 204
+    )
+    assert api.post(path + "/add", json={"amount": 5}).status_code == 200
+    response = api.post(path + "/consume", json={"amount": amount, "exact_amount": exact})
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert response.json()[0]["amount"] == -removed
+    else:
+        message = (
+            "No transaction was found by the given transaction id"
+            if amount == 5
+            else ("The amount cannot be lower than the defined tare weight")
+        )
+        assert response.json() == {"error_message": message}
+    assert api.get(path).json()["stock_amount"] == 3 - removed
+
+
+def test_native_consume_keeps_saved_booking_when_entry_delete_fails(api, catalog, execute_sql):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    trigger = "consume_delete_failure_" + uuid4().hex
+    try:
+        execute_sql(
+            f"CREATE TRIGGER {trigger} BEFORE DELETE ON stock "
+            f"WHEN OLD.product_id={product} BEGIN SELECT RAISE(ABORT,'Entry delete blocked'); END"
+        )
+        response = api.post(path + "/consume", json={"amount": 2})
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "error_message": "SQLSTATE[23000]: Integrity constraint violation: 19 "
+            "Entry delete blocked"
+        }
+        assert api.get(path).json()["stock_amount"] == 2
+        consumed = [
+            row
+            for row in rows(api, "stock_log", product_id=product)
+            if row["transaction_type"] == "consume"
+        ]
+        assert [row["amount"] for row in consumed] == [-2]
+    finally:
+        execute_sql(f"DROP TRIGGER IF EXISTS {trigger}")
+    response = api.post(path + "/consume", json={"amount": 2})
+    assert response.status_code == 200, response.text
+    assert api.get(path).json()["stock_amount"] == 0
+    assert (
+        len(
+            [
+                row
+                for row in rows(api, "stock_log", product_id=product)
+                if row["transaction_type"] == "consume"
+            ]
+        )
+        == 2
+    )
+
+
+@pytest.mark.parametrize(
+    "selection,list_exists", [("matched", True), ("missing", True), ("matched", False)]
+)
+def test_native_consume_shopping_updates_follow_stock_writes_before_result_lookup(
+    api, catalog, selection, list_exists
+):
+    product, unit, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 5}).status_code == 200
+    assert (
+        api.put(f"/api/objects/products/{product}", json={"min_stock_amount": 10}).status_code
+        == 204
+    )
+    shopping_list = create(api, "shopping_lists", name=uuid4().hex) if list_exists else 2147483647
+    enabled = "shopping_list_auto_add_below_min_stock_amount"
+    target = "shopping_list_auto_add_below_min_stock_amount_list_id"
+    saved = api.get("/api/user/settings").json()
+    try:
+        for key, value in [(enabled, 1), (target, shopping_list)]:
+            assert api.put("/api/user/settings/" + key, json={"value": value}).status_code == 204
+        body = {"amount": 1}
+        if selection == "missing":
+            body["stock_entry_id"] = "missing-" + uuid4().hex
+        response = api.post(path + "/consume", json=body)
+        if not list_exists:
+            assert response.status_code == 400, response.text
+            assert response.json() == {"error_message": "Shopping list does not exist"}
+        elif selection == "missing":
+            assert response.status_code == 400, response.text
+            assert response.json() == {
+                "error_message": "No transaction was found by the given transaction id"
+            }
+        else:
+            assert response.status_code == 200, response.text
+        assert api.get(path).json()["stock_amount"] == (5 if selection == "missing" else 4)
+        logs = [
+            row
+            for row in rows(api, "stock_log", product_id=product)
+            if row["transaction_type"] == "consume"
+        ]
+        assert [row["amount"] for row in logs] == ([] if selection == "missing" else [-1])
+        items = rows(api, "shopping_list", product_id=product)
+        assert [(item["amount"], item["shopping_list_id"], item["qu_id"]) for item in items] == (
+            [(5 if selection == "missing" else 6, shopping_list, unit)] if list_exists else []
+        )
+    finally:
+        for key in (enabled, target):
+            assert (
+                api.put("/api/user/settings/" + key, json={"value": saved[key]}).status_code == 204
+            )
+
+
+@pytest.mark.parametrize(
     "body,transaction_type",
     [
         ({"transaction_type": "inventory-correction"}, "consume"),
@@ -4319,6 +4821,28 @@ def test_native_stock_consumption_retains_transaction_field_typo(
     response = api.post(f"/api/stock/products/{product}/consume", json={"amount": 1, **body})
     assert response.status_code == 200, response.text
     assert response.json()[0]["transaction_type"] == transaction_type
+
+
+@pytest.mark.parametrize("transaction_type,label", [("other", "other"), (["consume"], "Array")])
+def test_native_consume_rejects_invalid_transaction_types_with_original_message(
+    api, catalog, transaction_type, label
+):
+    product, _, _, _ = catalog
+    path = f"/api/stock/products/{product}"
+    assert api.post(path + "/add", json={"amount": 2}).status_code == 200
+    response = api.post(
+        path + "/consume",
+        json={
+            "amount": 1,
+            "transaction_type": "ignored",
+            "transactiontype": transaction_type,
+        },
+    )
+    assert response.status_code == 400, response.text
+    assert response.json() == {
+        "error_message": f"Transaction type {label} is not valid (StockService.ConsumeProduct)"
+    }
+    assert api.get(path).json()["stock_amount"] == 2
 
 
 @pytest.mark.parametrize("form", ["decimal", "exponent"])
@@ -4645,11 +5169,16 @@ def barcode_plugin(api, catalog, monkeypatch, tmp_path):
         pytest.skip("User plugin checks need access to the disposable data directory")
     plugins = root / "plugins"
     plugins.mkdir(parents=True, exist_ok=True)
-    path = plugins / "OpenFoodFactsBarcodeLookupPlugin.php"
+    path = plugins / (
+        "OpenFoodFactsBarcodeLookupPlugin.php"
+        if reference
+        else "OpenFoodFactsBarcodeLookupPlugin.py"
+    )
     output = plugins / "lookup.json"
     previous = path.read_bytes() if path.exists() else None
     # This real user plugin replaces the bundled plugin and exposes its constructor data.
-    path.write_text("""<?php
+    if reference:
+        path.write_text("""<?php
 class OpenFoodFactsBarcodeLookupPlugin extends Grocy\\Helpers\\BaseBarcodeLookupPlugin {
     public const PLUGIN_NAME = 'User plugin';
     protected function ExecuteLookup($barcode) {
@@ -4666,6 +5195,24 @@ class OpenFoodFactsBarcodeLookupPlugin extends Grocy\\Helpers\\BaseBarcodeLookup
         return $value;
     }
 }
+""")
+    else:
+        path.write_text("""import json
+from pathlib import Path
+from grocy.plugins import BaseBarcodeLookupPlugin
+
+class OpenFoodFactsBarcodeLookupPlugin(BaseBarcodeLookupPlugin):
+    plugin_name = "User plugin"
+
+    def execute_lookup(self, barcode):
+        value = json.loads(Path(__file__).with_name("lookup.json").read_text())
+        if isinstance(value, dict) and "product" in value:
+            value = value["product"]
+            value["__barcode"] = barcode
+            value.setdefault("location_id", self.locations[0]["id"])
+            value.setdefault("qu_id_purchase", self.quantity_units[0]["id"])
+            value.setdefault("qu_id_stock", self.quantity_units[0]["id"])
+        return value
 """)
 
     class Plugin:
@@ -4964,7 +5511,7 @@ def test_native_system_info_uses_request_headers_and_saved_version(api, execute_
         response = api.get("/api/system/info", headers={"User-Agent": "Native system agent"})
         assert response.status_code == 200, response.text
         info = response.json()
-        assert set(info) == {
+        fields = {
             "grocy_version",
             "php_version",
             "sqlite_version",
@@ -4972,13 +5519,16 @@ def test_native_system_info_uses_request_headers_and_saved_version(api, execute_
             "os",
             "client",
         }
+        if not info["php_version"]:
+            fields.update({"python_version", "server_version"})
+            assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", info["python_version"])
+            assert isinstance(info["server_version"], str) and info["server_version"]
+        assert set(info) == fields
         assert info["db_version"] == 1337
         assert info["client"] == "Native system agent"
         assert info["grocy_version"] == {"Version": "4.5.0", "ReleaseDate": "2025-03-28"}
-        assert all(
-            isinstance(info[name], str) and info[name]
-            for name in ["php_version", "sqlite_version", "os"]
-        )
+        assert all(isinstance(info[name], str) and info[name] for name in ["sqlite_version", "os"])
+        assert isinstance(info["php_version"], str)
     finally:
         execute_sql("DELETE FROM migrations WHERE migration=1337")
 
@@ -5254,11 +5804,66 @@ def runtime_configuration(api, native_data_directory):
         api.options("/api/system/info", follow_redirects=False)
 
 
+@pytest.fixture
+def configuration_values(api, runtime_configuration, monkeypatch):
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    original = {}
+    original_defaults = get_settings().default_user_settings
+
+    def php_value(value):
+        encoded = base64.b64encode(json.dumps(value).encode()).decode()
+        return f"json_decode(base64_decode('{encoded}'), true)"
+
+    def configure(*, settings=None, user_defaults=None):
+        settings, user_defaults = settings or {}, user_defaults or {}
+        if reference:
+            settings = dict(settings)
+            if "AUTH_MODE" in settings:
+                mode = settings.pop("AUTH_MODE")
+                names = {
+                    "default": "Default",
+                    "api-key": "ApiKey",
+                    "session": "Session",
+                    "ldap": "Ldap",
+                    "reverse-proxy": "ReverseProxy",
+                }
+                settings["AUTH_CLASS"] = "Grocy\\Middleware\\" + names[mode] + "AuthMiddleware"
+            runtime_configuration(
+                "".join(
+                    f"Setting({php_value(key)}, {php_value(value)});"
+                    for key, value in settings.items()
+                )
+                + "".join(
+                    f"DefaultUserSetting({php_value(key)}, {php_value(value)});"
+                    for key, value in user_defaults.items()
+                )
+            )
+        else:
+            for name, value in original.items():
+                monkeypatch.setattr(get_settings(), name, value)
+            for key, value in settings.items():
+                name = key.lower()
+                original.setdefault(name, getattr(get_settings(), name))
+                monkeypatch.setattr(get_settings(), name, value)
+            monkeypatch.setattr(
+                get_settings(), "default_user_settings", {**original_defaults, **user_defaults}
+            )
+
+    return configure
+
+
 @pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
 @pytest.mark.parametrize("mode", ["production", "dev"])
 def test_native_cache_change_redirects_before_authentication(
     api, runtime_configuration, method, mode
 ):
+    from grocy.core.config import get_settings
+
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if not reference and not get_settings().use_native_php:
+        pytest.skip("The PHP template cache is checked only on the reference runtime")
     runtime_configuration(f"Setting('BASE_URL', '/startup-gap');Setting('MODE', '{mode}');")
     headers = dict(api.headers)
     try:
@@ -5287,10 +5892,11 @@ def test_native_cache_change_redirects_before_authentication(
     ],
 )
 def test_native_base_path_uses_original_routes_and_error_pages(
-    api, runtime_configuration, method, path, authenticated, status
+    api, configuration_values, method, path, authenticated, status
 ):
-    runtime_configuration("Setting('BASE_PATH', '/parity');")
-    assert api.options("/api/system/info", follow_redirects=False).status_code == 302
+    configuration_values(settings={"BASE_PATH": "/parity"})
+    if api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused")):
+        assert api.options("/api/system/info", follow_redirects=False).status_code == 302
     headers = dict(api.headers)
     try:
         if not authenticated:
@@ -5313,12 +5919,10 @@ def test_native_base_path_uses_original_routes_and_error_pages(
 
 @pytest.mark.parametrize("mode", ["demo", "prerelease"])
 def test_native_mode_uses_uninitialized_separate_database(
-    api, runtime_configuration, native_data_directory, mode
+    api, configuration_values, native_data_directory, mode
 ):
     path = native_data_directory / ("grocy_missing_" + uuid4().hex + ".db")
-    runtime_configuration(
-        f"Setting('MODE', '{mode}');Setting('DEMO_DB_SUFFIX', '{path.stem[6:]}');"
-    )
+    configuration_values(settings={"MODE": mode, "DEMO_DB_SUFFIX": path.stem[6:]})
     try:
         response = api.get("/api/user", follow_redirects=False)
         assert response.status_code == 500, response.text
@@ -5329,11 +5933,12 @@ def test_native_mode_uses_uninitialized_separate_database(
         path.unlink(missing_ok=True)
 
 
-def test_native_base_path_dispatches_encoded_file_routes(api, runtime_configuration):
+def test_native_base_path_dispatches_encoded_file_routes(api, configuration_values):
     from urllib.parse import quote
 
-    runtime_configuration("Setting('BASE_PATH', '/parity');")
-    assert api.options("/api/system/info", follow_redirects=False).status_code == 302
+    configuration_values(settings={"BASE_PATH": "/parity"})
+    if api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused")):
+        assert api.options("/api/system/info", follow_redirects=False).status_code == 302
     name = "Prefixed Ä " + uuid4().hex + ".bin"
     encoded = quote(base64.b64encode(name.encode()).decode(), safe="")
     path = "/parity/api/files/productpictures/" + encoded
@@ -5368,7 +5973,7 @@ def test_native_base_path_dispatches_encoded_file_routes(api, runtime_configurat
 
 @pytest.mark.parametrize(("mode", "suffix"), [("demo", None), ("prerelease", "custom_mode")])
 def test_native_mode_reads_and_writes_its_own_database(
-    api, runtime_configuration, native_data_directory, mode, suffix
+    api, configuration_values, native_data_directory, mode, suffix
 ):
     from grocy.db.native_schema import SCHEMA
 
@@ -5385,10 +5990,10 @@ def test_native_mode_reads_and_writes_its_own_database(
             "INSERT INTO permission_hierarchy(id,name,parent) VALUES (?,?,?)", SCHEMA["permissions"]
         )
         database.execute("INSERT INTO user_permissions(user_id,permission_id) VALUES (1,1)")
-    code = f"Setting('MODE', '{mode}');Setting('DEFAULT_LOCALE', 'de');"
+    settings = {"MODE": mode, "DEFAULT_LOCALE": "de"}
     if suffix:
-        code += f"Setting('DEMO_DB_SUFFIX', '{suffix}');"
-    runtime_configuration(code)
+        settings["DEMO_DB_SUFFIX"] = suffix
+    configuration_values(settings=settings)
     try:
         response = api.get("/api/user")
         assert response.status_code == 200, response.text
@@ -5398,24 +6003,31 @@ def test_native_mode_reads_and_writes_its_own_database(
         assert response.status_code == 204, response.text
         with sqlite3.connect(path) as database:
             assert database.execute("SELECT done FROM tasks WHERE id=?", (task,)).fetchone() == (1,)
-        runtime_configuration("")
+        configuration_values()
         assert all(row["name"] != task_name for row in rows(api, "tasks"))
     finally:
         path.unlink(missing_ok=True)
 
 
-def test_native_configuration_defaults_and_saved_setting_precedence(api, runtime_configuration):
-    runtime_configuration(
-        "DefaultUserSetting('stock_due_soon_days', 37);"
-        "DefaultUserSetting('stock_decimal_places_amounts', 2);"
-        "DefaultUserSetting('native_nested_default', ['key' => [1, true, null]]);"
-        "Setting('CURRENCY', 'EUR');"
+def test_native_configuration_defaults_and_saved_setting_precedence(api, configuration_values):
+    configuration_values(
+        settings={"CURRENCY": "EUR"},
+        user_defaults={
+            "stock_due_soon_days": 37,
+            "stock_decimal_places_amounts": 2,
+            "native_nested_default": {"key": [1, True, None]},
+        },
     )
     settings = api.get("/api/user/settings")
     assert settings.status_code == 200, settings.text
     assert settings.json()["stock_due_soon_days"] == 37
     assert settings.json()["stock_decimal_places_amounts"] == 2
     assert settings.json()["native_nested_default"] == {"key": [1, True, None]}
+    if hasattr(api, "portal"):
+        bulk = api.put("/api/v2/user/settings", json={})
+        assert bulk.status_code == 200, bulk.text
+        assert bulk.json()["stock_due_soon_days"] == 37
+        assert bulk.json()["native_nested_default"] == {"key": [1, True, None]}
     assert api.get("/api/system/config").json()["CURRENCY"] == "EUR"
     path = "/api/user/settings/stock_decimal_places_amounts"
     try:
@@ -5424,11 +6036,11 @@ def test_native_configuration_defaults_and_saved_setting_precedence(api, runtime
     finally:
         assert api.delete(path).status_code == 204
     assert api.get(path).json() == {"value": 2}
-    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 4);")
+    configuration_values(user_defaults={"stock_due_soon_days": 4})
     assert api.get("/api/user/settings/stock_due_soon_days").json() == {"value": 4}
 
 
-def test_native_configured_due_days_reach_recipe_sql(api, catalog, runtime_configuration):
+def test_native_configured_due_days_reach_recipe_sql(api, catalog, configuration_values):
     from datetime import date
 
     product, unit, *_ = catalog
@@ -5441,48 +6053,106 @@ def test_native_configured_due_days_reach_recipe_sql(api, catalog, runtime_confi
         ).status_code
         == 200
     )
-    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 37);")
+    configuration_values(user_defaults={"stock_due_soon_days": 37})
     assert rows(api, "recipes_pos_resolved", recipe_id=recipe)[0]["due_score"] == 1
-    runtime_configuration("DefaultUserSetting('stock_due_soon_days', 4);")
+    configuration_values(user_defaults={"stock_due_soon_days": 4})
     assert rows(api, "recipes_pos_resolved", recipe_id=recipe)[0]["due_score"] == 0
 
 
 @pytest.mark.parametrize(
-    ("code", "message"),
+    "settings,user_defaults,message",
     [
         (
-            "Setting('MODE', 'wrong');",
+            {"MODE": "wrong"},
+            {},
             'Invalid mode "wrong" set, only production, dev, demo, prerelease allowed',
         ),
         (
-            "Setting('DEFAULT_LOCALE', 'wrong');",
+            {"DEFAULT_LOCALE": "wrong"},
+            {},
             'Invalid locale "wrong" set, locale needs to exist in folder localization',
         ),
-        ("Setting('CURRENCY', 'EURO');", "CURRENCY is not in ISO 4217 format (three letter code)"),
+        ({"CURRENCY": "EURO"}, {}, "CURRENCY is not in ISO 4217 format (three letter code)"),
+        ({"CALENDAR_FIRST_DAY_OF_WEEK": 7}, {}, "Invalid value for CALENDAR_FIRST_DAY_OF_WEEK"),
+        ({"MEAL_PLAN_FIRST_DAY_OF_WEEK": -2}, {}, "Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK"),
         (
-            "Setting('CALENDAR_FIRST_DAY_OF_WEEK', 7);",
-            "Invalid value for CALENDAR_FIRST_DAY_OF_WEEK",
+            {"ENTRY_PAGE": "missing"},
+            {},
+            'Invalid entry page "missing" set, only stock, shoppinglist, recipes, '
+            "chores, tasks, batteries, equipment, calendar, mealplan allowed",
         ),
         (
-            "Setting('MEAL_PLAN_FIRST_DAY_OF_WEEK', -2);",
-            "Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK",
-        ),
-        (
-            "DefaultUserSetting('auto_night_mode_time_range_from', '25:00');",
+            {},
+            {"auto_night_mode_time_range_from": "25:00"},
             "auto_night_mode_time_range_from is not in HH:mm format (25:00)",
+        ),
+        (
+            {},
+            {"auto_night_mode_time_range_to": "12:61"},
+            "auto_night_mode_time_range_to is not in HH:mm format (12:61)",
         ),
     ],
 )
-def test_native_configuration_errors_precede_http_and_authentication(
-    api, runtime_configuration, code, message
+def test_configuration_validation_precedes_startup_and_authentication(
+    api, configuration_values, settings, user_defaults, message
 ):
-    runtime_configuration(code)
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    if not reference:
+        from pydantic import ValidationError
+
+        from grocy.core.config import Settings, get_settings
+
+        # Environment configuration is loaded at Python process startup. PHP
+        # reloads config.php for each request. Both must reject these values.
+        values = {
+            **get_settings().model_dump(),
+            **{name.lower(): value for name, value in settings.items()},
+            "default_user_settings": user_defaults,
+        }
+        with pytest.raises(ValidationError, match=re.escape(message)):
+            Settings(**values)
+        return
+    configuration_values(settings=settings, user_defaults=user_defaults)
     for method in ("GET", "OPTIONS"):
         response = api.request(method, "/api/user", headers={"GROCY-API-KEY": "invalid"})
         assert response.status_code == 200, response.text
         assert response.text == "Invalid setting in config.php: " + message
         assert response.headers["content-type"] == "text/html; charset=UTF-8"
         assert "access-control-allow-origin" not in response.headers
+
+
+def test_configuration_preserves_sunday_and_relative_meal_plan_start(api, configuration_values):
+    values = {
+        "CALENDAR_FIRST_DAY_OF_WEEK": 0,
+        "MEAL_PLAN_FIRST_DAY_OF_WEEK": -1,
+        "ENTRY_PAGE": "tasks",
+    }
+    configuration_values(settings=values)
+    if hasattr(api, "portal"):
+        from grocy.core.config import Settings, get_settings
+
+        Settings(**get_settings().model_dump())
+    response = api.get("/api/system/config")
+    assert response.status_code == 200, response.text
+    assert {name: response.json()[name] for name in values} == values
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"CALENDAR_SHOW_WEEK_OF_YEAR": False, "ENERGY_UNIT": "kJ", "GROCYCODE_TYPE": "1D"},
+        {
+            "CALENDAR_SHOW_WEEK_OF_YEAR": "off",
+            "ENERGY_UNIT": "custom unit",
+            "GROCYCODE_TYPE": "custom",
+        },
+    ],
+)
+def test_native_configured_display_options(api, configuration_values, values):
+    configuration_values(settings=values)
+    response = api.get("/api/system/config")
+    assert response.status_code == 200, response.text
+    assert {name: response.json()[name] for name in values} == values
 
 
 def test_native_bootstrap_output_retains_http_header_state(
@@ -5719,8 +6389,14 @@ def test_native_development_output_and_authentication_bypass(
     ids=lambda value: value if isinstance(value, str) and "{key}" not in value else "",
 )
 def test_native_session_cookie_authentication_and_use_time(
-    api, execute_sql, php_http_settings, case, suffix, cookie, valid
+    api, execute_sql, request, case, suffix, cookie, valid
 ):
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    # PHP warnings describe the reference interpreter. Python still checks each
+    # session, cookie, expiry, and persistence rule below without that runtime.
+    php_http_settings = (
+        request.getfixturevalue("php_http_settings") if reference else {"startup_output": b""}
+    )
     token = uuid4().hex
     hex_key = (token.encode() + suffix).hex()
     expiry = (
@@ -5784,17 +6460,15 @@ def test_native_session_cookie_authentication_and_use_time(
 
 @pytest.mark.parametrize("case", ["new", "missing", "duplicate", "env"])
 def test_native_reverse_proxy_identity_and_default_permissions(
-    api, execute_sql, runtime_configuration, case
+    api, execute_sql, configuration_values, case
 ):
-    runtime_configuration(
-        "Setting('AUTH_CLASS', 'Grocy\\\\Middleware\\\\ReverseProxyAuthMiddleware');"
-        "Setting('DEFAULT_PERMISSIONS', ['TASKS_MARK_COMPLETED']);"
-        + (
-            "Setting('REVERSE_PROXY_AUTH_USE_ENV', true);"
-            "Setting('REVERSE_PROXY_AUTH_HEADER', 'HTTP_REMOTE_USER');"
-            if case == "env"
-            else "Setting('REVERSE_PROXY_AUTH_HEADER', 'Remote-User');"
-        )
+    configuration_values(
+        settings={
+            "AUTH_MODE": "reverse-proxy",
+            "DEFAULT_PERMISSIONS": ["TASKS_MARK_COMPLETED"],
+            "REVERSE_PROXY_AUTH_USE_ENV": case == "env",
+            "REVERSE_PROXY_AUTH_HEADER": "HTTP_REMOTE_USER" if case == "env" else "Remote-User",
+        }
     )
     username = "proxy-" + uuid4().hex
     headers = [("GROCY-API-KEY", "")]
@@ -5814,6 +6488,12 @@ def test_native_reverse_proxy_identity_and_default_permissions(
     user = response.json()[0]
     assert user["username"] == username
     assert api.get("/api/user", headers=headers).json()[0]["id"] == user["id"]
+    if hasattr(api, "portal"):
+        saved = api.put("/api/v2/user/settings", json={"proxy_test": "saved"}, headers=headers)
+        assert saved.status_code == 200, saved.text
+        assert api.get("/api/user/settings/proxy_test", headers=headers).json() == {
+            "value": "saved"
+        }
     assert api.get("/api/objects/tasks", headers=headers).status_code == 200
     task = create(api, "tasks", name=uuid4().hex)
     assert api.post(f"/api/tasks/{task}/complete", headers=headers, json={}).status_code == 204
@@ -5827,13 +6507,11 @@ def test_native_reverse_proxy_identity_and_default_permissions(
     ) == [(1,)]
 
 
-@pytest.mark.parametrize(
-    "auth_class", ["ApiKeyAuthMiddleware", "SessionAuthMiddleware", "LdapAuthMiddleware"]
-)
+@pytest.mark.parametrize("auth_mode", ["api-key", "session", "ldap"])
 def test_native_configured_authentication_class_selects_credentials(
-    api, execute_sql, runtime_configuration, auth_class
+    api, execute_sql, configuration_values, auth_mode
 ):
-    runtime_configuration(f"Setting('AUTH_CLASS', 'Grocy\\\\Middleware\\\\{auth_class}');")
+    configuration_values(settings={"AUTH_MODE": auth_mode})
     key, cookie = uuid4().hex, uuid4().hex
     execute_sql(
         f"INSERT INTO api_keys(api_key,user_id,expires) VALUES ('{key}',1,'2999-12-31 23:59:59')"
@@ -5844,15 +6522,202 @@ def test_native_configured_authentication_class_selects_credentials(
     )
     try:
         by_key = api.get("/api/user", headers={"GROCY-API-KEY": key, "Cookie": ""})
-        assert by_key.status_code == (401 if auth_class == "SessionAuthMiddleware" else 200), (
-            by_key.text
-        )
+        assert by_key.status_code == (401 if auth_mode == "session" else 200), by_key.text
         by_cookie = api.get(
             "/api/user", headers={"GROCY-API-KEY": "", "Cookie": "grocy_session=" + cookie}
         )
-        assert by_cookie.status_code == (401 if auth_class == "ApiKeyAuthMiddleware" else 200), (
-            by_cookie.text
-        )
+        assert by_cookie.status_code == (401 if auth_mode == "api-key" else 200), by_cookie.text
     finally:
         execute_sql(f"DELETE FROM api_keys WHERE api_key='{key}'")
         execute_sql(f"DELETE FROM sessions WHERE session_key='{cookie}'")
+
+
+@pytest.mark.parametrize(
+    "username,password,valid,overrides",
+    [
+        ("Alice", "correct horse", True, {}),
+        ("alice", "wrong", False, {}),
+        ("missing", "correct horse", False, {}),
+        ("alice", "", False, {}),
+        ("blocked", "secret", False, {}),
+        ("alice", "correct horse", False, {"LDAP_BIND_PW": "wrong"}),
+    ],
+)
+def test_ldap_login_creates_and_reuses_the_directory_identity(
+    api, configuration_values, ldap_directory, username, password, valid, overrides
+):
+    configuration_values(
+        settings={
+            "AUTH_MODE": "ldap",
+            **ldap_directory,
+            **overrides,
+            "DEFAULT_PERMISSIONS": ["TASKS_MARK_COMPLETED"],
+        }
+    )
+    reference = api.base_url == httpx.URL(os.getenv("GROCY_REFERENCE_URL", "http://unused"))
+    before = api.get("/api/users").json()
+
+    def login():
+        if reference:
+            return api.post(
+                "/login",
+                data={"username": username, "password": password, "stay_logged_in": ""},
+                follow_redirects=False,
+            )
+        return api.post("/api/v2/login", json={"username": username, "password": password})
+
+    try:
+        result = login()
+        if not valid:
+            assert "grocy_session" not in result.cookies
+            if not reference:
+                assert result.status_code == 401, result.text
+            assert api.get("/api/users").json() == before
+            return
+        assert "grocy_session" in result.cookies, result.text
+        headers = {"GROCY-API-KEY": ""}
+        user_response = api.get("/api/user", headers=headers)
+        assert user_response.status_code == 200, user_response.text
+        user = user_response.json()[0]
+        assert (user["username"], user["first_name"], user["last_name"]) == (
+            "alice",
+            "Alice",
+            "Grocer",
+        )
+        assert login().cookies.get("grocy_session")
+        assert api.get("/api/user", headers=headers).json()[0]["id"] == user["id"]
+        permissions = api.get(f"/api/users/{user['id']}/permissions").json()
+        assert [row["permission_id"] for row in permissions] == [29]
+    finally:
+        api.cookies.clear()
+
+
+@pytest.mark.parametrize(
+    "group,display",
+    [
+        ("userfiles", 'Receipt "quoted".txt'),
+        ("equipmentmanuals", "Manual.pdf"),
+        ("recipepictures", "Recipe photo.png"),
+        ("productpictures", "Äpfel 漢字.png"),
+        ("userpictures", "Profile.jpg"),
+    ],
+)
+def test_named_file_links_use_the_stored_file_and_the_display_name(
+    api, tmp_path, monkeypatch, group, display
+):
+    from urllib.parse import quote
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    name = uuid4().hex + ".bin"
+    source = base64.b64encode(name.encode()).decode()
+    label = base64.b64encode(display.encode()).decode()
+    path = f"/api/files/{group}/{quote(source, safe='')}"
+    link = f"/files/{group}/{quote(source + '_' + label, safe='')}"
+    content = b"\x00\xffnamed file body\n"
+    assert api.put(path, content=content).status_code == 204
+
+    def download(method):
+        if not hasattr(api, "portal"):
+            return api.request(method, link, headers={"Range": "bytes=0-0"})
+
+        async def fetch():
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=api.app),
+                base_url=str(api.base_url),
+                headers=api.headers,
+            ) as connected:
+                return await connected.request(method, link, headers={"Range": "bytes=0-0"})
+
+        return api.portal.call(fetch)
+
+    try:
+        response = download("GET")
+        assert response.status_code == 200, response.text
+        assert response.content == content
+        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-disposition"] == f'inline; filename="{display}"'
+        assert response.headers["cache-control"] == "max-age=2592000"
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-headers"] == "*"
+        head = download("HEAD")
+        assert head.status_code == 200 and head.content == b""
+        assert head.headers["content-disposition"] == response.headers["content-disposition"]
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "case,status",
+    [
+        ("missing", 404),
+        ("bad_display", 404),
+        ("bad_group", 404),
+        ("empty_display", 404),
+        ("no_display", 500),
+        ("bad_group_no_display", 404),
+    ],
+)
+def test_named_file_link_errors_use_web_responses(api, case, status):
+    source = base64.b64encode((uuid4().hex + ".txt").encode()).decode()
+    display = base64.b64encode(b"Missing.txt").decode()
+    if case == "bad_display":
+        display = base64.b64encode(b"NoExtension").decode()
+    if case == "empty_display":
+        display = ""
+    token = source if case in {"no_display", "bad_group_no_display"} else source + "_" + display
+    group = "invalid" if case in {"bad_group", "bad_group_no_display"} else "userfiles"
+    response = api.get(f"/files/{group}/{token}")
+    assert response.status_code == status, response.text
+    assert response.headers["content-type"].startswith("text/html")
+    if status == 404:
+        assert "This page does not exist" in response.text
+        assert 'http-equiv="refresh"' in response.text
+        assert "5;url=" in response.text
+
+
+def test_named_file_picture_links_keep_original_and_cached_image(api, tmp_path, monkeypatch):
+    from PIL import Image
+
+    from grocy.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "files_root", tmp_path)
+    original = BytesIO()
+    Image.new("RGB", (80, 40), "red").save(original, "PNG")
+    name = uuid4().hex + ".png"
+    source = base64.b64encode(name.encode()).decode()
+    label = base64.b64encode(b"Recipe cover.jpg").decode()
+    path = f"/api/files/userfiles/{source}"
+    link = f"/files/userfiles/{source}_{label}_ignored"
+    assert api.put(path, content=original.getvalue()).status_code == 204
+    try:
+        assert api.get(link, params={"best_fit_width": 20}).content == original.getvalue()
+        picture = api.get(
+            link, params={"force_serve_as": "picture", "best_fit_width": 20, "best_fit_height": 20}
+        )
+        assert picture.status_code == 200, picture.text
+        assert picture.headers["content-type"] == "image/png"
+        assert picture.headers["content-disposition"] == 'inline; filename="Recipe cover.jpg"'
+        assert Image.open(BytesIO(picture.content)).size == (20, 10)
+        assert api.get(path).content == original.getvalue()
+        cached = base64.b64encode((name[:-4] + "__downscaledto20x20.png").encode()).decode()
+        assert api.get(f"/api/files/userfiles/{cached}").content == picture.content
+    finally:
+        assert api.delete(path).status_code == 204
+
+
+def test_named_file_preflight_needs_no_login(api):
+    previous = dict(api.headers)
+    api.headers.pop("GROCY-API-KEY", None)
+    try:
+        response = api.options(
+            "/files/userfiles/anything",
+            headers={"Origin": "https://example.invalid", "Access-Control-Request-Method": "GET"},
+        )
+        assert response.status_code == 200 and response.content == b""
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-headers"] == "*"
+        assert response.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, OPTIONS"
+    finally:
+        api.headers.update(previous)

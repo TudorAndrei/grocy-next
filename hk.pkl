@@ -5,6 +5,7 @@ import "package://github.com/jdx/hk/releases/download/v2.9.0/hk@2.9.0#/Builtins.
 exclude = List(
   "backend/src/grocy/_vendor/**",
   "frontend/tools/oxlint/anti-slop/**",
+  "frontend/public/vendor/**",
   "frontend/src/routeTree.gen.ts",
   "**/.agents/**",
   "**/.claude/**",

@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export function ProductMerge({ productId }: Props) {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
   const products = useQuery(productsQuery());
   const [removeId, setRemoveId] = useState("");
@@ -33,12 +36,13 @@ export function ProductMerge({ productId }: Props) {
   return (
     <section className="panel" aria-labelledby="merge-heading">
       <h2 className="panel-head" id="merge-heading">
-        Merge products
+        {tr("Merge products")}
       </h2>
       <div className="panel-body">
         <p className="field-hint">
-          Move stock and history from another product into this one, then remove the duplicate
-          catalog entry.
+          {tr(
+            "Move stock and history from another product into this one, then remove the duplicate catalog entry.",
+          )}
         </p>
         {merge.error ? <ErrorBlock message={merge.error.message} /> : null}
         <form className="inline-form" onSubmit={onSubmit}>
@@ -46,9 +50,9 @@ export function ProductMerge({ productId }: Props) {
             value={removeId}
             onChange={(e) => setRemoveId(e.target.value)}
             required
-            aria-label="Product to merge into this one"
+            aria-label={tr("Product to merge into this one")}
           >
-            <option value="">Select duplicate product</option>
+            <option value="">{tr("Select duplicate product")}</option>
             {choices.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -56,7 +60,7 @@ export function ProductMerge({ productId }: Props) {
             ))}
           </select>
           <button type="submit" className="btn btn-ghost" disabled={merge.isPending || !removeId}>
-            Merge into this product
+            {tr("Merge into this product")}
           </button>
         </form>
       </div>

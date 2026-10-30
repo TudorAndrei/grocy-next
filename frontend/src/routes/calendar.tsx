@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -6,7 +7,7 @@ import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
-import { batteriesQuery, choresQuery, objectsQuery, tasksQuery } from "@/hooks/queries";
+import { downloadApiDocument } from "@/lib/open-document";
 
 export const Route = createFileRoute("/calendar")({ component: CalendarPage });
 
@@ -16,24 +17,34 @@ type AgendaItem = {
   id: string;
   when: string;
   label: string;
-  kind: string;
+  allDay: boolean;
+};
+
+type CalendarEvent = {
+  title: string;
+  start: string | null;
+  date_format: "date" | "datetime";
+  allDay?: boolean;
 };
 
 function parseWhen(value: string | null | undefined): string | null {
   if (!value || String(value).startsWith("2999-")) return null;
   const text = String(value).replace(" ", "T");
-  const date = new Date(text);
+  const date = new Date(text.length === 10 ? text + "T00:00:00" : text);
 
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  return Number.isNaN(date.getTime()) ? null : text;
 }
 
 function CalendarPage() {
+  const { t: tr } = useI18n();
+
   const [tab, setTab] = useState<CalendarTab>("agenda");
   const [showLink, setShowLink] = useState(false);
-  const meals = useQuery(objectsQuery("meal_plan"));
-  const tasks = useQuery(tasksQuery(true));
-  const chores = useQuery(choresQuery());
-  const batteries = useQuery(batteriesQuery());
+
+  const events = useQuery({
+    queryKey: ["calendar", "events"],
+    queryFn: () => request<CalendarEvent[]>("/api/v2/calendar/events"),
+  });
 
   const sharing = useQuery({
     queryKey: ["calendar-link"],
@@ -42,107 +53,58 @@ function CalendarPage() {
   });
 
   const download = useMutation({
-    mutationFn: async () => {
-      const text = await request<string>("/api/calendar/ical");
-
-      const url = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "Grocy.ics";
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    },
+    mutationFn: () => downloadApiDocument("/api/calendar/ical", "Grocy.ics"),
   });
 
   const agenda: AgendaItem[] = [];
 
-  for (const row of meals.data ?? []) {
-    const when = parseWhen(row.day);
+  for (const [index, row] of (events.data ?? []).entries()) {
+    const when = parseWhen(row.start);
 
     if (!when) continue;
     agenda.push({
-      id: `meal-${row.id}`,
+      id: String(index),
       when,
-      kind: "Meal",
-      label: String(row.note ?? row.type ?? "Meal plan entry"),
-    });
-  }
-
-  for (const row of tasks.data ?? []) {
-    const when = parseWhen(row.due_date);
-
-    if (!when) continue;
-    agenda.push({
-      id: `task-${row.id}`,
-      when,
-      kind: "Task",
-      label: row.name,
-    });
-  }
-
-  for (const row of chores.data ?? []) {
-    const when = parseWhen(row.next_estimated_execution_time);
-
-    if (!when) continue;
-    agenda.push({
-      id: `chore-${row.id}`,
-      when,
-      kind: "Chore",
-      label: row.chore_name ?? row.name ?? "Chore",
-    });
-  }
-
-  for (const row of batteries.data ?? []) {
-    const when = parseWhen(row.next_estimated_charge_time);
-
-    if (!when) continue;
-    agenda.push({
-      id: `battery-${row.id}`,
-      when,
-      kind: "Battery",
-      label: row.battery?.name ?? row.name ?? "Battery",
+      allDay: row.date_format === "date" || Boolean(row.allDay),
+      label: row.title,
     });
   }
 
   agenda.sort((a, b) => a.when.localeCompare(b.when));
 
-  const loading = meals.isLoading || tasks.isLoading || chores.isLoading || batteries.isLoading;
-
-  const error =
-    meals.error ||
-    tasks.error ||
-    chores.error ||
-    batteries.error ||
-    sharing.error ||
-    download.error;
+  const loading = events.isLoading;
+  const error = events.error || sharing.error || download.error;
 
   return (
     <>
       <PageHeader
-        title="Calendar"
-        lead="Upcoming meals, tasks, chores, and battery charges — or export the full iCal feed."
+        title={tr("Calendar")}
+        lead={tr("Stock due dates, meals, tasks, chores, and battery charges.")}
       />
       <Tabs
-        ariaLabel="Calendar views"
+        ariaLabel={tr("Calendar views")}
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: "agenda", label: "Agenda" },
-          { id: "export", label: "Export" },
+          { id: "agenda", label: tr("Agenda") },
+          { id: "export", label: tr("Export") },
         ]}
       />
       {error ? <ErrorBlock message={error.message} /> : null}
       <TabPanel id="cal-agenda" labelledBy="tab-agenda" hidden={tab !== "agenda"}>
-        {loading ? <LoadingBlock label="Loading agenda…" /> : null}
-        {agenda.length === 0 && !loading ? (
-          <p className="empty-state">Nothing scheduled with a due date yet.</p>
+        {loading ? <LoadingBlock label={tr("Loading agenda…")} /> : null}
+        {agenda.length === 0 && !loading && !events.error ? (
+          <p className="empty-state">{tr("Nothing scheduled with a due date yet.")}</p>
         ) : (
           <ul className="agenda-list">
             {agenda.map((item) => (
               <li key={item.id} className="agenda-item">
-                <time dateTime={item.when}>{new Date(item.when).toLocaleString()}</time>
-                <span className="badge">{item.kind}</span>
+                <time dateTime={item.when}>
+                  {item.allDay
+                    ? new Date(item.when.slice(0, 10) + "T00:00:00").toLocaleDateString()
+                    : new Date(item.when).toLocaleString()}
+                </time>
+                <span className="badge">{item.allDay ? tr("All day") : tr("Timed")}</span>
                 <span>{item.label}</span>
               </li>
             ))}
@@ -156,15 +118,15 @@ function CalendarPage() {
             disabled={download.isPending}
             onClick={() => download.mutate()}
           >
-            Download calendar
+            {tr("Download calendar")}
           </button>
           <button className="btn btn-ghost" onClick={() => setShowLink(true)}>
-            Show subscription link
+            {tr("Show subscription link")}
           </button>
         </div>
         {sharing.data ? (
           <div className="field">
-            <label htmlFor="calendar-url">Subscription URL</label>
+            <label htmlFor="calendar-url">{tr("Subscription URL")}</label>
             <input id="calendar-url" readOnly value={sharing.data.url} />
           </div>
         ) : null}

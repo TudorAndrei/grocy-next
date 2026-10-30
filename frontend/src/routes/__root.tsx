@@ -1,4 +1,5 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+import { createRootRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { LoadingBlock } from "@/components/LoadingBlock";
@@ -8,9 +9,18 @@ import { currentUserQuery } from "@/hooks/queries";
 import { api, ApiError, queryKeys } from "@/lib/api";
 import { CommandProvider } from "@/components/CommandBar";
 import { Toaster } from "@/components/Toaster";
+import { DatabaseRefresh } from "@/components/DatabaseRefresh";
+import { FeatureRoute } from "@/components/FeatureRoute";
+import { LocalizationProvider } from "@/lib/i18n";
+import { NightMode } from "@/components/NightMode";
+import { ScreenOn } from "@/components/ScreenOn";
 
 export const Route = createRootRoute({
-  component: RootLayout,
+  component: () => (
+    <LocalizationProvider>
+      <RootLayout />
+    </LocalizationProvider>
+  ),
 });
 
 function RootLayout() {
@@ -28,29 +38,36 @@ function RootLayout() {
     retry: (count, error) => !(error instanceof ApiError && error.status === 401) && count < 2,
   });
 
+  let content: ReactNode;
+
   if (needsSetup) {
-    return <SetupWizard />;
-  }
-
-  if (user.error instanceof ApiError && user.error.status === 401) {
-    return <LoginPage />;
-  }
-
-  if (setup.isPending || (needsSetup === false && user.isPending)) {
-    return (
+    content = <SetupWizard />;
+  } else if (user.error instanceof ApiError && user.error.status === 401) {
+    content = <LoginPage />;
+  } else if (setup.isPending || (needsSetup === false && user.isPending)) {
+    content = (
       <main id="main-content" className="setup-page">
         <LoadingBlock />
       </main>
     );
+  } else {
+    content = (
+      <Toaster>
+        <DatabaseRefresh />
+        <ScreenOn />
+        <CommandProvider>
+          <AppShell>
+            <FeatureRoute />
+          </AppShell>
+        </CommandProvider>
+      </Toaster>
+    );
   }
 
   return (
-    <Toaster>
-      <CommandProvider>
-        <AppShell>
-          <Outlet />
-        </AppShell>
-      </CommandProvider>
-    </Toaster>
+    <>
+      <NightMode authenticated={needsSetup === false && user.isSuccess} />
+      {content}
+    </>
   );
 }

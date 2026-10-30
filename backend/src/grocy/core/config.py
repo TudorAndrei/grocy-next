@@ -1,9 +1,29 @@
+import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from grocy.compatibility import client_defaults
+
+
+def _valid_weekday(value: Any, minimum: int) -> bool:
+    if value is None or value is False or value == "":
+        return True
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return False
+    if (
+        isinstance(value, str)
+        and re.fullmatch(
+            r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?",
+            value.strip(" \t\r\n\v\f"),
+        )
+        is None
+    ):
+        return False
+    return minimum <= float(value) <= 6
 
 
 class Settings(BaseSettings):
@@ -13,11 +33,34 @@ class Settings(BaseSettings):
     use_native_php: bool = False
     php_executable: str = "php"
     mode: str = "production"
+    demo_db_suffix: str | None = None
     currency: str = "USD"
+    energy_unit: str = "kcal"
+    grocycode_type: str = "2D"
     default_locale: str = "en"
+    calendar_first_day_of_week: Any = ""
+    calendar_show_week_of_year: bool | str = True
+    meal_plan_first_day_of_week: Any = ""
+    entry_page: str = "stock"
     base_url: str = "/"
+    base_path: str = ""
     disable_url_rewriting: bool | str = False
     default_permissions: list[str] = ["ADMIN"]
+    default_user_settings: dict[str, Any] = {}
+    auth_mode: Literal["default", "api-key", "session", "ldap", "reverse-proxy"] = "default"
+    disable_auth: bool | str = False
+    reverse_proxy_auth_header: str = "Remote-User"
+    reverse_proxy_auth_use_env: bool = False
+    ldap_address: str = ""
+    ldap_base_dn: str = ""
+    ldap_bind_dn: str = ""
+    ldap_bind_pw: str = Field(default="", repr=False)
+    ldap_user_filter: str = ""
+    ldap_uid_attr: str = ""
+    ldap_start_tls: bool = False
+    ldap_ca_certs_file: Path | None = None
+    ldap_connect_timeout: int = Field(default=5, gt=0)
+    ldap_receive_timeout: int = Field(default=10, gt=0)
     debug: bool = False
     database_url: str = f"sqlite+aiosqlite:///{Path('data') / 'grocy.db'}"
     database_busy_timeout_ms: int = 5000
@@ -83,6 +126,8 @@ class Settings(BaseSettings):
                     or name
                     in {
                         "disable_url_rewriting",
+                        "disable_auth",
+                        "calendar_show_week_of_year",
                         "label_printer_run_server",
                         "label_printer_hook_json",
                         "tprinter_is_network_printer",
@@ -93,6 +138,78 @@ class Settings(BaseSettings):
                     value = value.rstrip("\r\n")
                     values[name] = {"true": True, "false": False}.get(value.lower(), value)
         return values
+
+    @model_validator(mode="after")
+    def validate_configuration(self) -> Self:
+        modes = ["production", "dev", "demo", "prerelease"]
+        if self.mode not in modes:
+            raise ValueError(f'Invalid mode "{self.mode}" set, only {", ".join(modes)} allowed')
+        locales = Path(__file__).parents[1] / "_vendor/grocy-core/localization"
+        if (
+            re.fullmatch(r"[A-Za-z0-9_@-]+", self.default_locale) is None
+            or not (locales / self.default_locale).is_dir()
+        ):
+            raise ValueError(
+                f'Invalid locale "{self.default_locale}" set, '
+                "locale needs to exist in folder localization"
+            )
+        if re.fullmatch(r"[A-z]{3}", self.currency) is None:
+            raise ValueError("CURRENCY is not in ISO 4217 format (three letter code)")
+        if not _valid_weekday(self.calendar_first_day_of_week, 0):
+            raise ValueError("Invalid value for CALENDAR_FIRST_DAY_OF_WEEK")
+        pages = [
+            "stock",
+            "shoppinglist",
+            "recipes",
+            "chores",
+            "tasks",
+            "batteries",
+            "equipment",
+            "calendar",
+            "mealplan",
+        ]
+        if self.entry_page not in pages:
+            raise ValueError(
+                f'Invalid entry page "{self.entry_page}" set, only {", ".join(pages)} allowed'
+            )
+        if not _valid_weekday(self.meal_plan_first_day_of_week, -1):
+            raise ValueError("Invalid value for MEAL_PLAN_FIRST_DAY_OF_WEEK")
+        defaults = self.user_defaults()
+        for name in ["auto_night_mode_time_range_from", "auto_night_mode_time_range_to"]:
+            value = defaults[name]
+            if (
+                not isinstance(value, str)
+                or re.fullmatch(r"(?:2[0-3]|[01][0-9]):[0-5][0-9]", value) is None
+            ):
+                raise ValueError(f"{name} is not in HH:mm format ({value})")
+        return self
+
+    def active_database_url(self) -> str:
+        if self.mode in {"demo", "prerelease"}:
+            suffix = self.default_locale if self.demo_db_suffix is None else self.demo_db_suffix
+            path = (self.datapath / f"grocy_{suffix}.db").resolve()
+            return "sqlite+aiosqlite:///" + str(path)
+        return self.database_url
+
+    def active_files_root(self) -> Path:
+        root = self.files_root
+        if self.mode in {"demo", "prerelease"}:
+            suffix = self.default_locale if self.demo_db_suffix is None else self.demo_db_suffix
+            root = Path(str(root) + "/" + suffix)
+        return root.resolve()
+
+    def user_defaults(self) -> dict[str, Any]:
+        return {**client_defaults()["user_settings"], **self.default_user_settings}
+
+    def auth_class_name(self) -> str:
+        names = {
+            "default": "Default",
+            "api-key": "ApiKey",
+            "session": "Session",
+            "ldap": "Ldap",
+            "reverse-proxy": "ReverseProxy",
+        }
+        return "Grocy\\Middleware\\" + names[self.auth_mode] + "AuthMiddleware"
 
     def feature_flags(self) -> dict[str, bool | str]:
         flags = {

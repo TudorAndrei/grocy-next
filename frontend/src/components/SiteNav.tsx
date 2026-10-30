@@ -1,6 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
+import { useFeatures } from "@/lib/features";
+import { useI18n } from "@/lib/i18n";
 import { Icon, type IconName } from "./Icon";
 
 /** Each domain keeps one marker colour across the nav and the Today board. */
@@ -22,15 +24,29 @@ const starts = (prefix: string) => (p: string) => p === prefix || p.startsWith(`
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: null,
-    links: [{ to: "/", label: "Today", icon: "today", domain: "stock", match: (p) => p === "/" }],
+    links: [
+      {
+        to: "/today",
+        label: "Today",
+        icon: "today",
+        domain: "stock",
+        match: (p) => p === "/today",
+      },
+    ],
   },
   {
     label: "Kitchen",
     links: [
-      { to: "/stock", label: "Stock", icon: "stock", domain: "stock", match: starts("/stock") },
+      {
+        to: "/stock",
+        label: "Stock overview",
+        icon: "stock",
+        domain: "stock",
+        match: starts("/stock"),
+      },
       {
         to: "/shopping",
-        label: "Shopping",
+        label: "Shopping list",
         icon: "shopping",
         domain: "shopping",
         match: starts("/shopping"),
@@ -42,6 +58,13 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: "products",
         domain: "stock",
         match: starts("/products"),
+      },
+      {
+        to: "/inventory",
+        label: "Inventory",
+        icon: "journal",
+        domain: "stock",
+        match: starts("/inventory"),
       },
       {
         to: "/recipes",
@@ -169,19 +192,25 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export function useNavCounts() {
+  const features = useFeatures();
+
   const shopping = useQuery({
     queryKey: queryKeys.shopping(1),
     queryFn: () => api.getShoppingList(1),
+    enabled: features.enabled("SHOPPINGLIST"),
   });
 
   const proposals = useQuery({
     queryKey: queryKeys.proposalsPending,
     queryFn: api.listPendingProposals,
+    enabled: features.enabled("STOCK"),
   });
 
   return {
-    shopping: shopping.data?.items.filter((item) => !item.done).length ?? 0,
-    review: proposals.data?.length ?? 0,
+    shopping: features.enabled("SHOPPINGLIST")
+      ? (shopping.data?.items.filter((item) => !item.done).length ?? 0)
+      : 0,
+    review: features.enabled("STOCK") ? (proposals.data?.length ?? 0) : 0,
   };
 }
 
@@ -190,34 +219,42 @@ export function usePathname() {
 }
 
 export function SiteNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useI18n();
+  const features = useFeatures();
   const pathname = usePathname();
   const counts = useNavCounts();
 
   return (
-    <nav className="site-nav" aria-label="Primary">
-      {NAV_GROUPS.map((group, index) => (
-        <div key={group.label ?? index} className="nav-group">
-          {group.label ? <div className="nav-group-label">{group.label}</div> : null}
-          {group.links.map((link) => {
-            const count = link.count && link.count !== "today" ? counts[link.count] : 0;
-            const active = link.match(pathname);
+    <nav className="site-nav" aria-label={t("Primary")}>
+      {NAV_GROUPS.flatMap((group, index) => {
+        const links = group.links.filter((link) => features.routeEnabled(link.to));
 
-            return (
-              <Link
-                key={link.to}
-                to={link.to}
-                data-domain={link.domain}
-                aria-current={active ? "page" : undefined}
-                onClick={onNavigate}
-              >
-                <Icon name={link.icon} />
-                <span>{link.label}</span>
-                {count > 0 ? <em aria-label={`${count} open`}>{count}</em> : null}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+        if (links.length === 0) return [];
+
+        return [
+          <div key={group.label ?? index} className="nav-group">
+            {group.label ? <div className="nav-group-label">{t(group.label)}</div> : null}
+            {links.map((link) => {
+              const count = link.count && link.count !== "today" ? counts[link.count] : 0;
+              const active = link.match(pathname);
+
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  data-domain={link.domain}
+                  aria-current={active ? "page" : undefined}
+                  onClick={onNavigate}
+                >
+                  <Icon name={link.icon} />
+                  <span>{t(link.label)}</span>
+                  {count > 0 ? <em aria-label={t("%s open", String(count))}>{count}</em> : null}
+                </Link>
+              );
+            })}
+          </div>,
+        ];
+      })}
     </nav>
   );
 }

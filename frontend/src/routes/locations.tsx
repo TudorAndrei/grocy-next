@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -5,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { objectsQuery } from "@/hooks/queries";
-import { formatAmount } from "@/lib/format";
+import { usePreferences } from "@/lib/preferences";
 import { request } from "@/lib/api";
 
 export const Route = createFileRoute("/locations")({
@@ -20,6 +21,9 @@ type LocationEntry = {
 };
 
 function LocationsPage() {
+  const { t: tr } = useI18n();
+
+  const { formatAmount } = usePreferences();
   const [locationId, setLocationId] = useState<number>(0);
   const locations = useQuery(objectsQuery("locations"));
   const products = useQuery(objectsQuery("products"));
@@ -38,17 +42,17 @@ function LocationsPage() {
   return (
     <>
       <PageHeader
-        title="Stock by location"
-        lead="See which products sit in each storage location, including opened amounts."
+        title={tr("Stock by location")}
+        lead={tr("See which products sit in each storage location, including opened amounts.")}
       />
       <div className="field" style={{ maxWidth: "20rem" }}>
-        <label htmlFor="location-pick">Location</label>
+        <label htmlFor="location-pick">{tr("Location")}</label>
         <select
           id="location-pick"
           value={locationId || ""}
           onChange={(e) => setLocationId(Number(e.target.value))}
         >
-          <option value="">Choose a location</option>
+          <option value="">{tr("Choose a location")}</option>
           {(locations.data ?? []).map((loc) => (
             <option key={loc.id} value={loc.id}>
               {loc.name}
@@ -57,9 +61,9 @@ function LocationsPage() {
         </select>
       </div>
       {error ? <ErrorBlock message={error.message} /> : null}
-      {locationId > 0 && entries.isLoading ? <LoadingBlock label="Loading entries…" /> : null}
+      {locationId > 0 && entries.isLoading ? <LoadingBlock label={tr("Loading entries…")} /> : null}
       {locationId > 0 && entries.isSuccess && entries.data.length === 0 ? (
-        <p className="empty-state">No stock in this location.</p>
+        <p className="empty-state">{tr("No stock in this location.")}</p>
       ) : null}
       {locationId > 0 && entries.isSuccess && entries.data.length > 0 ? (
         <section className="panel">
@@ -67,10 +71,10 @@ function LocationsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>Amount</th>
-                  <th>Opened</th>
-                  <th>Best before</th>
+                  <th>{tr("Product")}</th>
+                  <th>{tr("Amount")}</th>
+                  <th>{tr("Opened")}</th>
+                  <th>{tr("Best before")}</th>
                 </tr>
               </thead>
               <tbody>

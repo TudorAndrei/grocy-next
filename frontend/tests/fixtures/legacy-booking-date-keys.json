@@ -1,0 +1,303 @@
+{
+  "reference": "Grocy 4.5.0 at 21aa5eab218c8466f90729154cb293fffbe10c21",
+  "clock": "2026-10-30T12:34:56Z",
+  "cases": [
+    {
+      "name": "empty-up",
+      "initial": "",
+      "expected": {
+        "value": "2026-10-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowUp"
+    },
+    {
+      "name": "empty-down",
+      "initial": "",
+      "expected": {
+        "value": "2026-10-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowDown"
+    },
+    {
+      "name": "empty-left",
+      "initial": "",
+      "expected": {
+        "value": "2026-10-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowLeft"
+    },
+    {
+      "name": "empty-right",
+      "initial": "",
+      "expected": {
+        "value": "2026-10-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowRight"
+    },
+    {
+      "name": "never",
+      "initial": "",
+      "expected": {
+        "value": "2999-12-31",
+        "valid": true,
+        "readOnly": true,
+        "focus": "self"
+      },
+      "stroke": "x"
+    },
+    {
+      "name": "never-upper",
+      "initial": "",
+      "expected": {
+        "value": "2999-12-31",
+        "valid": true,
+        "readOnly": true,
+        "focus": "self"
+      },
+      "stroke": "X"
+    },
+    {
+      "name": "mmdd-today",
+      "initial": "103",
+      "expected": {
+        "value": "2027-10-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "0"
+    },
+    {
+      "name": "mmdd-next",
+      "initial": "123",
+      "expected": {
+        "value": "2026-12-31",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "1"
+    },
+    {
+      "name": "mmdd-past",
+      "initial": "010",
+      "expected": {
+        "value": "2027-01-01",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "1"
+    },
+    {
+      "name": "mmdd-invalid",
+      "initial": "023",
+      "expected": {
+        "value": "Invalid date",
+        "valid": false,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "0"
+    },
+    {
+      "name": "year-boundary",
+      "initial": "200",
+      "expected": {
+        "value": "Invalid date",
+        "valid": false,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "0"
+    },
+    {
+      "name": "compact",
+      "initial": "2032022",
+      "expected": {
+        "value": "2032-02-29",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "9"
+    },
+    {
+      "name": "compact-invalid",
+      "initial": "2032023",
+      "expected": {
+        "value": "2032-02-30",
+        "valid": false,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "0"
+    },
+    {
+      "name": "month-end",
+      "initial": "203202",
+      "expected": {
+        "value": "2032-02-29",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "e"
+    },
+    {
+      "name": "month-end-plus",
+      "initial": "203202",
+      "expected": {
+        "value": "2032-02-29",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "+"
+    },
+    {
+      "name": "relative-days",
+      "initial": "+2",
+      "expected": {
+        "value": "2026-11-01",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "d"
+    },
+    {
+      "name": "relative-months",
+      "initial": "-1",
+      "expected": {
+        "value": "2026-09-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "m"
+    },
+    {
+      "name": "relative-years",
+      "initial": "+3",
+      "expected": {
+        "value": "2029-10-30",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "y"
+    },
+    {
+      "name": "relative-invalid",
+      "initial": "+no",
+      "expected": {
+        "value": "Invalid date",
+        "valid": false,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "d"
+    },
+    {
+      "name": "day-up",
+      "initial": "2032-02-29",
+      "expected": {
+        "value": "2032-02-28",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowUp"
+    },
+    {
+      "name": "day-down",
+      "initial": "2032-02-29",
+      "expected": {
+        "value": "2032-03-01",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowDown"
+    },
+    {
+      "name": "week-left",
+      "initial": "2032-02-29",
+      "expected": {
+        "value": "2032-02-22",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowLeft"
+    },
+    {
+      "name": "week-right",
+      "initial": "2032-02-29",
+      "expected": {
+        "value": "2032-03-07",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "ArrowRight"
+    },
+    {
+      "name": "month-up",
+      "initial": "2032-03-31",
+      "expected": {
+        "value": "2032-02-29",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "Shift+ArrowUp"
+    },
+    {
+      "name": "month-down",
+      "initial": "2032-01-31",
+      "expected": {
+        "value": "2032-02-29",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "Shift+ArrowDown"
+    },
+    {
+      "name": "year-left",
+      "initial": "2032-02-29",
+      "expected": {
+        "value": "2031-02-28",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "Shift+ArrowLeft"
+    },
+    {
+      "name": "year-right",
+      "initial": "2032-02-29",
+      "expected": {
+        "value": "2033-02-28",
+        "valid": true,
+        "readOnly": false,
+        "focus": "self"
+      },
+      "stroke": "Shift+ArrowRight"
+    }
+  ]
+}

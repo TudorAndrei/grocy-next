@@ -15,11 +15,11 @@ Household management with FastAPI, SQLite, FastMCP, and React. The compatibility
 - Nutrition proposals, approval, rejection, revision restore, and label photos.
 - Database import with a source snapshot and a separate destination database.
 
-All 86 contract operations use the original Grocy 4.5.0 routes and response shapes. The 33 listable contract entities support reads. The generic API blocks API key reads, as the contract requires. By default the API runs in Python (`GROCY_USE_NATIVE_PHP=false`). Optional native PHP mode is for differential parity against Grocy 4.5.0. Contract response tests and workflow tests run locally. State comparison tests use a disposable Grocy v4.5.0 server. See [compatibility](docs/compatibility.md) for the tested behavior and runtime modes.
+The Python API provides the 86 contract operations and reads for the 33 listable entities. The generic API blocks API key reads, as the contract requires. The release uses Python (`GROCY_USE_NATIVE_PHP=false`). PHP is used only as a test reference. State comparison tests use a temporary Grocy v4.5.0 server. Full behavior parity is still in progress. See [compatibility](docs/compatibility.md) for the test method and current limits.
 
 ## Local development
 
-Python 3.13 and the backend dependencies are enough for the default path. PHP is not required unless you enable native PHP parity (`GROCY_USE_NATIVE_PHP=true`); see [the backend setup](backend/README.md).
+Python 3.13 and the backend dependencies are sufficient to run the API. PHP is required only for legacy comparison tests. See [the backend setup](backend/README.md).
 
 ```bash
 mise run setup   # first time (or after dependency changes)
@@ -59,7 +59,7 @@ Use Connection to set another server URL or API key. Use Manage to create the fi
 docker compose up --build
 ```
 
-Open <http://127.0.0.1:8080>. The API is also available at <http://127.0.0.1:8000>. Compose uses the Python default runtime; native PHP does not need to be enabled. The image still includes PHP for optional parity and CI. The volume stores the database and files under `/data`.
+Open <http://127.0.0.1:8080>. The API is also available at <http://127.0.0.1:8000>. The release image uses Python and does not install PHP. The volume stores the database and files under `/data`.
 
 For a new installation without demo records, set `GROCY_SEED_DEMO_DATA=false` and `GROCY_DEV_OPEN_API_KEY=` before startup. Create an administrator and a random API key:
 
@@ -85,7 +85,7 @@ npm run build
 Run `mise run check` from the repository root for lint, format, and type checks.
 Run `mise run fix` to apply safe lint fixes and format the files. Run tests separately.
 
-The optional PHP reference comparison suite is skipped unless a reference server is configured. See [compatibility](docs/compatibility.md) for the command and for enabling `GROCY_USE_NATIVE_PHP`. See [migration](docs/migration.md) for database import and recovery, and [MCP tools](docs/mcp-tools.md) for assistant access.
+The PHP reference tests are skipped unless a reference server is configured. See [compatibility](docs/compatibility.md) for the comparison command. Keep `GROCY_USE_NATIVE_PHP=false` when you test the Python release. See [migration](docs/migration.md) for database import and recovery, and [MCP tools](docs/mcp-tools.md) for assistant access.
 
 ## Git hooks
 

@@ -1,8 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useI18n } from "@/lib/i18n";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
+import { EquipmentManual } from "@/components/EquipmentManual";
+import { FullscreenCard, FullscreenToggle } from "@/components/FullscreenCard";
+import { RichDescription } from "@/components/RichDescription";
+import { PageHeader } from "@/components/PageHeader";
 import { api, downloadFile, filePath, request } from "@/lib/api";
 
 export const Route = createFileRoute("/equipment")({
@@ -10,9 +15,19 @@ export const Route = createFileRoute("/equipment")({
 });
 
 function EquipmentPage() {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
   const [equipmentId, setEquipmentId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selectedView = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (selectedId === null) return;
+    selectedView.current?.scrollIntoView({ block: "start" });
+    selectedView.current?.focus({ preventScroll: true });
+  }, [selectedId]);
 
   const query = useQuery({
     queryKey: ["objects", "equipment"],
@@ -21,7 +36,7 @@ function EquipmentPage() {
 
   const upload = useMutation({
     mutationFn: async () => {
-      if (!file || !equipmentId) throw new Error("Select equipment and a file.");
+      if (!file || !equipmentId) throw new Error(tr("Select equipment and a file."));
       const filename = `${equipmentId}-${file.name}`;
       await request(filePath("equipmentmanuals", filename), {
         method: "PUT",
@@ -45,36 +60,81 @@ function EquipmentPage() {
     upload.mutate();
   };
 
+  const selected = query.data?.find((row) => row.id === selectedId);
+
   return (
     <>
-      <h1 className="page-title">Equipment</h1>
-      <p className="page-lead">Keep equipment records and instruction manuals together.</p>
+      <h1 className="page-title">{tr("Equipment")}</h1>
+      <p className="page-lead">{tr("Keep equipment records and instruction manuals together.")}</p>
+      {selected ? (
+        <section
+          ref={selectedView}
+          key={selected.id}
+          className="equipment-detail"
+          aria-label={selected.name}
+          tabIndex={-1}
+        >
+          <FullscreenCard label={selected.name ?? tr("Equipment")}>
+            <PageHeader title={selected.name ?? tr("Equipment")} actions={<FullscreenToggle />} />
+            <RichDescription entity="equipment" objectId={selected.id} />
+          </FullscreenCard>
+          {selected.instruction_manual_file_name ? (
+            <FullscreenCard label={tr("Instruction manual")}>
+              <PageHeader
+                title={tr("Instruction manual")}
+                actions={
+                  <>
+                    <FullscreenToggle />
+                    <button
+                      className="btn btn-ghost"
+                      disabled={download.isPending}
+                      onClick={() => download.mutate(selected.instruction_manual_file_name!)}
+                    >
+                      {tr("Download manual")}
+                    </button>
+                  </>
+                }
+              />
+              <EquipmentManual
+                name={selected.instruction_manual_file_name}
+                label={tr("Instruction manual")}
+              />
+            </FullscreenCard>
+          ) : null}
+        </section>
+      ) : null}
       <EntityManager
         entity="equipment"
-        actions={(row) =>
-          row.instruction_manual_file_name ? (
-            <button
-              className="btn btn-ghost"
-              disabled={download.isPending}
-              onClick={() => download.mutate(row.instruction_manual_file_name ?? "")}
-            >
-              Download manual
+        detail={(row) => <h3>{row.name}</h3>}
+        actions={(row) => (
+          <>
+            <button className="btn btn-ghost" onClick={() => setSelectedId(row.id)}>
+              {tr("View")} {row.name}
             </button>
-          ) : null
-        }
+            {row.instruction_manual_file_name ? (
+              <button
+                className="btn btn-ghost"
+                disabled={download.isPending}
+                onClick={() => download.mutate(row.instruction_manual_file_name ?? "")}
+              >
+                {tr("Download manual")}
+              </button>
+            ) : null}
+          </>
+        )}
       />
       <form className="panel panel-inner" onSubmit={submit}>
-        <h2>Attach a manual</h2>
+        <h2>{tr("Attach a manual")}</h2>
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="manual-equipment">Equipment</label>
+            <label htmlFor="manual-equipment">{tr("Equipment")}</label>
             <select
               id="manual-equipment"
               required
               value={equipmentId}
               onChange={(e) => setEquipmentId(e.target.value)}
             >
-              <option value="">Select equipment</option>
+              <option value="">{tr("Select equipment")}</option>
               {query.data?.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name}
@@ -83,19 +143,20 @@ function EquipmentPage() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="manual-file">Manual file</label>
+            <label htmlFor="manual-file">{tr("Manual file")}</label>
             <input
               id="manual-file"
               type="file"
+              accept=".pdf,application/pdf"
               required
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </div>
         </div>
         <button className="btn btn-primary" disabled={upload.isPending}>
-          Upload manual
+          {tr("Upload manual")}
         </button>
-        {upload.isSuccess && <p role="status">Manual saved.</p>}
+        {upload.isSuccess && <p role="status">{tr("Manual saved.")}</p>}
         {(upload.error || download.error) && (
           <ErrorBlock message={(upload.error || download.error)!.message} />
         )}

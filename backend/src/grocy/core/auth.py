@@ -10,6 +10,9 @@ from sqlalchemy import or_, select, text, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.auth import select_key, select_session
+from grocy.compatibility.lessql import cookie_parameters, query_parameters
+from grocy.compatibility.php import loose_equals, php_error, truthy
 from grocy.core.actor import Actor
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
@@ -33,7 +36,7 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
             "GET",
             "HEAD",
             "OPTIONS",
-        } and get_settings().database_url.startswith("sqlite"):
+        } and get_settings().active_database_url().startswith("sqlite"):
             await session.execute(text("BEGIN IMMEDIATE"))
             session.info["write_lock"] = True
         yield session
@@ -70,6 +73,8 @@ async def authenticate_request(
         and request.url.path != "/api/health"
     ):
         return await authenticate_native_request(request, session)
+    if not request.url.path.startswith("/api/v2/") and request.url.path != "/api/health":
+        return await authenticate_release_request(request, session)
     key = grocy_api_key or request.headers.get(settings.api_key_header)
     calendar_secret = (
         request.query_params.get("secret") if request.url.path == "/api/calendar/ical" else None
@@ -83,6 +88,8 @@ async def authenticate_request(
         (calendar_secret, "calendar"),
     ]
     if not any(candidate for candidate, _ in candidates):
+        if not settings.use_native_php:
+            return await authenticate_release_request(request, session)
         raise UnauthorizedError("Missing API key")
     for candidate, key_type in candidates:
         if not candidate:
@@ -94,6 +101,117 @@ async def authenticate_request(
         except UnauthorizedError:
             continue
         return actor
+    if not settings.use_native_php:
+        return await authenticate_release_request(request, session)
+    raise UnauthorizedError("Invalid API key")
+
+
+async def authenticate_release_request(request: Request, session: AsyncSession) -> Actor:
+    settings = get_settings()
+    if settings.mode in {"dev", "demo", "prerelease"} or truthy(settings.disable_auth):
+        user_id = await session.scalar(select(User.id).order_by(User.id).limit(1))
+        if user_id is None:
+            raise UnauthorizedError("No default user exists")
+        return await actor_for_user(session, user_id)
+    if settings.auth_mode != "session":
+        try:
+            return await authenticate_release_key(request, session)
+        except UnauthorizedError:
+            if settings.auth_mode == "api-key":
+                raise
+    if settings.auth_mode == "reverse-proxy":
+        return await authenticate_proxy_user(request, session)
+    header = b"; ".join(
+        value for name, value in request.scope["headers"] if name.lower() == b"cookie"
+    )
+    selected, user_id = await select_session(
+        session, cookie_parameters(header).get("grocy_session")
+    )
+    if selected and user_id is not None:
+        return await actor_for_user(session, user_id)
+    raise UnauthorizedError("Invalid API key")
+
+
+async def authenticate_proxy_user(request: Request, session: AsyncSession) -> Actor:
+    from grocy.domains.users.service import UsersService
+
+    settings = get_settings()
+    name = settings.reverse_proxy_auth_header
+    if settings.reverse_proxy_auth_use_env and not name.startswith("HTTP_"):
+        username = os.environ.get(name)
+        if username is None:
+            raise php_error(
+                f"ReverseProxyAuthMiddleware: {name} env variable is missing "
+                "(could not be found in $_SERVER array)"
+            )
+        if not username:
+            raise php_error(f"ReverseProxyAuthMiddleware: {name} env variable is invalid")
+    else:
+        header_name = name.removeprefix("HTTP_").replace("_", "-").lower().encode()
+        values = [value for key, value in request.scope["headers"] if key.lower() == header_name]
+        if not values:
+            if settings.reverse_proxy_auth_use_env:
+                raise php_error(
+                    f"ReverseProxyAuthMiddleware: {name} env variable is missing "
+                    "(could not be found in $_SERVER array)"
+                )
+            raise php_error(f"ReverseProxyAuthMiddleware: {name} header is missing or invalid")
+        username = b", ".join(values).decode("utf-8", "surrogateescape")
+        if settings.reverse_proxy_auth_use_env and not username:
+            raise php_error(f"ReverseProxyAuthMiddleware: {name} env variable is invalid")
+    user_id = await session.scalar(select(User.id).where(User.username == username).limit(1))
+    if user_id is None:
+        await UsersService(session).create_user(
+            {"username": username, "first_name": "", "last_name": "", "password": ""}
+        )
+        user_id = await session.scalar(select(User.id).where(User.username == username).limit(1))
+    if user_id is None:
+        raise UnauthorizedError("Invalid proxy user")
+    return await actor_for_user(session, user_id)
+
+
+async def authenticate_release_key(request: Request, session: AsyncSession) -> Actor:
+    settings = get_settings()
+    header_name = settings.api_key_header.lower().encode()
+    header = b", ".join(
+        value.strip(b" \t")
+        for name, value in request.scope["headers"]
+        if name.lower() == header_name
+    )
+    parameters = query_parameters(request.scope.get("query_string", b""))
+    candidates = [(header, "default"), (parameters.get(settings.api_key_header), "default")]
+    if request.url.path == "/api/calendar/ical":
+        candidates.append((parameters.get("secret"), "special-purpose-calendar-ical"))
+    for candidate, kind in candidates:
+        selected, user_id = await select_key(session, candidate, kind)
+        if selected:
+            if user_id is None:
+                raise _MissingKeyUser("Invalid API key")
+            return await actor_for_user(session, user_id)
+        # Extension keys retain their own expiry and scope rules. Decode raw
+        # headers as UTF-8 only, so a byte key cannot select a different key.
+        if isinstance(candidate, bytes):
+            try:
+                candidate = candidate.decode()
+            except UnicodeDecodeError:
+                continue
+        if isinstance(candidate, str) and candidate not in {"", "0"}:
+            try:
+                candidate.encode()
+            except UnicodeEncodeError:
+                continue
+            try:
+                return await authenticate_key(
+                    session,
+                    candidate,
+                    key_type="calendar"
+                    if kind == "special-purpose-calendar-ical"
+                    else "grocy-next",
+                )
+            except _MissingKeyUser:
+                raise
+            except UnauthorizedError:
+                pass
     raise UnauthorizedError("Invalid API key")
 
 
@@ -187,6 +305,8 @@ def require_request_permission(request: Request, actor: Actor) -> None:
             raise GrocyError(
                 f"Permission missing: {permission}", status_code=403, code=None
             ) from None
+        if not path.startswith("v2/"):
+            raise php_error(f"Permission missing: {permission}", status_code=403) from None
         raise
 
 
@@ -288,7 +408,7 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
             return "USERS_READ"
         if request.method == "POST":
             return "USERS_CREATE"
-        if request.method == "PUT" and action == str(user_id):
+        if request.method == "PUT" and loose_equals(action, user_id):
             return "USERS_EDIT_SELF"
         return "USERS_EDIT"
     if not path.startswith("v2/"):

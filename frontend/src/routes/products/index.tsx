@@ -1,27 +1,46 @@
+import { useI18n } from "@/lib/i18n";
+import { GrocycodeActions } from "@/components/GrocycodeActions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, queryKeys } from "@/lib/api";
-import { useCatalog } from "@/lib/catalog";
-import { EntityManager } from "@/components/EntityManager";
+import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
+import { CopyProductLink, ProductEditor } from "@/components/ProductEditor";
+import { RichText } from "@/components/RichDescription";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Gauge } from "@/components/Gauge";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
 function ProductsPage() {
+  const { t: tr } = useI18n();
+
+  const features = useFeatures();
   const catalog = useCatalog();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(false);
   const products = useQuery({ queryKey: queryKeys.products, queryFn: api.listProducts });
+
+  const descriptions = useQuery({
+    queryKey: queryKeys.contentList("products"),
+    queryFn: () => api.getContentList("products"),
+    enabled: products.isSuccess,
+  });
+
+  const descriptionHtml = useMemo(
+    () => new Map(descriptions.data?.map((row) => [row.id, row.html])),
+    [descriptions.data],
+  );
+
   const stock = useQuery({ queryKey: queryKeys.stockOverview, queryFn: api.listStock });
 
   const amounts = useMemo(
-    () => new Map((stock.data ?? []).map((item) => [item.product_id, item.amount])),
+    () => new Map((stock.data ?? []).map((item) => [item.product_id, item])),
     [stock.data],
   );
 
@@ -42,8 +61,10 @@ function ProductsPage() {
   return (
     <>
       <PageHeader
-        title="Products"
-        lead="The master catalog. Open a product for stock moves, nutrition and its revision history."
+        title={tr("Products")}
+        lead={tr(
+          "The master catalog. Open a product for stock moves, nutrition and its revision history.",
+        )}
         actions={
           <button
             type="button"
@@ -51,32 +72,35 @@ function ProductsPage() {
             aria-pressed={editing}
             onClick={() => setEditing((on) => !on)}
           >
-            {editing ? "Close editor" : "Edit catalog"}
+            {editing ? tr("Close editor") : tr("Edit catalog")}
           </button>
         }
       />
-      {editing ? <EntityManager entity="products" /> : null}
+      {editing ? <ProductEditor /> : null}
       <div className="toolbar">
         <label className="search-field">
-          <span className="sr-only">Search products</span>
+          <span className="sr-only">{tr("Search products")}</span>
           <input
             type="search"
-            placeholder="Search by name, description or barcode"
+            placeholder={tr("Search by name, description or barcode")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
         <span className="toolbar-note">
-          {products.isSuccess ? `${visible.length} of ${products.data.length}` : null}
+          {products.isSuccess
+            ? tr("%1$s of %2$s", String(visible.length), String(products.data.length))
+            : null}
         </span>
       </div>
-      {products.isLoading ? <LoadingBlock label="Loading products…" /> : null}
+      {products.isLoading ? <LoadingBlock label={tr("Loading products…")} /> : null}
       {products.isError ? <ErrorBlock message={products.error.message} /> : null}
+      {descriptions.error ? <ErrorBlock message={descriptions.error.message} /> : null}
       {products.isSuccess && visible.length === 0 ? (
         <p className="empty-state">
           {search
-            ? "No product matches that search."
-            : "No products yet. Seed the backend, or check the API key under Settings."}
+            ? tr("No product matches that search.")
+            : tr("No products yet. Seed the backend, or check the API key under Settings.")}
         </p>
       ) : null}
       {visible.length > 0 ? (
@@ -84,20 +108,24 @@ function ProductsPage() {
           <table className="stock-table products-table">
             <thead>
               <tr>
-                <th scope="col">Product</th>
-                <th scope="col">Level</th>
+                <th scope="col">{tr("Product")}</th>
+                <th scope="col">{tr("Level")}</th>
                 <th scope="col" className="num">
-                  On hand
+                  {tr("On hand")}
                 </th>
                 <th scope="col" className="num">
-                  Minimum
+                  {tr("Minimum")}
                 </th>
-                <th scope="col">Barcode</th>
+                <th scope="col">{tr("Barcode")}</th>
+                <th scope="col">
+                  <span className="sr-only">{tr("Actions")}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {visible.map((product) => {
-                const amount = amounts.get(product.id) ?? 0;
+                const entry = amounts.get(product.id);
+                const amount = entry ? stockAmount(entry) : 0;
                 const min = product.min_stock_amount ?? 0;
 
                 return (
@@ -107,16 +135,37 @@ function ProductsPage() {
                         {product.name}
                       </Link>
                       <small>
-                        {catalog.location(product.location_id)?.name ?? "No location"}
-                        {product.description ? ` · ${product.description}` : ""}
+                        {[
+                          features.enabled("STOCK_LOCATION_TRACKING")
+                            ? (catalog.location(product.location_id)?.name ?? "No location")
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </small>
+                      {descriptionHtml.get(product.id) ? (
+                        <RichText html={descriptionHtml.get(product.id)!} />
+                      ) : null}
                     </td>
                     <td className="level">
-                      <Gauge amount={amount} min={min} label={product.name} />
+                      <Gauge
+                        amount={entry ? stockMinimumAmount(entry) : 0}
+                        min={min}
+                        label={product.name}
+                      />
                     </td>
                     <td className="num amount">{catalog.amountText(product.id, amount)}</td>
                     <td className="num">{min > 0 ? catalog.amountText(product.id, min) : "—"}</td>
                     <td className="code">{product.barcode ?? "—"}</td>
+                    <td className="row-actions">
+                      <CopyProductLink id={product.id} name={product.name} />
+                      <GrocycodeActions
+                        kind="product"
+                        id={product.id}
+                        name={product.name}
+                        compact
+                      />
+                    </td>
                   </tr>
                 );
               })}

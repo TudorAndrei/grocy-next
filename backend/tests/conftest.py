@@ -1,4 +1,5 @@
 import os
+import shutil
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
@@ -62,11 +63,42 @@ async def session() -> AsyncIterator[AsyncSession]:
     await engine.dispose()
 
 
+@pytest.fixture
+def php_http_settings(request):
+    from grocy.core.config import get_settings
+
+    target = getattr(request.node, "callspec", None)
+    if (
+        target is not None
+        and target.params.get("api") == "local"
+        and not get_settings().use_native_php
+    ):
+        pytest.skip("PHP interpreter output is checked only on the reference runtime")
+    return request.getfixturevalue("_php_reference_http_settings")
+
+
 @pytest.fixture(scope="session")
-def php_http_settings(tmp_path_factory):
+def _php_reference_http_settings(tmp_path_factory):
     from grocy.core.config import get_settings
     from php_runtime import read_http_settings
 
-    return read_http_settings(
-        get_settings().php_executable, tmp_path_factory.mktemp("php-http-settings")
-    )
+    executable = get_settings().php_executable
+    if shutil.which(executable) is None:
+        pytest.skip("The optional PHP reference runtime is not installed")
+    return read_http_settings(executable, tmp_path_factory.mktemp("php-http-settings"))
+
+
+@pytest.fixture
+def ldap_directory(tmp_path):
+    from ldap_server import directory
+
+    with directory(tmp_path / "ldap") as settings:
+        yield settings
+
+
+@pytest.fixture(params=["ldaps", "starttls"])
+def ldap_encrypted_directory(tmp_path, request):
+    from ldap_server import directory
+
+    with directory(tmp_path / "ldap", request.param) as settings:
+        yield settings

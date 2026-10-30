@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import type { ReactNode } from "react";
 import { daysUntil, formatDate } from "@/lib/format";
 import { DueBar } from "./DueBar";
@@ -13,6 +14,8 @@ export type HouseholdRow = {
 
 /** Chores, tasks and batteries share one shape: name, when it is due, one action. */
 export function HouseholdTable({ rows, dueLabel }: { rows: HouseholdRow[]; dueLabel: string }) {
+  const { t: tr } = useI18n();
+
   const sorted = [...rows].sort((a, b) => (daysUntil(a.due) ?? 9999) - (daysUntil(b.due) ?? 9999));
 
   return (
@@ -20,11 +23,11 @@ export function HouseholdTable({ rows, dueLabel }: { rows: HouseholdRow[]; dueLa
       <table className="stock-table household-table">
         <thead>
           <tr>
-            <th scope="col">Name</th>
+            <th scope="col">{tr("Name")}</th>
             <th scope="col">{dueLabel}</th>
-            <th scope="col">Date</th>
+            <th scope="col">{tr("Date")}</th>
             <th scope="col">
-              <span className="sr-only">Action</span>
+              <span className="sr-only">{tr("Action")}</span>
             </th>
           </tr>
         </thead>

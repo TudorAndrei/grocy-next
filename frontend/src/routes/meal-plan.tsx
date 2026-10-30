@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +61,8 @@ function mealLabel(
 }
 
 function MealPlanPage() {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const meals = useQuery(objectsQuery("meal_plan"));
@@ -124,8 +127,10 @@ function MealPlanPage() {
   return (
     <>
       <PageHeader
-        title="Meal plan"
-        lead="Plan the week by day. Complete meals or add missing ingredients to your shopping list."
+        title={tr("Meal plan")}
+        lead={tr(
+          "Plan the week by day. Complete meals or add missing ingredients to your shopping list.",
+        )}
       />
       {error ? <ErrorBlock message={error.message} /> : null}
       <div className="toolbar">
@@ -135,28 +140,28 @@ function MealPlanPage() {
             className="btn btn-ghost btn-sm"
             onClick={() => setWeekStart((w) => addDays(w, -7))}
           >
-            Previous week
+            {tr("Previous week")}
           </button>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
             onClick={() => setWeekStart(startOfWeek(new Date()))}
           >
-            This week
+            {tr("This week")}
           </button>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
             onClick={() => setWeekStart((w) => addDays(w, 7))}
           >
-            Next week
+            {tr("Next week")}
           </button>
         </div>
         <p className="muted" style={{ margin: 0 }}>
           {weekLabel}
         </p>
       </div>
-      {loading ? <LoadingBlock label="Loading meal plan…" /> : null}
+      {loading ? <LoadingBlock label={tr("Loading meal plan…")} /> : null}
       {!loading ? (
         <div className="meal-week" role="list">
           {days.map((day) => {
@@ -174,7 +179,7 @@ function MealPlanPage() {
                   <span className="muted">{day.key.slice(5)}</span>
                 </header>
                 {entries.length === 0 ? (
-                  <p className="muted meal-day-empty">No meals</p>
+                  <p className="muted meal-day-empty">{tr("No meals")}</p>
                 ) : (
                   <ul className="meal-day-list">
                     {entries.map((row) => {
@@ -192,7 +197,7 @@ function MealPlanPage() {
                             <p className="muted">
                               {String(row.type)}
                               {row.type === "recipe" && row.recipe_servings
-                                ? ` · ${row.recipe_servings} servings`
+                                ? tr(" · %s servings", String(row.recipe_servings))
                                 : ""}
                               {row.type === "product" && row.product_amount
                                 ? ` · ${row.product_amount}`
@@ -212,7 +217,7 @@ function MealPlanPage() {
                                   })
                                 }
                               >
-                                Complete
+                                {tr("Complete")}
                               </button>
                             ) : null}
                             {row.type === "recipe" ? (
@@ -227,7 +232,7 @@ function MealPlanPage() {
                                   })
                                 }
                               >
-                                Shopping list
+                                {tr("Shopping list")}
                               </button>
                             ) : null}
                           </div>
@@ -243,7 +248,7 @@ function MealPlanPage() {
       ) : null}
       <EntityManager
         entity="meal_plan"
-        title="All meals"
+        title={tr("All meals")}
         actions={(row) => (
           <>
             {!row.done && (
@@ -252,7 +257,7 @@ function MealPlanPage() {
                 disabled={action.isPending}
                 onClick={() => action.mutate({ id: row.id, kind: "consume" })}
               >
-                Complete meal
+                {tr("Complete meal")}
               </button>
             )}
             {row.type === "recipe" && (
@@ -261,7 +266,7 @@ function MealPlanPage() {
                 disabled={action.isPending}
                 onClick={() => action.mutate({ id: row.id, kind: "shopping-list" })}
               >
-                Add missing ingredients
+                {tr("Add missing ingredients")}
               </button>
             )}
           </>

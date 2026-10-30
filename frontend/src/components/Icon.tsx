@@ -1,4 +1,9 @@
 const PATHS = {
+  sort: ["m8 8 4-4 4 4", "M12 4v16"],
+  up: ["M12 20V4", "m6 10 6-6 6 6"],
+  down: ["M12 4v16", "m6 14 6 6 6-6"],
+  expand: ["M9 3H3v6M15 3h6v6M21 15v6h-6M9 21H3v-6"],
+  clock: ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z", "M12 7v5l3 2"],
   today: ["M4 5h16v15H4z", "M4 9h16", "M8 3v4M16 3v4", "M8 13h3v3H8z"],
   stock: ["M6 8h12v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z", "M5 5h14v3H5z", "M10 12h4"],
   shopping: ["M6 7h15l-1.4 8.2a2 2 0 0 1-2 1.6H9a2 2 0 0 1-2-1.5L5 3H2", "M10 20h.01M17 20h.01"],
@@ -26,6 +31,7 @@ const PATHS = {
   back: ["M15 5l-7 7 7 7"],
   household: ["M4 11.5 12 4l8 7.5", "M6 10.5V20h12v-9.5", "M9 14h6M9 17h6"],
   barcode: ["M4 6v12M7 6v12M10 6v12M14 6v12M17 6v12M20 6v12"],
+  camera: ["M3 7h4l2-3h6l2 3h4v13H3Z", "M16 13a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"],
   locations: ["M4 9h7v11H4z", "M13 9h7v11h-7z", "M4 4h16v3H4z"],
   journal: ["M4 6h16v12H4z", "M8 10h8M8 14h5"],
   labels: ["M6 4h12v6H6z", "M6 14h8v6H6z"],

@@ -5,7 +5,9 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from grocy.compatibility.php import find, loose_equals
 from grocy.compatibility.query import query_rows
+from grocy.compatibility.rows import save_rows
 from grocy.core.errors import GrocyError, NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.base import Base
@@ -78,7 +80,7 @@ class GenericObjectsService:
     def supported_entities(self) -> list[str]:
         return sorted(set(ENTITY_MODELS) | VIEW_ENTITIES)
 
-    def _require_writable(self, entity: str, *, deleting: bool = False) -> type[Base]:
+    def require_writable(self, entity: str, *, deleting: bool = False) -> type[Base]:
         model = ENTITY_MODELS.get(entity)
         if model is None or entity in READ_ONLY_ENTITIES or (entity == "api_keys" and not deleting):
             message = "Invalid entity" if deleting else "Entity does not exist or is not exposed"
@@ -121,13 +123,13 @@ class GenericObjectsService:
                 ),
                 {"entity": entity},
             )
-            values: dict[str, dict[str, Any]] = {}
-            for reference, name, value in result:
-                values.setdefault(str(reference), {}).setdefault(name, value)
+            values = [dict(row) for row in result.mappings()]
             for row in rows:
                 reference = row["stock_id"] if entity == "stock" else row["id"]
-                saved = values.get(str(reference), {})
-                row["userfields"] = field_response({name: saved.get(name) for _, name in fields})
+                saved = [value for value in values if loose_equals(value["object_id"], reference)]
+                row["userfields"] = field_response(
+                    {name: (find(saved, "name", name) or {}).get("value") for _, name in fields}
+                )
         return rows
 
     async def get_entity(self, entity: str, object_id: int | str) -> dict[str, Any]:
@@ -136,16 +138,6 @@ class GenericObjectsService:
             raise NotFoundError("Object not found", code=None)
         return rows[0]
 
-    def _payload(self, payload: dict[str, Any]) -> dict[str, Any]:
-        values = {}
-        for name, value in payload.items():
-            if isinstance(value, (dict, list)):
-                raise GrocyError(f"Invalid value for field {name}", code=None)
-            if isinstance(value, int) and not -(2**63) <= value < 2**63:
-                value = float(value)
-            values[name] = value
-        return values
-
     async def _after_write(self, entity: str) -> None:
         if entity == "products":
             await self.recipes.shopping.auto_add_missing()
@@ -153,38 +145,23 @@ class GenericObjectsService:
         self.session.expire_all()
 
     async def create_entity(self, entity: str, payload: dict[str, Any]) -> dict[str, str]:
-        self._require_writable(entity)
-        payload = self._payload(payload)
-        if payload:
-            columns = ",".join(_identifier(name) for name in payload)
-            bindings = ",".join("?" for _ in payload)
-            statement = f'INSERT INTO "{entity}" ({columns}) VALUES ({bindings})'
-        else:
-            statement = f'INSERT INTO "{entity}" DEFAULT VALUES'
-        connection = await self.session.connection()
-        result = await connection.exec_driver_sql(statement, tuple(payload.values()))
-        object_id = str(result.lastrowid)
+        self.require_writable(entity)
+        object_id = await save_rows(self.session, entity, payload)
         await self._after_write(entity)
         return {"created_object_id": object_id}
 
     async def update_entity(
         self, entity: str, object_id: int | str, payload: dict[str, Any]
     ) -> None:
-        self._require_writable(entity)
+        self.require_writable(entity)
         if not await self._read(entity, object_id):
             raise GrocyError("Object not found", code=None)
-        payload = self._payload(payload)
         if payload:
-            assignments = ",".join(f"{_identifier(name)}=?" for name in payload)
-            connection = await self.session.connection()
-            await connection.exec_driver_sql(
-                f'UPDATE "{entity}" SET {assignments} WHERE id=?',
-                (*payload.values(), str(object_id)),
-            )
+            await save_rows(self.session, entity, payload, object_id)
         await self._after_write(entity)
 
     async def delete_entity(self, entity: str, object_id: int | str) -> None:
-        self._require_writable(entity, deleting=True)
+        self.require_writable(entity, deleting=True)
         row = (
             await self.session.execute(
                 text(f'SELECT id FROM "{entity}" WHERE id=:object_id'),
@@ -243,13 +220,11 @@ class GenericObjectsService:
                 raise GrocyError(
                     f"Field {name} is not a valid userfield of the given entity", code=None
                 )
-            if isinstance(value, (dict, list)):
-                raise GrocyError(f"Invalid value for field {name}", code=None)
-        for name, value in values.items():
+            column = "value_id" if isinstance(value, (dict, list)) else "value"
             parameters = {
                 "field_id": fields[name],
                 "object_id": str(object_id),
-                "value": "" if value is None else value,
+                "value": None if isinstance(value, (dict, list)) else value,
             }
             existing = await self.session.scalar(
                 text(
@@ -261,17 +236,17 @@ class GenericObjectsService:
             if existing is None:
                 await self.session.execute(
                     text(
-                        "INSERT INTO userfield_values(field_id,object_id,value) "
+                        f"INSERT INTO userfield_values(field_id,object_id,{column}) "
                         "VALUES (:field_id,:object_id,:value)"
                     ),
                     parameters,
                 )
             else:
                 await self.session.execute(
-                    text("UPDATE userfield_values SET value=:value WHERE id=:id"),
+                    text(f"UPDATE userfield_values SET {column}=:value WHERE id=:id"),
                     {"value": parameters["value"], "id": existing},
                 )
-        await self.session.commit()
+            await self.session.commit()
 
     async def get_userfields(self, entity: str, object_id: int | str) -> dict[str, Any]:
         fields = await self._fields(entity)
@@ -282,14 +257,8 @@ class GenericObjectsService:
             ),
             {"entity": entity, "object_id": str(object_id)},
         )
-        values = {}
-        for name, value in result:
-            values.setdefault(name, value)
-        return {name: values.get(name) for _, name in fields}
-
-
-def _identifier(name: str) -> str:
-    return '"' + name.replace('"', '""') + '"'
+        values = [dict(row) for row in result.mappings()]
+        return {name: (find(values, "name", name) or {}).get("value") for _, name in fields}
 
 
 def field_response(values: dict[str, Any]) -> dict[str, Any] | list[Any]:

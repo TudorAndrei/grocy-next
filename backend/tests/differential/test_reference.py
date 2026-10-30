@@ -6,7 +6,7 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, quote
 from uuid import uuid4
 
 import httpx
@@ -1176,7 +1176,8 @@ def test_reference_parent_stock_and_volatile_records(
                     json={
                         "amount": amount,
                         "price": 2.5,
-                        "best_before_date": (date.today() - timedelta(days=1)).isoformat(),
+                        # Aggregation is checked here; date-boundary rules have separate cases.
+                        "best_before_date": (date.today() - timedelta(days=2)).isoformat(),
                     },
                 ).status_code
                 == 200
@@ -1254,6 +1255,125 @@ def test_reference_parent_stock_and_volatile_records(
         )
         assert app.get(f"/api/stock/products/{children[1]}").json()["stock_amount"] == 0
         assert app.get(f"/api/stock/products/{children[0]}").json()["stock_amount"] == 2
+    assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize(
+    "start", ["0000-01-01 00:30:00", "0000-01-01 01:44:24", "0000-01-02 00:30:00"]
+)
+def test_reference_calendar_utc_year_boundary(client, api_headers, reference, start):
+    client.headers.update(api_headers)
+    name = "Calendar boundary " + uuid4().hex
+    snapshots = []
+    for app in (reference, client):
+        chore = create(
+            app,
+            "chores",
+            {
+                "name": name,
+                "period_type": "daily",
+                "start_date": start,
+                "rollover": 0,
+                "track_date_only": 0,
+            },
+        )
+        try:
+            details = app.get(f"/api/chores/{chore}").json()
+            assert details["next_estimated_execution_time"] == start
+            response = app.get("/api/calendar/ical")
+            snapshots.append(
+                (
+                    response.status_code,
+                    response.json()["error_message"]
+                    if response.status_code != 200
+                    else name in response.text,
+                )
+            )
+        finally:
+            assert app.delete(f"/api/objects/chores/{chore}").status_code == 204
+    assert snapshots[0] == snapshots[1]
+
+
+@pytest.mark.parametrize(
+    "suffix,encodings",
+    [
+        ("box/part/add", 1),
+        ("https://example.test/item?q=1#code", 1),
+        ("literal%2Fcode", 1),
+        ("literal%2Fcode", 2),
+        ("box + café", 1),
+    ],
+)
+def test_reference_encoded_barcode_paths(client, api_headers, reference, suffix, encodings):
+    client.headers.update(api_headers)
+    name = f"Encoded barcode {uuid4().hex[:8]}"
+    barcode = f"{name}:{suffix}"
+    snapshots = []
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": name})
+        location = create(app, "locations", {"name": name})
+        destination = create(app, "locations", {"name": name + " destination"})
+        product = create(
+            app,
+            "products",
+            {
+                "name": name,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "qu_id_consume": unit,
+            },
+        )
+        create(app, "product_barcodes", {"product_id": product, "barcode": barcode})
+        products = [product]
+        if "%2F" in barcode:
+            decoded_product = create(
+                app,
+                "products",
+                {
+                    "name": name + " decoded",
+                    "location_id": location,
+                    "qu_id_stock": unit,
+                    "qu_id_purchase": unit,
+                    "qu_id_consume": unit,
+                },
+            )
+            products.append(decoded_product)
+            create(
+                app,
+                "product_barcodes",
+                {"product_id": decoded_product, "barcode": barcode.replace("%2F", "/")},
+            )
+        encoded = barcode
+        for _ in range(encodings):
+            encoded = quote(encoded, safe="")
+        path = "/api/stock/products/by-barcode/" + encoded
+        found = app.get(path)
+        results = [
+            (
+                found.status_code,
+                found.json()["product"]["name"] if found.status_code == 200 else None,
+            )
+        ]
+        for action, body in [
+            ("add", {"amount": 3, "price": 1, "best_before_date": "2999-12-31"}),
+            ("open", {"amount": 1}),
+            (
+                "transfer",
+                {"amount": 1, "location_id_from": location, "location_id_to": destination},
+            ),
+            ("consume", {"amount": 1, "location_id": destination}),
+            ("inventory", {"new_amount": 2}),
+        ]:
+            response = app.post(path + "/" + action, json=body)
+            results.append((response.status_code, None))
+        results.append(
+            [
+                app.get(f"/api/stock/products/{identity}").json()["stock_amount"]
+                for identity in products
+            ]
+        )
+        snapshots.append(results)
     assert snapshots[0] == snapshots[1]
 
 
@@ -1491,7 +1611,8 @@ def test_reference_system_metadata_localization_and_time(
     info = client.get("/api/system/info").json()
     assert info["grocy_version"] == expected["grocy_version"]
     assert info["db_version"] == expected["db_version"]
-    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", info["php_version"])
+    runtime_version = info["php_version"] or info["python_version"]
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+.*", runtime_version)
     expected_config = reference.get("/api/system/config").json()
     config = client.get("/api/system/config").json()
     for key in (
@@ -1575,9 +1696,29 @@ def test_reference_user_setting_defaults_values_and_reset(
     assert snapshots[0] == snapshots[1]
 
 
-@pytest.mark.parametrize("image_format", ["PNG", "JPEG", "GIF", "WEBP"])
+@pytest.mark.parametrize(
+    ("image_format", "mode", "orientation"),
+    [
+        ("PNG", "RGBA", 1),
+        ("PNG", "P", 1),
+        ("PNG", "L", 1),
+        ("JPEG", "RGB", 1),
+        ("JPEG", "RGB", 6),
+        ("JPEG", "RGB", 5),
+        ("GIF", "RGBA", 1),
+        ("WEBP", "RGBA", 1),
+        ("BMP", "RGB", 1),
+    ],
+)
 def test_reference_native_picture_bytes(
-    client: TestClient, api_headers: dict, reference, tmp_path, monkeypatch, image_format
+    client: TestClient,
+    api_headers: dict,
+    reference,
+    tmp_path,
+    monkeypatch,
+    image_format,
+    mode,
+    orientation,
 ):
     import base64
     from io import BytesIO
@@ -1595,10 +1736,15 @@ def test_reference_native_picture_bytes(
             for x in range(32)
         ]
     )
-    if image_format == "JPEG":
-        image = image.convert("RGB")
+    if mode != "RGBA":
+        image = image.convert(mode)
     source = BytesIO()
-    image.save(source, image_format)
+    save_options = {}
+    if image_format == "JPEG":
+        exif = image.getexif()
+        exif[274] = orientation
+        save_options["exif"] = exif
+    image.save(source, image_format, **save_options)
     name = uuid4().hex + "." + image_format.lower()
     path = "/api/files/productpictures/" + base64.b64encode(name.encode()).decode()
     snapshots = []
@@ -1611,6 +1757,8 @@ def test_reference_native_picture_bytes(
                 {"force_serve_as": "picture"},
                 {"force_serve_as": "picture", "best_fit_width": "17"},
                 {"force_serve_as": "picture", "best_fit_width": "17", "best_fit_height": "13"},
+                {"force_serve_as": "picture", "best_fit_width": "17.8"},
+                {"force_serve_as": "picture", "best_fit_width": "17", "best_fit_height": "5"},
             ]:
                 response = app.get(path, params=parameters, headers=headers)
                 assert response.status_code == 200, response.text
@@ -2037,6 +2185,10 @@ def test_reference_native_system_config_exposes_current_printer_and_url_settings
         response = app.get("/api/system/config")
         assert response.status_code == 200, response.text
         assert {key: response.json()[key] for key in values} == values
+        specification = app.get("/api/openapi/specification")
+        assert specification.status_code == 200, specification.text
+        assert specification.json()["servers"][0]["url"] == "/native-prefix/api"
+        assert "/native-prefix/manageapikeys" in specification.json()["info"]["description"]
         link = app.get("/api/calendar/ical/sharing-link")
         assert link.status_code == 200, link.text
         assert link.json()["url"].startswith("/native-prefix/api/calendar/ical?secret=")
@@ -2053,6 +2205,9 @@ def test_reference_native_system_config_exposes_current_printer_and_url_settings
         ("GET", "/api/missing-route", "http://localhost:5173"),
         ("PATCH", "/api/system/info", "https://example.invalid"),
         ("POST", "/api/system/info", "https://example.invalid"),
+        ("PATCH", "/api/objects/products", "https://example.invalid"),
+        ("PATCH", "/api/objects/products/1", "https://example.invalid"),
+        ("PATCH", "/api/files/productpictures/aW1hZ2U=", "https://example.invalid"),
         ("GET", "/api/system/info", "http://localhost:5173"),
     ],
 )
@@ -2127,3 +2282,61 @@ def test_reference_native_openapi_specification_includes_user_entities(
         assert spec["servers"][0]["url"] == base + "/api"
         results.append(json.loads(json.dumps(spec).replace(base, "BASE")))
     assert results[0] == results[1]
+
+
+@pytest.mark.parametrize("tare,count,removed", [(0, 0, [8, 2]), (0, 5, [5]), (3, 8, [5])])
+def test_reference_inventory_reduction_retains_entry_metadata_and_undo(
+    client, api_headers, reference, tare, count, removed
+):
+    from datetime import date
+
+    client.headers.update(api_headers)
+    for app in (reference, client):
+        unit = create(app, "quantity_units", {"name": uuid4().hex})
+        location = create(app, "locations", {"name": uuid4().hex})
+        product = create(
+            app,
+            "products",
+            {
+                "name": uuid4().hex,
+                "location_id": location,
+                "qu_id_stock": unit,
+                "qu_id_purchase": unit,
+                "enable_tare_weight_handling": int(tare > 0),
+                "tare_weight": tare,
+            },
+        )
+        base = f"/api/stock/products/{product}"
+        for amount, day, note, price in [
+            (8, "01", "First batch", 1.5),
+            (2, "02", "Next batch", 1.6),
+        ]:
+            added = app.post(
+                base + "/add",
+                json={
+                    "amount": amount + (tare + (8 if day == "02" else 0) if tare else 0),
+                    "purchased_date": "2026-01-" + day,
+                    "best_before_date": "2033-01-01",
+                    "price": price,
+                    "note": note,
+                },
+            )
+            assert added.status_code == 200, added.text
+        response = app.post(base + "/inventory", json={"new_amount": count, "note": "Count note"})
+        assert response.status_code == 200, response.text
+        bookings = response.json()
+        assert [row["amount"] for row in bookings] == [-amount for amount in removed]
+        assert [row["note"] for row in bookings] == ["First batch", "Next batch"][: len(removed)]
+        assert all(row["used_date"] == date.today().isoformat() for row in bookings)
+        assert all(row["stock_row_id"] is None for row in bookings)
+        transaction = bookings[0]["transaction_id"]
+        saved = app.get(
+            "/api/objects/stock_log", params={"query[]": "transaction_id=" + transaction}
+        )
+        assert saved.status_code == 200
+        assert saved.json() == bookings
+        assert app.post(f"/api/stock/transactions/{transaction}/undo").status_code == 204
+        restored = app.get(base + "/entries").json()
+        expected = [(2, "Next batch", 1.6)]
+        expected.extend((amount, "First batch", 1.5) for amount in ([8] if count == 0 else [3, 5]))
+        assert sorted((row["amount"], row["note"], row["price"]) for row in restored) == expected

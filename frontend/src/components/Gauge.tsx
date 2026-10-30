@@ -1,3 +1,5 @@
+import { useI18n } from "@/lib/i18n";
+
 type GaugeProps = {
   amount: number;
   min: number;
@@ -10,10 +12,17 @@ type GaugeProps = {
  * made-up fill.
  */
 export function Gauge({ amount, min, label }: GaugeProps) {
+  const { t: tr } = useI18n();
+
   if (!(min > 0)) {
     return (
-      <span className="gauge" data-state="none" role="img" aria-label={`${label}, no minimum set`}>
-        <span className="gauge-none">no min</span>
+      <span
+        className="gauge"
+        data-state="none"
+        role="img"
+        aria-label={tr("%s, no minimum set", String(label))}
+      >
+        <span className="gauge-none">{tr("no min")}</span>
       </span>
     );
   }
@@ -26,7 +35,11 @@ export function Gauge({ amount, min, label }: GaugeProps) {
       className="gauge"
       data-state={state}
       role="img"
-      aria-label={`${label}, ${Math.round((amount / min) * 100)}% of minimum`}
+      aria-label={tr(
+        "%1$s, %2$s%% of minimum",
+        String(label),
+        String(Math.round((amount / min) * 100)),
+      )}
     >
       <span className="gauge-fill" style={{ width: `${ratio * 100}%` }} />
       <span className="gauge-min" />

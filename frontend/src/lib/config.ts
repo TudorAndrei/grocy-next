@@ -24,7 +24,8 @@ function readStored(key: string): string | null {
 }
 
 export function readApiConfig(): ApiConfig {
-  const baseUrl = readStored(STORAGE_BASE) ?? import.meta.env.VITE_API_BASE ?? "";
+  const baseUrl =
+    readStored(STORAGE_BASE) ?? (import.meta.env.VITE_API_BASE?.trim() || import.meta.env.BASE_URL);
 
   const apiKey = readStored(STORAGE_KEY) ?? import.meta.env.VITE_API_KEY ?? DEFAULT_API_KEY;
 

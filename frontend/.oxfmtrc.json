@@ -4,6 +4,7 @@
     "src/routeTree.gen.ts",
     "tools/oxlint/anti-slop/**",
     "dist/**",
+    "public/vendor/**",
     "**/*.md",
     "**/*.markdown",
     "**/*.toml",

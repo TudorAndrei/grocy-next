@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import type { JsonObject } from "@/lib/json";
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -6,6 +7,7 @@ import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { api, request } from "@/lib/api";
 import type { EntityRow } from "@/lib/entities";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/household")({
   component: HouseholdPage,
@@ -25,8 +27,17 @@ function displayTime(value: string | null | undefined) {
 }
 
 function HouseholdPage() {
+  const { t: tr } = useI18n();
+
   const client = useQueryClient();
-  const [entity, setEntity] = useState("chores");
+  const features = useFeatures();
+
+  const choices = ["chores", "tasks", "batteries"].filter((name) =>
+    features.enabled(name.toUpperCase()),
+  );
+
+  const [selection, setEntity] = useState("chores");
+  const entity = choices.includes(selection) ? selection : (choices[0] ?? "chores");
   const [recording, setRecording] = useState<EntityRow | null>(null);
   const [merging, setMerging] = useState<EntityRow | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
@@ -37,11 +48,13 @@ function HouseholdPage() {
   const records = useQuery({
     queryKey: ["objects", entity],
     queryFn: () => api.objects(entity),
+    enabled: choices.length > 0,
   });
 
   const current = useQuery({
     queryKey: ["household-current", entity],
     queryFn: () => request<EntityRow[]>(`/api/${entity}`),
+    enabled: choices.length > 0,
   });
 
   const users = useQuery({
@@ -55,7 +68,7 @@ function HouseholdPage() {
   const history = useQuery({
     queryKey: ["objects", logsEntity],
     queryFn: () => api.objects(logsEntity),
-    enabled: entity !== "tasks",
+    enabled: choices.length > 0 && entity !== "tasks",
   });
 
   const action = useMutation({
@@ -83,7 +96,8 @@ function HouseholdPage() {
     if (!recording) return;
 
     const body: JsonObject = {};
-    body[entity === "tasks" ? "done_time" : "tracked_time"] = trackedTime;
+    body[entity === "tasks" ? "done_time" : "tracked_time"] =
+      trackedTime.replace("T", " ") + (trackedTime.length === 16 ? ":00" : "");
 
     if (entity === "chores") {
       body.skipped = skipped;
@@ -102,10 +116,10 @@ function HouseholdPage() {
 
   return (
     <>
-      <h1 className="page-title">Household</h1>
-      <p className="page-lead">Manage chores, tasks, and battery charges.</p>
-      <div className="tabs" role="group" aria-label="Household type">
-        {["chores", "tasks", "batteries"].map((value) => (
+      <h1 className="page-title">{tr("Household")}</h1>
+      <p className="page-lead">{tr("Manage chores, tasks, and battery charges.")}</p>
+      <div className="tabs" role="group" aria-label={tr("Household type")}>
+        {choices.map((value) => (
           <button
             key={value}
             className="btn btn-ghost"
@@ -127,15 +141,16 @@ function HouseholdPage() {
         <form
           className="panel panel-inner"
           onSubmit={submitRecord}
-          aria-label={`Record ${recording.name}`}
+          aria-label={tr("Record %s", String(recording.name))}
         >
           <h2>
-            {skipped ? "Skip" : entity === "tasks" ? "Complete" : "Record"} {recording.name}
+            {skipped ? tr("Skip") : entity === "tasks" ? tr("Complete") : tr("Record")}{" "}
+            {recording.name}
           </h2>
           <div className="form-grid">
             <div className="field">
               <label htmlFor="household-time">
-                {entity === "tasks" ? "Completion time" : "Recorded time"}
+                {entity === "tasks" ? tr("Completion time") : tr("Recorded time")}
               </label>
               <input
                 id="household-time"
@@ -147,13 +162,13 @@ function HouseholdPage() {
             </div>
             {entity === "chores" && (
               <div className="field">
-                <label htmlFor="household-user">Done by</label>
+                <label htmlFor="household-user">{tr("Done by")}</label>
                 <select
                   id="household-user"
                   value={doneBy}
                   onChange={(e) => setDoneBy(e.target.value)}
                 >
-                  <option value="">Current user</option>
+                  <option value="">{tr("Current user")}</option>
                   {users.data?.map((user) => (
                     <option key={user.id} value={user.id}>
                       {String(user.display_name ?? user.username)}
@@ -165,11 +180,11 @@ function HouseholdPage() {
             )}
           </div>
           {skipped && Boolean(recording.consume_product_on_execution) && (
-            <p>This chore will also consume its configured stock amount.</p>
+            <p>{tr("This chore will also consume its configured stock amount.")}</p>
           )}
           <div className="actions">
             <button className="btn btn-primary" disabled={action.isPending}>
-              {skipped ? "Save skipped execution" : "Save record"}
+              {skipped ? tr("Save skipped execution") : tr("Save record")}
             </button>
             <button
               type="button"
@@ -177,7 +192,7 @@ function HouseholdPage() {
               disabled={action.isPending}
               onClick={() => setRecording(null)}
             >
-              Cancel
+              {tr("Cancel")}
             </button>
           </div>
         </form>
@@ -185,7 +200,7 @@ function HouseholdPage() {
       {merging && (
         <form
           className="panel panel-inner"
-          aria-label="Merge chores"
+          aria-label={tr("Merge chores")}
           onSubmit={(event) => {
             event.preventDefault();
             action.mutate({
@@ -193,17 +208,19 @@ function HouseholdPage() {
             });
           }}
         >
-          <h2>Merge {merging.name}</h2>
-          <p>Move this chore's history to another chore, then delete this chore.</p>
+          <h2>
+            {tr("Merge")} {merging.name}
+          </h2>
+          <p>{tr("Move this chore's history to another chore, then delete this chore.")}</p>
           <div className="field">
-            <label htmlFor="merge-target">Chore to keep</label>
+            <label htmlFor="merge-target">{tr("Chore to keep")}</label>
             <select
               id="merge-target"
               required
               value={mergeTarget}
               onChange={(e) => setMergeTarget(e.target.value)}
             >
-              <option value="">Select a chore</option>
+              <option value="">{tr("Select a chore")}</option>
               {records.data
                 ?.filter((row) => row.id !== merging.id)
                 .map((row) => (
@@ -215,7 +232,7 @@ function HouseholdPage() {
           </div>
           <div className="actions">
             <button className="btn btn-primary" disabled={action.isPending}>
-              Merge chores
+              {tr("Merge chores")}
             </button>
             <button
               type="button"
@@ -223,82 +240,99 @@ function HouseholdPage() {
               disabled={action.isPending}
               onClick={() => setMerging(null)}
             >
-              Cancel
+              {tr("Cancel")}
             </button>
           </div>
         </form>
       )}
-      <EntityManager
-        key={entity}
-        entity={entity}
-        detail={(row) => {
-          const state = current.data?.find((item) => item.id === row.id);
+      {choices.length > 0 ? (
+        <EntityManager
+          key={entity}
+          entity={entity}
+          detail={(row) => {
+            const state = current.data?.find((item) => item.id === row.id);
 
-          const assigned = state?.next_execution_assigned_user ?? state?.assigned_to_user;
+            const assigned = state?.next_execution_assigned_user ?? state?.assigned_to_user;
 
-          return (
+            return (
+              <>
+                <h3>{row.name}</h3>
+                {row.description && <p>{row.description}</p>}
+                <p className="muted">
+                  {entity === "tasks"
+                    ? row.done
+                      ? tr("Completed %s", String(displayTime(row.done_timestamp)))
+                      : tr("Due %s", String(displayTime(row.due_date)))
+                    : row.active === 0
+                      ? tr("Inactive")
+                      : tr(
+                          "Next %s",
+                          String(
+                            displayTime(
+                              state?.[
+                                entity === "chores"
+                                  ? "next_estimated_execution_time"
+                                  : "next_estimated_charge_time"
+                              ],
+                            ),
+                          ),
+                        )}
+                </p>
+                {assigned && (
+                  <p>
+                    {tr("Assigned to")} {String(assigned.display_name ?? assigned.username)}
+                  </p>
+                )}
+              </>
+            );
+          }}
+          actions={(row) => (
             <>
-              <h3>{row.name}</h3>
-              {row.description && <p>{row.description}</p>}
-              <p className="muted">
+              <button
+                className="btn btn-primary"
+                disabled={action.isPending || row.active === 0}
+                onClick={() =>
+                  entity === "tasks" && row.done
+                    ? action.mutate({ path: `/api/tasks/${row.id}/undo` })
+                    : record(row)
+                }
+              >
                 {entity === "tasks"
                   ? row.done
-                    ? `Completed ${displayTime(row.done_timestamp)}`
-                    : `Due ${displayTime(row.due_date)}`
-                  : row.active === 0
-                    ? "Inactive"
-                    : `Next ${displayTime(state?.[entity === "chores" ? "next_estimated_execution_time" : "next_estimated_charge_time"])}`}
-              </p>
-              {assigned && <p>Assigned to {String(assigned.display_name ?? assigned.username)}</p>}
+                    ? tr("Reopen")
+                    : tr("Complete")
+                  : entity === "chores"
+                    ? tr("Record execution")
+                    : tr("Record charge")}
+              </button>
+              {entity === "chores" && row.period_type !== "manually" && (
+                <button
+                  className="btn btn-ghost"
+                  disabled={action.isPending || row.active === 0}
+                  onClick={() => record(row, true)}
+                >
+                  {tr("Skip")}
+                </button>
+              )}
+              {entity === "chores" && (
+                <button
+                  className="btn btn-ghost"
+                  disabled={action.isPending}
+                  onClick={() => {
+                    action.reset();
+                    setMerging(row);
+                    setMergeTarget("");
+                    setRecording(null);
+                  }}
+                >
+                  {tr("Merge")}
+                </button>
+              )}
             </>
-          );
-        }}
-        actions={(row) => (
-          <>
-            <button
-              className="btn btn-primary"
-              disabled={action.isPending || row.active === 0}
-              onClick={() =>
-                entity === "tasks" && row.done
-                  ? action.mutate({ path: `/api/tasks/${row.id}/undo` })
-                  : record(row)
-              }
-            >
-              {entity === "tasks"
-                ? row.done
-                  ? "Reopen"
-                  : "Complete"
-                : entity === "chores"
-                  ? "Record execution"
-                  : "Record charge"}
-            </button>
-            {entity === "chores" && row.period_type !== "manually" && (
-              <button
-                className="btn btn-ghost"
-                disabled={action.isPending || row.active === 0}
-                onClick={() => record(row, true)}
-              >
-                Skip
-              </button>
-            )}
-            {entity === "chores" && (
-              <button
-                className="btn btn-ghost"
-                disabled={action.isPending}
-                onClick={() => {
-                  action.reset();
-                  setMerging(row);
-                  setMergeTarget("");
-                  setRecording(null);
-                }}
-              >
-                Merge
-              </button>
-            )}
-          </>
-        )}
-      />
-      {entity === "chores" && (
+          )}
+        />
+      ) : null}
+      {entity === "chores" && features.enabled("CHORES_ASSIGNMENTS") && (
         <button
           className="btn btn-ghost"
           disabled={action.isPending}
@@ -308,12 +342,12 @@ function HouseholdPage() {
             })
           }
         >
-          Calculate next assignments
+          {tr("Calculate next assignments")}
         </button>
       )}
       {entity !== "tasks" && (
         <section>
-          <h2>History</h2>
+          <h2>{tr("History")}</h2>
           {history.error && <ErrorBlock message={history.error.message} />}
           <ul className="product-list">
             {history.data
@@ -325,8 +359,8 @@ function HouseholdPage() {
                   <span>
                     {records.data?.find((record) => record.id === (row.chore_id ?? row.battery_id))
                       ?.name ?? `#${String(row.chore_id ?? row.battery_id)}`}{" "}
-                    {row.skipped ? "skipped" : "recorded"} {displayTime(row.tracked_time)}
-                    {row.undone ? " (undone)" : ""}
+                    {row.skipped ? tr("skipped") : tr("recorded")} {displayTime(row.tracked_time)}
+                    {row.undone ? tr(" (undone)") : ""}
                   </span>
                   {!row.undone && (
                     <button
@@ -341,7 +375,7 @@ function HouseholdPage() {
                         })
                       }
                     >
-                      Undo
+                      {tr("Undo")}
                     </button>
                   )}
                 </li>

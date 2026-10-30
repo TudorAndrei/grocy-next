@@ -1,0 +1,210 @@
+{
+  "cases": [
+    {
+      "date": "",
+      "locale": "en",
+      "relative": "",
+      "timestamp": null
+    },
+    {
+      "date": "",
+      "locale": "en",
+      "relative": "",
+      "timestamp": ""
+    },
+    {
+      "date": "2026",
+      "locale": "en",
+      "relative": "",
+      "timestamp": "2026"
+    },
+    {
+      "date": "Never",
+      "locale": "en",
+      "relative": "",
+      "timestamp": "2999-12-31 23:59:59"
+    },
+    {
+      "date": "Unknown",
+      "locale": "en",
+      "relative": "",
+      "timestamp": "2888-12-31 23:59:59"
+    },
+    {
+      "date": "2026-10-28 01:02:03",
+      "locale": "en",
+      "relative": "Today",
+      "timestamp": "2026-10-28 01:02:03"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "en",
+      "relative": "12 hours ago",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "en",
+      "relative": "in a day",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "en",
+      "relative": "2 years ago",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "de",
+      "relative": "vor 12 Stunden",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "de",
+      "relative": "in einem Tag",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "de",
+      "relative": "vor 2 Jahren",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "ro",
+      "relative": "12 ore în urmă",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "ro",
+      "relative": "peste o zi",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "ro",
+      "relative": "2 ani în urmă",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "ca",
+      "relative": "fa 12 hores",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "ca",
+      "relative": "d'aquí un dia",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "ca",
+      "relative": "fa 2 anys",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "uk",
+      "relative": "12 годин тому",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "uk",
+      "relative": "за день",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "uk",
+      "relative": "2 роки тому",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-28 01:02:03",
+      "locale": "ar",
+      "relative": "منذ ١١ ساعة",
+      "timestamp": "2026-10-28 01:02:03"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "ar",
+      "relative": "منذ ١٢ ساعة",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "ar",
+      "relative": "بعد يوم واحد",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "ar",
+      "relative": "منذ عامين",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "ja",
+      "relative": "12時間前",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "ja",
+      "relative": "1日後",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "ja",
+      "relative": "2年前",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "sr",
+      "relative": "pre 12 sati",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "sr",
+      "relative": "za jedan dan",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "sr",
+      "relative": "pre 2 godine",
+      "timestamp": "2025-01-01 12:00:00"
+    },
+    {
+      "date": "2026-10-27 23:59:59",
+      "locale": "zh-cn",
+      "relative": "12 小时前",
+      "timestamp": "2026-10-27 23:59:59"
+    },
+    {
+      "date": "2026-10-29 23:59:59",
+      "locale": "zh-cn",
+      "relative": "1 天后",
+      "timestamp": "2026-10-29 23:59:59"
+    },
+    {
+      "date": "2025-01-01 12:00:00",
+      "locale": "zh-cn",
+      "relative": "2 年前",
+      "timestamp": "2025-01-01 12:00:00"
+    }
+  ],
+  "now": "2026-10-28T12:00:00",
+  "reference": "Grocy 4.5.0 / RefreshContextualTimeago"
+}

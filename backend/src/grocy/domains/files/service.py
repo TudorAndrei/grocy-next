@@ -5,15 +5,19 @@ import mimetypes
 import os
 import re
 import tempfile
+from collections.abc import AsyncIterator
 from contextlib import suppress
 from pathlib import Path
 
 from fastapi import Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
+from grocy.compatibility.php import php_error
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.domains.files.gd import picture_bytes
+from grocy.domains.files.mime import content_type
 
 FILE_GROUPS = {"equipmentmanuals", "recipepictures", "productpictures", "userfiles", "userpictures"}
 _FILE_NAME = re.compile(r"^[^/?*;:{}\\]+\.[^/?*;:{}\\]+$")
@@ -61,16 +65,21 @@ class FilesService:
         return file_name
 
     def _path(self, group: str, file_name: str) -> tuple[Path, str]:
+        self._group(group)
+        return self._file_path(group, self._name(file_name))
+
+    def _group(self, group: str) -> None:
         groups = FILE_GROUPS if self.compatibility else FILE_GROUPS | {"equipment", "nutrition"}
         if group not in groups:
             raise GrocyError("Invalid file group", code=None)
-        name = self._name(file_name)
+
+    def _file_path(self, group: str, name: str) -> tuple[Path, str]:
         code = None if self.compatibility else "invalid_path"
         if name in {"", ".", ".."} or any(
             character in name for character in ("/", "\\", "\x00", "\r", "\n")
         ):
             raise GrocyError("Invalid filename", code=code)
-        root = get_settings().files_root.resolve()
+        root = get_settings().active_files_root()
         path = (root / group / name).resolve()
         if not path.is_relative_to(root):
             raise GrocyError("Invalid file path", code=code)
@@ -84,16 +93,50 @@ class FilesService:
         width: str | int | None = None,
         height: str | int | None = None,
         picture: bool = False,
+        head: bool = False,
+        named: bool = False,
     ) -> Response:
         try:
-            path, name = self._path(group, file_name)
+            if not named:
+                path, name = self._path(group, file_name)
+            else:
+                self._group(group)
+                parts = file_name.split("_")
+                if len(parts) < 2:
+                    raise php_error("Invalid filename")
+                name = self._name(parts[1])
+                if any(character in name for character in ("\x00", "\r", "\n")):
+                    raise GrocyError("Invalid filename", code=None)
+                try:
+                    internal = _decode(parts[0]).decode()
+                except UnicodeDecodeError as error:
+                    raise GrocyError("Invalid filename", code=None) from error
+                path, _ = self._file_path(group, internal)
             if not path.is_file():
                 raise NotFoundError("File not found")
             media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
             if picture:
                 path, media_type = await run_in_threadpool(
-                    self._picture, path, _dimension(height), _dimension(width)
+                    self._picture, path, _dimension(height), _dimension(width), self.compatibility
                 )
+            if self.compatibility:
+                mime = await run_in_threadpool(content_type, path)
+
+                async def chunks() -> AsyncIterator[bytes]:
+                    if head:
+                        return
+                    with path.open("rb") as stream:
+                        while chunk := await run_in_threadpool(stream.read, 1048576):
+                            yield chunk
+
+                response = StreamingResponse(
+                    chunks(),
+                    headers={"Content-Type": mime, "Cache-Control": "max-age=2592000"},
+                )
+                response.raw_headers.append(
+                    (b"content-disposition", f'inline; filename="{name}"'.encode())
+                )
+                return response
             return FileResponse(
                 path,
                 filename=name,
@@ -103,12 +146,17 @@ class FilesService:
             )
         except GrocyError as error:
             if self.compatibility:
-                raise NotFoundError(error.message, code=None) from error
+                if error.status_code >= 500:
+                    raise
+                raise php_error(error.message, status_code=404) from error
             raise
 
     @staticmethod
     def _picture(
-        path: Path, height: tuple[str, int] | None, width: tuple[str, int] | None
+        path: Path,
+        height: tuple[str, int] | None,
+        width: tuple[str, int] | None,
+        compatibility: bool = False,
     ) -> tuple[Path, str]:
         from PIL import Image, UnidentifiedImageError
 
@@ -119,12 +167,30 @@ class FilesService:
         )
         try:
             if not cached.is_file():
+                if compatibility and (
+                    (height is not None and width is None)
+                    or any(value is not None and value[1] <= 0 for value in (width, height))
+                ):
+                    raise php_error(
+                        "imagecreatetruecolor(): Argument #1 ($width) must be greater than 0"
+                    )
                 if any(value is not None and not 0 < value[1] <= 4096 for value in (width, height)):
                     raise GrocyError("Invalid image dimensions")
                 with Image.open(path) as picture:
                     if picture.width * picture.height > 25_000_000:
                         raise GrocyError("Image exceeds the pixel limit", status_code=413)
                     image_format = picture.format or "PNG"
+                    rendered = (
+                        picture_bytes(
+                            path,
+                            image_format,
+                            picture.getexif().get(274, 1),
+                            width[0] if width else None,
+                            height[0] if height else None,
+                        )
+                        if compatibility
+                        else None
+                    )
                     picture.thumbnail(
                         (
                             width[1] if width else picture.width,
@@ -134,14 +200,18 @@ class FilesService:
                     descriptor, temporary = tempfile.mkstemp(dir=path.parent)
                     try:
                         with os.fdopen(descriptor, "wb") as stream:
-                            picture.save(stream, image_format)
+                            if rendered is None:
+                                picture.save(stream, image_format)
+                            else:
+                                stream.write(rendered)
                         os.replace(temporary, cached)
                     finally:
                         Path(temporary).unlink(missing_ok=True)
             with Image.open(cached) as picture:
                 media_type = Image.MIME.get(picture.format or "", "application/octet-stream")
         except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as error:
-            raise GrocyError("File is not a valid image") from error
+            message = "Unsupported file type" if compatibility else "File is not a valid image"
+            raise GrocyError(message, code=None) from error
         return cached, media_type
 
     async def put(self, request: Request, group: str, file_name: str) -> None:
@@ -151,13 +221,22 @@ class FilesService:
         path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary = tempfile.mkstemp(dir=path.parent)
         size = 0
+        pending = bytearray()
         try:
             with os.fdopen(descriptor, "wb") as stream:
                 async for chunk in request.stream():
                     size += len(chunk)
                     if size > get_settings().max_upload_bytes:
                         raise GrocyError("File exceeds the upload limit", status_code=413)
-                    await run_in_threadpool(stream.write, chunk)
+                    if not self.compatibility:
+                        await run_in_threadpool(stream.write, chunk)
+                        continue
+                    pending.extend(chunk)
+                    while len(pending) >= 1048576:
+                        await run_in_threadpool(stream.write, pending[:1048576])
+                        del pending[:1048576]
+                if self.compatibility and pending and pending != b"0":
+                    await run_in_threadpool(stream.write, pending)
             try:
                 await run_in_threadpool(os.link, temporary, path)
             except FileExistsError as error:

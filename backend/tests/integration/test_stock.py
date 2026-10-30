@@ -1,5 +1,10 @@
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+
+from grocy.db.session import get_session_factory
 
 
 def test_purchase_and_consume(client: TestClient, api_headers: dict[str, str]) -> None:
@@ -40,6 +45,73 @@ def test_shopping_list_add(client: TestClient, api_headers: dict[str, str]) -> N
     listing = client.get("/api/v2/shopping-lists/1", headers=api_headers)
     assert listing.status_code == 200
     assert any(item["product_id"] == product_id for item in listing.json()["items"])
+
+
+def test_product_details_keep_native_numeric_types_and_saved_price_precision(client, api_headers):
+    base = "/api/stock/products/1"
+    created = client.post(
+        "/api/objects/shopping_locations",
+        headers=api_headers,
+        json={"name": "History shop", "active": 0},
+    )
+    created.raise_for_status()
+    store = int(created.json()["created_object_id"])
+    bookings = []
+    for price in (1.5, 1.5, 2.5):
+        response = client.post(
+            f"{base}/add",
+            headers=api_headers,
+            json={"amount": 1, "price": price, "shopping_location_id": store},
+        )
+        assert response.status_code == 200, response.text
+        bookings.append(response.json()[0]["id"])
+    for amount, spoiled in ((1, False), (0.5, True)):
+        response = client.post(
+            f"{base}/consume",
+            headers=api_headers,
+            json={"amount": amount, "spoiled": spoiled, "exact_amount": True},
+        )
+        assert response.status_code == 200, response.text
+    details = client.get(base, headers=api_headers).json()
+    assert {key: details[key] for key in ("avg_price", "spoil_rate_percent")} == {
+        "avg_price": 1.8333333333333333,
+        "spoil_rate_percent": 33.333333333333336,
+    }
+
+    async def retain_saved_prices():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text(
+                    "UPDATE cache__products_average_price SET price=0.123456789123456 "
+                    "WHERE product_id=1"
+                )
+            )
+            await session.execute(
+                text(
+                    "UPDATE cache__products_last_purchased SET price=7.123456789123456 "
+                    "WHERE product_id=1"
+                )
+            )
+            await session.commit()
+
+    assert client.portal is not None
+    client.portal.call(retain_saved_prices)
+    saved = client.get(base, headers=api_headers).json()
+    assert saved["avg_price"] == 0.123456789123456
+    assert saved["last_price"] == 7.123456789123456
+
+    async def retain_history_precision():
+        async with get_session_factory()() as session:
+            await session.execute(
+                text("UPDATE stock_log SET price=0.123456789123456 WHERE id=:id"),
+                {"id": bookings[0]},
+            )
+            await session.commit()
+
+    client.portal.call(retain_history_precision)
+    history = client.get(f"{base}/price-history", headers=api_headers).json()
+    assert any(row["price"] == 0.123456789123456 for row in history)
+    assert all(row["shopping_location"]["active"] == 0 for row in history)
 
 
 @pytest.mark.parametrize(("first_price", "average"), [(2, 3), (2.25, 3.8)])
@@ -85,8 +157,19 @@ def test_purchase_history_keeps_dates_weighted_prices_and_undo(
     assert restored["stock_value"] == 4 * first_price
 
 
+@pytest.mark.parametrize(
+    "opened,previous",
+    [
+        (False, None),
+        (True, None),
+        (True, "2020-01-02"),
+        (True, "2020-01-02 00:00:00"),
+        (True, "2020-01-02 12:34:56"),
+        (False, "2020-01-02"),
+    ],
+)
 def test_stock_entry_edit_undo_follows_correlated_booking_rules(
-    client: TestClient, api_headers: dict
+    client: TestClient, api_headers: dict, opened: bool, previous: str | None
 ):
     client.headers.update(api_headers)
     base = "/api/stock/products/1"
@@ -99,11 +182,23 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
     )
     assert client.post(f"{base}/consume", json={"amount": 1}).status_code == 200
     entry = client.get(f"{base}/entries").json()[0]
+    if previous is not None:
+
+        async def import_opened_date():
+            async with get_session_factory()() as session:
+                await session.execute(
+                    text("UPDATE stock SET opened_date=:opened,open=1 WHERE id=:id"),
+                    {"opened": previous, "id": entry["id"]},
+                )
+                await session.commit()
+
+        assert client.portal is not None
+        client.portal.call(import_opened_date)
     edited = client.put(
         f"/api/stock/entry/{entry['id']}",
         json={
             "amount": 5,
-            "open": False,
+            "open": opened,
             "price": 3.25,
             "purchased_date": "2027-01-04",
             "note": "corrected",
@@ -113,6 +208,13 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
     bookings = edited.json()
     assert [row["transaction_type"] for row in bookings] == ["stock-edit-old", "stock-edit-new"]
     assert [row["price"] for row in bookings] == [2.5, 3.25]
+    expected_opened = (previous or date.today().isoformat()) if opened else None
+    assert [row["opened_date"] for row in bookings] == [previous, expected_opened]
+    assert client.get(f"/api/stock/entry/{entry['id']}").json()["opened_date"] == expected_opened
+    assert (
+        client.get(f"/api/stock/bookings/{bookings[1]['id']}").json()["opened_date"]
+        == expected_opened
+    )
     consumed = client.post(f"{base}/consume", json={"amount": 1})
     assert consumed.status_code == 200
     undone = client.post(f"/api/stock/bookings/{bookings[0]['id']}/undo")
@@ -124,4 +226,5 @@ def test_stock_entry_edit_undo_follows_correlated_booking_rules(
         restored["purchased_date"],
         restored["note"],
     ) == (3, 2.5, "2027-01-01", "original")
+    assert restored["opened_date"] == previous
     assert client.get(base).json()["avg_price"] == 3.25

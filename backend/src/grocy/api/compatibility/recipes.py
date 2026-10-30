@@ -1,12 +1,19 @@
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from grocy.api.compatibility.input import CompatibilityBody, CompatibilityRoute, filtered_body
+from grocy.compatibility.lessql import query_parameters, query_rows
+from grocy.compatibility.php import PhpJSONResponse, request_body
 from grocy.core.auth import CurrentActor
-from grocy.core.deps import RecipesSvc
+from grocy.core.config import get_settings
+from grocy.core.deps import DbSession, RecipesSvc
+from grocy.core.errors import GrocyError
+from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.domains.recipes.legacy import LegacyRecipesService
+from grocy.domains.system.service import SystemService, localization
 
 router = APIRouter(tags=["recipes"], route_class=CompatibilityRoute)
 
@@ -23,46 +30,72 @@ class RecipeCreateBody(BaseModel):
 
 
 @router.get("/api/recipes/fulfillment")
-async def recipes_fulfillment(_actor: CurrentActor, recipes: RecipesSvc) -> list[dict[str, Any]]:
-    return [recipes.serialize(recipe) for recipe in await recipes.list_recipes()]
+async def recipes_fulfillment(
+    request: Request, _actor: CurrentActor, session: DbSession
+) -> Response:
+    await configure_compatibility_queries(session)
+    return PhpJSONResponse(
+        await query_rows(
+            session,
+            "recipes_resolved",
+            query_parameters(request.scope["query_string"]),
+            caught=True,
+        )
+    )
 
 
 @router.get("/api/recipes/{recipe_id}/fulfillment")
 async def recipe_fulfillment(
-    recipe_id: int,
+    recipe_id: str,
     _actor: CurrentActor,
-    recipes: RecipesSvc,
-    servings: Annotated[Decimal | None, Query()] = None,
-) -> dict[str, Any]:
-    return await recipes.fulfillment(recipe_id, servings=servings)
+    session: DbSession,
+) -> Response:
+    await configure_compatibility_queries(session)
+    rows = await query_rows(
+        session, "recipes_resolved", {}, where="recipe_id = ?", bindings=(recipe_id,), caught=True
+    )
+    if not rows:
+        raise GrocyError("Recipe does not exist", code=None)
+    return PhpJSONResponse(rows[0])
 
 
 @router.post("/api/recipes/{recipe_id}/consume", status_code=204)
 async def recipe_consume(
-    recipe_id: int,
+    recipe_id: str,
     actor: CurrentActor,
-    recipes: RecipesSvc,
-    servings: Annotated[Decimal | None, Query()] = None,
+    session: DbSession,
 ) -> Response:
-    await recipes.consume(actor, recipe_id, servings=servings)
+    await LegacyRecipesService(session).consume(actor, recipe_id)
     return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/add-not-fulfilled-products-to-shoppinglist", status_code=204)
 async def recipe_add_missing(
-    recipe_id: int,
+    recipe_id: str,
+    request: Request,
     _actor: CurrentActor,
-    recipes: RecipesSvc,
-    servings: Annotated[Decimal | None, Query()] = None,
+    session: DbSession,
 ) -> Response:
-    await recipes.add_missing_to_shopping_list(recipe_id, servings=servings)
+    values = await request_body(request)
+    excluded = values.get("excludedProductIds") if values is not None else None
+    await LegacyRecipesService(session).add_missing(recipe_id, excluded)
     return Response(status_code=204)
 
 
 @router.post("/api/recipes/{recipe_id}/copy")
-async def recipe_copy(recipe_id: int, _actor: CurrentActor, recipes: RecipesSvc) -> dict[str, Any]:
-    copy = await recipes.copy(recipe_id)
-    return {"created_object_id": str(copy.id)}
+async def recipe_copy(
+    recipe_id: str, request: Request, actor: CurrentActor, session: DbSession
+) -> dict[str, Any]:
+    locale = await SystemService(session).locale(
+        actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
+    messages = localization(locale, get_settings().mode)["messages"].get("", {})
+    translated = messages.get("Copy of %s", [""])[0]
+    return {
+        "created_object_id": await LegacyRecipesService(session).copy(
+            recipe_id, translated or "Copy of %s"
+        )
+    }
 
 
 @router.get("/api/v2/recipes/{recipe_id}/fulfillment")

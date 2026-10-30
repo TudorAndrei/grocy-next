@@ -1,5 +1,7 @@
 # Backend parity audit
 
+This document records earlier tests of the native PHP adapter. It does not prove that the Python release has the same behavior. The release must use Python. PHP is only a test reference. See [the current compatibility status](compatibility.md) for the release target and open work.
+
 Audit date: 2026-10-16. Baseline: Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`.
 
 All 86 contract operations now execute the original Grocy 4.5.0 route declarations and controllers. Compatibility includes native errors, partial writes, and known defects. The sections below record the repairs and their checks. The separate `/api/v2` extensions keep their application rules.

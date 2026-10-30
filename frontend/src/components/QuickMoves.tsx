@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
 import { useCatalog } from "@/lib/catalog";
 import { useStockMove } from "@/lib/stockActions";
@@ -13,6 +14,8 @@ type QuickMovesProps = {
  * products open the product page instead, because "+1" would book 1 g.
  */
 export function QuickMoves({ productId, name, amount }: QuickMovesProps) {
+  const { t: tr } = useI18n();
+
   const catalog = useCatalog();
   const purchase = useStockMove("purchase");
   const consume = useStockMove("consume");
@@ -26,9 +29,9 @@ export function QuickMoves({ productId, name, amount }: QuickMovesProps) {
           params={params}
           search={{ move: "purchase" }}
           className="btn btn-sm"
-          aria-label={`Purchase ${name}`}
+          aria-label={tr("Purchase %s", String(name))}
         >
-          Purchase…
+          {tr("Purchase…")}
         </Link>
         <Link
           to="/products/$productId"
@@ -36,9 +39,9 @@ export function QuickMoves({ productId, name, amount }: QuickMovesProps) {
           search={{ move: "consume" }}
           className="btn btn-sm"
           aria-disabled={amount <= 0}
-          aria-label={`Consume ${name}`}
+          aria-label={tr("Consume %s", String(name))}
         >
-          Consume…
+          {tr("Consume…")}
         </Link>
       </>
     );
@@ -51,7 +54,7 @@ export function QuickMoves({ productId, name, amount }: QuickMovesProps) {
         className="btn btn-sm"
         disabled={purchase.isPending}
         onClick={() => purchase.mutate({ productId, amount: 1 })}
-        aria-label={`Purchase 1 ${name}`}
+        aria-label={tr("Purchase 1 %s", String(name))}
       >
         +1
       </button>
@@ -60,9 +63,9 @@ export function QuickMoves({ productId, name, amount }: QuickMovesProps) {
         className="btn btn-sm"
         disabled={consume.isPending || amount <= 0}
         onClick={() => consume.mutate({ productId, amount: 1 })}
-        aria-label={`Consume 1 ${name}`}
+        aria-label={tr("Consume 1 %s", String(name))}
       >
-        Consume
+        {tr("Consume")}
       </button>
     </>
   );
