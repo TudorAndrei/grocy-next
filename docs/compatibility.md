@@ -745,6 +745,26 @@ Separate browser checks confirmed that purchase and inventory retain invalid pur
 
 All 39 public resource and form responses passed. All 95 web build files and 177 Python source files matched the final release images. PHP remained disabled and absent from the API image. SQLite integrity passed, with 71 stock rows and 188 booking rows after the test edit and Undo. The owned browser session, four test containers, and private network were removed. Full legacy compliance remains incomplete; the broader stock-form, callback, error-recovery, device, and application checks remain open.
 
+### Spending report
+
+The web application now provides `/stockreports/spendings`, with a Spendings link on the stock overview. Stock and price tracking settings control the link and page. The Python reader at `/api/v2/stock/reports/spendings` requires authentication and permits the native read-only user.
+
+The report reads the pinned `products_price_history` view. It groups by product, product group, or store. Product-group limits apply only to product grouping. Inactive products, groups, and stores can have totals. Only active groups appear in the filter choices. Missing groups display as Ungrouped. A saved group name of `0` retains that native display rule. Missing store names stay blank.
+
+Two valid date bounds select an inclusive purchase-date range. Without both valid bounds, the report starts at the first day of the current month and has no upper date bound. Future purchases therefore remain in the default report. Self-production, zero-price receipts, and undone purchases do not add costs. Edited stock uses the newest edit price and original purchase amount, including after partial consumption.
+
+The page includes all nine native date presets, custom Apply and Cancel, grouping, and Clear filter. URL changes retain the other report limits and the presence of `embedded`. Preset names remain selected after navigation. The applied date text stays separate from an unsaved range draft. The ring chart retains the complete report when table search or sorting changes. Its total uses the normal currency precision, while table values use the saved price display precision. The table uses the shared numeric sorter, smart search, grouping, column controls, and native `metrics-table` settings key.
+
+All 288 Python integration tests passed; five optional checks were skipped. All 502 frontend tests passed in 48 files in the final Linux build environment. That run used two workers and a limit of 20 seconds for each test. Some host repetitions stopped on existing test time limits while other builds were active. Python lint, formatting, and types, frontend lint, formatting, all three type checks, and root and `/house` builds passed. Both new HTTP cases and three routed workflow cases failed with the previous routes. Two feature-setting controls passed. A separate check failed before the preset label correction.
+
+The final comparisons used a fixed native database imported through the supported Python CLI. All 16 data cases matched the native HTML report. These cases cover inclusive bounds, grouping, inactive records, the zero group name, ungrouped rows, reversed and empty ranges, invalid and incomplete dates, future purchases, edited origin amounts, consumption, and Undo. Five rendered table states matched, including numeric sorting and both aggregate modes. The actual native This year preset also produced the same rendered year report as the Python preset.
+
+The 1440-pixel desktop and 390- and 320-pixel phone views were inspected. Neither phone page had horizontal overflow. The chart stayed within the viewport, and the table retained its own scroll region. The phone range checks covered valid keyboard date entry, Apply, Clear filter, and the year preset. Column drag changed the heading and cell order, retained that order after reload, and restored the original order. The stock overview link opened the report under `/house`. No browser script errors were reported.
+
+All 96 web build files and 178 Python source files matched the final release images. All 41 public resource and form responses passed, including the report and its embedded store view. Restart retained the same product, group, store, stock, and booking hashes. SQLite integrity passed, with 112 stock rows and 251 booking rows. PHP was disabled and absent from the API image. The owned browser session, four test containers, and private network were removed.
+
+The native date-range calendar's configured week start, week-number display, and further keyboard states still need comparison and implementation. Other utility pages, callback timing, error recovery, device behavior, and the broader application audit remain open. Full legacy compliance remains incomplete.
+
 Run the normal tests without PHP:
 
 ```bash

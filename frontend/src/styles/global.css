@@ -1079,6 +1079,74 @@ input[type="date"][data-empty="true"]::-webkit-datetime-edit {
   background: transparent;
 }
 
+.spending-grouping {
+  align-items: center;
+}
+
+.spending-grouping [aria-pressed="true"] {
+  background: var(--cobalt);
+  color: var(--surface);
+}
+
+.spending-filters,
+.spending-date-range {
+  align-items: end;
+}
+
+.spending-chart {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  margin: 24px 0;
+  max-width: 900px;
+}
+
+.spending-chart svg {
+  width: 100%;
+  fill: var(--ink);
+  font-size: 14px;
+}
+
+.spending-chart-total {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.spending-chart ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spending-chart li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+
+.spending-chart-key {
+  width: 10px;
+  height: 10px;
+}
+
+@media (width < 576px) {
+  .spending-chart {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .spending-chart svg {
+    max-width: 280px;
+    justify-self: center;
+  }
+}
+
 .booking-date-context {
   display: block;
   min-height: 1lh;

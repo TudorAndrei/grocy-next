@@ -45,6 +45,7 @@ import { Route as StockentriesIndexRouteImport } from './routes/stockentries/ind
 import { Route as StockentryEntryIdRouteImport } from './routes/stockentry/$entryId'
 import { Route as StockjournalIndexRouteImport } from './routes/stockjournal/index'
 import { Route as StockjournalSummaryRouteImport } from './routes/stockjournal/summary'
+import { Route as StockreportsSpendingsRouteImport } from './routes/stockreports/spendings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -227,6 +228,11 @@ const StockjournalSummaryRoute = StockjournalSummaryRouteImport.update({
   path: '/stockjournal/summary',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StockreportsSpendingsRoute = StockreportsSpendingsRouteImport.update({
+  id: '/stockreports/spendings',
+  path: '/stockreports/spendings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
   '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/stockjournal/summary': typeof StockjournalSummaryRoute
+  '/stockreports/spendings': typeof StockreportsSpendingsRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
   '/stockentries/': typeof StockentriesIndexRoute
@@ -299,6 +306,7 @@ export interface FileRoutesByTo {
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
   '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/stockjournal/summary': typeof StockjournalSummaryRoute
+  '/stockreports/spendings': typeof StockreportsSpendingsRoute
   '/products': typeof ProductsIndexRoute
   '/recipes': typeof RecipesIndexRoute
   '/stockentries': typeof StockentriesIndexRoute
@@ -338,6 +346,7 @@ export interface FileRoutesById {
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
   '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/stockjournal/summary': typeof StockjournalSummaryRoute
+  '/stockreports/spendings': typeof StockreportsSpendingsRoute
   '/products/': typeof ProductsIndexRoute
   '/recipes/': typeof RecipesIndexRoute
   '/stockentries/': typeof StockentriesIndexRoute
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/shoppinglistitem/$itemId'
     | '/stockentry/$entryId'
     | '/stockjournal/summary'
+    | '/stockreports/spendings'
     | '/products/'
     | '/recipes/'
     | '/stockentries/'
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/shoppinglistitem/$itemId'
     | '/stockentry/$entryId'
     | '/stockjournal/summary'
+    | '/stockreports/spendings'
     | '/products'
     | '/recipes'
     | '/stockentries'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/shoppinglistitem/$itemId'
     | '/stockentry/$entryId'
     | '/stockjournal/summary'
+    | '/stockreports/spendings'
     | '/products/'
     | '/recipes/'
     | '/stockentries/'
@@ -493,6 +505,7 @@ export interface RootRouteChildren {
   ShoppinglistitemItemIdRoute: typeof ShoppinglistitemItemIdRoute
   StockentryEntryIdRoute: typeof StockentryEntryIdRoute
   StockjournalSummaryRoute: typeof StockjournalSummaryRoute
+  StockreportsSpendingsRoute: typeof StockreportsSpendingsRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   RecipesIndexRoute: typeof RecipesIndexRoute
   StockentriesIndexRoute: typeof StockentriesIndexRoute
@@ -753,6 +766,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockjournalSummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stockreports/spendings': {
+      id: '/stockreports/spendings'
+      path: '/stockreports/spendings'
+      fullPath: '/stockreports/spendings'
+      preLoaderRoute: typeof StockreportsSpendingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -789,6 +809,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShoppinglistitemItemIdRoute: ShoppinglistitemItemIdRoute,
   StockentryEntryIdRoute: StockentryEntryIdRoute,
   StockjournalSummaryRoute: StockjournalSummaryRoute,
+  StockreportsSpendingsRoute: StockreportsSpendingsRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   RecipesIndexRoute: RecipesIndexRoute,
   StockentriesIndexRoute: StockentriesIndexRoute,

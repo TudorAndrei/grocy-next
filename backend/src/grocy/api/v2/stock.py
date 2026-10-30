@@ -11,9 +11,22 @@ from grocy.domains.stock.journal import (
     journal_summary,
     journal_view,
 )
+from grocy.domains.stock.spendings import SpendingsView, spendings_view
 from grocy.domains.stock.transfer import transfer_editor
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/reports/spendings")
+async def get_spendings(
+    actor: AuthenticatedActor,
+    session: DbSession,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    group_by: str | None = None,
+    product_group: str | None = None,
+) -> SpendingsView:
+    return await spendings_view(session, start_date, end_date, group_by, product_group)
 
 
 @router.get("/stock/consume/editor")
