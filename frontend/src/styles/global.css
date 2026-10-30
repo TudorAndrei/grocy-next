@@ -1065,13 +1065,6 @@ input[type="date"][data-empty="true"]::-webkit-datetime-edit {
   font-variant-numeric: tabular-nums;
 }
 
-.booking-date-input > .booking-date-calendar {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-}
-
 .booking-date-button.btn {
   position: absolute;
   inset-block: 0;
@@ -1084,6 +1077,130 @@ input[type="date"][data-empty="true"]::-webkit-datetime-edit {
   border-radius: var(--radius-sm);
   color: var(--cobalt);
   background: transparent;
+}
+
+.booking-date-context {
+  display: block;
+  min-height: 1lh;
+  margin-top: 4px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.booking-calendar {
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  width: 320px;
+  max-width: min(100%, calc(100vw - 32px));
+  padding: 8px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.booking-calendar.is-above {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.booking-calendar button {
+  width: 100%;
+  min-height: 36px;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-calendar button:hover:not(:disabled) {
+  background: var(--cobalt-soft);
+}
+
+.booking-calendar button:disabled {
+  color: var(--ink-3);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.booking-calendar .is-other {
+  color: var(--ink-3);
+}
+
+.booking-calendar .is-selected,
+.booking-calendar .is-selected:hover:not(:disabled) {
+  background: var(--cobalt);
+  color: var(--surface);
+}
+
+.booking-calendar .is-today {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.booking-calendar-nav {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  font-weight: 700;
+}
+
+.booking-calendar .calendar-next {
+  transform: rotate(180deg);
+}
+
+.booking-calendar table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.booking-calendar td,
+.booking-calendar th {
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+
+.booking-calendar thead th {
+  height: 28px;
+  font-weight: 600;
+}
+
+.booking-calendar-week {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.booking-calendar-choices {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.booking-calendar-choices button {
+  min-height: 48px;
+}
+
+.booking-calendar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 4px;
+}
+
+@media (width <= 360px) {
+  .recipe-action-dialog .booking-calendar {
+    inset-inline-start: -24px;
+    width: calc(100vw - 80px);
+    max-width: none;
+  }
 }
 
 input[type="checkbox"] {

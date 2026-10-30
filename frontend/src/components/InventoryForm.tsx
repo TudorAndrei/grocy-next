@@ -689,6 +689,8 @@ function InventoryFields({
                 label={t("Purchased date")}
                 required
                 numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
+                firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
+                weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
                 initialCalendarValue={purchased}
                 value={purchased}
                 onChange={setPurchased}
@@ -705,6 +707,8 @@ function InventoryFields({
                   label={t("Due date")}
                   required={adding}
                   numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
+                  firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
+                  weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
                   readOnly={due === "2999-12-31"}
                   value={due}
                   onChange={setDue}

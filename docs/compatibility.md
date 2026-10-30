@@ -707,7 +707,27 @@ The Linux browser replay matched all 108 native states across purchase and inven
 
 The browser calendar selected the next day and set the field to `2026-10-31`. The 1440-pixel desktop and 390-pixel phone views were inspected. The phone view had no horizontal overflow. All 96 web build files and 177 Python source files matched their release images. All 39 public resource and form responses passed. SQLite integrity passed. PHP remained disabled and absent from the API image. The owned browser, four containers, and private network were removed.
 
-Full legacy compliance remains incomplete. The browser calendar menu, week numbers, contextual date text, other locales, and mobile keyboard behavior still need comparison. The broader stock-form and application differences remain open.
+The next calendar batch checks the menu, week numbers, and contextual date text. Other locales, mobile keyboard behavior, and the broader stock-form and application differences remain open. Full legacy compliance remains incomplete.
+
+### Booking calendar menus and date help
+
+The shared booking field now has the native calendar menu. It has day, month, year, and decade views, previous and next controls, week numbers, Today, and Close. Navigating a month or year does not change the field until a day is selected. Adjacent-month days remain selectable. The menu retains its view after Close and reopen. Today changes the field and keeps the menu open. A typed key closes the menu and retains the native focus result. The final calendar month retains the checked disabled dates and navigation limits.
+
+The calendar also retains two observed defects. The leading decade choice can select the next decade's year range. Today can leave an earlier custom validation error until the menu closes. A pasted Never date now moves focus to Price on its first validation. This check failed before the focus correction.
+
+The configured week start and week-number column apply to both booking fields. English with a Monday start and German retain their different week-year rules. Contextual date text shows Today or the native relative text. Never and Unknown dates leave that text empty. The menu follows an open field when the viewport is resized. Its width stays within the field or the available dialog gutter. This corrects the right-edge clipping found in the phone stock dialog.
+
+All 495 frontend tests passed in 47 files. Seven focused cases failed with the previous date control, while 61 controls passed. Lint, formatting, all three type checks, and root and `/house` builds passed. The primary date owner covers menu navigation, adjacent days, retained views, Today validation, the maximum date, week settings, German labels, week-year numbers, and date help. The purchase route checks that a selected calendar day reaches the booking request. No Python backend source changed.
+
+The Linux comparison matched 36 native calendar states. It checked field values, validation, read-only state, focus, date help, menu views, headers, navigation limits, weekdays, week numbers, and all visible choices. The comparison includes an explicit Monday start, week numbers disabled, and German defaults. The date-help row keeps its height when the text clears, so the Never checkbox does not move. The outside-dismiss check used the visible purchased-date field.
+
+Both runtimes completed purchase and inventory bookings with `2032-03-01` selected as the purchased date and `2035-11-29` as the due date. Request values, stock entries, booking values, and stock custom fields matched after generated IDs and timestamps were excluded. Each visible Undo link restored empty stock.
+
+The final Linux release passed all 39 public resource and form responses. All 96 web build files and 177 Python source files matched the tested images. PHP was disabled and absent from the API image. SQLite integrity passed, with 70 stock rows and 183 booking rows after the test bookings and Undo.
+
+The 1440-pixel desktop view and 390-pixel phone view passed the open-menu resize check. All four menu views were inspected on the phone. The stock dialog also passed at 390 and 320 pixels without horizontal overflow or calendar clipping. Selecting a day kept the parent dialog open. Cancellation retained the stock filter and returned focus without a stock write. The browser error count was zero. The owned browser session, four test containers, and private network were removed.
+
+Full legacy compliance remains incomplete. Late and overlapping product responses, native error recovery, other stock forms and application workflows, physical camera and printer use, mobile keyboard behavior, and further locale and time-zone cases still need work or comparison. The native inactive-unit initialization defect remains open.
 
 Run the normal tests without PHP:
 

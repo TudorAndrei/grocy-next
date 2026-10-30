@@ -1,13 +1,18 @@
 import {
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type RefObject,
 } from "react";
 import moment from "moment/min/moment-with-locales.js";
 import { useI18n } from "@/lib/i18n";
 import { Icon } from "./Icon";
+import { contextualDateText } from "@/lib/header-clock";
+import type { JsonValue } from "@/lib/json";
+import { BookingCalendar, type CalendarView } from "./BookingCalendar";
 
 const FORMAT = "YYYY-MM-DD";
 
@@ -22,6 +27,8 @@ type Props = {
   inputRef?: RefObject<HTMLInputElement | null>;
   initialCalendarValue?: string;
   onShortcut?: () => void;
+  firstDayOfWeek?: JsonValue;
+  weekNumbers?: boolean;
 };
 
 export function BookingDateInput({
@@ -35,14 +42,21 @@ export function BookingDateInput({
   inputRef,
   initialCalendarValue = "",
   onShortcut,
+  firstDayOfWeek,
+  weekNumbers = true,
 }: Props) {
   const { t } = useI18n();
   const input = useRef<HTMLInputElement>(null);
   useImperativeHandle(inputRef, () => input.current!);
-  const calendar = useRef<HTMLInputElement>(null);
+  const calendarOpen = useRef(false);
+  const [open, setOpen] = useState(false);
+  const [calendarView, setCalendarView] = useState<CalendarView>("days");
+  const [viewDate, setViewDate] = useState(Date.now);
+  const [above, setAbove] = useState(false);
   const cached = useRef(initialCalendarValue);
   const observed = useRef(value);
   const dirty = useRef(false);
+  const neverValidated = useRef(false);
   const selectedLocale = t("moment_locale");
   const locale = moment.locales().includes(selectedLocale) ? selectedLocale : "en";
   const parse = (source: string, strict = true) => moment(source, FORMAT, locale, strict);
@@ -50,6 +64,12 @@ export function BookingDateInput({
   function validate(source: string) {
     if (parse(source).isValid()) input.current?.setCustomValidity("");
     else if (required) input.current?.setCustomValidity("error");
+
+    if (source !== "2999-12-31") neverValidated.current = false;
+    else if (!neverValidated.current) {
+      neverValidated.current = true;
+      onShortcut?.();
+    }
   }
 
   function change(next: string) {
@@ -64,10 +84,29 @@ export function BookingDateInput({
     observed.current = value;
 
     if (!value) cached.current = "";
+
+    if (calendarOpen.current) closeCalendar();
     validate(value);
   });
 
+  useEffect(() => {
+    if (!open) return;
+
+    const reposition = () => {
+      const bounds = input.current?.getBoundingClientRect();
+      const height = document.getElementById(`${id}-calendar`)?.getBoundingClientRect().height;
+
+      if (bounds && height)
+        setAbove(bounds.bottom + height + 4 > window.innerHeight && bounds.top >= height + 4);
+    };
+
+    window.addEventListener("resize", reposition);
+
+    return () => window.removeEventListener("resize", reposition);
+  }, [id, open, input]);
+
   function keyUp(event: KeyboardEvent<HTMLInputElement>) {
+    closeCalendar();
     const source = event.currentTarget.value;
     const arrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key);
     const now = moment().locale(locale);
@@ -115,8 +154,8 @@ export function BookingDateInput({
     validate(input.current?.value ?? next);
   }
 
-  function blur() {
-    if (!dirty.current) return;
+  function commit(force = false) {
+    if (!dirty.current && !force) return;
     dirty.current = false;
     const source = input.current?.value.trim() ?? value;
     const date = parse(source, false);
@@ -127,53 +166,111 @@ export function BookingDateInput({
     change(cached.current);
   }
 
+  function closeCalendar() {
+    if (!calendarOpen.current) return;
+    calendarOpen.current = false;
+    setOpen(false);
+    commit(true);
+    validate(input.current?.value ?? value);
+
+    input.current?.blur();
+    const last = parse(cached.current);
+    setViewDate(last.isValid() ? last.valueOf() : Date.now());
+  }
+
+  function openCalendar() {
+    if (calendarOpen.current) {
+      closeCalendar();
+
+      return;
+    }
+
+    commit(true);
+    const last = parse(cached.current);
+    setViewDate(last.isValid() ? last.valueOf() : Date.now());
+    const bounds = input.current?.getBoundingClientRect();
+    const height = calendarView === "days" ? 340 : 232;
+    setAbove(!!bounds && bounds.bottom + height > window.innerHeight && bounds.top >= height);
+    calendarOpen.current = true;
+    setOpen(true);
+    input.current?.focus();
+  }
+
+  function selectDate(next: string, keepOpen = false) {
+    cached.current = next;
+    dirty.current = false;
+    change(next);
+    setViewDate(parse(next).valueOf());
+
+    if (!keepOpen) closeCalendar();
+  }
+
+  const calendarLabel = `${label}: ${t("Calendar")}`;
+  const context = contextualDateText(value, new Date(), locale, t).relative;
+
   return (
-    <div className="booking-date-input">
-      <input
-        ref={input}
-        id={id}
-        type="text"
-        inputMode={numeric ? "numeric" : undefined}
-        autoComplete="off"
-        placeholder={FORMAT}
-        required={required}
-        readOnly={readOnly}
-        value={value}
-        onChange={(event) => {
-          dirty.current = true;
-          change(event.target.value);
-        }}
-        onKeyUp={keyUp}
-        onBlur={blur}
-      />
-      <input
-        ref={calendar}
-        className="booking-date-calendar"
-        type="date"
-        tabIndex={-1}
-        aria-hidden="true"
-        max="2999-12-31"
-        value={parse(value).isValid() ? parse(value).locale("en").format(FORMAT) : ""}
-        onChange={(event) => {
-          const next = event.target.value;
-          cached.current = next;
-          change(next);
-          validate(next);
-        }}
-      />
-      <button
-        type="button"
-        className="btn booking-date-button"
-        tabIndex={-1}
-        aria-label={`${label}: ${t("Calendar")}`}
-        disabled={readOnly}
-        onClick={() => {
-          if (calendar.current?.showPicker) calendar.current.showPicker();
-          else calendar.current?.focus();
-        }}
+    <div className="booking-date-control">
+      <div className="booking-date-input">
+        <input
+          ref={input}
+          id={id}
+          type="text"
+          inputMode={numeric ? "numeric" : undefined}
+          autoComplete="off"
+          placeholder={FORMAT}
+          required={required}
+          aria-describedby={context ? `${id}-context` : undefined}
+          readOnly={readOnly}
+          value={value}
+          onChange={(event) => {
+            dirty.current = true;
+            change(event.target.value);
+          }}
+          onKeyUp={keyUp}
+          onBlur={() => {
+            if (calendarOpen.current) closeCalendar();
+            else commit();
+          }}
+        />
+        <button
+          type="button"
+          className="btn booking-date-button"
+          tabIndex={-1}
+          aria-label={calendarLabel}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={open ? `${id}-calendar` : undefined}
+          disabled={readOnly}
+          onClick={openCalendar}
+        >
+          <Icon name="calendar" />
+        </button>
+        {open ? (
+          <BookingCalendar
+            id={`${id}-calendar`}
+            label={calendarLabel}
+            date={viewDate}
+            view={calendarView}
+            selected={cached.current}
+            locale={locale}
+            firstDayOfWeek={firstDayOfWeek}
+            weekNumbers={weekNumbers}
+            above={above}
+            onDate={setViewDate}
+            onView={setCalendarView}
+            onSelect={selectDate}
+            onToday={() => selectDate(moment().locale(locale).format(FORMAT), true)}
+            onClose={closeCalendar}
+          />
+        ) : null}
+      </div>
+      <time
+        id={`${id}-context`}
+        dateTime={context ? value : undefined}
+        className="booking-date-context"
       >
-        <Icon name="calendar" />
-      </button>
+        {context}
+      </time>
     </div>
   );
 }
