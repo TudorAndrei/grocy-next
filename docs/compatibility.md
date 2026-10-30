@@ -667,6 +667,14 @@ The container API then stopped responding. Its read-only health request timed ou
 
 The final built frontend, including the scan-menu guard, was also checked against a local Python API and an immutable reference snapshot. All eleven browser cases and visible Undo passed. Saved fields matched the native cases, with each booking checked against its actual UTC test date. The final bundle passed 37 resource and form responses. A later phone screenshot repeat stopped on a browser-tool read error. The source and booking checks completed. Camera denial is covered by the consume form tests; no physical camera result is claimed.
 
+### Inventory editor catalog
+
+Python now provides `/api/v2/stock/inventory/editor`. It returns active products that can have their own stock, active locations and stores, all quantity units, saved barcode lists, saved conversion rows, and stock custom fields. The lists retain the native name order. Inactive quantity units remain available on inventory, as required by the pinned controller. Purchase retains its active-unit filter. Both forms use the same catalog service for their common data.
+
+The endpoint requires authentication. An authenticated reader can load it without a stock permission, as with the other legacy editor catalogs. Stock writes keep their own permission checks.
+
+Five related Python HTTP checks passed. The new inventory case failed with the previous routes, while the purchase control passed. The shared checks cover product scope, inactive choices, saved conversion text and names, disconnected cache rows, custom-field order, and authenticated read access. Python lint, formatting, and type checks passed. No PHP code is used by the endpoint. The inventory page and a live native replay remain open work.
+
 Run the normal tests without PHP:
 
 ```bash

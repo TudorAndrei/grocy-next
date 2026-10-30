@@ -134,6 +134,7 @@ def test_transfer_editor_allows_authenticated_readers_and_reports_their_own_perm
     assert client.get("/api/v2/stock/transfer/editor", headers=headers).status_code == 200
     assert client.get("/api/v2/stock/purchase/editor", headers=headers).status_code == 200
     assert client.get("/api/v2/stock/consume/editor", headers=headers).status_code == 200
+    assert client.get("/api/v2/stock/inventory/editor", headers=headers).status_code == 200
     permissions = client.get("/api/v2/user/permissions", headers=headers)
     permissions.raise_for_status()
     assert permissions.json()["STOCK_TRANSFER"] is False

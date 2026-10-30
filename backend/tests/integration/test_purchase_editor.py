@@ -1,14 +1,18 @@
-"""The purchase form reads the native product scope and saved lookup values."""
+"""Stock booking forms read the native product scope and saved lookup values."""
 
+import pytest
 from sqlalchemy import text
 
 from grocy.db.session import get_session_factory
 
 
-def test_purchase_editor_keeps_empty_products_active_choices_and_saved_conversions(
-    client, api_headers
+@pytest.mark.parametrize(
+    ("operation", "inactive_unit_visible"), [("purchase", False), ("inventory", True)]
+)
+def test_booking_editor_keeps_native_choices_and_saved_conversions(
+    client, api_headers, operation, inactive_unit_visible
 ):
-    path = "/api/v2/stock/purchase/editor"
+    path = f"/api/v2/stock/{operation}/editor"
     assert client.get(path).status_code == 401
     client.headers.update(api_headers)
 
@@ -130,7 +134,7 @@ def test_purchase_editor_keeps_empty_products_active_choices_and_saved_conversio
     assert shelf not in {row["id"] for row in view["locations"]}
     assert {"id": store, "name": "Purchase market"} in view["stores"]
     assert old_store not in {row["id"] for row in view["stores"]}
-    assert box not in {row["id"] for row in view["units"]}
+    assert (box in {row["id"] for row in view["units"]}) is inactive_unit_visible
     assert (
         next(row for row in view["units"] if row["id"] == unit)["name_plural"] == "Purchase pieces"
     )

@@ -1,4 +1,4 @@
-"""Lookup lists and custom fields for the legacy purchase form."""
+"""Lookup lists and stock fields shared by purchase and inventory forms."""
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,11 +7,11 @@ from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.domains.stock.barcode_lookup import barcode_lookup_plugin_name
 
 
-async def purchase_editor(session: AsyncSession) -> dict:
+async def booking_editor(session: AsyncSession, *, include_inactive_units: bool) -> dict:
     await configure_compatibility_queries(session)
 
-    async def rows(sql: str) -> list[dict]:
-        result = await session.execute(text(sql))
+    async def rows(sql: str, parameters: dict | None = None) -> list[dict]:
+        result = await session.execute(text(sql), parameters or {})
         return [dict(row) for row in result.mappings()]
 
     return {
@@ -28,7 +28,8 @@ async def purchase_editor(session: AsyncSession) -> dict:
         ),
         "units": await rows(
             "SELECT id,name,name_plural,plural_forms FROM quantity_units "
-            "WHERE active=1 ORDER BY name COLLATE NOCASE"
+            "WHERE :all_units OR active=1 ORDER BY name COLLATE NOCASE",
+            {"all_units": include_inactive_units},
         ),
         "barcodes": await rows("SELECT product_id,barcodes FROM product_barcodes_comma_separated"),
         # The native picker uses the first matching saved row and its unit names.
