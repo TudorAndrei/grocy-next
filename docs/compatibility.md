@@ -1,5 +1,7 @@
 # Grocy compatibility
 
+This document retains historical implementation and verification notes, including the retired React client. That client, its UI-only check scripts and GitHub Actions CI have been removed. Frontend commands and pending web checklists below are historical, not current setup or acceptance requirements. Use the [README](../README.md) for current API-only commands and [API parity status](api-parity-status.md) for the completion scope.
+
 The baseline is Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`. The OpenAPI file and its checksum are in `contracts/`.
 
 ## Release target

@@ -538,10 +538,11 @@
     "EVID-004": {
       "path": ".github/workflows/ci.yml",
       "kind": "source",
-      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "scope": "Historical implementation/runner inventory only. CI removed after certification; local commands in README/mise replace automation. Source existence is not a passing run.",
       "availableAtInventory": true,
       "sha256AtInventory": "54f5b699d3aaf14d88aaafc00be8e2fa874acf8b2c59eb314456ef1acb2de855",
-      "certifiesCurrentCandidate": false
+      "certifiesCurrentCandidate": false,
+      "currentStatus": "removed_after_certification"
     },
     "EVID-005": {
       "path": "scripts/check-reference.py",
@@ -1309,7 +1310,7 @@
       "coveredByFullSuiteGates": [],
       "implementationRefs": [
         "backend/pyproject.toml",
-        ".github/workflows/ci.yml"
+        "mise.toml"
       ],
       "evidenceRefs": [
         "EVID-015",
@@ -1351,7 +1352,7 @@
       "coveredByFullSuiteGates": [],
       "implementationRefs": [
         "backend/tests/conftest.py",
-        ".github/workflows/ci.yml"
+        "mise.toml"
       ],
       "evidenceRefs": [
         "EVID-016",
@@ -1599,7 +1600,7 @@
       ],
       "coveredByFullSuiteGates": [],
       "implementationRefs": [
-        ".github/workflows/ci.yml",
+        "mise.toml",
         "backend/tests/differential/test_workflows.py"
       ],
       "evidenceRefs": [
@@ -2492,5 +2493,11 @@
       "actual response and database/file state assertions for the named cases",
       "Parent must attach current certification or justify unchanged relevant input hashes; this inventory invents no current pass."
     ]
+  },
+  "postCertificationMaintenance": {
+    "baselineCommit": "59ddfea4ce2b44809ea78f051224ad351f2aa361",
+    "change": "Remove the standalone React frontend, GitHub Actions CI workflow and UI-only tooling at the user request. Local Python verification remains available.",
+    "apiImplementationAndTestsChanged": false,
+    "historicalEvidencePolicy": "Recorded run counts, source manifests and hashes describe their original certified candidate; removed tooling is not represented as currently present. No new full-suite run is claimed."
   }
 }

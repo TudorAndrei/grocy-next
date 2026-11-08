@@ -20,15 +20,5 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-  web:
-    build:
-      context: ./frontend
-      args:
-        VITE_BASE_PATH: "${GROCY_BASE_PATH:-/}"
-    expose:
-      - "80"
-    depends_on:
-      api:
-        condition: service_healthy
 volumes:
   grocy-data:

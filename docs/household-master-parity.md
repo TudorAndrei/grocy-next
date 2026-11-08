@@ -1,5 +1,7 @@
 # Household master lists and overviews
 
+Historical notes for the retired React client. Its source and frontend tests have been removed; these results describe the earlier implementation, not a currently runnable client suite. See [API parity status](api-parity-status.md) for current acceptance.
+
 The reference is Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`. Source paths below are relative to that reference. This increment separates master-data navigation from operational overviews; it does not establish complete household web parity.
 
 ## Reference behavior

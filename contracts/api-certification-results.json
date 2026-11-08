@@ -251,5 +251,11 @@
     "Production Python API runs without PHP; PHP is the separate test oracle.",
     "Image root/literal-path evidence is reused with relevant-input equality, not relabeled as direct current-image execution."
   ],
-  "finalAcceptanceRecord": "contracts/api-release-gates.json"
+  "finalAcceptanceRecord": "contracts/api-release-gates.json",
+  "postCertificationMaintenance": {
+    "baselineCommit": "59ddfea4ce2b44809ea78f051224ad351f2aa361",
+    "change": "Remove the standalone React frontend, GitHub Actions CI workflow and UI-only tooling at the user request. Local Python verification remains available.",
+    "apiImplementationAndTestsChanged": false,
+    "historicalEvidencePolicy": "Recorded run counts, source manifests and hashes describe their original certified candidate; removed tooling is not represented as currently present. No new full-suite run is claimed."
+  }
 }

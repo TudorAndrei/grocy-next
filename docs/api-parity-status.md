@@ -4,7 +4,7 @@
 
 The completion target is the Python implementation of the pinned Grocy 4.5.0 API. The API is the core product and supports independent clients. PHP Grocy is the behavioral reference, not a production dependency.
 
-The existing React app and future Native Shell clients consume this API. Native web-page/template equivalence, React callbacks/animations, browser layout, cameras, torch controls and physical printers are outside this completion target. Printer API payloads, webhooks, transport errors and file/code output remain in scope. Additional v2, nutrition and MCP features retain their regression tests but do not substitute for a missing Grocy API operation.
+Independent clients consume this API; future cross-platform UI work will use Native Shell. The previous React client and GitHub Actions CI have been removed. Native web-page/template equivalence, browser layout, cameras, torch controls and physical printers are outside this completion target. Printer API payloads, webhooks, transport errors and file/code output remain in scope. Additional v2, nutrition and MCP features retain their regression tests but do not substitute for a missing Grocy API operation.
 
 ## Finite acceptance
 
@@ -28,6 +28,8 @@ Case groups reuse full-suite evidence rather than running the same tests again f
 ## Current certification
 
 **Complete: 21 of 21 mandatory API gates verified (100%).** The independent final audit passed 40 checks with no blockers. All 86 native operations and 33 listable entities are verified within the declared acceptance scope. Owned certification runs have finished and reference-server cleanup is recorded.
+
+The recorded certification predates removal of the standalone frontend, CI workflow and UI-only scripts. That cleanup does not change the Python API implementation or tests. Its historical source/evidence hashes remain attributed to the certified candidate; current local verification uses the API-only commands in the README.
 
 The final collection contains **2,559 Python test cases**. All certification runs below finished successfully with `GROCY_USE_NATIVE_PHP=false`:
 

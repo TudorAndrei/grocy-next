@@ -22,15 +22,9 @@ htmlcov/
 .tox/
 .hypothesis/
 
-node_modules/
-.pnpm-store/
-frontend/dist/
-frontend/node_modules/
 backend/.uv-venv/
 backend/.uv-cache/
 backend/.run-venv/
-frontend/.output/
-frontend/.tanstack/
 
 data/
 *.db

@@ -1,13 +1,15 @@
 # Household overviews and preferences
 
+Historical notes for the retired React client. Its source and frontend tests have been removed; these results describe the earlier implementation, not a currently runnable client suite. The Python API remains available for future clients.
+
 The reference is Grocy 4.5.0, commit `21aa5eab218c8466f90729154cb293fffbe10c21`. This note describes the native household settings controls and the effects their overview callers must preserve. It does not establish complete overview parity.
 
 ## Native settings pages
 
 | Page | Reads on opening | Writes on a valid change | Default | OK destination |
 | --- | --- | --- | --- | --- |
-| `/choressettings` | `chores_due_soon_days` | ` chores_due_soon_days` (one leading space) | `5` | `/choresoverview` |
-| `/batteriessettings` | `batteries_due_soon_days` | ` batteries_due_soon_days` (one leading space) | `5` | `/batteriesoverview` |
+| `/choressettings` | `chores_due_soon_days` | one space + `chores_due_soon_days` | `5` | `/choresoverview` |
+| `/batteriessettings` | `batteries_due_soon_days` | one space + `batteries_due_soon_days` | `5` | `/batteriesoverview` |
 | `/taskssettings` | `tasks_due_soon_days` | `tasks_due_soon_days` | `5` | `/tasks` |
 | Chore tracking-button checkbox | `chores_overview_swap_tracking_buttons` | `chores_overview_swap_tracking_buttons` | `false` | `/choresoverview` |
 

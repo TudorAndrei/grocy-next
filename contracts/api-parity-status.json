@@ -8726,7 +8726,7 @@
       ],
       "status": "verified",
       "kind": "direct_state_changing_success_assertion",
-      "finding": "Known valid box+café lookup/inventory must return200; public selected quantity changes2→4, collision product remains0. Encoded/slash status and source/Python comparison controls remain.",
+      "finding": "Known valid box+caf\u00e9 lookup/inventory must return200; public selected quantity changes2\u21924, collision product remains0. Encoded/slash status and source/Python comparison controls remain.",
       "sourceOwnerRefs": [
         "TEST-e5a6342df6",
         "TEST-5f35d0d882"
@@ -8807,7 +8807,8 @@
       "fullBaselineSha256": null,
       "matchesCandidateFullBaseline": null,
       "matchesFinalCandidate": null,
-      "historicalInventorySha256": "54f5b699d3aaf14d88aaafc00be8e2fa874acf8b2c59eb314456ef1acb2de855"
+      "historicalInventorySha256": "54f5b699d3aaf14d88aaafc00be8e2fa874acf8b2c59eb314456ef1acb2de855",
+      "currentStatus": "removed_after_certification"
     },
     "backend/src/grocy/api/compatibility/calendar.py": {
       "sha256": "31330784c3e648c8842e4b28a98f7411a68ebfd204910eeda7a68908b72d7248",
@@ -10911,5 +10912,11 @@
       "path": "/tmp/python-api-assertion-draft/locale-results.json",
       "sha256": "1145e3c430b08c26b593f6606c990fbd38f816a38e20c1e6e2b2c049917bf5e6"
     }
+  },
+  "postCertificationMaintenance": {
+    "baselineCommit": "59ddfea4ce2b44809ea78f051224ad351f2aa361",
+    "change": "Remove the standalone React frontend, GitHub Actions CI workflow and UI-only tooling at the user request. Local Python verification remains available.",
+    "apiImplementationAndTestsChanged": false,
+    "historicalEvidencePolicy": "Recorded run counts, source manifests and hashes describe their original certified candidate; removed tooling is not represented as currently present. No new full-suite run is claimed."
   }
 }
