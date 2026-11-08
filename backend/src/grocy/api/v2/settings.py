@@ -1,4 +1,4 @@
-"""Bulk setting operations for Grocy Next clients."""
+"""Bulk setting operations and authenticated native settings choice reads."""
 
 import json
 import math
@@ -6,9 +6,9 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Response
-from sqlalchemy import select
+from sqlalchemy import select, text
 
-from grocy.core.auth import CurrentActor
+from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.errors import GrocyError
@@ -61,3 +61,34 @@ async def delete_user_settings(actor: CurrentActor, session: DbSession) -> Respo
         await session.delete(row)
     await session.commit()
     return Response(status_code=204)
+
+
+@router.get("/settings/stock-context")
+async def stock_settings_context(
+    _actor: AuthenticatedActor, session: DbSession
+) -> dict[str, list[dict[str, Any]]]:
+    choices = {}
+    for key, statement in (
+        ("locations", "SELECT id,name FROM locations WHERE active=1 ORDER BY name COLLATE NOCASE"),
+        (
+            "quantity_units",
+            "SELECT id,name FROM quantity_units WHERE active=1 ORDER BY name COLLATE NOCASE",
+        ),
+        (
+            "product_groups",
+            "SELECT id,name FROM product_groups WHERE active=1 ORDER BY name COLLATE NOCASE",
+        ),
+    ):
+        result = await session.execute(text(statement))
+        choices[key] = [dict(row) for row in result.mappings()]
+    return choices
+
+
+@router.get("/settings/shopping-context")
+async def shopping_settings_context(
+    _actor: AuthenticatedActor, session: DbSession
+) -> dict[str, list[dict[str, Any]]]:
+    result = await session.execute(
+        text("SELECT id,name FROM shopping_lists ORDER BY name COLLATE NOCASE")
+    )
+    return {"shopping_lists": [dict(row) for row in result.mappings()]}

@@ -16,21 +16,99 @@ from grocy.domains.system.service import SystemService
 router = APIRouter(tags=["shopping"])
 
 
+class ShoppingNotesDraft(BaseModel):
+    html: str
+    visible: bool
+
+
 @router.get("/shopping-lists")
-async def shopping_lists(_actor: CurrentActor, shopping: ShoppingSvc) -> list[dict]:
+async def shopping_lists(_actor: AuthenticatedActor, shopping: ShoppingSvc) -> list[dict]:
     return await shopping.lists()
+
+
+@router.get("/shopping-lists/native-context")
+async def native_shopping_context(
+    request: Request, actor: AuthenticatedActor, shopping: ShoppingSvc, session: DbSession
+) -> dict:
+    locale = await SystemService(session).locale(
+        actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
+    return await shopping.native_context(request.scope.get("query_string", b""), locale)
+
+
+async def _native_shopping_paper(
+    request: Request,
+    actor: AuthenticatedActor,
+    session: DbSession,
+    *,
+    header: bool,
+    grouped: bool,
+    layout: str,
+    notes: tuple[str, bool] | None = None,
+) -> HTMLResponse:
+    locale = await SystemService(session).locale(
+        actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
+    return HTMLResponse(
+        await ShoppingPaper(session).document(
+            1,
+            actor.user_id,
+            locale,
+            header=header,
+            grouped=grouped,
+            layout=layout,
+            base_url=str(request.base_url).rstrip("/"),
+            notes=notes,
+            native_query=request.scope.get("query_string", b""),
+        )
+    )
+
+
+@router.get("/shopping-lists/native-print", response_class=HTMLResponse)
+async def native_shopping_paper(
+    request: Request,
+    actor: AuthenticatedActor,
+    session: DbSession,
+    header: bool = True,
+    grouped: bool = True,
+    layout: str = "table",
+) -> HTMLResponse:
+    return await _native_shopping_paper(
+        request, actor, session, header=header, grouped=grouped, layout=layout
+    )
+
+
+@router.post("/shopping-lists/native-print", response_class=HTMLResponse)
+async def native_shopping_paper_draft(
+    body: ShoppingNotesDraft,
+    request: Request,
+    actor: AuthenticatedActor,
+    session: DbSession,
+    header: bool = True,
+    grouped: bool = True,
+    layout: str = "table",
+) -> HTMLResponse:
+    return await _native_shopping_paper(
+        request,
+        actor,
+        session,
+        header=header,
+        grouped=grouped,
+        layout=layout,
+        notes=(body.html, body.visible),
+    )
 
 
 @router.get("/shopping-lists/editor")
 async def shopping_list_editor(
-    _actor: CurrentActor, shopping: ShoppingSvc, list_id: int | None = None
+    _actor: AuthenticatedActor, shopping: ShoppingSvc, list_id: int | None = None
 ) -> dict:
     return await shopping.editor(list_id)
 
 
 @router.get("/shopping-lists/items/editor")
 async def shopping_item_editor(
-    _actor: CurrentActor, shopping: ShoppingSvc, item_id: int | None = None
+    _actor: AuthenticatedActor, shopping: ShoppingSvc, item_id: int | None = None
 ) -> dict:
     return await shopping.item_editor(item_id)
 
@@ -45,7 +123,6 @@ async def shopping_paper(
     grouped: bool = True,
     layout: str = "table",
 ) -> HTMLResponse:
-    actor.require("SHOPPINGLIST")
     locale = await SystemService(session).locale(
         actor.user_id, request.headers.get("accept-language", "")
     )
@@ -62,11 +139,6 @@ async def shopping_paper(
     )
 
 
-class ShoppingNotesDraft(BaseModel):
-    html: str
-    visible: bool
-
-
 @router.post("/shopping-lists/{shopping_list_id}/print", response_class=HTMLResponse)
 async def shopping_paper_draft(
     shopping_list_id: int,
@@ -78,7 +150,6 @@ async def shopping_paper_draft(
     grouped: bool = True,
     layout: str = "table",
 ) -> HTMLResponse:
-    actor.require("SHOPPINGLIST")
     locale = await SystemService(session).locale(
         actor.user_id, request.headers.get("accept-language", "")
     )
@@ -103,7 +174,6 @@ async def shopping_notes_editor(
     actor: AuthenticatedActor,
     session: DbSession,
 ) -> HTMLResponse:
-    actor.require("SHOPPINGLIST")
     shopping = await session.get(ShoppingList, shopping_list_id)
     if shopping is None:
         raise NotFoundError("Shopping list not found")
@@ -125,7 +195,7 @@ class ShoppingAddBody(BaseModel):
 @router.get("/shopping-lists/{shopping_list_id}")
 async def get_shopping_list(
     shopping_list_id: int,
-    _actor: CurrentActor,
+    _actor: AuthenticatedActor,
     shopping: ShoppingSvc,
 ) -> dict:
     return await shopping.get_list(shopping_list_id)

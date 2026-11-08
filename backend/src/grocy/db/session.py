@@ -14,6 +14,7 @@ from sqlalchemy.pool import StaticPool
 
 from grocy.compatibility.sqlite_functions import register_sqlite_functions
 from grocy.core.config import Settings, get_settings
+from grocy.db.change_signal import ChangeTrackedSession, install_change_signal
 
 _engines: dict[str, AsyncEngine] = {}
 _session_factories: dict[str, async_sessionmaker[AsyncSession]] = {}
@@ -56,8 +57,18 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
             **engine_kwargs,
         )
         _engines[url] = engine
-        _session_factories[url] = async_sessionmaker(engine, expire_on_commit=False)
+        _session_factories[url] = async_sessionmaker(
+            engine, expire_on_commit=False, sync_session_class=ChangeTrackedSession
+        )
         if url.startswith("sqlite"):
+            if engine.url.database and engine.url.database != ":memory:":
+                from pathlib import Path
+
+                install_change_signal(
+                    engine.sync_engine,
+                    Path(engine.url.database),
+                    cfg.database_busy_timeout_ms / 1000,
+                )
 
             @event.listens_for(engine.sync_engine, "connect")
             def configure_connection(connection: Any, _record: Any) -> None:

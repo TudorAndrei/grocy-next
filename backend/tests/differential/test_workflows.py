@@ -3510,30 +3510,105 @@ def test_native_file_streams_keep_chunk_and_header_rules(api, value, expected, m
 
 
 @pytest.mark.parametrize(
-    "parameters,status,size",
+    "query,status,size,passthrough",
     [
-        ({"best_fit_height": "20"}, 500, None),
-        ({"best_fit_width": "0"}, 200, (100, 50)),
-        ({"best_fit_width": "-2"}, 500, None),
-        ({"best_fit_width": "1.9"}, 200, (1, 1)),
-        ({"best_fit_width": "bad", "best_fit_height": "bad"}, 200, (100, 50)),
-        ({"best_fit_width[]": "20"}, 200, (100, 50)),
+        pytest.param(
+            "force_serve_as=picture&best_fit_height=20", 500, None, False, id="height-only"
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=0", 200, (100, 50), False, id="zero-width"
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=-2", 500, None, False, id="negative-width"
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=1.9", 200, (1, 1), False, id="fractional-width"
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=bad&best_fit_height=bad",
+            200,
+            (100, 50),
+            False,
+            id="invalid-dimensions",
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width[]=20", 200, (100, 50), False, id="array-width"
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=10&best_fit_width=20",
+            200,
+            (20, 10),
+            False,
+            id="duplicate-scalar-width",
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=20&best_fit_width[]=40",
+            200,
+            (100, 50),
+            False,
+            id="scalar-then-array-width",
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width[]=40&best_fit_width=20",
+            200,
+            (20, 10),
+            False,
+            id="array-then-scalar-width",
+        ),
+        pytest.param(
+            "force_serve_as=picture&force_serve_as[]=raw&best_fit_width=20",
+            200,
+            (100, 50),
+            True,
+            id="scalar-then-array-force",
+        ),
+        pytest.param(
+            "force_serve_as[]=raw&force_serve_as=picture&best_fit_width=20",
+            200,
+            (20, 10),
+            False,
+            id="array-then-scalar-force",
+        ),
+        pytest.param(
+            "force.serve.as=picture&best.fit.width=20", 200, (20, 10), False, id="normalized-dots"
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=20&best_fit_width[x]=40",
+            200,
+            (100, 50),
+            False,
+            id="scalar-then-indexed-width",
+        ),
+        pytest.param(
+            "force_serve_as=picture&best_fit_width=20&best_fit_width[]=40&best_fit_height=10",
+            500,
+            None,
+            False,
+            id="mixed-width-height",
+        ),
     ],
 )
-def test_native_picture_parameters_follow_php_and_gd(api, parameters, status, size):
+def test_native_picture_parameters_follow_php_and_gd(api, query, status, size, passthrough):
     from PIL import Image
 
     original = BytesIO()
     Image.new("RGBA", (100, 50), (10, 20, 30, 120)).save(original, "PNG")
-    token = base64.b64encode((uuid4().hex + ".png").encode()).decode()
+    name = uuid4().hex + ".png"
+    token = base64.b64encode(name.encode()).decode()
     path = f"/api/files/productpictures/{token}"
     assert api.put(path, content=original.getvalue()).status_code == 204
     try:
-        response = api.get(path, params={"force_serve_as": "picture", **parameters})
+        response = api.get(path + "?" + query)
         assert response.status_code == status, response.text if status != 200 else status
         if status == 200:
             with Image.open(BytesIO(response.content)) as picture:
                 assert picture.size == size
+            if passthrough:
+                assert response.content == original.getvalue()
+                cached = base64.b64encode(
+                    (name[:-4] + "__downscaledtoautox20.png").encode()
+                ).decode()
+                assert api.get("/api/files/productpictures/" + cached).status_code == 404
         else:
             assert response.json()["error_message"] == (
                 "imagecreatetruecolor(): Argument #1 ($width) must be greater than 0"
@@ -4359,12 +4434,58 @@ def test_native_recipe_copy_failure_keeps_parent_and_can_retry(api, catalog, exe
 
 
 @pytest.mark.parametrize(
-    "action", ["add-missing-products", "add-overdue-products", "add-expired-products"]
+    "action,list_id",
+    [
+        (action, list_id)
+        for action in ("add-missing-products", "add-overdue-products", "add-expired-products")
+        for list_id in ("invalid", [])
+    ]
+    + [
+        (action, list_id)
+        for action in ("add-missing-products", "add-overdue-products")
+        for list_id in (None, "selected")
+    ],
 )
-@pytest.mark.parametrize("list_id", ["invalid", []])
-def test_native_shopping_bulk_actions_ignore_invalid_list_ids(api, action, list_id):
-    response = api.post(f"/api/stock/shoppinglist/{action}", json={"list_id": list_id})
+def test_native_shopping_bulk_actions_preserve_list_selection(api, request, action, list_id):
+    if action == "add-expired-products":
+        response = api.post(f"/api/stock/shoppinglist/{action}", json={"list_id": list_id})
+        assert response.status_code == 204 and response.content == b"", response.text
+        return
+    product, unit, _, location = request.getfixturevalue("catalog")
+    control = create(
+        api,
+        "products",
+        name=uuid4().hex,
+        location_id=location,
+        qu_id_stock=unit,
+        qu_id_purchase=unit,
+    )
+    if action == "add-missing-products":
+        configured = api.put(f"/api/objects/products/{product}", json={"min_stock_amount": 3})
+        assert configured.status_code == 204, configured.text
+        amount = 3
+    else:
+        configured = api.put(f"/api/objects/products/{product}", json={"due_type": 1})
+        assert configured.status_code == 204, configured.text
+        today = datetime.now(UTC).date()
+        for identity, days in ((product, -1), (control, 30)):
+            added = api.post(
+                f"/api/stock/products/{identity}/add",
+                json={"amount": 2, "best_before_date": (today + timedelta(days=days)).isoformat()},
+            )
+            assert added.status_code == 200, added.text
+        amount = 1
+    target = create(api, "shopping_lists", name=uuid4().hex) if list_id == "selected" else 1
+    body = {} if list_id is None else {"list_id": target if list_id == "selected" else list_id}
+    assert rows(api, "shopping_list", product_id=product) == []
+    response = api.post(f"/api/stock/shoppinglist/{action}", json=body)
     assert response.status_code == 204 and response.content == b"", response.text
+    saved = rows(api, "shopping_list", product_id=product)
+    assert len(saved) == 1
+    assert saved[0]["amount"] == amount
+    assert saved[0]["qu_id"] == unit
+    assert saved[0]["shopping_list_id"] == target
+    assert rows(api, "shopping_list", product_id=control) == []
 
 
 @pytest.mark.parametrize(
@@ -6248,15 +6369,11 @@ def test_native_development_output_and_authentication_bypass(
     runtime_configuration,
     native_data_directory,
     php_http_settings,
-    request,
     mode,
     method,
     path,
 ):
     log = native_data_directory / "development-errors.log"
-    if mode == "logging":
-        assert not log.exists()
-        request.addfinalizer(lambda: log.unlink(missing_ok=True))
     runtime_configuration(
         "Setting('DISABLE_AUTH', true);"
         if mode == "disabled"
@@ -6274,11 +6391,15 @@ def test_native_development_output_and_authentication_bypass(
         body_notice = warning + body_notice
         if warning:
             content_type = php_http_settings["startup_content_type"]
+    logged_before = log.read_bytes() if mode == "logging" and log.exists() else b""
     response = api.request(method, path, headers=headers)
     if mode == "logging":
         contents = log.read_bytes() if log.exists() else b""
+        assert contents.startswith(logged_before)
         assert (
-            contents.count(b"ob_clean(): Failed to delete buffer. No buffer to delete")
+            contents[len(logged_before) :].count(
+                b"ob_clean(): Failed to delete buffer. No buffer to delete"
+            )
             == expected["logged"]
         )
     assert response.status_code == (405 if method == "PATCH" and not notice else 200), response.text
@@ -6690,9 +6811,17 @@ def test_named_file_picture_links_keep_original_and_cached_image(api, tmp_path, 
     label = base64.b64encode(b"Recipe cover.jpg").decode()
     path = f"/api/files/userfiles/{source}"
     link = f"/files/userfiles/{source}_{label}_ignored"
+    mixed_cache = base64.b64encode((name[:-4] + "__downscaledtoautoxauto.png").encode()).decode()
+    cached = base64.b64encode((name[:-4] + "__downscaledto20x20.png").encode()).decode()
     assert api.put(path, content=original.getvalue()).status_code == 204
     try:
         assert api.get(link, params={"best_fit_width": 20}).content == original.getvalue()
+        mixed = api.get(link + "?force_serve_as=picture&best_fit_width=20&best_fit_width[]=40")
+        assert mixed.status_code == 200, mixed.text
+        assert mixed.headers["content-type"] == "image/png"
+        assert mixed.headers["content-disposition"] == 'inline; filename="Recipe cover.jpg"'
+        assert Image.open(BytesIO(mixed.content)).size == (80, 40)
+        assert api.get(f"/api/files/userfiles/{mixed_cache}").content == mixed.content
         picture = api.get(
             link, params={"force_serve_as": "picture", "best_fit_width": 20, "best_fit_height": 20}
         )
@@ -6701,10 +6830,11 @@ def test_named_file_picture_links_keep_original_and_cached_image(api, tmp_path, 
         assert picture.headers["content-disposition"] == 'inline; filename="Recipe cover.jpg"'
         assert Image.open(BytesIO(picture.content)).size == (20, 10)
         assert api.get(path).content == original.getvalue()
-        cached = base64.b64encode((name[:-4] + "__downscaledto20x20.png").encode()).decode()
         assert api.get(f"/api/files/userfiles/{cached}").content == picture.content
     finally:
         assert api.delete(path).status_code == 204
+    for removed in (mixed_cache, cached):
+        assert api.get(f"/api/files/userfiles/{removed}").status_code == 404
 
 
 def test_named_file_preflight_needs_no_login(api):

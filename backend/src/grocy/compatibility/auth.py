@@ -1,14 +1,13 @@
 """Legacy API credential selection, binding, and use records in Python."""
 
-import os
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from grocy.compatibility.php import empty, pdo_parameter, php_error
 from grocy.core.time import server_timezone
+from grocy.db.change_signal import AUTHENTICATION_WRITE
 
 
 def _parameter(value: Any) -> bytes | None:
@@ -69,13 +68,12 @@ async def _select_credential(
     ).scalar_one_or_none()
     if identity is None:
         return False, None
-    database = session.get_bind().engine.url.database
-    path = Path(database) if database and database != ":memory:" else None
-    previous = path.stat() if path and path.is_file() else None
-    await connection.exec_driver_sql(f"UPDATE {table} SET last_used=? WHERE id=?", (now, identity))
+    await connection.exec_driver_sql(
+        f"UPDATE {table} SET last_used=? WHERE id=?",
+        (now, identity),
+        execution_options=AUTHENTICATION_WRITE,
+    )
     await session.commit()
-    if previous is not None and path is not None:
-        os.utime(path, (previous.st_atime, previous.st_mtime))
 
     # LessQL quotes the selected value again for its user lookup. This has
     # different NUL and array rules from the bound credential validation above.

@@ -45,6 +45,6 @@ Run the Python API against a separate Grocy 4.5.0 test server:
 GROCY_USE_NATIVE_PHP=false uv run python ../scripts/check-reference.py
 ```
 
-This test command requires PHP with the modules listed in [compatibility](../docs/compatibility.md). The release image does not install PHP. The separate reference CI job installs it.
+This test command requires PHP with the modules listed in [compatibility](../docs/compatibility.md). Install those dependencies locally when running comparisons; GitHub Actions CI has been removed. The release image does not install PHP.
 
 The old `GROCY_USE_NATIVE_PHP=true` test mode runs original Grocy controllers. Its results do not prove that a Python feature is complete. Do not use this mode for a release.

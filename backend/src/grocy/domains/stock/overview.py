@@ -89,7 +89,9 @@ async def overview_view(session: AsyncSession, user_id: int, locale: str) -> Ove
             value for value in values if loose_equals(value["object_id"], row["product_id"])
         ]
         row["product_values"] = {
-            name: (find(product_values, "name", name) or {}).get("value") for name in field_names
+            name: value["value"]
+            for name in field_names
+            if (value := find(product_values, "name", name)) is not None
         }
 
     async def choices(table: str) -> list[JournalChoice]:

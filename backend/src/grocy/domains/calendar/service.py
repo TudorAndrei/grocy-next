@@ -2,7 +2,7 @@
 
 import secrets
 import string
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 
@@ -25,6 +25,7 @@ from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.users import ApiKey
 from grocy.domains.calendar.ical import calendar
 from grocy.domains.system.service import SystemService, localization
+from grocy.domains.users.service import UsersService
 
 _KEY_CHARACTERS = string.digits + string.ascii_lowercase + string.ascii_uppercase
 _KEY_TYPE = "special-purpose-calendar-ical"
@@ -54,6 +55,18 @@ def _event(title: str, start: Any, date_format: str) -> dict[str, Any]:
     return {"title": title, "start": start, "date_format": date_format}
 
 
+def _present(
+    event: dict[str, Any],
+    settings: Mapping[str, Any] | None,
+    base: str,
+    path: str,
+    color_key: str,
+) -> dict[str, Any]:
+    if settings is not None:
+        event.update(link=construct_url(base, path), color=settings.get(color_key))
+    return event
+
+
 class CalendarService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -72,7 +85,19 @@ class CalendarService:
             entries.setdefault(row["product_id"], row)
         return list(entries.values())
 
-    async def events(self, locale: str, base: str) -> list[dict[str, Any]]:
+    async def context(self, user_id: int, accept_language: str, base: str) -> dict[str, Any]:
+        locale = await self.locale(user_id, accept_language)
+        user_settings = await UsersService(self.session).settings(user_id)
+        return {
+            "events": await self.events(locale, base, presentation=user_settings),
+            "user_settings": user_settings,
+            "config": SystemService(self.session).config(locale),
+            "locale": locale,
+        }
+
+    async def events(
+        self, locale: str, base: str, *, presentation: Mapping[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         settings = get_settings()
         translate = _translator(locale)
         await configure_compatibility_queries(self.session)
@@ -84,12 +109,26 @@ class CalendarService:
                 if _positive(entry["amount"]):
                     product = find(products, "id", entry["product_id"])
                     events.append(
-                        _event(prefix + _name(product), entry["best_before_date"], "date")
+                        _present(
+                            _event(prefix + _name(product), entry["best_before_date"], "date"),
+                            presentation,
+                            base,
+                            "/stockoverview",
+                            "calendar_color_products",
+                        )
                     )
         if settings.feature_enabled("TASKS"):
             prefix = translate("Task due") + ": "
             for task in await self._rows("SELECT * FROM `tasks_current`"):
-                events.append(_event(prefix + php_string(task["name"]), task["due_date"], "date"))
+                events.append(
+                    _present(
+                        _event(prefix + php_string(task["name"]), task["due_date"], "date"),
+                        presentation,
+                        base,
+                        "/tasks",
+                        "calendar_color_tasks",
+                    )
+                )
         if settings.feature_enabled("CHORES"):
             users = await self._rows("SELECT * FROM `users_dto`")
             chores = await self._rows("SELECT * FROM `chores` WHERE (active = 1)")
@@ -108,23 +147,37 @@ class CalendarService:
                     "datetime",
                 )
                 event["allDay"] = chore is not None and loose_equals(chore["track_date_only"], 1)
-                events.append(event)
+                events.append(
+                    _present(event, presentation, base, "/choresoverview", "calendar_color_chores")
+                )
         if settings.feature_enabled("BATTERIES"):
             batteries = await self._rows("SELECT * FROM `batteries` WHERE (active = 1)")
             prefix = translate("Battery charge cycle due") + ": "
             for current in await self._rows("SELECT * FROM `batteries_current`"):
                 battery = find(batteries, "id", current["battery_id"])
                 events.append(
-                    _event(
-                        prefix + _name(battery), current["next_estimated_charge_time"], "datetime"
+                    _present(
+                        _event(
+                            prefix + _name(battery),
+                            current["next_estimated_charge_time"],
+                            "datetime",
+                        ),
+                        presentation,
+                        base,
+                        "/batteriesoverview",
+                        "calendar_color_batteries",
                     )
                 )
         if settings.feature_enabled("RECIPES_MEALPLAN"):
-            events += await self._meal_plan_events(translate, base, products)
+            events += await self._meal_plan_events(translate, base, products, presentation)
         return events
 
     async def _meal_plan_events(
-        self, translate: Callable[[str], str], base: str, products: list[dict[str, Any]]
+        self,
+        translate: Callable[[str], str],
+        base: str,
+        products: list[dict[str, Any]],
+        presentation: Mapping[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         sections = await self._rows("SELECT * FROM `meal_plan_sections`")
         recipes = await self._rows("SELECT * FROM `recipes` WHERE `type` = 'normal'")
@@ -160,7 +213,12 @@ class CalendarService:
                     event["description"] = construct_url(
                         base, "/mealplan?week=" + php_string(entry["day"])
                     )
-                events.append(event)
+                path = (
+                    "/recipes?recipe=" + php_string(entry["recipe_id"]) + "#fullscreen"
+                    if kind == "recipe"
+                    else "/mealplan?start=" + php_string(start)
+                )
+                events.append(_present(event, presentation, base, path, "calendar_color_meal_plan"))
         return events
 
     async def ical(self, locale: str, base: str) -> str:

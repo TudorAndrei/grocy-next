@@ -35,9 +35,9 @@ class EditorDraft(BaseModel):
 
 @router.get("/content/{entity}")
 async def formatted_descriptions(
-    entity: ContentEntity, actor: AuthenticatedActor, session: DbSession
+    entity: ContentEntity, _actor: AuthenticatedActor, session: DbSession
 ) -> list[FormattedContent]:
-    actor.require({"products": "STOCK", "recipes": "RECIPES", "equipment": "EQUIPMENT"}[entity])
+    # Native page controllers render descriptions without checking mutation permissions.
     model = Product if entity == "products" else Recipe if entity == "recipes" else Equipment
     rows = (await session.execute(select(model.id, model.description))).all()
     return await run_in_threadpool(
@@ -55,7 +55,6 @@ async def description_editor(
     actor: AuthenticatedActor,
     session: DbSession,
 ) -> HTMLResponse:
-    actor.require({"products": "STOCK", "recipes": "RECIPES", "equipment": "EQUIPMENT"}[entity])
     locale = await SystemService(session).locale(
         actor.user_id, request.headers.get("accept-language", "")
     )
@@ -63,7 +62,7 @@ async def description_editor(
         editor_document,
         body.html,
         locale,
-        label="Description",
+        label={"products": "Description", "recipes": "Preparation", "equipment": "Notes"}[entity],
         channel="grocy-description",
         paste_initial=body.paste,
     )
@@ -74,10 +73,9 @@ async def description_editor(
 async def formatted_description(
     entity: ContentEntity,
     object_id: int,
-    actor: AuthenticatedActor,
+    _actor: AuthenticatedActor,
     session: DbSession,
 ) -> dict[str, str]:
-    actor.require({"products": "STOCK", "recipes": "RECIPES", "equipment": "EQUIPMENT"}[entity])
     model = Product if entity == "products" else Recipe if entity == "recipes" else Equipment
     row = await session.get(model, object_id)
     if row is None:

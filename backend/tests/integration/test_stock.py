@@ -73,6 +73,9 @@ def test_product_details_keep_native_numeric_types_and_saved_price_precision(cli
         )
         assert response.status_code == 200, response.text
     details = client.get(base, headers=api_headers).json()
+    assert "qu_factor_purchase_to_stock" not in details["product"]
+    assert details["qu_conversion_factor_purchase_to_stock"] == 1.0
+    assert details["qu_conversion_factor_price_to_stock"] == 1.0
     assert {key: details[key] for key in ("avg_price", "spoil_rate_percent")} == {
         "avg_price": 1.8333333333333333,
         "spoil_rate_percent": 33.333333333333336,

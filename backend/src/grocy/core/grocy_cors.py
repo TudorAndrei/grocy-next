@@ -1,7 +1,7 @@
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from grocy.core.config import get_settings
+from grocy.core.legacy_http import application_scope
 
 _GROCY_CORS = (
     (b"access-control-allow-origin", b"*"),
@@ -15,13 +15,11 @@ class GrocyCorsHeadersMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        path = scope.get("path", "")
-        prefix = get_settings().base_path.rstrip("/")
-        if prefix and path.startswith(prefix + "/"):
-            path = path[len(prefix) :]
+        path = application_scope(scope).get("path", "")
         api = path.startswith("/api")
         named_file = path.startswith("/files/")
-        if scope["type"] != "http" or not (api or named_file):
+        native_auth = path in {"/login", "/logout"}
+        if scope["type"] != "http" or not (api or named_file or native_auth):
             await self.app(scope, receive, send)
             return
 
@@ -44,7 +42,7 @@ class GrocyCorsHeadersMiddleware:
                 message = {**message, "headers": headers}
             await send(message)
 
-        if named_file and scope["method"] == "OPTIONS":
+        if (named_file or native_auth) and scope["method"] == "OPTIONS":
             response = Response(headers={"Content-Type": "text/html; charset=UTF-8"})
             await response(scope, receive, send_with_cors)
             return

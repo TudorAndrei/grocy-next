@@ -8,6 +8,17 @@ window.initializeRichTextEditor = function ({
 }) {
   const $ = window.jQuery;
   const editor = $("#description");
+  $(window).on("mousemove mousedown click scroll keypress", (event) => {
+    parent.postMessage({ channel, kind: "activity", event: event.type }, "*");
+  });
+  $(document).on("keyup paste change", "input, textarea", function (event) {
+    $(this).addClass("is-dirty").closest("form").addClass("is-dirty");
+    parent.postMessage({ channel, kind: "dirty", event: event.type }, "*");
+  });
+  $(document).on("click", "select", function (event) {
+    $(this).addClass("is-dirty").closest("form").addClass("is-dirty");
+    parent.postMessage({ channel, kind: "dirty", event: event.type }, "*");
+  });
   editor.val(pasteInitial ? "" : initial);
   let initialized = false;
 
@@ -99,6 +110,9 @@ window.initializeRichTextEditor = function ({
       editor.summernote("fullscreen.toggle");
     }
     if (event.data.command === "focus") editor.summernote("focus");
+    if (event.data.command === "paste" && typeof event.data.html === "string") {
+      editor.summernote("pasteHTML", event.data.html);
+    }
   });
   document.addEventListener("keydown", (event) => {
     if (

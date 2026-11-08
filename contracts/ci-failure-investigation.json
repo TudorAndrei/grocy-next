@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "scope": "Scoped diagnosis of retired CI run; no CI or frontend restoration",
+  "historicalRun": "https://github.com/TudorAndrei/grocy-next/actions/runs/42504755970",
+  "historicalHead": "59ddfea4ce2b44809ea78f051224ad351f2aa361",
+  "followUpBase": "eae1faa082ce575cb1c44f3f750b3d16d17aebb8",
+  "finding": "PHP 8.3 empty printer path diagnostic differs from canonical PHP 8.4 wording. Existing comparison assumed identical interpreter diagnostics. Reproduced 1failed/1passed before repair; status500 correct in both APIs.",
+  "productionApiChanged": false,
+  "changedOwner": {
+    "file": "backend/tests/differential/test_reference.py",
+    "function": "test_reference_native_thermal_connector_errors",
+    "beforeSha256": "1f9a3c4f5cdffc00862263da7913070baa60907405997e38f4403781ec6c45c5",
+    "afterSha256": "f28b1f574c3509a3c64097edd7f33ec106109cf00a78e4396ae2be44898c4dd6",
+    "remainingModuleAstUnchanged": true,
+    "newCasesAdded": 0
+  },
+  "repair": "Keep exact500/400 status assertions and exact missing-parent/network equality. Assert reference empty-path message against reported PHP version and Python message against canonical PHP8.4 wording.",
+  "profiles": [
+    {
+      "phpVersion": "8.3.35",
+      "timezone": "UTC",
+      "passed": 23,
+      "skipped": 0,
+      "deselected": 2078,
+      "exitCode": 0,
+      "result": "/tmp/grocy-ci-php83-utc-result.json",
+      "log": "/tmp/grocy-ci-php83-utc-tests.log",
+      "executedNodeIds": "/tmp/grocy-ci-php83-utc-cache/v/cache/nodeids"
+    },
+    {
+      "phpVersion": "8.3.35",
+      "timezone": "Europe/Bucharest",
+      "passed": 23,
+      "skipped": 0,
+      "deselected": 2078,
+      "exitCode": 0,
+      "result": "/tmp/grocy-ci-php83-bucharest-result.json",
+      "log": "/tmp/grocy-ci-php83-bucharest-tests.log",
+      "executedNodeIds": "/tmp/grocy-ci-php83-bucharest-cache/v/cache/nodeids"
+    },
+    {
+      "phpVersion": "8.4.26",
+      "timezone": "UTC",
+      "passed": 23,
+      "skipped": 0,
+      "deselected": 2078,
+      "exitCode": 0,
+      "result": "/tmp/grocy-ci-php84-utc-result.json",
+      "log": "/tmp/grocy-ci-php84-utc-tests.log",
+      "executedNodeIds": "/tmp/grocy-ci-php84-utc-cache/v/cache/nodeids"
+    },
+    {
+      "phpVersion": "8.4.26",
+      "timezone": "Europe/Bucharest",
+      "passed": 23,
+      "skipped": 0,
+      "deselected": 2078,
+      "exitCode": 0,
+      "result": "/tmp/grocy-ci-php84-bucharest-result.json",
+      "log": "/tmp/grocy-ci-php84-bucharest-tests.log",
+      "executedNodeIds": "/tmp/grocy-ci-php84-bucharest-cache/v/cache/nodeids"
+    }
+  ],
+  "loginContext": {
+    "passed": 7,
+    "warnings": 2,
+    "exitCode": 0,
+    "scope": "Existing API owner tests public URL and cookie-presence contract; retired web checker expected stale two-field shape."
+  },
+  "cancelledJobs": "Backend and both reference jobs were cancelled. Reference progress includes one failure marker in each zone; backend log has no observed test failure. Cancelled suites are not full passes.",
+  "originalCertification": "Original complete-suite counts and hashes retain their original candidate attribution. Follow-up changes only an existing assertion owner; these runs do not claim a fresh full2559-case execution.",
+  "artifacts": {
+    "/tmp/grocy-ci-php83-utc-result.json": {
+      "sha256": "5afa187f84a11e33a831fb774491f28f0b1cab77d3dd9f054fbd5c390d049680"
+    },
+    "/tmp/grocy-ci-php83-utc-tests.log": {
+      "sha256": "802d3b6536b15b4f6d635eecc6cc38f1b8e44fad5e7a4b157fb3fea3e8094f4e"
+    },
+    "/tmp/grocy-ci-php83-utc-cache/v/cache/nodeids": {
+      "sha256": "5a3fcdb939a24d380ee9e53d2da0e74c363c3b1830ff03d94881c754a8fd450d"
+    },
+    "/tmp/grocy-ci-php83-bucharest-result.json": {
+      "sha256": "83b04b188cae7ffcd54e90c03ac3971beeb1f41d90dc51c52186e56aa2a427fd"
+    },
+    "/tmp/grocy-ci-php83-bucharest-tests.log": {
+      "sha256": "802d3b6536b15b4f6d635eecc6cc38f1b8e44fad5e7a4b157fb3fea3e8094f4e"
+    },
+    "/tmp/grocy-ci-php83-bucharest-cache/v/cache/nodeids": {
+      "sha256": "5a3fcdb939a24d380ee9e53d2da0e74c363c3b1830ff03d94881c754a8fd450d"
+    },
+    "/tmp/grocy-ci-php84-utc-result.json": {
+      "sha256": "b62075d3aab818cb092d21f899a991c152661738a72e2c12fce44aa22ea91d47"
+    },
+    "/tmp/grocy-ci-php84-utc-tests.log": {
+      "sha256": "802d3b6536b15b4f6d635eecc6cc38f1b8e44fad5e7a4b157fb3fea3e8094f4e"
+    },
+    "/tmp/grocy-ci-php84-utc-cache/v/cache/nodeids": {
+      "sha256": "5a3fcdb939a24d380ee9e53d2da0e74c363c3b1830ff03d94881c754a8fd450d"
+    },
+    "/tmp/grocy-ci-php84-bucharest-result.json": {
+      "sha256": "f48c1c992575ec238dd025b26299eb4e5825c977ff96764d83000a2d151b1965"
+    },
+    "/tmp/grocy-ci-php84-bucharest-tests.log": {
+      "sha256": "802d3b6536b15b4f6d635eecc6cc38f1b8e44fad5e7a4b157fb3fea3e8094f4e"
+    },
+    "/tmp/grocy-ci-php84-bucharest-cache/v/cache/nodeids": {
+      "sha256": "5a3fcdb939a24d380ee9e53d2da0e74c363c3b1830ff03d94881c754a8fd450d"
+    },
+    "/tmp/grocy-ci-php83-before-result.json": {
+      "sha256": "fa2b01ce54889a097ae790353ccacb53d63f62886eb53227d232f0771931c12e"
+    },
+    "/tmp/grocy-ci-php83-before-tests.log": {
+      "sha256": "dd1eb3f09a91a9b249f166acc1f97422de84bc2121546cfc564da884feb841e4"
+    },
+    "/tmp/grocy-ci-connector-local-result.json": {
+      "sha256": "e4fe5c802ee2a851e97e29c71566c05d17a4c6f93a730d92af8ff97534b1d3ff"
+    },
+    "/tmp/grocy-ci-connector-local-tests.log": {
+      "sha256": "43beb8a5307edf1b92e469c1f00186b9984645f6cec4caffedf838873c16e5cf"
+    },
+    "/tmp/grocy-ci-login-context.log": {
+      "sha256": "7fe76d315c9eb56378c4063e8959d325386aac997b6983ccaa245d38430bf3f6"
+    }
+  }
+}

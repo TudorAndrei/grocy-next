@@ -158,8 +158,25 @@ def test_overview_table_values_keep_native_number_text_units_and_fields(client, 
         type="text-single-line",
         show_as_column_in_tables=1,
     )
+    cleared_field = create(
+        "userfields",
+        entity="products",
+        name="cleared_link",
+        caption="Cleared link",
+        type="link",
+        show_as_column_in_tables=1,
+    )
+    create(
+        "userfields",
+        entity="products",
+        name="missing_link",
+        caption="Missing link",
+        type="link",
+        show_as_column_in_tables=1,
+    )
     client.put(
-        f"/api/userfields/products/{parent}", json={"origin": "Shared brew"}
+        f"/api/userfields/products/{parent}",
+        json={"origin": "Shared brew", "cleared_link": "https://example.test/removed"},
     ).raise_for_status()
     create("shopping_list", product_id=parent, amount=1, shopping_list_id=1)
     client.put(
@@ -182,6 +199,18 @@ def test_overview_table_values_keep_native_number_text_units_and_fields(client, 
                 text("UPDATE stock SET amount=1.2345678901234567 WHERE product_id=:id"),
                 {"id": parent},
             )
+            # Empty values are removed by the actual native SQLite trigger.
+            await session.execute(
+                text("UPDATE userfield_values SET value='' WHERE field_id=:field"),
+                {"field": cleared_field},
+            )
+            assert (
+                await session.scalar(
+                    text("SELECT count(*) FROM userfield_values WHERE field_id=:field"),
+                    {"field": cleared_field},
+                )
+                == 0
+            )
             await session.commit()
 
     client.portal.call(saved_amount)
@@ -200,6 +229,9 @@ def test_overview_table_values_keep_native_number_text_units_and_fields(client, 
         assert row["unit_label"] == own
         assert row["unit_label_aggregated"] == aggregate
         assert row["product_values"] == {"origin": "Shared brew"}
+        assert (
+            next(row for row in data["rows"] if row["product_id"] == child)["product_values"] == {}
+        )
         assert row["product_description"] == "<p>Dark <strong>cocoa</strong></p>"
         assert row["on_shopping_list"] == 1
         assert data["show_shopping_icon"] is True

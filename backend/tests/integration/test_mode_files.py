@@ -64,7 +64,12 @@ def test_mode_image_cache_and_deletion_keep_production_files(tmp_path, monkeypat
         assert api.put(path, content=image("blue")).status_code == 204
         resized = api.get(path, params=query)
         assert resized.status_code == 200, resized.text
-        assert Image.open(BytesIO(resized.content)).getpixel((0, 0)) == (0, 0, 255)
+        assert Image.open(BytesIO(resized.content)).convert("RGBA").getpixel((0, 0)) == (
+            0,
+            0,
+            255,
+            255,
+        )
         assert (
             tmp_path / "files/de/userfiles/photo__downscaledtoautox20.png"
         ).read_bytes() == resized.content

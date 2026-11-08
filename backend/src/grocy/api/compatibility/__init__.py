@@ -6,6 +6,7 @@ from grocy.api.compatibility import (
     grocycode,
     health,
     household,
+    login,
     objects,
     recipes,
     stock,
@@ -20,6 +21,7 @@ from grocy.core.legacy_http import decode_route_arguments
 
 router = APIRouter(dependencies=[Depends(decode_route_arguments)])
 router.include_router(health.router)
+router.include_router(login.router)
 router.include_router(objects.router)
 router.include_router(stock.router)
 router.include_router(recipes.router)

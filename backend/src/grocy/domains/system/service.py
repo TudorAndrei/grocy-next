@@ -121,12 +121,14 @@ class SystemService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def locale(self, user_id: int, accept_language: str) -> str:
+    async def locale(self, user_id: int | None, accept_language: str) -> str:
         available = {".", "..", *os.listdir(_CORE / "localization")}
-        setting = await self.session.scalar(
-            text("SELECT value FROM user_settings WHERE user_id=:user AND key='locale'"),
-            {"user": user_id},
-        )
+        setting = None
+        if user_id is not None:
+            setting = await self.session.scalar(
+                text("SELECT value FROM user_settings WHERE user_id=:user AND key='locale'"),
+                {"user": user_id},
+            )
         if not empty(setting) and php_string(setting) in available:
             return php_string(setting)
         preferences: dict[str, float] = {}

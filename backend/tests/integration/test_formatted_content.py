@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.mark.parametrize("entity,permission", [("products", 7), ("recipes", 9), ("equipment", 13)])
-def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
+def test_formatted_content_preserves_saved_values_and_native_reader_access(
     client, api_headers, monkeypatch, entity, permission
 ):
     from grocy.core.config import get_settings
@@ -61,7 +61,7 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     for read_path in read_paths:
         assert client.get(read_path).status_code == 401
 
-    # Give the reader this domain only. The extension must not require STOCK.
+    # Native product/recipe/equipment pages expose descriptions to authenticated readers.
     monkeypatch.setattr(get_settings(), "default_permissions", [])
     assert (
         client.post(
@@ -81,7 +81,20 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
     ]
     headers = {"GROCY-API-KEY": key}
     for read_path in read_paths:
-        assert client.get(read_path, headers=headers).status_code == 403
+        assert client.get(read_path, headers=headers).status_code == 200
+    assert (
+        client.put(
+            f"/api/objects/{entity}/{identity}",
+            headers=headers,
+            json={"description": "Denied"},
+        ).status_code
+        == 403
+    )
+    if entity == "recipes":
+        # CopyRecipe has no native permission check, unlike generic recipe writes.
+        copied = client.post(f"/api/recipes/{identity}/copy", headers=headers)
+        copied.raise_for_status()
+        assert int(copied.json()["created_object_id"]) != identity
     assert (
         client.put(
             f"/api/users/{user_id}/permissions",
@@ -144,7 +157,7 @@ def test_formatted_content_preserves_saved_values_and_enforces_domain_access(
 
 
 @pytest.mark.parametrize("entity,permission", [("products", 7), ("recipes", 9), ("equipment", 13)])
-def test_description_editor_authorizes_the_domain_and_keeps_drafts_out_of_storage(
+def test_description_editor_uses_native_reader_access_and_keeps_drafts_out_of_storage(
     client, api_headers, monkeypatch, entity, permission
 ):
     from editor_document import EditorDocument
@@ -169,7 +182,11 @@ def test_description_editor_authorizes_the_domain_and_keeps_drafts_out_of_storag
         "api_key"
     ]
     headers = {"GROCY-API-KEY": key}
-    assert client.post(path, headers=headers, json={"html": imported}).status_code == 403
+    assert client.post(path, headers=headers, json={"html": imported}).status_code == 200
+    assert (
+        client.post(f"/api/objects/{entity}", headers=headers, json={"name": "Denied"}).status_code
+        == 403
+    )
     client.put(
         f"/api/users/{user_id}/permissions", headers=api_headers, json={"permissions": [permission]}
     ).raise_for_status()
@@ -184,7 +201,9 @@ def test_description_editor_authorizes_the_domain_and_keeps_drafts_out_of_storag
     assert document.options == {
         "initial": imported,
         "locale": "de-DE",
-        "label": "Beschreibung",
+        "label": {"equipment": "Notizen", "recipes": "Zubereitung", "products": "Beschreibung"}[
+            entity
+        ],
         "channel": "grocy-description",
         "sourceLabel": "Code view",
         **({"pasteInitial": True} if entity == "products" else {}),

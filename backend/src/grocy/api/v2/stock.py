@@ -83,19 +83,21 @@ async def get_journal_summary(
     user_id: str | None = None,
     transaction_type: str | None = None,
 ) -> JournalSummaryView:
-    actor.require("STOCK")
     return await journal_summary(session, product_id, user_id, transaction_type)
+
+
+@router.get("/stock/entries/native-editor")
+async def get_native_entry_editor(row: str, actor: AuthenticatedActor, session: DbSession) -> dict:
+    return await entry_editor(session, row)
 
 
 @router.get("/stock/entries/{entry_id}/editor")
 async def get_entry_editor(entry_id: int, actor: AuthenticatedActor, session: DbSession) -> dict:
-    actor.require("STOCK")
     return await entry_editor(session, entry_id)
 
 
 @router.get("/stock/entries")
 async def get_stock_entries(actor: AuthenticatedActor, session: DbSession) -> EntriesView:
-    actor.require("STOCK")
     return await entries_view(session)
 
 
@@ -106,5 +108,4 @@ async def get_stock_journal(
     product: str | None = None,
     months: str | None = None,
 ) -> JournalView:
-    actor.require("STOCK")
     return await journal_view(session, product, months)

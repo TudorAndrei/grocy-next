@@ -1,18 +1,57 @@
+import base64
+import re
 from typing import Any
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
 
 from grocy.compatibility.input import json_body
 from grocy.compatibility.lessql import query_parameters
-from grocy.compatibility.php import PhpJSONResponse, php_error
-from grocy.core.auth import CurrentActor
+from grocy.compatibility.php import PhpJSONResponse, php_error, php_json
+from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
 from grocy.core.urls import request_base
 from grocy.domains.system.service import SystemService, localization
 
 router = APIRouter(tags=["system"])
+
+
+async def _legacy_page(request: Request) -> None:
+    request.scope["grocy_legacy_base_path"] = True
+
+
+@router.api_route(
+    "/manifest",
+    methods=["GET", "HEAD"],
+    dependencies=[Depends(_legacy_page)],
+    include_in_schema=False,
+)
+async def manifest(request: Request, _actor: AuthenticatedActor) -> Response:
+    parameters = query_parameters(request.scope.get("query_string", b""))
+    data = parameters.get("data", "")
+    if not isinstance(data, str):
+        raise php_error(
+            "base64_decode(): Argument #1 ($string) must be of type string, array given"
+        )
+    encoded = re.sub(rb"[^A-Za-z0-9+/]", b"", data.encode("utf-8", "surrogateescape"))
+    if len(encoded) % 4 == 1:
+        encoded = encoded[:-1]
+    decoded = base64.b64decode(encoded + b"=" * (-len(encoded) % 4))
+    pieces = decoded.decode("utf-8", "surrogateescape").split("#")
+    # Native json_encode returns an empty body for malformed UTF-8.
+    body = php_json(
+        {
+            "name": "Grocy " + pieces[0],
+            "short_name": "Grocy " + pieces[0],
+            "icons": [{"src": "./img/icon-1024.png", "sizes": "1024x1024", "type": "image/png"}],
+            "start_url": pieces[1] if len(pieces) > 1 else None,
+            "background_color": "#333131",
+            "theme_color": "#333131",
+            "display": "standalone",
+        }
+    )
+    return Response(body, media_type="application/json")
 
 
 @router.get("/api/system/info")

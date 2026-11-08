@@ -7,10 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from grocy.compatibility.php import empty
+from grocy.compatibility.php import empty, find, loose_equals
 from grocy.compatibility.sanitizer import render_html
 from grocy.core.errors import NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.domains.catalog.custom_data import custom_data_fields
 
 
 class RecipeIngredient(BaseModel):
@@ -71,6 +72,7 @@ class RecipeListItem(BaseModel):
     missing_products_count: int
     product_names: str
     stock_status: Literal["Xenoughinstock", "enoughinstockwithshoppinglist", "notenoughinstock"]
+    custom_values: dict[str, str | None]
 
 
 async def recipe_overview(session: AsyncSession) -> list[RecipeListItem]:
@@ -87,16 +89,36 @@ async def recipe_overview(session: AsyncSession) -> list[RecipeListItem]:
             "WHERE r.type='normal' ORDER BY r.name COLLATE NOCASE"
         )
     )
-    return [
-        RecipeListItem.model_validate(
-            {
-                **row,
-                "name": row["name"] or "",
-                "product_names": row["product_names"] or "",
-            }
-        )
-        for row in rows.mappings()
+    fields = await custom_data_fields(session, "recipes")
+    values = [
+        dict(row)
+        for row in (
+            await session.execute(
+                text(
+                    "SELECT object_id,name,value FROM userfield_values_resolved "
+                    "WHERE entity='recipes' ORDER BY name COLLATE NOCASE"
+                )
+            )
+        ).mappings()
     ]
+    items = []
+    for row in rows.mappings():
+        saved = [value for value in values if loose_equals(value["object_id"], row["id"])]
+        items.append(
+            RecipeListItem.model_validate(
+                {
+                    **row,
+                    "name": row["name"] or "",
+                    "product_names": row["product_names"] or "",
+                    "custom_values": {
+                        field["name"] or "": value["value"]
+                        for field in fields
+                        if (value := find(saved, "name", field["name"])) is not None
+                    },
+                }
+            )
+        )
+    return items
 
 
 async def recipe_view(session: AsyncSession, recipe_id: int) -> RecipeView:

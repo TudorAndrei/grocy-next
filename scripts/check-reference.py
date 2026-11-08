@@ -2,6 +2,7 @@
 """Run API comparisons against an isolated, checksum-verified Grocy v4.5.0 release."""
 
 import argparse
+import ctypes
 import hashlib
 import importlib.util
 import json
@@ -41,6 +42,84 @@ REQUIRED_MODULES = {
     "zlib",
 }
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def reference_server_options(timezone: str) -> list[str]:
+    # PHP recommends its production ini for testing too; assertions must not add
+    # development-only errors to the original application's responses.
+    # https://raw.githubusercontent.com/php/php-src/php-8.4.26/php.ini-production
+    return [
+        "-d",
+        "zend.assertions=-1",
+        "-d",
+        f"date.timezone={timezone}",
+        "-d",
+        "opcache.enable=0",
+    ]
+
+
+def runtime_provenance(php: str, timezone: str) -> dict:
+    from grocy.domains.files.gd import _library
+
+    library = _library()
+    if library is None:
+        raise ValueError(
+            "Python libgd is unavailable. Install libgd3 or expose its library directory "
+            "to the backend Python environment before running reference comparisons."
+        )
+    version = library.gdVersionString
+    version.argtypes = []
+    version.restype = ctypes.c_char_p
+    python_gd_version = version()
+    if python_gd_version is None:
+        raise ValueError("Could not read the Python libgd version.")
+    ini = (
+        '["zend.assertions" => ini_get("zend.assertions"), '
+        '"assert.exception" => ini_get("assert.exception"), '
+        '"assert.active" => ini_get("assert.active"), '
+        '"date.timezone" => ini_get("date.timezone"), '
+        '"opcache.enable" => ini_get("opcache.enable")]'
+    )
+    php_runtime = subprocess.run(
+        [php, "-r", 'echo json_encode(["version" => PHP_VERSION, "gd_info" => gd_info()]);'],
+        check=True,
+        text=True,
+        capture_output=True,
+        timeout=10,
+    )
+    inherited_ini = subprocess.run(
+        [php, "-r", f"echo json_encode({ini});"],
+        check=True,
+        text=True,
+        capture_output=True,
+        timeout=10,
+    )
+    server_options = reference_server_options(timezone)
+    server_ini = subprocess.run(
+        [php, *server_options, "-r", f"echo json_encode({ini});"],
+        check=True,
+        text=True,
+        capture_output=True,
+        timeout=10,
+    )
+    return {
+        "python": sys.version,
+        "python_libgd": {
+            "name": str(library._name),
+            "version": python_gd_version.decode("ascii", errors="replace"),
+        },
+        "php": {
+            "executable": php,
+            **json.loads(php_runtime.stdout),
+            "inherited_ini": json.loads(inherited_ini.stdout),
+        },
+        "reference_server": {
+            "startup_options": server_options,
+            "effective_ini": json.loads(server_ini.stdout),
+            "standalone_diagnostics_inherit_server_options": False,
+        },
+        "pytest_addopts": os.getenv("PYTEST_ADDOPTS", ""),
+    }
 
 
 def checked_release(path: Path) -> Path:
@@ -121,10 +200,7 @@ def run_reference(
             server = subprocess.Popen(
                 [
                     php,
-                    "-d",
-                    f"date.timezone={timezone}",
-                    "-d",
-                    "opcache.enable=0",
+                    *reference_server_options(timezone),
                     "-S",
                     f"127.0.0.1:{port}",
                     "-t",
@@ -242,6 +318,7 @@ def main() -> int:
             raise ValueError("PHP modules are missing: " + ", ".join(sorted(missing)))
         if importlib.util.find_spec("pytest") is None:
             raise ValueError("Use the backend Python environment, which includes pytest.")
+        result["runtime"] = runtime_provenance(php, args.timezone)
         release = checked_release(args.release.resolve()) if args.release else None
         if args.dry_run:
             result.update(

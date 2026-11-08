@@ -1,6 +1,8 @@
-"""The choices used by the pinned product form."""
+"""The pinned product list and form choices."""
 
-from fastapi import APIRouter
+from typing import Any
+
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -8,8 +10,31 @@ from grocy.core.auth import AuthenticatedActor
 from grocy.core.deps import DbSession
 from grocy.core.errors import NotFoundError
 from grocy.db.compatibility_views import configure_compatibility_queries
+from grocy.domains.catalog.product_form import native_product_editor
+from grocy.domains.catalog.product_master import products_master_context
 
 router = APIRouter(tags=["products"])
+
+
+@router.get("/products/context")
+async def products_context(
+    request: Request, actor: AuthenticatedActor, session: DbSession
+) -> dict[str, Any]:
+    return await products_master_context(
+        session,
+        actor.user_id,
+        request.scope.get("query_string", b""),
+        ",".join(request.headers.getlist("accept-language")),
+    )
+
+
+@router.get("/products/native-editor")
+async def get_native_product_editor(
+    row: str, request: Request, actor: AuthenticatedActor, session: DbSession
+) -> dict[str, Any]:
+    return await native_product_editor(
+        session, row, actor.user_id, ",".join(request.headers.getlist("accept-language"))
+    )
 
 
 class ResolvedUnit(BaseModel):
@@ -90,11 +115,10 @@ class ProductFormOptions(BaseModel):
 
 @router.get("/products/form-options")
 async def product_form_options(
-    actor: AuthenticatedActor,
+    _actor: AuthenticatedActor,
     session: DbSession,
     product_id: int | None = None,
 ) -> ProductFormOptions:
-    actor.require("STOCK")
     parameters = {"id": product_id}
     if product_id is not None and not await session.scalar(
         text("SELECT EXISTS(SELECT 1 FROM products WHERE id=:id)"), parameters
