@@ -1,6 +1,6 @@
 import { signal, Text, View } from "nsh";
 import { Button } from "nsh/base";
-import { Api, positive, type Row } from "../api";
+import { Api, message, positive, type Row } from "../api";
 import { remote, operations, Feedback, LoadState } from "../data";
 import {
   Action,
@@ -11,13 +11,16 @@ import {
   Heading,
   Note,
   Panel,
-  Tabs,
   Toggle,
   addDays,
   dateISO,
   dueDays,
 } from "../ui";
 import { Nutrition, NutritionHistory } from "./Nutrition";
+const attention = (r: Row) =>
+  Number(r.amount) < Number(r.min_stock_amount) ||
+  (Number(r.amount) > 0 && (dueDays(r.best_before_date) ?? 99) <= 5);
+
 export function Stock(p: { api: Api }) {
   const state = remote(async (s) => {
     const [overview, products, locations, units] = await Promise.all([
@@ -28,11 +31,23 @@ export function Stock(p: { api: Api }) {
     ]);
     return { overview, products, locations, units };
   });
+  const groups = remote((s) =>
+    p.api.request<Row[]>("/api/objects/product_groups", "GET", undefined, s),
+  );
   const proposals = remote((s) =>
     p.api.request<Row[]>("/api/v2/nutrition/proposals", "GET", undefined, s),
   );
   const query = signal(""),
     filter = signal("Everything"),
+    filterLocation = signal(""),
+    filterGroup = signal(""),
+    sort = signal("name"),
+    filtering = signal(false),
+    scanner = signal(false),
+    barcode = signal(""),
+    scanAction = signal("details"),
+    scanBusy = signal(false),
+    scanError = signal(""),
     mode = signal(""),
     product = signal(""),
     amount = signal("1"),
@@ -48,19 +63,13 @@ export function Stock(p: { api: Api }) {
     days = signal("0");
   const entries = remote((s) =>
     product()
-      ? p.api.request<Row[]>(
-          `/api/stock/products/${product()}/entries`,
-          "GET",
-          undefined,
-          s,
-        )
+      ? p.api.request<Row[]>(`/api/stock/products/${product()}/entries`, "GET", undefined, s)
       : Promise.resolve([]),
   );
   const undo = signal(""),
     notice = signal(""),
     op = operations(state.refresh);
-  const selected = () =>
-    state.data()?.products.find((r) => String(r.id) === product());
+  const selected = () => state.data()?.products.find((r) => String(r.id) === product());
   const unit = (id: unknown) =>
     state.data()?.units.find((r) => String(r.id) === String(id))?.name ?? "";
   const rows = (): Row[] => {
@@ -68,9 +77,7 @@ export function Stock(p: { api: Api }) {
     if (!data) return [];
     return data.products
       .map((item) => {
-        const stock = data.overview.rows.find(
-          (r: Row) => Number(r.product_id) === Number(item.id),
-        );
+        const stock = data.overview.rows.find((r: Row) => Number(r.product_id) === Number(item.id));
         return {
           ...item,
           product_id: item.id,
@@ -80,27 +87,45 @@ export function Stock(p: { api: Api }) {
           ...stock,
           locationLabel:
             stock?.location_names?.filter(Boolean).join(", ") ||
-            data.locations.find(
-              (l) => Number(l.id) === Number(item.location_id),
-            )?.name ||
+            data.locations.find((l) => Number(l.id) === Number(item.location_id))?.name ||
             "",
         };
       })
-      .filter((r) =>
-        String(r.product_name).toLowerCase().includes(query().toLowerCase()),
-      )
-      .sort((a, b) => a.product_name.localeCompare(b.product_name));
+      .filter((r) => String(r.product_name).toLowerCase().includes(query().toLowerCase()))
+      .filter((r) => {
+        if (filterGroup() && String(r.product_group_id ?? "") !== filterGroup()) return false;
+        if (filterLocation()) {
+          const name = data.locations.find((l) => String(l.id) === filterLocation())?.name;
+          const matches = r.location_names?.length
+            ? r.location_names.includes(name)
+            : String(r.location_id) === filterLocation();
+          if (!matches) return false;
+        }
+        if (filter() === "In stock") return Number(r.amount) > 0;
+        if (filter() === "Out of stock") return Number(r.amount) <= 0;
+        if (filter() === "Below minimum") return Number(r.amount) < Number(r.min_stock_amount);
+        if (filter() === "Due soon")
+          return Number(r.amount) > 0 && (dueDays(r.best_before_date) ?? 999) <= 5;
+        return true;
+      })
+      .toSorted((a, b) =>
+        sort() === "due"
+          ? ((Number(a.amount) > 0 ? dueDays(a.best_before_date) : null) ?? 9999) -
+              ((Number(b.amount) > 0 ? dueDays(b.best_before_date) : null) ?? 9999) ||
+            a.product_name.localeCompare(b.product_name)
+          : sort() === "quantity"
+            ? Number(a.amount) - Number(b.amount) || a.product_name.localeCompare(b.product_name)
+            : a.product_name.localeCompare(b.product_name),
+      );
   };
-  const attention = (r: Row) =>
-    Number(r.amount) < Number(r.min_stock_amount) ||
-    (Number(r.amount) > 0 && (dueDays(r.best_before_date) ?? 99) <= 5);
+
   const attentionRows = () =>
     rows()
       .filter(attention)
-      .sort(
-        (a, b) =>
-          (dueDays(a.best_before_date) ?? 999) -
-          (dueDays(b.best_before_date) ?? 999),
+      .toSorted((a, b) =>
+        sort() !== "name"
+          ? 0
+          : (dueDays(a.best_before_date) ?? 999) - (dueDays(b.best_before_date) ?? 999),
       );
   const choose = (id: string) => {
     product.set(id);
@@ -111,9 +136,7 @@ export function Stock(p: { api: Api }) {
     choose(id);
     newName.set("");
     newUnit.set(String(state.data()?.units[0]?.id ?? ""));
-    location.set(
-      String(selected()?.location_id ?? state.data()?.locations[0]?.id ?? ""),
-    );
+    location.set(String(selected()?.location_id ?? state.data()?.locations[0]?.id ?? ""));
     amount.set("1");
     date.set("");
     mode.set("add");
@@ -126,6 +149,48 @@ export function Stock(p: { api: Api }) {
     notice.set("");
     void entries.refresh();
   }
+  async function lookupBarcode() {
+    if (scanBusy() || op.busy()) return;
+    const code = barcode().trim();
+    if (!code) {
+      scanError.set("Enter a barcode or scan with a connected scanner.");
+      return;
+    }
+    scanBusy.set(true);
+    scanError.set("");
+    try {
+      const result = await p.api.request<Row>(
+        `/api/stock/products/by-barcode/${encodeURIComponent(code)}`,
+      );
+      if (!op.alive()) return;
+      const item = result.product;
+      if (!item?.id) throw new Error("No product was returned for this barcode.");
+      if (!state.data()?.products.some((r) => Number(r.id) === Number(item.id)))
+        await state.refresh();
+      if (!op.alive()) return;
+      const action = scanAction();
+      if (action === "add") purchase(String(item.id));
+      else {
+        details({ product_id: item.id });
+        if (action !== "details") {
+          amount.set(
+            action === "inventory"
+              ? String(result.stock_amount ?? 0)
+              : String(item.quick_consume_amount || 1),
+          );
+          mode.set(action);
+        }
+      }
+      barcode.set("");
+    } catch (error) {
+      if (op.alive())
+        scanError.set(
+          `Barcode lookup failed: ${message(error)} Check the code or add the product in Settings.`,
+        );
+    } finally {
+      if (op.alive()) scanBusy.set(false);
+    }
+  }
   async function book() {
     const action = mode();
     let transaction = "";
@@ -133,8 +198,7 @@ export function Stock(p: { api: Api }) {
       const quantity = positive(amount(), action === "inventory");
       let id = product();
       if (!id && action === "add") {
-        if (!newName().trim())
-          throw new Error("Choose a product or enter its name.");
+        if (!newName().trim()) throw new Error("Choose a product or enter its name.");
         if (!newUnit() || !location())
           throw new Error("Choose a unit and a location for this product.");
         const result = await p.api.save("products", {
@@ -149,10 +213,7 @@ export function Stock(p: { api: Api }) {
         await state.refresh();
       }
       if (!id) throw new Error("Choose a product.");
-      const body: Row =
-        action === "inventory"
-          ? { new_amount: quantity }
-          : { amount: quantity };
+      const body: Row = action === "inventory" ? { new_amount: quantity } : { amount: quantity };
       if (date()) body.best_before_date = date();
       if (action === "add" && location()) body.location_id = Number(location());
       if (action === "transfer") {
@@ -161,10 +222,7 @@ export function Stock(p: { api: Api }) {
         body.location_id_from = Number(from());
         body.location_id_to = Number(location());
       }
-      const result = await p.api.post(
-        `/api/stock/products/${id}/${action}`,
-        body,
-      );
+      const result = await p.api.post(`/api/stock/products/${id}/${action}`, body);
       transaction = result?.[0]?.transaction_id ?? "";
     }, "");
     if (ok) {
@@ -179,10 +237,9 @@ export function Stock(p: { api: Api }) {
     const count = Number(r.quick_consume_amount) || 1;
     let transaction = "";
     const ok = await op.run(async () => {
-      const result = await p.api.post(
-        `/api/stock/products/${r.product_id}/consume`,
-        { amount: count },
-      );
+      const result = await p.api.post(`/api/stock/products/${r.product_id}/consume`, {
+        amount: count,
+      });
       transaction = result?.[0]?.transaction_id ?? "";
     }, "");
     if (ok) {
@@ -198,10 +255,7 @@ export function Stock(p: { api: Api }) {
         class="flex-1 min-w-0 min-h-11 flex-row items-center gap-3 hover:bg-[#f0f0ec] focus:outline-2 focus:outline-[#22603f] rounded-lg px-1"
       >
         <View class="flex-1 min-w-0 gap-1">
-          <Text
-            style={{ numberOfLines: 2 }}
-            class="text-base font-medium text-[#1b1d1c]"
-          >
+          <Text style={{ numberOfLines: 2 }} class="text-base font-medium text-[#1b1d1c]">
             {r.product_name}
           </Text>
           <View class="flex-row flex-wrap gap-2 md:hidden">
@@ -218,9 +272,7 @@ export function Stock(p: { api: Api }) {
           <Due value={Number(r.amount) > 0 ? r.best_before_date : null} />
         </View>
         <Text class="shrink-0 text-sm font-semibold text-[#1b1d1c]">
-          {Number(r.amount) > 0
-            ? `${r.amount} ${r.unit_label}`
-            : "Not in stock"}
+          {Number(r.amount) > 0 ? `${r.amount} ${r.unit_label}` : "Not in stock"}
         </Text>
       </Button>
       <View class="w-16 items-end">
@@ -258,21 +310,131 @@ export function Stock(p: { api: Api }) {
           onChange={(v) => query.set(v)}
         />
       ) : null}
-      {state.data()?.products.length ? (
-        <Tabs
-          items={[
-            "Everything",
-            ...(attentionRows().length ? ["Needs attention"] : []),
-          ]}
-          value={filter()}
-          onChange={(v) => filter.set(v)}
+      <View class="flex-row flex-wrap items-center gap-2">
+        <Action
+          label={scanner() ? "Hide barcode entry" : "Barcode entry"}
+          onPress={() => scanner.set(!scanner())}
         />
+        <Action
+          label={filtering() ? "Hide filters" : "Filter and sort"}
+          quiet
+          onPress={() => filtering.set(!filtering())}
+        />
+        <Action
+          label="Refresh stock"
+          quiet
+          disabled={state.loading() || op.busy()}
+          onPress={() => void state.refresh()}
+        />
+      </View>
+      {scanner() ? (
+        <View class="gap-3 py-3 border-b border-[#e4e4e0]">
+          <Note>
+            Enter a barcode, or use a connected scanner. Review the product before saving a stock
+            change.
+          </Note>
+          <Choice
+            label="Barcode action"
+            value={scanAction()}
+            items={[
+              { value: "details", title: "View product" },
+              { value: "add", title: "Purchase" },
+              { value: "consume", title: "Consume" },
+              { value: "open", title: "Open" },
+              { value: "inventory", title: "Inventory" },
+            ]}
+            onChange={(v) => scanAction.set(v)}
+          />
+          <Field
+            label="Barcode"
+            value={barcode()}
+            autoFocus
+            placeholder="Scan or enter barcode"
+            onChange={(v) => barcode.set(v)}
+            onSubmit={() => void lookupBarcode()}
+          />
+          {scanError() ? <Note error>{scanError()}</Note> : null}
+          <Action
+            label={scanBusy() ? "Looking up barcode…" : "Look up barcode"}
+            disabled={scanBusy() || op.busy() || !barcode().trim()}
+            onPress={() => void lookupBarcode()}
+          />
+        </View>
       ) : null}
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      {filtering() ? (
+        <View class="gap-3 py-3 border-b border-[#e4e4e0]">
+          <Choice
+            label="Stock status"
+            value={filter()}
+            items={[
+              "Everything",
+              "Needs attention",
+              "In stock",
+              "Out of stock",
+              "Below minimum",
+              "Due soon",
+            ].map((title) => ({ value: title, title }))}
+            onChange={(v) => filter.set(v)}
+          />
+          <Choice
+            label="Stock location"
+            value={filterLocation()}
+            items={[
+              { value: "", title: "All locations" },
+              ...(state.data()?.locations ?? []).map((r) => ({
+                value: String(r.id),
+                title: r.name,
+              })),
+            ]}
+            onChange={(v) => filterLocation.set(v)}
+          />
+          <LoadState loading={groups.loading()} error={groups.error()} retry={groups.refresh} />
+          {groups.data()?.length ? (
+            <Choice
+              label="Product group"
+              value={filterGroup()}
+              items={[
+                { value: "", title: "All groups" },
+                ...(groups.data() ?? []).map((r) => ({
+                  value: String(r.id),
+                  title: r.name,
+                })),
+              ]}
+              onChange={(v) => filterGroup.set(v)}
+            />
+          ) : null}
+          <Choice
+            label="Sort products"
+            value={sort()}
+            items={[
+              { value: "name", title: "Product name" },
+              { value: "due", title: "Best-before date" },
+              { value: "quantity", title: "Stock quantity" },
+            ]}
+            onChange={(v) => sort.set(v)}
+          />
+          <Action
+            label="Reset filters"
+            quiet
+            onPress={() => {
+              filter.set("Everything");
+              filterLocation.set("");
+              filterGroup.set("");
+              sort.set("name");
+              query.set("");
+            }}
+          />
+        </View>
+      ) : null}
+      {state.data()?.products.length ? (
+        <Note>
+          {rows().length} products · {filter()}
+          {filterLocation()
+            ? ` · ${state.data()?.locations.find((r) => String(r.id) === filterLocation())?.name ?? ""}`
+            : ""}
+        </Note>
+      ) : null}
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       <Feedback error={op.error()} success={op.success()} />
       {notice() ? (
         <View class="flex-row flex-wrap items-center justify-between gap-2 bg-[#edf2ee] rounded-lg px-3 py-2">
@@ -298,45 +460,56 @@ export function Stock(p: { api: Api }) {
       {!state.loading() && !state.error() && !state.data()?.products.length ? (
         <Note>Your stock starts with your first purchase.</Note>
       ) : null}
-      {!state.loading() &&
-      state.data()?.products.length &&
-      rows().length === 0 ? (
+      {!state.loading() && state.data()?.products.length && rows().length === 0 ? (
         <View class="gap-3">
-          <Note>No products match “{query()}”.</Note>
+          <Note>
+            {query()
+              ? `No products match “${query()}” with these filters.`
+              : "No products match these filters."}
+          </Note>
+          {query().trim() ? (
+            <Action
+              label={`Create ${query()}`}
+              onPress={() => {
+                purchase();
+                newName.set(query());
+              }}
+            />
+          ) : null}
           <Action
-            label={`Create ${query()}`}
+            label="Show all products"
             onPress={() => {
-              purchase();
-              newName.set(query());
+              filter.set("Everything");
+              filterLocation.set("");
+              filterGroup.set("");
+              query.set("");
             }}
           />
         </View>
       ) : null}
-      {filter() === "Needs attention" ? (
+      {sort() !== "name" ? (
         <View>
-          {attentionRows().length === 0 ? (
-            <Note>Nothing needs attention.</Note>
-          ) : null}
+          <Each of={filter() === "Needs attention" ? attentionRows() : rows()}>
+            {(r) => row(r())}
+          </Each>
+        </View>
+      ) : filter() === "Needs attention" ? (
+        <View>
+          {attentionRows().length === 0 ? <Note>Nothing needs attention.</Note> : null}
           <Each of={attentionRows()}>{(r) => row(r())}</Each>
         </View>
       ) : (
         <View>
           {attentionRows().length ? (
             <View class="gap-1 mb-5">
-              <Text class="text-sm font-semibold text-[#5e625f]">
-                Needs attention
-              </Text>
+              <Text class="text-sm font-semibold text-[#5e625f]">Needs attention</Text>
               <Each of={attentionRows()}>{(r) => row(r())}</Each>
             </View>
           ) : null}
           {attentionRows().length && rows().some((r) => !attention(r)) ? (
-            <Text class="text-sm font-semibold text-[#5e625f]">
-              Everything else
-            </Text>
+            <Text class="text-sm font-semibold text-[#5e625f]">Everything else</Text>
           ) : null}
-          <Each of={rows().filter((r) => !attention(r))}>
-            {(r) => row(r())}
-          </Each>
+          <Each of={rows().filter((r) => !attention(r))}>{(r) => row(r())}</Each>
         </View>
       )}
       <Panel
@@ -401,15 +574,12 @@ export function Stock(p: { api: Api }) {
           <View class="gap-5">
             <View class="gap-2">
               <Text class="text-2xl font-semibold text-[#1b1d1c]">
-                {rows().find((r) => String(r.product_id) === product())
+                {state.data()?.overview.rows.find((r: Row) => String(r.product_id) === product())
                   ?.amount ?? 0}{" "}
                 {unit(selected()?.qu_id_stock)}
               </Text>
               <Note>
-                {state
-                  .data()
-                  ?.locations.find((l) => String(l.id) === location())?.name ??
-                  ""}
+                {state.data()?.locations.find((l) => String(l.id) === location())?.name ?? ""}
               </Note>
             </View>
             <LoadState
@@ -424,22 +594,18 @@ export function Stock(p: { api: Api }) {
                     {entry().amount} {unit(selected()?.qu_id_stock)} ·{" "}
                     {state
                       .data()
-                      ?.locations.find(
-                        (l) => Number(l.id) === Number(entry().location_id),
-                      )?.name ?? "Unknown location"}
+                      ?.locations.find((l) => Number(l.id) === Number(entry().location_id))?.name ??
+                      "Unknown location"}
                   </Note>
                   <Due value={entry().best_before_date} />
                 </View>
               )}
             </Each>
-            <Action
-              label="Add purchase"
-              primary
-              onPress={() => purchase(product())}
-            />
+            <Action label="Add purchase" primary onPress={() => purchase(product())} />
             <View class="flex-row flex-wrap gap-2">
               {Number(
-                rows().find((r) => String(r.product_id) === product())?.amount,
+                state.data()?.overview.rows.find((r: Row) => String(r.product_id) === product())
+                  ?.amount,
               ) > 0 ? (
                 <View class="flex-row gap-2">
                   <Action
@@ -465,7 +631,9 @@ export function Stock(p: { api: Api }) {
                 onPress={() => {
                   amount.set(
                     String(
-                      rows().find((r) => String(r.product_id) === product())
+                      state
+                        .data()
+                        ?.overview.rows.find((r: Row) => String(r.product_id) === product())
                         ?.amount ?? 0,
                     ),
                   );
@@ -473,7 +641,8 @@ export function Stock(p: { api: Api }) {
                 }}
               />
               {Number(
-                rows().find((r) => String(r.product_id) === product())?.amount,
+                state.data()?.overview.rows.find((r: Row) => String(r.product_id) === product())
+                  ?.amount,
               ) > 0 && (state.data()?.locations.length ?? 0) > 1 ? (
                 <Action
                   label="Move"
@@ -567,13 +736,7 @@ export function Stock(p: { api: Api }) {
                   ["Never", "2999-12-31"],
                 ]}
               >
-                {(d) => (
-                  <Action
-                    label={d()[0]}
-                    quiet
-                    onPress={() => date.set(d()[1])}
-                  />
-                )}
+                {(d) => <Action label={d()[0]} quiet onPress={() => date.set(d()[1])} />}
               </Each>
             </View>
             <Note>
@@ -592,11 +755,7 @@ export function Stock(p: { api: Api }) {
         ) : null}
         {mode() === "edit" ? (
           <View class="gap-4">
-            <Field
-              label="Product name"
-              value={editName()}
-              onChange={(v) => editName.set(v)}
-            />
+            <Field label="Product name" value={editName()} onChange={(v) => editName.set(v)} />
             <Field
               label="Minimum stock"
               numeric

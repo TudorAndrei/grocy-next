@@ -1,10 +1,19 @@
 import { signal, Text, View } from "nsh";
+import { Checkbox } from "nsh/base";
 import { Api, message, positive, type Row } from "../api";
 import { remote, operations, Feedback, LoadState } from "../data";
 import { Action, Choice, Field, Heading, Note, Panel, Toggle } from "../ui";
 export function Shopping(p: { api: Api }) {
   const list = signal(""),
     adding = signal(false),
+    editing = signal<Row | null>(null),
+    inStore = signal(false),
+    search = signal(""),
+    managing = signal(false),
+    listName = signal(""),
+    newList = signal(false),
+    deleting = signal(false),
+    removing = signal(false),
     product = signal(""),
     amount = signal("1"),
     note = signal(""),
@@ -16,25 +25,21 @@ export function Shopping(p: { api: Api }) {
       p.api.request<Row[]>("/api/objects/products", "GET", undefined, s),
       p.api.request<Row[]>("/api/objects/quantity_units", "GET", undefined, s),
     ]);
-    const id = list() || String(lists[0]?.id ?? "");
+    const id = lists.some((r) => String(r.id) === list()) ? list() : String(lists[0]?.id ?? "");
     if (!s.aborted) list.set(id);
     const result = id
-      ? await p.api.request<Row>(
-          `/api/v2/shopping-lists/${id}`,
-          "GET",
-          undefined,
-          s,
-        )
+      ? await p.api.request<Row>(`/api/v2/shopping-lists/${id}`, "GET", undefined, s)
       : { items: [] };
     return { lists, products, units, items: result.items as Row[] };
   });
   const checking = signal<Set<number>>(new Set());
   const checkError = signal("");
   const op = operations(state.refresh);
-  const checked = () => state.data()?.items.filter((r) => r.done) ?? [];
+  const checked = () => state.data()?.items.filter((r) => Number(r.done) === 1) ?? [];
+  const listTitle = () =>
+    state.data()?.lists.find((r) => String(r.id) === list())?.name ?? "Shopping list";
   const title = (r: Row) =>
-    state.data()?.products.find((i) => Number(i.id) === Number(r.product_id))
-      ?.name ??
+    state.data()?.products.find((i) => Number(i.id) === Number(r.product_id))?.name ??
     r.note ??
     "Shopping item";
   const unit = (id: unknown) =>
@@ -47,9 +52,7 @@ export function Shopping(p: { api: Api }) {
       data
         ? {
             ...data,
-            items: data.items.map((r) =>
-              r.id === row.id ? { ...r, done: value } : r,
-            ),
+            items: data.items.map((r) => (r.id === row.id ? { ...r, done: value } : r)),
           }
         : data,
     );
@@ -62,16 +65,13 @@ export function Shopping(p: { api: Api }) {
           data
             ? {
                 ...data,
-                items: data.items.map((r) =>
-                  r.id === row.id ? { ...r, done: !value } : r,
-                ),
+                items: data.items.map((r) => (r.id === row.id ? { ...r, done: !value } : r)),
               }
             : data,
         );
       }
     } finally {
-      if (op.alive())
-        checking.set(new Set([...checking()].filter((id) => id !== row.id)));
+      if (op.alive()) checking.set(new Set([...checking()].filter((id) => id !== row.id)));
     }
   }
   async function receive() {
@@ -109,8 +109,10 @@ export function Shopping(p: { api: Api }) {
         <Action
           label="Add item"
           primary
-          disabled={!list()}
+          disabled={!list() || state.loading() || op.busy() || checking().size > 0}
           onPress={() => {
+            editing.set(null);
+            removing.set(false);
             product.set("");
             amount.set("1");
             note.set("");
@@ -118,64 +120,166 @@ export function Shopping(p: { api: Api }) {
           }}
         />
       </View>
-      {(state.data()?.lists.length ?? 0) > 1 ? (
+      <View class="flex-row flex-wrap gap-2">
+        <Action
+          label={inStore() ? "Finish in-store mode" : "In-store mode"}
+          disabled={!list() || state.loading()}
+          onPress={() => {
+            inStore.set(!inStore());
+            search.set("");
+          }}
+        />
+        {!inStore() ? (
+          <Action
+            label="New list"
+            quiet
+            disabled={op.busy() || checking().size > 0 || state.loading()}
+            onPress={() => {
+              newList.set(true);
+              listName.set("");
+              deleting.set(false);
+              managing.set(true);
+            }}
+          />
+        ) : null}
+        {!inStore() && list() ? (
+          <Action
+            label="Manage list"
+            quiet
+            disabled={op.busy() || checking().size > 0 || state.loading()}
+            onPress={() => {
+              newList.set(false);
+              listName.set(listTitle());
+              deleting.set(false);
+              managing.set(true);
+            }}
+          />
+        ) : null}
+      </View>
+      {inStore() ? (
+        <View class="py-3 gap-2">
+          <Text class="text-lg font-semibold text-[#1b1d1c]">{listTitle()}</Text>
+          <Note>
+            {checked().length} of {state.data()?.items.length ?? 0} collected. Tap a product to
+            check it off.
+          </Note>
+          <Note>Checks sync with your server. Keep this connection open while shopping.</Note>
+        </View>
+      ) : null}
+      {(state.data()?.lists.length ?? 0) > 1 &&
+      !inStore() &&
+      !op.busy() &&
+      checking().size === 0 ? (
         <Choice
           label="Shopping list"
           value={list()}
-          items={state
-            .data()!
-            .lists.map((r) => ({ value: String(r.id), title: r.name }))}
+          items={state.data()!.lists.map((r) => ({ value: String(r.id), title: r.name }))}
           onChange={(v) => {
             list.set(v);
             void state.refresh();
           }}
         />
       ) : null}
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       <Feedback error={op.error() || checkError()} success={op.success()} />
+      <Field
+        label="Search shopping items"
+        value={search()}
+        onChange={(v) => search.set(v)}
+        placeholder="Product or note"
+      />
       <View>
         <Each
           of={(state.data()?.items ?? [])
-            .slice()
-            .sort((a, b) => Number(a.done) - Number(b.done))}
+            .filter((r) =>
+              `${title(r)} ${r.note ?? ""}`.toLowerCase().includes(search().toLowerCase().trim()),
+            )
+            .toSorted((a, b) => Number(a.done) - Number(b.done))}
         >
           {(r) => (
-            <View class="min-h-16 flex-row items-center gap-3 border-b border-[#e4e4e0] py-2">
+            <View
+              class={
+                inStore()
+                  ? "min-h-24 flex-row items-center gap-4 border-b border-[#e4e4e0] py-3"
+                  : "min-h-16 flex-row items-center gap-3 border-b border-[#e4e4e0] py-2"
+              }
+            >
               <View class="flex-1 min-w-0">
-                <Toggle
-                  label={title(r())}
-                  checked={Boolean(r().done)}
-                  disabled={op.busy() || checking().has(r().id)}
-                  onChange={(v) => void toggle(r(), v)}
-                />
+                {inStore() ? (
+                  <Checkbox
+                    accessibilityLabel={title(r())}
+                    checked={Number(r().done) === 1}
+                    disabled={op.busy() || checking().has(r().id) || state.loading()}
+                    onChange={(e) => void toggle(r(), e.checked)}
+                    class="min-h-20 flex-row items-center gap-4 focus:outline-2 focus:outline-[#22603f]"
+                    indicatorClass="w-8 h-8 border border-[#c9c9c3] rounded items-center justify-center checked:bg-[#22603f] checked:border-[#22603f]"
+                    indicator={
+                      Number(r().done) === 1 ? (
+                        <View class="w-3 h-4 border-r-2 border-b-2 border-white rotate-45" />
+                      ) : null
+                    }
+                  >
+                    <Text class="text-xl font-medium text-[#1b1d1c]">{title(r())}</Text>
+                  </Checkbox>
+                ) : (
+                  <Toggle
+                    label={title(r())}
+                    checked={Number(r().done) === 1}
+                    disabled={op.busy() || checking().has(r().id) || state.loading()}
+                    onChange={(v) => void toggle(r(), v)}
+                  />
+                )}
                 {r().note && r().product_id ? <Note>{r().note}</Note> : null}
               </View>
-              <Text class="text-sm text-[#5e625f]">
+              <Text
+                class={
+                  inStore() ? "text-lg font-semibold text-[#1b1d1c]" : "text-sm text-[#5e625f]"
+                }
+              >
                 {r().amount} {unit(r().qu_id)}
               </Text>
+              {!inStore() ? (
+                <Action
+                  label="Edit"
+                  accessibilityLabel={`Edit ${title(r())}`}
+                  quiet
+                  disabled={op.busy() || checking().size > 0 || state.loading()}
+                  onPress={() => {
+                    editing.set(r());
+                    product.set(String(r().product_id ?? ""));
+                    amount.set(String(r().amount));
+                    note.set(r().note ?? "");
+                    removing.set(false);
+                    adding.set(true);
+                  }}
+                />
+              ) : null}
             </View>
           )}
         </Each>
       </View>
+      {!state.loading() &&
+      !state.error() &&
+      Boolean(state.data()?.items.length) &&
+      search().trim() &&
+      !state
+        .data()!
+        .items.some((r) =>
+          `${title(r)} ${r.note ?? ""}`.toLowerCase().includes(search().toLowerCase().trim()),
+        ) ? (
+        <Note>No shopping items match your search.</Note>
+      ) : null}
       {!state.loading() && !state.error() && !state.data()?.items.length ? (
         <View class="py-6 gap-2">
-          <Text class="text-base font-medium text-[#1b1d1c]">
-            Your list is clear.
-          </Text>
-          <Note>
-            Add an item, or bring across products below their minimum stock.
-          </Note>
+          <Text class="text-base font-medium text-[#1b1d1c]">Your list is clear.</Text>
+          <Note>Add an item, or bring across products below their minimum stock.</Note>
         </View>
       ) : null}
-      {list() ? (
+      {list() && !inStore() ? (
         <Action
           label="Add below-minimum products"
           quiet
-          disabled={op.busy()}
+          disabled={op.busy() || checking().size > 0 || state.loading()}
           onPress={() =>
             void op.run(
               () =>
@@ -192,13 +296,10 @@ export function Shopping(p: { api: Api }) {
           <Action
             label={`Put away ${checked().length} ${checked().length === 1 ? "item" : "items"}`}
             primary
-            disabled={op.busy() || checking().size > 0}
+            disabled={op.busy() || checking().size > 0 || state.loading()}
             onPress={() => void receive()}
           />
-          <Note>
-            Dates and locations use product defaults. Items are removed from
-            this list.
-          </Note>
+          <Note>Dates and locations use product defaults. Items are removed from this list.</Note>
         </View>
       ) : null}
       {receipt() ? (
@@ -214,49 +315,52 @@ export function Shopping(p: { api: Api }) {
                   void op.run(async () => {
                     const pending = transactions().slice();
                     while (pending.length) {
-                      await p.api.post(
-                        `/api/stock/transactions/${pending[0]}/undo`,
-                      );
+                      await p.api.post(`/api/stock/transactions/${pending[0]}/undo`);
                       pending.shift();
                       if (op.alive()) transactions.set(pending.slice());
                     }
                     if (op.alive())
-                      receipt.set(
-                        "Stock changes undone. Shopping items have not been restored.",
-                      );
+                      receipt.set("Stock changes undone. Shopping items have not been restored.");
                   }, "")
                 }
               />
-              <Note>
-                Undo restores stock only, not the removed shopping items.
-              </Note>
+              <Note>Undo restores stock only, not the removed shopping items.</Note>
             </View>
           ) : null}
         </View>
       ) : null}
       <Panel
         open={adding()}
-        title="Add shopping item"
+        title={editing() ? "Edit shopping item" : "Add shopping item"}
         onClose={() => adding.set(false)}
         busy={op.busy()}
         footer={
           <View class="gap-2">
             <Feedback error={op.error()} success="" />
             <Action
-              label="Add to list"
+              label={editing() ? "Save item" : "Add to list"}
               primary
-              disabled={op.busy() || !product()}
+              disabled={op.busy() || (!editing() && !product())}
               onPress={() =>
                 void op
                   .run(
                     () =>
-                      p.api.post("/api/v2/shopping-lists/items", {
-                        product_id: Number(product()),
-                        amount: positive(amount()),
-                        note: note(),
-                        shopping_list_id: Number(list()),
-                      }),
-                    "Item added.",
+                      editing()
+                        ? p.api.save(
+                            "shopping_list",
+                            {
+                              amount: positive(amount()),
+                              note: note(),
+                            },
+                            editing()!.id,
+                          )
+                        : p.api.post("/api/v2/shopping-lists/items", {
+                            product_id: Number(product()),
+                            amount: positive(amount()),
+                            note: note(),
+                            shopping_list_id: Number(list()),
+                          }),
+                    editing() ? "Item saved." : "Item added.",
                   )
                   .then((ok) => {
                     if (ok) adding.set(false);
@@ -266,26 +370,142 @@ export function Shopping(p: { api: Api }) {
           </View>
         }
       >
-        <Choice
-          label="Product to add"
-          value={product()}
-          items={(state.data()?.products ?? []).map((r) => ({
-            value: String(r.id),
-            title: r.name,
-          }))}
-          onChange={(v) => product.set(v)}
-        />
+        {editing() ? (
+          <Note>{title(editing()!)}</Note>
+        ) : (
+          <Choice
+            label="Product to add"
+            value={product()}
+            items={(state.data()?.products ?? []).map((r) => ({
+              value: String(r.id),
+              title: r.name,
+            }))}
+            onChange={(v) => product.set(v)}
+          />
+        )}
         <Field
-          label={`Quantity${product() ? ` (${unit(state.data()?.products.find((r) => String(r.id) === product())?.qu_id_purchase)})` : ""}`}
+          label={`Quantity${product() ? ` (${unit(editing() ? editing()!.qu_id : state.data()?.products.find((r) => String(r.id) === product())?.qu_id_purchase)})` : ""}`}
           numeric
           value={amount()}
           onChange={(v) => amount.set(v)}
         />
-        <Field
-          label="Note (optional)"
-          value={note()}
-          onChange={(v) => note.set(v)}
-        />
+        <Field label="Note (optional)" value={note()} onChange={(v) => note.set(v)} />
+        {editing() ? (
+          <View class="gap-3 pt-4">
+            {removing() ? (
+              <View class="gap-3">
+                <Note>Remove {title(editing()!)} from this list? Stock will stay the same.</Note>
+                <Action
+                  label="Confirm remove item"
+                  danger
+                  disabled={op.busy()}
+                  onPress={() =>
+                    void op
+                      .run(
+                        () =>
+                          p.api.request(`/api/objects/shopping_list/${editing()!.id}`, "DELETE"),
+                        "Item removed.",
+                      )
+                      .then((ok) => {
+                        if (ok) adding.set(false);
+                      })
+                  }
+                />
+                <Action
+                  label="Keep item"
+                  quiet
+                  disabled={op.busy()}
+                  onPress={() => removing.set(false)}
+                />
+              </View>
+            ) : (
+              <Action
+                label="Remove item"
+                danger
+                quiet
+                disabled={op.busy()}
+                onPress={() => removing.set(true)}
+              />
+            )}
+          </View>
+        ) : null}
+      </Panel>
+      <Panel
+        open={managing()}
+        title={newList() ? "New shopping list" : "Manage shopping list"}
+        onClose={() => managing.set(false)}
+        busy={op.busy()}
+        footer={
+          <View class="gap-2">
+            <Feedback error={op.error()} success="" />
+            {!deleting() ? (
+              <Action
+                label={newList() ? "Create list" : "Save list"}
+                primary
+                disabled={op.busy() || !listName().trim()}
+                onPress={() =>
+                  void op
+                    .run(
+                      async () => {
+                        const result = await p.api.save(
+                          "shopping_lists",
+                          { name: listName().trim() },
+                          newList() ? undefined : Number(list()),
+                        );
+                        if (newList() && result?.created_object_id && op.alive())
+                          list.set(String(result.created_object_id));
+                      },
+                      newList() ? "List created." : "List saved.",
+                    )
+                    .then((ok) => {
+                      if (ok) managing.set(false);
+                    })
+                }
+              />
+            ) : null}
+          </View>
+        }
+      >
+        <Field label="List name" value={listName()} onChange={(v) => listName.set(v)} />
+        {!newList() ? (
+          <View class="gap-3 pt-4">
+            <Note>Empty this list before deleting it.</Note>
+            {deleting() ? (
+              <View class="gap-3">
+                <Note>Delete {listTitle()}? This cannot be undone.</Note>
+                <Action
+                  label="Confirm delete list"
+                  danger
+                  disabled={op.busy()}
+                  onPress={() =>
+                    void op
+                      .run(async () => {
+                        await p.api.request(`/api/objects/shopping_lists/${list()}`, "DELETE");
+                        if (op.alive()) list.set("");
+                      }, "List deleted.")
+                      .then((ok) => {
+                        if (ok) managing.set(false);
+                      })
+                  }
+                />
+                <Action
+                  label="Keep list"
+                  quiet
+                  disabled={op.busy()}
+                  onPress={() => deleting.set(false)}
+                />
+              </View>
+            ) : (
+              <Action
+                label="Delete list"
+                danger
+                quiet
+                disabled={op.busy() || Boolean(state.data()?.items.length)}
+                onPress={() => deleting.set(true)}
+              />
+            )}
+          </View>
+        ) : null}
       </Panel>
     </View>
   );

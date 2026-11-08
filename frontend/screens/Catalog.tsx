@@ -1,17 +1,7 @@
 import { signal, Text, View } from "nsh";
 import { Api, plain, type Row } from "../api";
 import { remote, operations, Feedback, LoadState } from "../data";
-import {
-  Action,
-  Choice,
-  DateField,
-  Field,
-  Heading,
-  Line,
-  Note,
-  Panel,
-  Toggle,
-} from "../ui";
+import { Action, Choice, DateField, Field, Heading, Line, Note, Panel, Toggle } from "../ui";
 
 type Definition = {
   title: string;
@@ -24,24 +14,24 @@ type Definition = {
     initial?: string;
   }[];
 };
-const text = (
-  key: string,
-  label: string,
-  required = false,
-  initial?: string,
-) => ({ key, label, required, initial });
+const text = (key: string, label: string, required = false, initial?: string) => ({
+  key,
+  label,
+  required,
+  initial,
+});
 const number = (key: string, label: string, initial?: string) => ({
   key,
   label,
   number: true,
   initial,
 });
-const relation = (
-  key: string,
-  label: string,
-  entity: string,
-  required = false,
-) => ({ key, label, relation: entity, required });
+const relation = (key: string, label: string, entity: string, required = false) => ({
+  key,
+  label,
+  relation: entity,
+  required,
+});
 const definitions: Record<string, Definition> = {
   products: {
     title: "Products",
@@ -66,10 +56,7 @@ const definitions: Record<string, Definition> = {
   },
   quantity_units: {
     title: "Quantity units",
-    fields: [
-      text("name", "Singular name", true),
-      text("name_plural", "Plural name", true),
-    ],
+    fields: [text("name", "Singular name", true), text("name_plural", "Plural name", true)],
   },
   quantity_unit_conversions: {
     title: "Unit conversions",
@@ -82,17 +69,11 @@ const definitions: Record<string, Definition> = {
   },
   product_groups: {
     title: "Product groups",
-    fields: [
-      text("name", "Group name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Group name", true), text("description", "Description")],
   },
   shopping_locations: {
     title: "Stores",
-    fields: [
-      text("name", "Store name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Store name", true), text("description", "Description")],
   },
   product_barcodes: {
     title: "Barcodes",
@@ -147,10 +128,7 @@ const definitions: Record<string, Definition> = {
   },
   task_categories: {
     title: "Task categories",
-    fields: [
-      text("name", "Category name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Category name", true), text("description", "Description")],
   },
   chores: {
     title: "Chores",
@@ -173,10 +151,7 @@ const definitions: Record<string, Definition> = {
   },
   equipment: {
     title: "Equipment",
-    fields: [
-      text("name", "Equipment name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Equipment name", true), text("description", "Description")],
   },
 };
 export function Catalog(p: { api: Api }) {
@@ -207,24 +182,12 @@ function Records(p: { api: Api; entity: string }) {
   );
   const options = remote(async (s) => {
     const tables = [
-      ...new Set(
-        definition.fields
-          .map((f) => f.relation)
-          .filter((v): v is string => Boolean(v)),
-      ),
+      ...new Set(definition.fields.map((f) => f.relation).filter((v): v is string => Boolean(v))),
     ];
     const entries = await Promise.all(
       tables.map(
         async (name) =>
-          [
-            name,
-            await p.api.request<Row[]>(
-              `/api/objects/${name}`,
-              "GET",
-              undefined,
-              s,
-            ),
-          ] as const,
+          [name, await p.api.request<Row[]>(`/api/objects/${name}`, "GET", undefined, s)] as const,
       ),
     );
     return Object.fromEntries(entries);
@@ -273,17 +236,9 @@ function Records(p: { api: Api; entity: string }) {
   return (
     <View class="gap-4">
       <View class="flex-row flex-wrap gap-2">
-        <Action
-          label={`Add ${definition.title.toLowerCase()}`}
-          primary
-          onPress={() => edit()}
-        />
+        <Action label={`Add ${definition.title.toLowerCase()}`} primary onPress={() => edit()} />
       </View>
-      <Field
-        label="Search records"
-        value={query()}
-        onChange={(v) => query.set(v)}
-      />
+      <Field label="Search records" value={query()} onChange={(v) => query.set(v)} />
       <Feedback error={op.error()} success={op.success()} />
       <Panel
         open={editing()}
@@ -296,19 +251,13 @@ function Records(p: { api: Api; entity: string }) {
             <Action
               label="Save record"
               primary
-              disabled={
-                op.busy() || options.loading() || Boolean(options.error())
-              }
+              disabled={op.busy() || options.loading() || Boolean(options.error())}
               onPress={() => void save()}
             />
           </View>
         }
       >
-        <LoadState
-          loading={options.loading()}
-          error={options.error()}
-          retry={options.refresh}
-        />
+        <LoadState loading={options.loading()} error={options.error()} retry={options.refresh} />
         <Each of={definition.fields}>
           {(f) => (
             <View>
@@ -316,9 +265,7 @@ function Records(p: { api: Api; entity: string }) {
                 <Toggle
                   label="Freezer"
                   checked={draft()[f().key] === "1"}
-                  onChange={(v) =>
-                    draft.set({ ...draft(), [f().key]: v ? "1" : "0" })
-                  }
+                  onChange={(v) => draft.set({ ...draft(), [f().key]: v ? "1" : "0" })}
                 />
               ) : f().key === "due_date" ? (
                 <DateField
@@ -365,31 +312,20 @@ function Records(p: { api: Api; entity: string }) {
           )}
         </Each>
       </Panel>
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       {!state.loading() && !state.error() && !state.data()?.length ? (
         <Note>No records yet. Add the first one above.</Note>
       ) : null}
       <Each
         of={(state.data() ?? []).filter((r) =>
-          [title(r), plain(r.description)]
-            .join(" ")
-            .toLowerCase()
-            .includes(query().toLowerCase()),
+          [title(r), plain(r.description)].join(" ").toLowerCase().includes(query().toLowerCase()),
         )}
       >
         {(r) => (
           <Line>
-            <Text class="text-base font-medium text-[#1b1d1c]">
-              {title(r())}
-            </Text>
+            <Text class="text-base font-medium text-[#1b1d1c]">{title(r())}</Text>
             {r().description ? (
-              <Text class="text-sm text-[#5e625f]">
-                {plain(r().description)}
-              </Text>
+              <Text class="text-sm text-[#5e625f]">{plain(r().description)}</Text>
             ) : null}
             <View class="flex-row flex-wrap gap-2">
               <Action
@@ -418,18 +354,12 @@ function Records(p: { api: Api; entity: string }) {
                     disabled={op.busy()}
                     onPress={() =>
                       void op.run(async () => {
-                        await p.api.request(
-                          `/api/objects/${p.entity}/${r().id}`,
-                          "DELETE",
-                        );
+                        await p.api.request(`/api/objects/${p.entity}/${r().id}`, "DELETE");
                         deleting.set(null);
                       }, "Record deleted.")
                     }
                   />
-                  <Action
-                    label="Keep record"
-                    onPress={() => deleting.set(null)}
-                  />
+                  <Action label="Keep record" onPress={() => deleting.set(null)} />
                 </View>
               </View>
             ) : null}

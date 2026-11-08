@@ -8,12 +8,7 @@ type Record = components["schemas"]["NutritionRecord"];
 export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
   const state = remote(async (s) => {
     const [proposals, products] = await Promise.all([
-      p.api.request<Proposal[]>(
-        "/api/v2/nutrition/proposals",
-        "GET",
-        undefined,
-        s,
-      ),
+      p.api.request<Proposal[]>("/api/v2/nutrition/proposals", "GET", undefined, s),
       p.api.request<Row[]>("/api/objects/products", "GET", undefined, s),
     ]);
     const current: Map<number, Record | null> = new Map();
@@ -46,15 +41,9 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
   });
   return (
     <View class="gap-4">
-      <Note>
-        Compare each change with the current record before approving it.
-      </Note>
+      <Note>Compare each change with the current record before approving it.</Note>
       <Feedback error={op.error()} success={op.success()} />
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       {!state.loading() && !state.error() && !state.data()?.proposals.length ? (
         <Note>All caught up. No changes need review.</Note>
       ) : null}
@@ -63,20 +52,16 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
           <Line>
             <Heading
               title={
-                state
-                  .data()
-                  ?.products.find((i) => Number(i.id) === r().product_id)
-                  ?.name ?? `Product ${r().product_id}`
+                state.data()?.products.find((i) => Number(i.id) === r().product_id)?.name ??
+                `Product ${r().product_id}`
               }
             />
             <Note>
-              Per {r().payload.basis.quantity} {r().payload.basis.unit} ·
-              Source: {r().payload.source?.type}
+              Per {r().payload.basis.quantity} {r().payload.basis.unit} · Source:{" "}
+              {r().payload.source?.type}
             </Note>
             <Note>
-              {r().payload.source?.note ||
-                r().payload.note ||
-                "No source note supplied."}
+              {r().payload.source?.note || r().payload.note || "No source note supplied."}
             </Note>
             <Note>
               Current record:{" "}
@@ -93,16 +78,12 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
             <Each of={Object.keys(r().payload.nutrients)}>
               {(key) => (
                 <View class="flex-row gap-2 py-2 border-b border-[#e4e4e0]">
-                  <Text class="flex-1 text-sm text-[#1b1d1c]">
-                    {key().replace(/_/g, " ")}
-                  </Text>
+                  <Text class="flex-1 text-sm text-[#1b1d1c]">{key().replace(/_/g, " ")}</Text>
                   <Text class="w-20 text-sm text-[#5e625f]">
                     {String(
-                      (
-                        state.data()?.current.get(r().product_id)?.nutrients as
-                          | Row
-                          | undefined
-                      )?.[key()] ?? "—",
+                      (state.data()?.current.get(r().product_id)?.nutrients as Row | undefined)?.[
+                        key()
+                      ] ?? "—",
                     )}
                   </Text>
                   <Text class="w-20 text-sm font-semibold text-[#1b1d1c]">
@@ -111,9 +92,7 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
                 </View>
               )}
             </Each>
-            {r().conflict_reason ? (
-              <Note error>{r().conflict_reason}</Note>
-            ) : null}
+            {r().conflict_reason ? <Note error>{r().conflict_reason}</Note> : null}
             <View class="flex-row gap-2">
               <Action
                 label="Approve"
@@ -121,10 +100,7 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
                 disabled={op.busy()}
                 onPress={() =>
                   void op.run(
-                    () =>
-                      p.api.post(
-                        `/api/v2/nutrition/proposals/${r().id}/approve`,
-                      ),
+                    () => p.api.post(`/api/v2/nutrition/proposals/${r().id}/approve`),
                     "Nutrition approved.",
                   )
                 }
@@ -134,10 +110,7 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
                 disabled={op.busy()}
                 onPress={() =>
                   void op.run(
-                    () =>
-                      p.api.post(
-                        `/api/v2/nutrition/proposals/${r().id}/reject`,
-                      ),
+                    () => p.api.post(`/api/v2/nutrition/proposals/${r().id}/reject`),
                     "Proposal rejected.",
                   )
                 }
@@ -173,28 +146,17 @@ export function NutritionHistory(p: { api: Api; productId: number }) {
   return (
     <View class="gap-3">
       <Text class="text-base font-semibold text-[#1b1d1c]">Nutrition</Text>
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       <Feedback error={op.error()} success={op.success()} />
       {state.data()?.record ? (
         <View class="gap-2">
           <Note>
-            Per {state.data()!.record!.basis_quantity}{" "}
-            {state.data()!.record!.basis_unit}
+            Per {state.data()!.record!.basis_quantity} {state.data()!.record!.basis_unit}
           </Note>
-          <Each
-            of={Object.entries(state.data()!.record!.nutrients).filter(
-              ([, v]) => v != null,
-            )}
-          >
+          <Each of={Object.entries(state.data()!.record!.nutrients).filter(([, v]) => v != null)}>
             {(n) => (
               <View class="flex-row justify-between">
-                <Text class="text-sm text-[#5e625f]">
-                  {n()[0].replace(/_/g, " ")}
-                </Text>
+                <Text class="text-sm text-[#5e625f]">{n()[0].replace(/_/g, " ")}</Text>
                 <Text class="text-sm text-[#1b1d1c]">{String(n()[1])}</Text>
               </View>
             )}

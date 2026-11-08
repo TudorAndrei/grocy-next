@@ -19,16 +19,12 @@ export function Action(p: {
 }) {
   return (
     <Button
-      accessibilityLabel={p.accessibilityLabel}
+      accessibilityLabel={p.accessibilityLabel ?? p.label}
       onPress={p.onPress}
       disabled={p.disabled}
       class="min-h-11 rounded-lg px-3 py-2 justify-center items-center hover:bg-[#f0f0ec] focus:outline-2 focus:outline-offset-2 focus:outline-[#22603f] disabled:opacity-40"
       style={{
-        backgroundColor: p.primary
-          ? color.accent
-          : p.quiet
-            ? "transparent"
-            : "#ffffff",
+        backgroundColor: p.primary ? color.accent : p.quiet ? "transparent" : "#ffffff",
         borderWidth: p.primary || p.quiet ? 0 : 1,
         borderColor: "#c9c9c3",
       }}
@@ -186,15 +182,10 @@ export function Toggle(p: {
       class="flex-row items-center gap-3 min-h-11"
       indicatorClass="w-5 h-5 items-center justify-center border border-[#c9c9c3] rounded checked:bg-[#22603f] checked:border-[#22603f]"
       indicator={
-        p.checked ? (
-          <View class="w-2 h-3 border-r-2 border-b-2 border-white rotate-45" />
-        ) : null
+        p.checked ? <View class="w-2 h-3 border-r-2 border-b-2 border-white rotate-45" /> : null
       }
     >
-      <Text
-        style={{ numberOfLines: 2 }}
-        class="flex-1 min-w-0 text-sm text-[#1b1d1c]"
-      >
+      <Text style={{ numberOfLines: 2 }} class="flex-1 min-w-0 text-sm text-[#1b1d1c]">
         {p.label}
       </Text>
     </Checkbox>
@@ -242,14 +233,11 @@ export function DateField(p: {
               : item.kind === "next"
                 ? "Next"
                 : item.kind === "weekday"
-                  ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-                      item.value
-                    ]
+                  ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][item.value]
                   : item.kind === "monthToggle" || item.kind === "month"
-                    ? new Date(item.year, item.value - 1, 1).toLocaleDateString(
-                        undefined,
-                        { month: "short" },
-                      )
+                    ? new Date(item.year, item.value - 1, 1).toLocaleDateString(undefined, {
+                        month: "short",
+                      })
                     : String(item.value)}
           </Text>
         )}
@@ -267,10 +255,10 @@ export function addDays(value: string, days: number): string {
   return dateISO(date);
 }
 export function shortDate(value: string): string {
-  return new Date(value.slice(0, 10) + "T12:00:00").toLocaleDateString(
-    undefined,
-    { day: "numeric", month: "short" },
-  );
+  return new Date(value.slice(0, 10) + "T12:00:00").toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
 }
 export function dueDays(value?: string | null): number | null {
   if (!value || value.slice(0, 4) >= "2888") return null;
@@ -309,11 +297,7 @@ export function Due(p: { value?: string | null }) {
     </Text>
   );
 }
-export function Tabs(p: {
-  items: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
+export function Tabs(p: { items: string[]; value: string; onChange: (v: string) => void }) {
   return (
     <View class="flex-row gap-4 border-b border-[#e4e4e0]">
       <Each of={p.items}>
