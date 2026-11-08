@@ -2,7 +2,7 @@
 
 Grocy Next is a Python household-management API built with FastAPI, SQLite and FastMCP. The compatibility API uses the pinned Grocy v4.5.0 contract. The nutrition API adds proposals, review, evidence and revision history. External assistants can use MCP. The server does not run an agent, OCR or a vision model.
 
-The Python API is the core product and the Grocy parity completion target. Its HTTP contract and behavior support independent clients. The previous React frontend has been removed; future cross-platform UI work will use [Native Shell](https://nsh.dev/). See the [API-only acceptance status](docs/api-parity-status.md).
+The Python API is the core product and the Grocy parity completion target. Its HTTP contract and behavior support independent clients. The web client uses [Native Shell](https://nsh.dev/) with TSX signals and its DOM/Wasm renderer. It replaces the removed React frontend. See [client setup and supported workflows](frontend/README.md). See the [API-only acceptance status](docs/api-parity-status.md).
 
 ## Functions
 
@@ -38,13 +38,19 @@ uv run grocy
 
 The API listens at <http://127.0.0.1:8000>. Check `/api/health` and send the development key `dev-key` in the `GROCY-API-KEY` header for authenticated requests. The application applies schema upgrades at startup when `GROCY_AUTO_CREATE_SCHEMA=true`. See the backend setup for configuration and API-key creation.
 
+Start the Native Shell client separately after installing NSH 0.4.0:
+
+```sh
+mise run web:dev
+```
+
 ## Containers
 
 ```bash
 docker compose up --build
 ```
 
-The API is available at <http://127.0.0.1:8000>. Compose runs only the API service. The release image uses Python and does not install PHP. The volume stores the database and files under `/data`.
+The API is available at <http://127.0.0.1:8000>. The web client is available at <http://localhost:8080>. Enter that same origin and your API key at its connection screen. Compose builds the NSH client and serves it through nginx, forwarding API requests to Python. The release image uses Python and does not install PHP. The volume stores the database and files under `/data`.
 
 To serve under `/grocy/`, set `GROCY_BASE_PATH=/grocy` before starting the API. This prefix applies to API routing and generated links. Set `GROCY_BASE_URL` separately when generated links need a different public base URL.
 
@@ -69,7 +75,7 @@ uv run ty check . ../scripts --error-on-warning
 Run `mise run check` from the repository root for lint, format, and type checks.
 Run `mise run fix` to apply safe lint fixes and format the files. Run tests separately.
 
-GitHub Actions CI has been removed. Verification commands and Python tests remain available locally; the new client can define its own build and validation workflow.
+GitHub Actions CI has been removed. Verification commands and Python tests remain available locally; the NSH client has local `web:check`, `web:test`, and `web:build` tasks.
 
 The PHP reference tests are skipped unless a reference server is configured. See [compatibility](docs/compatibility.md) for the comparison command. Keep `GROCY_USE_NATIVE_PHP=false` when you test the Python release. See [migration](docs/migration.md) for database import and recovery, and [MCP tools](docs/mcp-tools.md) for assistant access.
 
