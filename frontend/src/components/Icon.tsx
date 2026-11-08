@@ -1,4 +1,8 @@
 const PATHS = {
+  "sidebar-collapse": ["M3 3h18v18H3z", "M9 3v18", "m17 9-3 3 3 3"],
+  "sidebar-expand": ["M3 3h18v18H3z", "M9 3v18", "m14 9 3 3-3 3"],
+  logout: ["M9 3H4v18h5", "M10 12h11", "m17 8 4 4-4 4"],
+  user: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M4 21v-2a8 8 0 0 1 16 0v2"],
   sort: ["m8 8 4-4 4 4", "M12 4v16"],
   up: ["M12 20V4", "m6 10 6-6 6 6"],
   down: ["M12 4v16", "m6 14 6 6 6-6"],
@@ -23,15 +27,19 @@ const PATHS = {
     "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
     "M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1",
   ],
+  external: ["M14 3h7v7", "M21 3 11 13", "M10 3H3v18h18v-7"],
+  filter: ["M3 4h18l-7 8v7l-4 2v-9Z"],
   search: ["M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z", "m20 20-4-4"],
   plus: ["M12 5v14M5 12h14"],
   check: ["m5 12.5 4.5 4.5L19 7.5"],
   menu: ["M4 7h16M4 12h16M4 17h16"],
+  more: ["M12 5h.01M12 12h.01M12 19h.01"],
   close: ["M6 6l12 12M18 6 6 18"],
   back: ["M15 5l-7 7 7 7"],
   household: ["M4 11.5 12 4l8 7.5", "M6 10.5V20h12v-9.5", "M9 14h6M9 17h6"],
   barcode: ["M4 6v12M7 6v12M10 6v12M14 6v12M17 6v12M20 6v12"],
   camera: ["M3 7h4l2-3h6l2 3h4v13H3Z", "M16 13a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"],
+  image: ["M3 3h18v18H3z", "m3 17 6-6 4 4 3-3 5 5", "M8 7h.01"],
   locations: ["M4 9h7v11H4z", "M13 9h7v11h-7z", "M4 4h16v3H4z"],
   journal: ["M4 6h16v12H4z", "M8 10h8M8 14h5"],
   labels: ["M6 4h12v6H6z", "M6 14h8v6H6z"],
@@ -43,6 +51,23 @@ const PATHS = {
 } as const;
 
 export type IconName = keyof typeof PATHS;
+
+/** Draw the same icons inside a third-party calendar's DOM. */
+export function createIcon(name: IconName) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+
+  for (const d of PATHS[name]) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+
+  return svg;
+}
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
   return (

@@ -60,10 +60,11 @@ export const recipeOverviewSchema = z.array(
     missing_products_count: z.number(),
     product_names: z.string(),
     stock_status: z.enum(["Xenoughinstock", "enoughinstockwithshoppinglist", "notenoughinstock"]),
+    custom_values: z.record(z.string(), z.string().nullable()).default({}),
   }),
 );
 
-export type RecipeListItem = z.infer<typeof recipeOverviewSchema>[number];
+export type RecipeListItem = z.input<typeof recipeOverviewSchema>[number];
 
 export type RecipeStatus = RecipeListItem["stock_status"];
 
@@ -72,7 +73,7 @@ export type RecipeListMode = "list" | "gallery";
 export type RecipeOverviewSearch = {
   recipe?: number;
   search?: string;
-  status?: RecipeStatus;
+  status?: RecipeStatus | "all";
   tab?: RecipeListMode;
   embedded?: boolean;
 };
@@ -86,8 +87,7 @@ export const recipeOverviewSearchSchema = z.object({
   status: z
     .enum(["all", "Xenoughinstock", "enoughinstockwithshoppinglist", "notenoughinstock"])
     .optional()
-    .catch(undefined)
-    .transform((value) => (value === "all" ? undefined : value)),
+    .catch(undefined),
   tab: z.enum(["list", "gallery"]).optional().catch(undefined),
   embedded: z
     .unknown()

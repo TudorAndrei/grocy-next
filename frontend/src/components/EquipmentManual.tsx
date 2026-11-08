@@ -7,7 +7,29 @@ import { LoadingBlock } from "./LoadingBlock";
 
 type ManualResult = { name: string } & ({ url: string } | { error: string });
 
-export function EquipmentManual({ name, label }: { name: string; label: string }) {
+export function EquipmentManual({
+  name,
+  label,
+  sourceUrl,
+}: {
+  name: string;
+  label: string;
+  sourceUrl?: string;
+}) {
+  return sourceUrl !== undefined ? (
+    <embed
+      className="equipment-manual"
+      src={sourceUrl}
+      type="application/pdf"
+      aria-label={label}
+      tabIndex={0}
+    />
+  ) : (
+    <AuthenticatedEquipmentManual name={name} label={label} />
+  );
+}
+
+function AuthenticatedEquipmentManual({ name, label }: { name: string; label: string }) {
   const { t } = useI18n();
   const [result, setResult] = useState<ManualResult | null>(null);
 

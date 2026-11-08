@@ -10,6 +10,7 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { ActorTag, bookingVerb } from "@/components/ActorTag";
 import { useNotify } from "@/components/Toaster";
+import { currentUserQuery } from "@/hooks/queries";
 
 export const Route = createFileRoute("/activity")({
   component: ActivityPage,
@@ -23,7 +24,7 @@ function ActivityPage() {
   const invalidate = useInvalidateStock();
   const [showUndone, setShowUndone] = useState(false);
   const log = useQuery({ queryKey: queryKeys.stockLog, queryFn: api.listStockLog });
-  const me = useQuery({ queryKey: queryKeys.currentUser, queryFn: api.getCurrentUser });
+  const me = useQuery(currentUserQuery());
 
   const undo = useMutation({
     mutationFn: (transactionId: string) => api.undoTransaction(transactionId),

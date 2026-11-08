@@ -36,6 +36,67 @@ function mount(entity: string) {
   );
 }
 
+test("the generic Product dialog retains inline selected fields without native value Load", async () => {
+  const row = {
+    id: 7,
+    name: "Generic coffee",
+    active: 1,
+    location_id: 1,
+    qu_id_stock: 1,
+    qu_id_purchase: 1,
+    qu_id_consume: 1,
+    qu_id_price: 1,
+    description: "",
+    userfields: { Note: "Generic stored note" },
+  };
+
+  const reads: string[] = [];
+  const fields: JsonObject[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async (input, init) => {
+      const path = String(input);
+
+      if (path.startsWith("/api/userfields/") && !init?.method) {
+        reads.push(path);
+
+        return Response.json({ Note: "Unexpected native Load" });
+      }
+
+      if (path === "/api/system/config") return Response.json({});
+
+      if (path === "/api/v2/custom-data/fields")
+        return Response.json([field(1, "Note", "text-single-line")]);
+
+      if (path === "/api/objects/quantity_units") return Response.json([{ id: 1, name: "Piece" }]);
+
+      if (path === "/api/objects/locations") return Response.json([{ id: 1, name: "Shelf" }]);
+
+      if (path === "/api/objects/products/7" && init?.method === "PUT")
+        return new Response(null, { status: 204 });
+
+      if (path === "/api/userfields/products/7" && init?.method === "PUT") {
+        fields.push(JSON.parse(String(init.body)));
+
+        return new Response(null, { status: 204 });
+      }
+
+      if (path === "/api/objects/products") return Response.json([row]);
+
+      return Response.json([]);
+    }),
+  );
+  mount("products");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /Edit.*Generic coffee/ }));
+  expect(screen.getByLabelText<HTMLInputElement>("Note").value).toBe("Generic stored note");
+  await user.type(screen.getByLabelText("Note"), " changed");
+  await user.click(screen.getByRole("button", { name: "Save product" }));
+  await waitFor(() => expect(screen.queryByRole("form", { name: "Edit product" })).toBeNull());
+  expect(fields).toEqual([{ Note: "Generic stored note changed" }]);
+  expect(reads).toEqual([]);
+});
+
 test("product creation retries a custom file on the saved row before its picture", async () => {
   const writes: string[] = [];
   const rows: EntityRow[] = [];
@@ -59,11 +120,11 @@ test("product creation retries a custom file on the saved row before its picture
 
       if (path === "/api/system/config") return Response.json({});
 
-      if (path === "/api/objects/userfields")
+      if (path === "/api/objects/userfields" || path === "/api/v2/custom-data/fields")
         return Response.json([
-          field(3, "Manual", "file"),
-          field(2, "Untouched", "text-single-line", { default_value: "Configured default" }),
           field(1, "Confirmed", "checkbox", { input_required: 1 }),
+          field(2, "Untouched", "text-single-line", { default_value: "Configured default" }),
+          field(3, "Manual", "file"),
         ]);
 
       if (path === "/api/objects/quantity_units") return Response.json([{ id: 1, name: "Piece" }]);
@@ -157,14 +218,16 @@ test("product creation retries a custom file on the saved row before its picture
   ).toBe(picture);
 });
 
-test("editing loads numeric custom names and writes only changed values", async () => {
+test("editing retains server field order after empty text becomes null and writes only changed values", async () => {
   const fields = [
-    field(3, "Z", "text-single-line", { entity: "locations", sort_number: 1 }),
     field(2, "0", "text-single-line", { entity: "locations", sort_number: null }),
+    field(1, "1", "checkbox", { entity: "locations", input_required: 1, sort_number: 0 }),
     field(4, "a", "text-single-line", { entity: "locations", sort_number: 1 }),
-    field(1, "1", "checkbox", { entity: "locations", input_required: 1, sort_number: null }),
-    field(5, "😀", "text-single-line", { entity: "locations", sort_number: 1 }),
+    field(3, "Z", "text-single-line", { entity: "locations", sort_number: 1 }),
     field(6, "\uE000", "text-single-line", { entity: "locations", sort_number: 1 }),
+    field(5, "😀", "text-single-line", { entity: "locations", sort_number: 1 }),
+    // SQL orders stored empty TEXT after numbers; PDO exposes that empty TEXT as null.
+    field(7, "blank", "text-single-line", { entity: "locations", sort_number: null }),
   ];
 
   const writes: JsonObject[] = [];
@@ -176,7 +239,7 @@ test("editing loads numeric custom names and writes only changed values", async 
 
       if (path === "/api/system/config") return Response.json({});
 
-      if (path === "/api/objects/userfields") return Response.json(fields);
+      if (path === "/api/v2/custom-data/fields") return Response.json(fields);
 
       if (path === "/api/objects/locations") return Response.json([row]);
 
@@ -198,9 +261,9 @@ test("editing loads numeric custom names and writes only changed values", async 
   expect(screen.getByLabelText<HTMLInputElement>("0").value).toBe("Stored value");
   expect(screen.getByLabelText<HTMLInputElement>("1").required).toBe(false);
   const group = within(screen.getByRole("group", { name: "Userfields" }));
-  expect(group.getAllByText(/^(0|1|a|Z|\uE000|😀)$/).map((element) => element.textContent)).toEqual(
-    ["0", "1", "a", "Z", "\uE000", "😀"],
-  );
+  expect(
+    group.getAllByText(/^(0|1|a|Z|\uE000|😀|blank)$/).map((element) => element.textContent),
+  ).toEqual(["0", "1", "a", "Z", "\uE000", "😀", "blank"]);
   await user.type(screen.getByLabelText("0"), " changed");
   await user.click(screen.getByRole("button", { name: "Save location" }));
   await waitFor(() => expect(screen.queryByRole("form", { name: "Edit location" })).toBeNull());
@@ -227,7 +290,8 @@ test("a custom record type change uses its own field names and retains shared ed
 
       if (path === "/api/system/config") return Response.json({});
 
-      if (path === "/api/objects/userfields") return Response.json(definitions);
+      if (path === "/api/objects/userfields" || path === "/api/v2/custom-data/fields")
+        return Response.json(definitions);
 
       if (path === "/api/objects/userentities")
         return Response.json([
@@ -282,7 +346,7 @@ test("Manage retains the list name until custom fields save and retries only unf
 
       if (path === "/api/objects/shopping_lists") return Response.json([row]);
 
-      if (path === "/api/objects/userfields")
+      if (path === "/api/objects/userfields" || path === "/api/v2/custom-data/fields")
         return Response.json([
           field(1, "Delivery", "text-single-line", { entity: "shopping_lists" }),
         ]);

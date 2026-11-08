@@ -7,9 +7,11 @@ import { useI18n } from "@/lib/i18n";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
 import { tableNumber } from "@/lib/native-table-cell";
+import { nativeUserfieldLink } from "@/lib/native-userfield-link";
 import { EntityPicture } from "./EntityPicture";
 import { ErrorBlock } from "./ErrorBlock";
 import { Icon } from "./Icon";
+import { NativeUserfieldFile } from "./NativeUserfieldFile";
 
 const titledLink = z.object({ title: z.string().nullish(), link: z.string().nullish() });
 
@@ -26,14 +28,33 @@ function linkTarget(value: string) {
 export function UserfieldValue({
   field,
   value,
+  nativeTable = false,
+  present = true,
 }: {
   field: UserfieldDefinition;
   value: string | null;
+  nativeTable?: boolean;
+  present?: boolean;
 }) {
   const { t } = useI18n();
   const preferences = usePreferences();
   const features = useFeatures();
   const [error, setError] = useState<Error>();
+
+  if (nativeTable && !present) return null;
+
+  if (nativeTable && (field.type === "file" || field.type === "image"))
+    return <NativeUserfieldFile field={field} value={value} />;
+
+  if (nativeTable && (field.type === "link" || field.type === "link-with-title")) {
+    const link = nativeUserfieldLink(field.type, value);
+
+    return (
+      <a href={linkTarget(link.link)} target="_blank" rel="noopener noreferrer">
+        {link.title}
+      </a>
+    );
+  }
 
   if (value === null) return null;
 

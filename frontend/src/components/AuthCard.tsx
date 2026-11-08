@@ -6,7 +6,7 @@ export function AuthCard({
   children,
 }: {
   title: string;
-  lead: string;
+  lead?: string;
   children: ReactNode;
 }) {
   return (
@@ -17,7 +17,7 @@ export function AuthCard({
             Grocy <span>Next</span>
           </p>
           <h1 className="panel-title">{title}</h1>
-          <p className="muted">{lead}</p>
+          {lead ? <p className="muted">{lead}</p> : null}
           {children}
         </div>
       </section>

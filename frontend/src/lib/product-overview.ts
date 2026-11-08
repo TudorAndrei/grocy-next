@@ -34,6 +34,8 @@ const overviewSchema = z.object({
   spoil_rate_percent: z.number(),
 });
 
+export type ProductOverviewData = z.infer<typeof overviewSchema>;
+
 export async function getProductOverview(productId: number, signal: AbortSignal) {
   return overviewSchema.parse(await request(`/api/stock/products/${productId}`, { signal }));
 }

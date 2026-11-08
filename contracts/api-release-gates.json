@@ -1,0 +1,2496 @@
+{
+  "schemaVersion": 1,
+  "title": "Finite Python API parity release acceptance",
+  "scope": {
+    "baseline": "Grocy v4.5.0 native API",
+    "openapiOperationCount": 86,
+    "listableExposedEntityCount": 33,
+    "include": [
+      "native API HTTP/input/error/state/config/auth semantics",
+      "native printer/webhook/thermal/code API payloads",
+      "Python API release image and its dependencies"
+    ],
+    "exclude": [
+      "React/native web-page/template parity",
+      "browser/device rendering/navigation/focus/animations",
+      "frontend assets/nginx/UI image",
+      "camera/torch/wake-lock hardware",
+      "physical printer/paper calibration",
+      "v2-only extension feature equivalence"
+    ],
+    "extensionPolicy": "Normal Python tests retain extensions as regression coverage; v2-only resources cannot independently define Grocy native API parity."
+  },
+  "inventoryMode": "offline_read_only_sources_then_one_new_contract_file; no tests/services/API/browser/engine/network run by this author",
+  "baselineRefs": [
+    "EVID-001",
+    "EVID-002",
+    "EVID-003"
+  ],
+  "profiles": {
+    "API-DEFAULT": {
+      "python": "3.13",
+      "useNativePhp": false,
+      "mode": "production",
+      "locale": "en",
+      "database": "fresh disposable SQLite",
+      "files": "owned temporary root",
+      "features": "configured defaults"
+    },
+    "REF-UTC": {
+      "command": "reference-full",
+      "timezone": "UTC"
+    },
+    "REF-BUCHAREST": {
+      "command": "reference-full",
+      "timezone": "Europe/Bucharest"
+    },
+    "FLAGS-OFF-UTC": {
+      "command": "reference-disabled",
+      "timezone": "UTC",
+      "flags": {
+        "TASKS": "false",
+        "CHORES": "false",
+        "BATTERIES": "false",
+        "RECIPES_MEALPLAN": "false",
+        "STOCK_BEST_BEFORE_DATE_TRACKING": "false",
+        "STOCK_PRODUCT_FREEZING": "false",
+        "STOCK_PRICE_TRACKING": "off"
+      }
+    },
+    "FLAGS-OFF-BUCHAREST": {
+      "command": "reference-disabled",
+      "timezone": "Europe/Bucharest",
+      "flags": {
+        "TASKS": "false",
+        "CHORES": "false",
+        "BATTERIES": "false",
+        "RECIPES_MEALPLAN": "false",
+        "STOCK_BEST_BEFORE_DATE_TRACKING": "false",
+        "STOCK_PRODUCT_FREEZING": "false",
+        "STOCK_PRICE_TRACKING": "off"
+      }
+    },
+    "HTTP-MOUNTS": {
+      "cases": [
+        {
+          "basePath": "",
+          "baseUrl": "/"
+        },
+        {
+          "basePath": "/house.hold",
+          "baseUrl": "/house.hold"
+        },
+        {
+          "basePath": "/house.v1+demo",
+          "baseUrl": "/house.v1+demo"
+        }
+      ],
+      "additionalCases": [
+        "explicit absolute BASE_URL override",
+        "URL rewriting enabled/disabled and optional index.php aliases",
+        "encoded static/default-segment tokens and source trailing-slash errors"
+      ],
+      "scope": "API HTTP requests only"
+    },
+    "AUTH-CONFIG": {
+      "authModes": [
+        "default",
+        "api-key",
+        "session",
+        "ldap",
+        "reverse-proxy"
+      ],
+      "cases": [
+        "valid/invalid/missing API key",
+        "valid/expired/revoked session",
+        "allowed/denied native grants and hierarchy",
+        "LDAP bind/search/TLS certificate failure",
+        "trusted reverse-proxy process environment and configured header",
+        "DISABLE_AUTH false/true",
+        "production/dev/demo/prerelease API bypass and actor selection"
+      ],
+      "scope": "identity/permissions/status/state at API boundary; no web login/logout rendering or React transport requirement"
+    },
+    "CONFIG-CLASSES": {
+      "cases": [
+        "valid and invalid mode/locale/currency/weekday/default-time configuration",
+        "false/0/empty/string PHP-compatible flag classes",
+        "ordinary enabled flags and existing seven-flag disabled table",
+        "demo/prerelease database and file suffix isolation",
+        "default values versus per-user settings"
+      ],
+      "strategy": "fixed equivalence classes from existing source-backed API owners, not every field multiplied by every environment"
+    },
+    "CULTURE-TIME": {
+      "nativeCatalogIds": [
+        "bg_BG",
+        "ca",
+        "cs",
+        "da",
+        "de",
+        "el_GR",
+        "en",
+        "en_GB",
+        "es",
+        "et_EE",
+        "fi",
+        "fr",
+        "he_IL",
+        "hu",
+        "it",
+        "ja",
+        "ko_KR",
+        "lt",
+        "nl",
+        "no",
+        "pl",
+        "pt_BR",
+        "pt_PT",
+        "ro_RO",
+        "ru",
+        "sk_SK",
+        "sl",
+        "sv_SE",
+        "ta",
+        "tr",
+        "uk",
+        "zh_CN",
+        "zh_TW"
+      ],
+      "representativeCultures": [
+        "en",
+        "de",
+        "ta",
+        "he_IL"
+      ],
+      "timezones": [
+        "UTC",
+        "Europe/Bucharest"
+      ],
+      "cases": [
+        "native API configured/request/user locale selection and fallback",
+        "native localization-strings/config/error payloads and localized copy names",
+        "calendar feed/date fields and existing DST/date-boundary cases",
+        "currency/number/plural/date values observable in native API"
+      ],
+      "excludes": [
+        "browser rendering",
+        "React locale resources",
+        "requiring v2-only localization endpoint equivalence"
+      ]
+    },
+    "PRINT-SINK": {
+      "cases": [
+        "printer flags disabled",
+        "enabled with configured owned HTTP webhook",
+        "thermal network TCP capture sink",
+        "misconfigured/unreachable/error transport",
+        "printHeader/quantity/label-mode/parameter classes"
+      ],
+      "physicalDeviceRequired": false
+    }
+  },
+  "commands": {
+    "python-static": {
+      "cwd": "backend",
+      "shellCommands": [
+        "uv run ruff check --config pyproject.toml . ../scripts",
+        "uv run ruff format --config pyproject.toml --check . ../scripts",
+        "uv run ty check . ../scripts --error-on-warning"
+      ]
+    },
+    "python-normal": {
+      "cwd": "backend",
+      "environment": {
+        "GROCY_USE_NATIVE_PHP": "false"
+      },
+      "argv": [
+        "uv",
+        "run",
+        "pytest"
+      ],
+      "selection": "full; no additional case selector",
+      "ownership": "parent certification run; do not start a duplicate"
+    },
+    "reference-full": {
+      "cwd": ".",
+      "environment": {
+        "GROCY_USE_NATIVE_PHP": "false"
+      },
+      "argvTemplate": [
+        "uv",
+        "run",
+        "--project",
+        "backend",
+        "python",
+        "scripts/check-reference.py",
+        "--timezone",
+        "{timezone}"
+      ],
+      "parameters": {
+        "timezone": [
+          "UTC",
+          "Europe/Bucharest"
+        ]
+      },
+      "selection": "full differential; PYTEST_ADDOPTS must contain no case selector",
+      "requirements": [
+        "checksum-pinned original Grocy4.5.0 ZIP",
+        "required PHP verification modules",
+        "Python-visible libgd and libmagic",
+        "real LDAP/TLS prerequisites where selected"
+      ],
+      "ownership": "parent certification runs; do not start duplicates"
+    },
+    "reference-disabled": {
+      "cwd": ".",
+      "environment": {
+        "GROCY_USE_NATIVE_PHP": "false",
+        "PYTEST_ADDOPTS": "-k disabled_feature_flags"
+      },
+      "argvTemplate": [
+        "uv",
+        "run",
+        "--project",
+        "backend",
+        "python",
+        "scripts/check-reference.py",
+        "--timezone",
+        "{timezone}",
+        "--feature-flag",
+        "TASKS=false",
+        "--feature-flag",
+        "CHORES=false",
+        "--feature-flag",
+        "BATTERIES=false",
+        "--feature-flag",
+        "RECIPES_MEALPLAN=false",
+        "--feature-flag",
+        "STOCK_BEST_BEFORE_DATE_TRACKING=false",
+        "--feature-flag",
+        "STOCK_PRODUCT_FREEZING=false",
+        "--feature-flag",
+        "STOCK_PRICE_TRACKING=off"
+      ],
+      "parameters": {
+        "timezone": [
+          "UTC",
+          "Europe/Bucharest"
+        ]
+      },
+      "selection": "existing disabled_feature_flags profile only; record deselected counts separately"
+    },
+    "backend-image": {
+      "cwd": ".",
+      "argvTemplate": [
+        "docker",
+        "build",
+        "--file",
+        "backend/Dockerfile",
+        "--tag",
+        "{owned_api_tag}",
+        "backend"
+      ],
+      "requirements": [
+        "fresh owned disposable data only",
+        "record exact base digests/build inputs/image ID/entrypoint/runtime versions",
+        "rootless equivalent OCI engine may be used with explicit provenance"
+      ],
+      "execution": "manual API-image protocol; no frontend image required"
+    },
+    "api-http-profile": {
+      "execution": "existing backend HTTP/front-controller cases and API-only runtime probes",
+      "requirements": [
+        "root and two literal configured mount profiles",
+        "record actual URL/method/status/headers/body and expected database/file effects",
+        "no React or SPA assertions"
+      ]
+    },
+    "api-print-sink": {
+      "execution": "existing print/label integration and differential cases with owned local HTTP/TCP capture sink",
+      "requirements": [
+        "record exact sent payload bytes and response/error semantics",
+        "no real printer or external recipient"
+      ]
+    },
+    "offline-reconcile": {
+      "execution": "read frozen source/run/image/evidence manifests; no runtime required",
+      "requirements": [
+        "do not promote historical hashes to changed candidate",
+        "do not sum overlapping subsets as unique coverage",
+        "record unavailable evidence and declared exclusions"
+      ]
+    }
+  },
+  "coveragePolicy": {
+    "finiteClasses": true,
+    "cartesianProductRequired": false,
+    "executeFullSuiteProfilesOnce": true,
+    "reuseSuiteEvidenceForDomainGates": true,
+    "expandOnlyForConcreteReproducibleApiContractDiscrepancy": true,
+    "sourceDefects": "Preserve observed pinned native defects/partial writes unless an explicit documented API boundary says otherwise.",
+    "runtimeExclusions": [
+      "PHP interpreter warning text/version internals and arbitrary PHP execution are reference-runtime properties, not Python product dependencies",
+      "PHP template-cache first-request behavior and browser rendering are outside API scope",
+      "Python startup config rejection versus PHP per-request configuration error is a declared boundary"
+    ],
+    "noSilentWaivers": true
+  },
+  "statusDefinitions": {
+    "implementationStatus": {
+      "implemented": "API implementation and existing owners are present; no assertion of complete verification",
+      "defined": "release/process gate is specified",
+      "not_implemented": "required API implementation missing"
+    },
+    "verificationStatus": {
+      "verified_scoped": "terminal evidence passes the stated API scope and exact relevant inputs; never an automatic whole-product pass",
+      "implemented_unverified": "implemented/defined but current certification is pending, partial, historical or unreconciled",
+      "unavailable": "required API dependency/evidence cannot be obtained; remains a blocker, not a waiver"
+    }
+  },
+  "currentCertification": {
+    "state": "verified_composed",
+    "durableResultsRecord": "contracts/api-certification-results.json",
+    "method": "Unchanged-production baseline full suites plus independently executed changed-owner state25/TZ and native-catalog36/TZ profiles, final live selected normal/static/collection checks.",
+    "fullFinal2559RunClaimed": false,
+    "finalCollected": 2559,
+    "fullBaseline": {
+      "normal": {
+        "passed": 1382,
+        "skipped": 1137,
+        "warnings": 4,
+        "seconds": 1463.99,
+        "collection": 2519,
+        "skipReasons": {
+          "reference_not_configured": 1079,
+          "php_template_cache_only": 6,
+          "php_interpreter_output_only": 49,
+          "native_php_adapter_only_integration": 3
+        },
+        "evidenceRefs": [
+          "EVID-059",
+          "EVID-056"
+        ]
+      },
+      "referenceUTC": {
+        "passed": 2005,
+        "skipped": 56,
+        "warnings": 2,
+        "seconds": 1255.04,
+        "collection": 2061,
+        "skipReasons": {
+          "separate_disabled_feature_profile": 1,
+          "php_template_cache_only": 6,
+          "php_interpreter_output_only": 49
+        },
+        "evidenceRefs": [
+          "EVID-060",
+          "EVID-061"
+        ]
+      },
+      "referenceBucharest": {
+        "passed": 2005,
+        "skipped": 56,
+        "warnings": 2,
+        "seconds": 1252.01,
+        "collection": 2061,
+        "skipReasons": {
+          "separate_disabled_feature_profile": 1,
+          "php_template_cache_only": 6,
+          "php_interpreter_output_only": 49
+        },
+        "evidenceRefs": [
+          "EVID-062",
+          "EVID-063"
+        ]
+      }
+    },
+    "disabledProfiles": {
+      "UTC": {
+        "passed": 2,
+        "deselected": 2059,
+        "skipped": 0,
+        "warnings": 2,
+        "seconds": 2.02,
+        "evidenceRefs": [
+          "EVID-064",
+          "EVID-065"
+        ]
+      },
+      "Europe/Bucharest": {
+        "passed": 2,
+        "deselected": 2059,
+        "skipped": 0,
+        "warnings": 2,
+        "seconds": 2.09,
+        "evidenceRefs": [
+          "EVID-066",
+          "EVID-067"
+        ]
+      }
+    },
+    "changedOwnerProfiles": {
+      "state": {
+        "passedPerTimezone": 25,
+        "deselectedPerTimezone": 2044,
+        "skippedPerTimezone": 0,
+        "timezones": [
+          "UTC",
+          "Europe/Bucharest"
+        ],
+        "evidenceRefs": [
+          "EVID-069",
+          "EVID-070"
+        ]
+      },
+      "nativeCatalog": {
+        "passedPerTimezone": 36,
+        "deselectedPerTimezone": 2065,
+        "skippedPerTimezone": 0,
+        "catalogs": 33,
+        "timezones": [
+          "UTC",
+          "Europe/Bucharest"
+        ],
+        "evidenceRefs": [
+          "EVID-071",
+          "EVID-072",
+          "EVID-073"
+        ]
+      }
+    },
+    "finalSelectedNormal": {
+      "passed": 10,
+      "skipped": 51,
+      "deselected": 2040,
+      "warnings": 2,
+      "seconds": 8.64,
+      "skippedClasses": {
+        "barcode_reference_only": 5,
+        "locale_reference_only": 36,
+        "bulk_reference_only": 10
+      },
+      "scope": "Selected changed-owner profile only; all51 skips covered by isolated actualPHP profiles.",
+      "evidenceRefs": [
+        "EVID-077"
+      ]
+    },
+    "finalChecks": {
+      "static": "Ruff/format/Ty terminal clean, parent reports exit0",
+      "collection": "2559 collected; collection is not execution",
+      "evidenceRefs": [
+        "EVID-078",
+        "EVID-079",
+        "EVID-080",
+        "EVID-076",
+        "EVID-058",
+        "EVID-057"
+      ]
+    },
+    "warningScope": "Normal:two ldap3/pyasn1 deprecations,passlib argon2 version deprecation,SQLAlchemy expression-index reflection warning. Reference/scoped:two ldap3/pyasn1 deprecations. Actual logs retained.",
+    "exclusionScope": "Reference-only/adapter/PHP-runtime skips are declared and not counted as passes. No nativeAPI skip is silently waived. UI/hardware and v2-only feature equivalence remain excluded.",
+    "remaining": [],
+    "independentAudit": {
+      "checks": 40,
+      "blockers": 0,
+      "evidenceRefs": [
+        "EVID-089",
+        "EVID-090",
+        "EVID-091"
+      ],
+      "status": "PASS"
+    }
+  },
+  "historicalEvidenceRefs": [
+    "EVID-008",
+    "EVID-009",
+    "EVID-010",
+    "EVID-011",
+    "EVID-012",
+    "EVID-013",
+    "EVID-014"
+  ],
+  "evidenceRegistry": {
+    "EVID-001": {
+      "path": "contracts/baseline.yaml",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "e19e79abc395a72595de4ccb72b6c75a0ad865575486748a72a09325b5c8b4a1",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-002": {
+      "path": "contracts/compatibility-matrix.yaml",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "8a10e469775909e0e1d6df1c154f030585a403b11e5fee326c8dfa8b268920d3",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-003": {
+      "path": "contracts/grocy.openapi.json",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "7d2480054d2bf98c8719d634b310b3e07a7c29a0b2a70045e9f34860e7362e64",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-004": {
+      "path": ".github/workflows/ci.yml",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "54f5b699d3aaf14d88aaafc00be8e2fa874acf8b2c59eb314456ef1acb2de855",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-005": {
+      "path": "scripts/check-reference.py",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "29221fd5fa92d1369f20780d2d83b8070055977ea21e808de62375288e480eea",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-006": {
+      "path": "backend/src/grocy/core/config.py",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "1576502f608284c1598c221283b7b0db8a6d44536cfeb6119aece9b070b4f0a1",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-007": {
+      "path": "backend/Dockerfile",
+      "kind": "source",
+      "scope": "implementation/runner inventory only; source existence is not a passing run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "4040923692f1ecd941950d6620bf9ed3b915506f8ab2ae3bba6bc693a546fe35",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-008": {
+      "path": "/tmp/grocy-parity-backend-full-gd-final-complete.log",
+      "kind": "historical_run",
+      "scope": "historical full normal run; code snapshot predates later backend changes",
+      "availableAtInventory": true,
+      "sha256AtInventory": "6b627dc80b7af93f3da94ff02667d8821a569b9286017da1b2192093a861ff52",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-009": {
+      "path": "/tmp/grocy-reference-production-full-utc-tests.log",
+      "kind": "historical_run",
+      "scope": "historical full original-reference UTC run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "e7e7ea9c2322309a5b6d80fd4ed3459b0e9e4522bf4385c3fb2c9d5fe37bc7fa",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-010": {
+      "path": "/tmp/grocy-reference-production-full-bucharest-tests.log",
+      "kind": "historical_run",
+      "scope": "historical full original-reference Bucharest run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "fb628096eddf347be5c6e33b6b4faecee5adb7f2e23eb97d459d69c2b3bd3edc",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-011": {
+      "path": "/tmp/grocy-reference-production-disabled-utc-tests.log",
+      "kind": "historical_run",
+      "scope": "historical selected disabled UTC run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "e4d1b607ce4411c1a01e9e0d4294d7eca73220ffe8c76b970ddb0133632b837b",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-012": {
+      "path": "/tmp/grocy-reference-production-disabled-bucharest-tests.log",
+      "kind": "historical_run",
+      "scope": "historical selected disabled Bucharest run",
+      "availableAtInventory": true,
+      "sha256AtInventory": "2563a22a8b5ff07aac1bac0ee5c80233232afce1c57e071dc6a2e2d477d8e4e3",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-013": {
+      "path": "/tmp/native-task-delete-qa-runtime-result.json",
+      "kind": "historical_run",
+      "scope": "backend image b69 reused by exact hash; ignore all frontend evidence for API gates",
+      "availableAtInventory": true,
+      "sha256AtInventory": "4c44eaa61bd5b11adda31a06cc51f2a883e6d861c565e53d4ddf7aa8985f2d4d",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-014": {
+      "path": "/tmp/grocy-release-image-matrix-report.md",
+      "kind": "historical_run",
+      "scope": "older backend2ce root/prefix/literal API-image/resource evidence; frontend/browser portions excluded",
+      "availableAtInventory": true,
+      "sha256AtInventory": "f732696a113eb7733334cb63a2d2d242d136b1b5d3e41fd8a615cf2455a1985c",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-015": {
+      "path": "backend/pyproject.toml",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "e231f22f42f315ea35c9c043ad09baa68010839450f31a1d9db463a6622c27f8",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-016": {
+      "path": "backend/tests/conftest.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "1196955105d5b675cfc52df78b83f275104200eb201ee31380d921ea477bc261",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-017": {
+      "path": "backend/tests/integration/test_openapi_coverage.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "85707c5dce35a5ebb15b4e6a7079fc75a086e31354e60c4e415501410c25a4cb",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-018": {
+      "path": "backend/tests/integration/test_contract_behavior.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "508e54020e16a9434abcfb051576a31a84cf6e728c1d02f43ec8c964f8cf052f",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-019": {
+      "path": "backend/src/grocy/domains/catalog/objects.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "3f534a9e265f8df2e3b1f3bde13b0fe953afcfab93a58591e95f5c569fef5670",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-020": {
+      "path": "backend/tests/differential/test_reference.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "85eff91bc75b982a117ee86502ca0cfcbfd85828a23b3abe9fcb83a4b23f1ed1",
+      "certifiesCurrentCandidate": false,
+      "sha256AtCertification": "1f9a3c4f5cdffc00862263da7913070baa60907405997e38f4403781ec6c45c5",
+      "scopeAtCertification": "Current applied assertion owner; historical inventory hash retained separately and actual scoped execution/AST composition attached."
+    },
+    "EVID-021": {
+      "path": "backend/tests/differential/test_workflows.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "0a0deb67da0be9eab5bdf1fb886fcbfa4b75b91c243821943928e418a0381369",
+      "certifiesCurrentCandidate": false,
+      "sha256AtCertification": "89aabad5be7db21de33438f6a1b695c0fb23f01fc82faeead893374488c8af8b",
+      "scopeAtCertification": "Current applied assertion owner; historical inventory hash retained separately and actual scoped execution/AST composition attached."
+    },
+    "EVID-022": {
+      "path": "backend/tests/integration/test_mode_files.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "90b20ec9cfc51fda76ff3515035af8afd8abd3a257f0cc52bf9e4196e3c35dcc",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-023": {
+      "path": "backend/src/grocy/core/auth.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "f3e90c53a4ed425229cc9250a580acf4e81950f52215e249385f6672aed28b10",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-024": {
+      "path": "backend/tests/integration/test_access_and_files.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "36e0f48286a46d48be0e2505304806cfe2626632640b23b8b7df43e4bd826685",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-025": {
+      "path": "backend/tests/integration/test_permission_upgrade.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "6dd8a5724ee633e653cfe92071a228e3d4e21b6079544800f4cf26ce5f98546f",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-026": {
+      "path": "backend/tests/integration/test_ldap_tls.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "ce272ed742e5f0ec79250a6e9ffdeed8c4c805469cc818e56cdebbdd3a6fbff0",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-027": {
+      "path": "backend/src/grocy/core/legacy_http.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "1578cfa81f523e6e38e5c7957d2300cff968844ba788b7872f6aac33bc317463",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-028": {
+      "path": "backend/tests/integration/test_front_controller_routes.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "9e2f5cc38c067ffae11082673fb53f0a1be9d9f1a574549392f86ab682373c15",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-029": {
+      "path": "backend/tests/integration/test_input_purification.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "c137b93b7df84ba6db4ac410784b8cfd07f7d0e9a389193d023e7a659644fb93",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-030": {
+      "path": "backend/tests/integration/test_native_storage_types.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "bbf7eee8b078d32e4313efc399775baff079894d9d6e60128f42c542b9bbcc4b",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-031": {
+      "path": "backend/tests/integration/test_stock.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "c141f5213d205abce9f76cfd8611de74cb672a0d98482570107d88b5b28b2121",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-032": {
+      "path": "backend/tests/integration/test_resolved_conversions.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "94475b8fb4c5494a9af91ac381796ce8614b40c14051db6e812e1f2f3fde047f",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-033": {
+      "path": "backend/tests/integration/test_stock_entries.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "352b0983197625c327dd01140277b921b4ebaaa84d7b53fdf4f388a0985d5c8c",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-034": {
+      "path": "backend/tests/integration/test_stock_journal.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "a21ba299abe832669254c5ab4d9e28e2b6f601b47574bcaa83cdd12bbddfabf7",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-035": {
+      "path": "backend/tests/integration/test_recipe_quantities.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "f5583838e726dce555c9a82a77b30da593fff571bb49fb6e2cc28ca5d07befbd",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-036": {
+      "path": "backend/tests/integration/test_meals_and_catalog.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "440ac61b9bc07ce781c2bd4f709ee56939be234b8c2b0104296db17c4245b84c",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-037": {
+      "path": "backend/tests/integration/test_shopping_lists.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "b126f20eecd4b04457b5e02653f74a9a61b506dd3bbac5db36c1e0242f5ad74c",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-038": {
+      "path": "backend/tests/integration/test_shopping_purchase.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "e1c1ff2a24ff58de59b3ac524e13a878d2be4a26410888f06200da3bb9e3f814",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-039": {
+      "path": "backend/tests/integration/test_mealplan_calendar.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "aaf7426604d5389309ae2f69d470889363d7cf4ee4af49301f0671225d0604c7",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-040": {
+      "path": "backend/tests/integration/test_household_schedule.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "ba1ba2f2886493cf6ec3873317931744e7f16581f126bf07b97f2072f7e9ee2f",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-041": {
+      "path": "backend/tests/integration/test_household_journal.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "603c55092b69e728d16183611013a8729524f7e795c278158643b0aa9ea4041a",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-042": {
+      "path": "backend/tests/integration/test_household_tracking_users.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "1ea6f9f1f160e6f084733d953ab8d804fb044019a9ec3b7436a8f1bed4f70562",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-043": {
+      "path": "backend/tests/integration/test_task_overview.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "d2e209634f7e40ea1b327ca0c4c79baee9be962e68e253ede2479d2d7045d765",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-044": {
+      "path": "backend/tests/integration/test_user_deletion.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "07b085715f3514fb33b877c81fa8251121c37b110e611a1fc76aee867eade66a",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-045": {
+      "path": "backend/tests/integration/test_userfield_identity.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "5c5fea4eb71ad8ec41ae7896866a1644dbe62ffea9ea57a4d2e7109d3200d678",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-046": {
+      "path": "backend/tests/integration/test_custom_data_context.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "3394588315dc52675375cf2efcd57eed3fee4bf0f853850ab1c98c3ffaf72f12",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-047": {
+      "path": "backend/tests/integration/test_native_file_streams.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "a0da84e9d2f5d5744d20d5632809237cb9bf8701cbe729a315d04ad7995d3b3e",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-048": {
+      "path": "backend/src/grocy/api/compatibility/print.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "566be269e9c0012502356b7ce2f9048872df6061da355c53e88bbaac18dbeac7",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-049": {
+      "path": "backend/tests/integration/test_paper_labels.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "0bc0013947964ebf9a3fcbd75fbd05ef4fdad21282e16c5839cdb4a5628b64b3",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-050": {
+      "path": "backend/tests/integration/test_grocycodes.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "bf4ac2a43428e7f3acb414f353b3cfed11652b1cd2406cc198eaf402b3866ea3",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-051": {
+      "path": "backend/tests/integration/test_shopping_paper.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "5618699e7dff7daac9e34979cd9090dc2e5ba67e1b7a8e2c9e00aef60cea8075",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-052": {
+      "path": "backend/tests/unit/test_label_errors.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "4ecbfc9bec2acabf6c1fe30cf56ef21f951c7dc658e5a4cd60f748fe92ccc782",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-053": {
+      "path": "backend/tests/integration/test_python_compatibility.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "10ad86bd286e865841db45d6f96d9a4d608e7cdaadc9a9b786abe4be223a8a8d",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-054": {
+      "path": "backend/tests/integration/test_calendar_agenda.py",
+      "kind": "source",
+      "scope": "existing API implementation/test owner; execution is covered by normal/reference certification",
+      "availableAtInventory": true,
+      "sha256AtInventory": "76e8eb54b9d77d181ce325e5b393aee16533d9c2d612adeaa536e0dbe4ca951a",
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-055": {
+      "path": "contracts/api-release-gates.json",
+      "kind": "source",
+      "scope": "this finite gate definition; record its final hash in external certification, avoiding self-reference",
+      "availableAtInventory": true,
+      "sha256AtInventory": null,
+      "certifiesCurrentCandidate": false
+    },
+    "EVID-056": {
+      "path": "/tmp/api-parity-candidate-source.json",
+      "kind": "candidate_manifest",
+      "scope": "Original3725-input baseline executed by complete normal/reference/disabled runs.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "33113344e4b990bff7ceae25158c15f01a980886ab2e02b456057af1545575a5",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-057": {
+      "path": "/tmp/api-parity-final-candidate-source.json",
+      "kind": "candidate_manifest",
+      "scope": "Current3725-input manifest; only the two independently executed assertion owners changed.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "55c6df08c5a6593ba732d786288a9046c721282d1a4fd1db7471ba3d05e943f1",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-058": {
+      "path": "/tmp/api-release-gates-source-reconciliation.json",
+      "kind": "source_reconciliation",
+      "scope": "All3725 final hashes match;3723 baseline inputs unchanged and no runtime production change.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "042ef2c1153bb4a659eeb200dae269667636267cecc1cbd5330f921713784a1e",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-059": {
+      "path": "/tmp/api-parity-python-full-admitted.log",
+      "kind": "terminal_run",
+      "scope": "Full original-candidate normal:1382passed/1137skipped/4warnings,1463.99s; not a final2559-case single run.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "148da8739644852ca23bbd88863993708bf30ec79a8813d936d565941aec71d8",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-060": {
+      "path": "/tmp/api-parity-reference-utc-result.json",
+      "kind": "terminal_run",
+      "scope": "Full original-candidate actualPHP UTC:oktrue/exit0, exact runtime/INI/selection.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "230473ee9522131177108ce0ada40410d916331e256bce3dd67cab63e5d6824b",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-061": {
+      "path": "/tmp/api-parity-reference-utc-tests.log",
+      "kind": "terminal_run",
+      "scope": "Full original-candidate UTC:2005passed/56skipped/2warnings,1255.04s.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "13726f27f02cc2974797c7d5645a21389425c59441888a634bf6cd2103ae3c15",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-062": {
+      "path": "/tmp/api-parity-reference-bucharest-result.json",
+      "kind": "terminal_run",
+      "scope": "Full original-candidate actualPHP Bucharest:oktrue/exit0, exact runtime/INI/selection.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "21b2c90789a87eb7f8a96b47082311b24ad978973492e4b5f45752ebeb6eb826",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-063": {
+      "path": "/tmp/api-parity-reference-bucharest-tests.log",
+      "kind": "terminal_run",
+      "scope": "Full original-candidate Bucharest:2005passed/56skipped/2warnings,1252.01s.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "f21fd7340afec77da819716925a094f87ad5664a64785d2c47bd19bdc67be22b",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-064": {
+      "path": "/tmp/api-parity-disabled-utc-result.json",
+      "kind": "terminal_run",
+      "scope": "Selected existing seven-flag disabled UTC profile:exit0.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "246f1a7b4684a21fce4a573b30249627cb927ed8ea4b392437871f1922e335a3",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-065": {
+      "path": "/tmp/api-parity-disabled-utc-tests.log",
+      "kind": "terminal_run",
+      "scope": "Selected UTC2passed/2059deselected/0skipped/2warnings,2.02s.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "5a600c30b1ccb78c599d81486e8c3ae84b0e66c69ca1e800d9520768f94e9d29",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-066": {
+      "path": "/tmp/api-parity-disabled-bucharest-result.json",
+      "kind": "terminal_run",
+      "scope": "Selected existing seven-flag disabled Bucharest profile:exit0.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "833bd335c8584a75537c9f249b5e114f124b0eff7faff4fb8b5aeca62564f49c",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-067": {
+      "path": "/tmp/api-parity-disabled-bucharest-tests.log",
+      "kind": "terminal_run",
+      "scope": "Selected Bucharest2passed/2059deselected/0skipped/2warnings,2.09s.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "7362b7d4f7484550502f85940e317570666221670e531d88f0964861a9965d37",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-068": {
+      "path": "/tmp/api-parity-reference-admission.json",
+      "kind": "runtime_admission",
+      "scope": "Actual checksum-pinned ZIP, Python3.13.18/GD2.3.3/PHP8.4.26 verification runtime.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "7a15eb559e66cf144e301f5380da121c17f78ed9bb3b1ec4769f1aa2b7675fe1",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-069": {
+      "path": "/tmp/python-api-assertion-draft/scoped-results.json",
+      "kind": "scoped_run",
+      "scope": "Changed-owner state assertions:25passed/TZ,0skipped; isolated runtime source origin and exact commands/runtime.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "c634c6c316a01a55cf795614045d540bc2ff1e7f84883812c885902175bcb872",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-070": {
+      "path": "/tmp/python-api-assertion-draft/final-handoff.json",
+      "kind": "test_composition",
+      "scope": "State patch hashes/AST equality and static exits; no implementation change or live full-run mutation.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "3630b007d1e487cd60ce0d02176ed7cf034d35f2e6552e2210353ea343802fce",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-071": {
+      "path": "/tmp/python-api-assertion-draft/locale-results.json",
+      "kind": "scoped_run",
+      "scope": "Native localization/config/copy owner36passed/TZ,0skipped; all33 native catalogs.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "1145e3c430b08c26b593f6606c990fbd38f816a38e20c1e6e2b2c049917bf5e6",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-072": {
+      "path": "/tmp/python-api-assertion-draft/locale-handoff.json",
+      "kind": "test_composition",
+      "scope": "Final owner1f9a3c4f...,33 IDs,36/TZ selections, no browser/v2 proof.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "3e6fc2140c5867e75e8c4c88a727b3d0364730c8b865ad7068292360cb1c5237",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-073": {
+      "path": "/tmp/python-api-assertion-draft/locale-pinned-catalogs.json",
+      "kind": "pinned_source_data",
+      "scope": "Actual33 native catalogs used by scoped originalPHP/config/strings/copy assertions.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "ba821649a84a2caea92b8ba3489ad468b49092d15d4ce936d559de4f8a73924a",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-074": {
+      "path": "/tmp/python-api-assertion-draft/scoped-cleanup.json",
+      "kind": "cleanup",
+      "scope": "Both scoped25/TZ runners gone, no ownedPHP servers.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "633772f53b3f9fdb81fe46d8e63dee238ff07692ebc51b37dcfb2aaaa7da48cb",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-075": {
+      "path": "/tmp/python-api-assertion-draft/locale-cleanup.json",
+      "kind": "cleanup",
+      "scope": "Both scoped36/TZ runners gone, no ownedPHP servers.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "4ffba5c5662e5e9dcac94c0a952b00147a12fb6c0292c88cf7dc2900998414f5",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-076": {
+      "path": "/tmp/api-parity-final-collection.log",
+      "kind": "collection_only",
+      "scope": "Final collection2559, not a single full2559 execution.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "e3e4746bb41b849eed0659ce30a011c0acaceb155e7e195353c0d216d7d883c8",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-077": {
+      "path": "/tmp/api-parity-final-selected.log",
+      "kind": "scoped_run",
+      "scope": "Final live changed-owner normal selection10passed/51reference-only skipped/2040deselected/2warnings,8.64s.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "e7b7c6c0df36ee9c16ddc8ffb520922367e23eaa1da18d5ff9cfbb25e898278c",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-078": {
+      "path": "/tmp/api-parity-final-ruff.log",
+      "kind": "static_run",
+      "scope": "Final live backend/scripts Ruff clean.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-079": {
+      "path": "/tmp/api-parity-final-format.log",
+      "kind": "static_run",
+      "scope": "Final live backend/scripts formatting clean.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "aed20c5cdfe9f925fe3d0e35cc2b37455ed39da2dab16a5441a0d6530c2e51af",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-080": {
+      "path": "/tmp/api-parity-final-typecheck.log",
+      "kind": "static_run",
+      "scope": "Final live backend/scripts Ty clean.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-081": {
+      "path": "/tmp/api-parity-ledger-review.json",
+      "kind": "relevant_input_reconciliation",
+      "scope": "Current candidate b69runtime/COPY identity and older2ce native-path equivalence; pre-status-update inventory review.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "718e80aa16a75144492e18e86bfbe234805699fdae12413677ed2ab18f9b503c",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-082": {
+      "path": "/tmp/api-parity-ledger-review.md",
+      "kind": "relevant_input_reconciliation",
+      "scope": "Explicit b69direct-prefix versus older2ce reused-root/literal boundary; no new smoke needed by declared policy.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "a9dbe263c57d848bd6cc79891cda3f7760dddaf53bbc697a6a1b7f5460da31eb",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-083": {
+      "path": "/tmp/native-shell-auth-qa-runtime-result.json",
+      "kind": "actual_api_image",
+      "scope": "Actual b69Dockerfile build/Python3.13.18/noPHP/GD/libmagic/API runtime. All frontend data in artifact excluded.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "f3a795634409f385ab1aba79cef71ea18bf8e6b8a4fee9d9051c611e505e9b1a",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-084": {
+      "path": "/tmp/grocy-release-image-contexts-native-shell-auth-qa-before.json",
+      "kind": "build_context",
+      "scope": "b69before backend COPY context31f389ec...; candidate relevant inputs identical.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "435b9c763706aac60a2996aaa4f469426e7e99135243907112fd053301f97d6e",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-085": {
+      "path": "/tmp/grocy-release-image-contexts-native-shell-auth-qa-after.json",
+      "kind": "build_context",
+      "scope": "b69after same backend COPY context; no runtime source changes.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "5d36be4ae3498592e4a9a6f2e2fe156171b79b99e29931ffd7dfe31de480e689",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-086": {
+      "path": "/tmp/grocy-release-image-contexts-before.json",
+      "kind": "historical_api_context",
+      "scope": "Older2ce differs only in two v2-only inputs; native core/auth/files/printer inputs unchanged.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "fdb23a29aa4ba54e3da6c65fbad8ce6995d93136c3b8f5b5a04dffd35137a621",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-087": {
+      "path": "/tmp/grocy-release-image-matrix-root-close-result.json",
+      "kind": "reused_api_path_runtime",
+      "scope": "Root API/path/state proof on2ce reused by relevant native input equality; frontend/browser excluded.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "b3630a263099091818ff692be16228083a4bb0b1264a7d0e3b61eee3d0d67dde",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-088": {
+      "path": "/tmp/grocy-release-image-matrix-literal-close-result.json",
+      "kind": "reused_api_path_runtime",
+      "scope": "Literal-prefix API/path/state proof on2ce reused; not direct b69root/literal execution.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "0c82dd5cdfb8314e081755741a52c82fbcf221736528a01459177b0855c00ad5",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-089": {
+      "path": "/tmp/api-parity-final-independent-audit.json",
+      "kind": "independent_audit",
+      "scope": "Forty offline checks PASS; zero blockers. Preserves reviewed preclose ledger hashes and authorizes status-only GATE021 closure.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "447957f8c0c8bfd5756aef2720fe7e84f193d7d39ad28b02cbdc78ebbf72fde0",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-090": {
+      "path": "/tmp/api-parity-final-independent-audit.md",
+      "kind": "independent_audit_summary",
+      "scope": "Human-readable final finite Python API scope and source/evidence/composition audit.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "b46141f70d1e511fd67b0ece670a03f5d4dde30667c2cd246558c9271061d693",
+      "certifiesCurrentCandidate": true
+    },
+    "EVID-091": {
+      "path": "/tmp/api-parity-final-process-cleanup.json",
+      "kind": "owned_cleanup",
+      "scope": "Current exact reference-runner/PHP-server signatures absent; complements terminal0 and runner finally. Not historical per-PID/port measurement.",
+      "availableAtCertification": true,
+      "sha256AtCertification": "84fde497e5146b69e1236a8da57e715b4a0a14b497907056ec8d8ede86221c50",
+      "certifiesCurrentCandidate": true
+    }
+  },
+  "gates": [
+    {
+      "id": "GATE-001",
+      "title": "Pinned API baseline",
+      "mandatory": true,
+      "implementationStatus": "defined",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Verify exact Grocy4.5.0 release/commit/OpenAPI and checked original ZIP before comparison.",
+      "representativeScenarios": [
+        "release v4.5.0",
+        "commit21aa5eab218c8466f90729154cb293fffbe10c21",
+        "OpenAPI SHA7d2480054d2bf98c8719d634b310b3e07a7c29a0b2a70045e9f34860e7362e64",
+        "release ZIP SHAf8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95"
+      ],
+      "profiles": [
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "contracts/baseline.yaml",
+        "scripts/check-reference.py"
+      ],
+      "evidenceRefs": [
+        "EVID-001",
+        "EVID-005",
+        "EVID-068",
+        "EVID-060",
+        "EVID-062"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Verify exact Grocy4.5.0 release/commit/OpenAPI and checked original ZIP before comparison.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-002",
+      "title": "Python static checks",
+      "mandatory": true,
+      "implementationStatus": "defined",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "All backend and scripts lint/format/types pass without new suppressions.",
+      "representativeScenarios": [
+        "Ruff check",
+        "Ruff format --check",
+        "Ty --error-on-warning"
+      ],
+      "profiles": [
+        "API-DEFAULT"
+      ],
+      "commandRefs": [
+        "python-static"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "backend/pyproject.toml",
+        ".github/workflows/ci.yml"
+      ],
+      "evidenceRefs": [
+        "EVID-015",
+        "EVID-004",
+        "EVID-078",
+        "EVID-079",
+        "EVID-080",
+        "EVID-070",
+        "EVID-072"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "All backend and scripts lint/format/types pass without new suppressions.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-003",
+      "title": "Full normal Python suite",
+      "mandatory": true,
+      "implementationStatus": "defined",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Full normal suite passes with native PHP disabled; reference-only skips are reported, never counted as passes.",
+      "representativeScenarios": [
+        "exact collection and results",
+        "actual LDAP/TLS prerequisites",
+        "no external test-server contamination"
+      ],
+      "profiles": [
+        "API-DEFAULT"
+      ],
+      "commandRefs": [
+        "python-normal"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "backend/tests/conftest.py",
+        ".github/workflows/ci.yml"
+      ],
+      "evidenceRefs": [
+        "EVID-016",
+        "EVID-004",
+        "EVID-059",
+        "EVID-077",
+        "EVID-058",
+        "EVID-069",
+        "EVID-071"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Full normal suite passes with native PHP disabled; reference-only skips are reported, never counted as passes.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-004",
+      "title": "86 native API operations",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Every pinned API operation is mounted with its native method/path and covered behavioral contracts; registration alone is insufficient.",
+      "representativeScenarios": [
+        "method/path inventory",
+        "response shape/status/header",
+        "representative mutation state and errors"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_openapi_coverage.py",
+        "backend/tests/integration/test_contract_behavior.py"
+      ],
+      "evidenceRefs": [
+        "EVID-017",
+        "EVID-018",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Every pinned API operation is mounted with its native method/path and covered behavioral contracts; registration alone is insufficient.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-005",
+      "title": "33 exposed entities",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "All33 listable exposed entities and permitted generic mutations follow source storage/error rules.",
+      "representativeScenarios": [
+        "list/read",
+        "allowed create/update/delete versus read-only errors",
+        "dynamic user entities",
+        "generic api_keys denial"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/src/grocy/domains/catalog/objects.py",
+        "backend/tests/differential/test_reference.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-019",
+        "EVID-020",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "All33 listable exposed entities and permitted generic mutations follow source storage/error rules.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-006",
+      "title": "Full PHP differential UTC",
+      "mandatory": true,
+      "implementationStatus": "defined",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Unselected full API comparison against checksum-pinned actual PHP passes in UTC.",
+      "representativeScenarios": [
+        "exact response and persisted-state comparisons",
+        "actual GD byte comparisons",
+        "explicit interpreter/cache-only exclusions"
+      ],
+      "profiles": [
+        "REF-UTC"
+      ],
+      "commandRefs": [
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "scripts/check-reference.py",
+        "backend/tests/differential/test_reference.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-005",
+        "EVID-020",
+        "EVID-021",
+        "EVID-060",
+        "EVID-061",
+        "EVID-058",
+        "EVID-069",
+        "EVID-071"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Unselected full API comparison against checksum-pinned actual PHP passes in UTC.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-007",
+      "title": "Full PHP differential Bucharest",
+      "mandatory": true,
+      "implementationStatus": "defined",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Same full comparison passes in Europe/Bucharest without replacing server-local date behavior by UTC assumptions.",
+      "representativeScenarios": [
+        "full original runtime",
+        "timezone-sensitive dates/state",
+        "same declared exclusions"
+      ],
+      "profiles": [
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "scripts/check-reference.py",
+        "backend/tests/differential/test_reference.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-005",
+        "EVID-020",
+        "EVID-021",
+        "EVID-062",
+        "EVID-063",
+        "EVID-058",
+        "EVID-069",
+        "EVID-071"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Same full comparison passes in Europe/Bucharest without replacing server-local date behavior by UTC assumptions.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-008",
+      "title": "Existing disabled-feature differential",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Existing seven-flag disabled profile passes separately in both timezones.",
+      "representativeScenarios": [
+        "TASKS/CHORES/BATTERIES/RECIPES_MEALPLAN false",
+        "best-before/freezing false",
+        "price tracking literal off",
+        "record selection/deselection exactly"
+      ],
+      "profiles": [
+        "FLAGS-OFF-UTC",
+        "FLAGS-OFF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "reference-disabled"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        ".github/workflows/ci.yml",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-004",
+        "EVID-021",
+        "EVID-064",
+        "EVID-065",
+        "EVID-066",
+        "EVID-067"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Existing seven-flag disabled profile passes separately in both timezones.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-009",
+      "title": "Configuration and flag classes",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Configuration validity/default/coercion and mode storage boundaries match the documented native API boundary.",
+      "representativeScenarios": [
+        "mode/locale/currency/weekdays/default times",
+        "false/0/empty/string truthiness",
+        "demo/prerelease DB/files isolation",
+        "invalid startup configuration"
+      ],
+      "profiles": [
+        "CONFIG-CLASSES"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/src/grocy/core/config.py",
+        "backend/tests/integration/test_mode_files.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-006",
+        "EVID-022",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "notes": [
+        "Python startup validation and PHP per-request configuration errors are separate documented runtime boundaries."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Configuration validity/default/coercion and mode storage boundaries match the documented native API boundary.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-010",
+      "title": "API authentication and permissions",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "API actor, credentials, grants, hierarchy and revocation behave correctly without unintended actor substitution.",
+      "representativeScenarios": [
+        "five configured auth modes",
+        "key/session invalidation",
+        "LDAP TLS failure and success",
+        "trusted proxy env/header",
+        "disable-auth and four MODEs",
+        "denied mutation and user isolation"
+      ],
+      "profiles": [
+        "AUTH-CONFIG"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/src/grocy/core/auth.py",
+        "backend/tests/integration/test_access_and_files.py",
+        "backend/tests/integration/test_permission_upgrade.py",
+        "backend/tests/integration/test_ldap_tls.py",
+        "backend/tests/differential/test_reference.py"
+      ],
+      "evidenceRefs": [
+        "EVID-023",
+        "EVID-024",
+        "EVID-025",
+        "EVID-026",
+        "EVID-020",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "notes": [
+        "Web forms, React credential choice and provider logout are outside this API gate."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "API actor, credentials, grants, hierarchy and revocation behave correctly without unintended actor substitution.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-011",
+      "title": "API routing and HTTP",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Native HTTP method/routing/CORS/auth-error ordering and configured mounts match source.",
+      "representativeScenarios": [
+        "GET/HEAD/OPTIONS/unsupported methods",
+        "root/prefix/literal prefix",
+        "optional index.php",
+        "trailing slash/default segments",
+        "encoded path tokens"
+      ],
+      "profiles": [
+        "HTTP-MOUNTS"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full",
+        "api-http-profile"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/src/grocy/core/legacy_http.py",
+        "backend/tests/integration/test_front_controller_routes.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-027",
+        "EVID-028",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Native HTTP method/routing/CORS/auth-error ordering and configured mounts match source.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-012",
+      "title": "Inputs errors and serialization",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Raw request coercion, stored types, error channels and response bytes match the finite existing native API classes.",
+      "representativeScenarios": [
+        "missing/empty/null/zero/arrays",
+        "duplicate/array queries",
+        "malformed JSON",
+        "numeric/Unicode/CRLF storage",
+        "error status/body",
+        "genuine empty204"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_input_purification.py",
+        "backend/tests/integration/test_native_storage_types.py",
+        "backend/tests/integration/test_contract_behavior.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-029",
+        "EVID-030",
+        "EVID-018",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Raw request coercion, stored types, error channels and response bytes match the finite existing native API classes.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-013",
+      "title": "Stock API state",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Stock booking, conversion, histories, Undo and native partial-write ordering preserve real database semantics.",
+      "representativeScenarios": [
+        "add/consume/open/transfer/inventory",
+        "units/prices/locations",
+        "booking arrays and transaction IDs",
+        "derived totals/history",
+        "Undo and partial failure",
+        "unrelated rows unchanged"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_stock.py",
+        "backend/tests/integration/test_resolved_conversions.py",
+        "backend/tests/integration/test_stock_entries.py",
+        "backend/tests/integration/test_stock_journal.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-031",
+        "EVID-032",
+        "EVID-033",
+        "EVID-034",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Stock booking, conversion, histories, Undo and native partial-write ordering preserve real database semantics.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-014",
+      "title": "Recipe shopping meal-plan API state",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Native recipe/list/meal-plan operations preserve calculations, related writes and documented partial state.",
+      "representativeScenarios": [
+        "quantity/conversion and derived meals",
+        "recipe copy/consume/shopping",
+        "list settings/done/purchase",
+        "meal-plan sections/copy/events",
+        "native partial writes distinct from v2 atomic extension"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_recipe_quantities.py",
+        "backend/tests/integration/test_meals_and_catalog.py",
+        "backend/tests/integration/test_shopping_lists.py",
+        "backend/tests/integration/test_shopping_purchase.py",
+        "backend/tests/integration/test_mealplan_calendar.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-035",
+        "EVID-036",
+        "EVID-037",
+        "EVID-038",
+        "EVID-039",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Native recipe/list/meal-plan operations preserve calculations, related writes and documented partial state.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-015",
+      "title": "Household API state",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Chore/Task/Battery mutations and derived details match recurrence, assignment, logs and error behavior.",
+      "representativeScenarios": [
+        "Chore schedule/reschedule/execute/skip/Undo",
+        "Task complete/Undo/delete",
+        "Battery charge/Undo/count/last time",
+        "missing and already-undone errors",
+        "no unrelated stock effects"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_household_schedule.py",
+        "backend/tests/integration/test_household_journal.py",
+        "backend/tests/integration/test_household_tracking_users.py",
+        "backend/tests/integration/test_task_overview.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-040",
+        "EVID-041",
+        "EVID-042",
+        "EVID-043",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "notes": [
+        "No browser Card/dialog/animation requirement."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Chore/Task/Battery mutations and derived details match recurrence, assignment, logs and error behavior.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-016",
+      "title": "Users settings custom-data API state",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "User/key/permission/settings and generic custom-data identity/storage/partial-write semantics match source.",
+      "representativeScenarios": [
+        "user deletion/key lifecycle/permissions",
+        "per-user default/persisted settings",
+        "definition/value namespace identity",
+        "dense numeric PHP arrays",
+        "null/omitted distinctions",
+        "equipment and ordinary generic objects"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "AUTH-CONFIG"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_user_deletion.py",
+        "backend/tests/integration/test_userfield_identity.py",
+        "backend/tests/integration/test_custom_data_context.py",
+        "backend/tests/differential/test_reference.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-044",
+        "EVID-045",
+        "EVID-046",
+        "EVID-020",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "User/key/permission/settings and generic custom-data identity/storage/partial-write semantics match source.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-017",
+      "title": "API files and images",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "API filename/query/stream/image processing retains exact routing, bytes, geometry and errors within explicit documented limits.",
+      "representativeScenarios": [
+        "normal/single/double encoding",
+        "default-segment path/duplicate-array query classes",
+        "upload/read/delete/missing/invalid",
+        "MIME/headers/body bytes",
+        "GD resize/cache/image bytes",
+        "mode-isolated files"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "HTTP-MOUNTS",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/integration/test_access_and_files.py",
+        "backend/tests/integration/test_native_file_streams.py",
+        "backend/tests/integration/test_mode_files.py",
+        "backend/tests/differential/test_reference.py",
+        "backend/tests/differential/test_workflows.py"
+      ],
+      "evidenceRefs": [
+        "EVID-024",
+        "EVID-047",
+        "EVID-022",
+        "EVID-020",
+        "EVID-021",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "notes": [
+        "No browser preview/download or physical chooser requirement."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "API filename/query/stream/image processing retains exact routing, bytes, geometry and errors within explicit documented limits.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-018",
+      "title": "Printer webhook thermal code API",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Native printer and code API requests/payloads/status/errors are verified against owned capture sinks and source.",
+      "representativeScenarios": [
+        "label modes/quantities/parameters",
+        "printHeader/list IDs",
+        "HTTP webhook payload and errors",
+        "thermal TCP exact bytes",
+        "Grocycode/image output",
+        "disabled/misconfigured/unreachable transport"
+      ],
+      "profiles": [
+        "PRINT-SINK"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full",
+        "api-print-sink"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/src/grocy/api/compatibility/print.py",
+        "backend/tests/integration/test_paper_labels.py",
+        "backend/tests/integration/test_grocycodes.py",
+        "backend/tests/integration/test_shopping_paper.py",
+        "backend/tests/unit/test_label_errors.py",
+        "backend/tests/differential/test_reference.py"
+      ],
+      "evidenceRefs": [
+        "EVID-048",
+        "EVID-049",
+        "EVID-050",
+        "EVID-051",
+        "EVID-052",
+        "EVID-020",
+        "EVID-056",
+        "EVID-057",
+        "EVID-058",
+        "EVID-059",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-069",
+        "EVID-070",
+        "EVID-071",
+        "EVID-072",
+        "EVID-077"
+      ],
+      "notes": [
+        "A real printer, print dialog and paper/visual calibration are explicitly excluded, not unavailable blocking API gates."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Native printer and code API requests/payloads/status/errors are verified against owned capture sinks and source.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-019",
+      "title": "Native culture config error copy calendar API",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Native API culture/configuration/error/localized-copy/calendar semantics match source for the fixed supported catalog/time classes.",
+      "representativeScenarios": [
+        "33 native catalog identifiers/config acceptance",
+        "configured/user/request locale and fallback",
+        "native localization-strings/config/error payloads",
+        "localized recipe copy names",
+        "calendar feeds/date fields",
+        "currency/number/date/plural and existing DST cases"
+      ],
+      "profiles": [
+        "CULTURE-TIME",
+        "REF-UTC",
+        "REF-BUCHAREST"
+      ],
+      "commandRefs": [
+        "python-normal",
+        "reference-full"
+      ],
+      "coveredByFullSuiteGates": [
+        "GATE-003",
+        "GATE-006",
+        "GATE-007"
+      ],
+      "implementationRefs": [
+        "backend/tests/differential/test_reference.py",
+        "backend/tests/differential/test_workflows.py",
+        "backend/tests/integration/test_python_compatibility.py",
+        "backend/tests/integration/test_calendar_agenda.py"
+      ],
+      "evidenceRefs": [
+        "EVID-020",
+        "EVID-021",
+        "EVID-053",
+        "EVID-054",
+        "EVID-071",
+        "EVID-072",
+        "EVID-073",
+        "EVID-060",
+        "EVID-061",
+        "EVID-062",
+        "EVID-063",
+        "EVID-058"
+      ],
+      "notes": [
+        "Browser rendering and v2-only React localization resources cannot independently block native Grocy API parity. Normal tests still check extensions as regressions.",
+        "The33-catalog native API/config/strings/localized-copy evidence is now terminal36passed per timezone; calendar/error/date clauses retain their independent full-suite owners. No v2/browser requirement imported."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Native API culture/configuration/error/localized-copy/calendar semantics match source for the fixed supported catalog/time classes.",
+        "fullFinal2559RunClaimed": false
+      }
+    },
+    {
+      "id": "GATE-020",
+      "title": "Current Python API release image",
+      "mandatory": true,
+      "implementationStatus": "implemented",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_composed_current_api_evidence",
+      "requirement": "Actual backend Dockerfile/current relevant hashes boot with Python3.13/noPHP/GD/libmagic and preserve disposable API state/files across configured mounts.",
+      "representativeScenarios": [
+        "exact image/base digests/entrypoint",
+        "no host Python/library mounts",
+        "Python/noPHP/GD/libmagic",
+        "startup/migrations/persistent data",
+        "API health/auth/files/printer resources",
+        "root/prefix/literal API profiles"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "HTTP-MOUNTS",
+        "PRINT-SINK"
+      ],
+      "commandRefs": [
+        "backend-image",
+        "api-http-profile"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "backend/Dockerfile",
+        "backend/src/grocy/core/config.py"
+      ],
+      "evidenceRefs": [
+        "EVID-007",
+        "EVID-006",
+        "EVID-081",
+        "EVID-082",
+        "EVID-083",
+        "EVID-084",
+        "EVID-085",
+        "EVID-086",
+        "EVID-087",
+        "EVID-088",
+        "EVID-058"
+      ],
+      "notes": [
+        "API image only. No frontend assets, nginx, React or browser condition may block this gate.",
+        "Reuse exact backend image proof by unchanged relevant hash; historical changed images require explicit reconciliation."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "method": "current scoped evidence with unchanged-runtime/test-only composition",
+        "candidateManifestRef": "EVID-057",
+        "reconciliationRef": "EVID-058",
+        "scope": "Actual backend Dockerfile/current relevant hashes boot with Python3.13/noPHP/GD/libmagic and preserve disposable API state/files across configured mounts.",
+        "fullFinal2559RunClaimed": false,
+        "apiImageId": "b69cd1c8a2f58d229ef252cb6e2bf29249a4656ccf7ca9f0d9d2e2c4026124bc",
+        "directCurrentImageProfile": "/house.hold",
+        "reusedOlderImageId": "2ce280d6289ea4bfff876cac4cc7f63cbf3e86bff8e0779a9620057e174434de",
+        "reusedProfiles": [
+          "root",
+          "/house.v1+demo"
+        ],
+        "reuseReason": "Only two v2-only runtime inputs differ in old2ce; native compatibility/core/auth/config/database/files/printer/dependencies/Dockerfile identical. b69COPY/runtime inputs match current candidate.",
+        "notClaimed": [
+          "direct b69root/literal execution",
+          "whole2ce image identity",
+          "frontend/nginx/browser equivalence"
+        ]
+      }
+    },
+    {
+      "id": "GATE-021",
+      "title": "Frozen API candidate reconciliation",
+      "mandatory": true,
+      "implementationStatus": "defined",
+      "verificationStatus": "verified_scoped",
+      "currentCertification": "verified_by_independent_final_audit",
+      "requirement": "All20 preceding mandatory API gates have current or justified identical-input evidence with declared exclusions and exact operational attribution.",
+      "representativeScenarios": [
+        "source/contract/runner/runtime/image binding",
+        "terminal status and selection counts",
+        "known source defects and approved runtime exclusions",
+        "expected SQL/files effects",
+        "secret-safe evidence and owned cleanup",
+        "no stale artifact promotion"
+      ],
+      "profiles": [
+        "API-DEFAULT",
+        "REF-UTC",
+        "REF-BUCHAREST",
+        "FLAGS-OFF-UTC",
+        "FLAGS-OFF-BUCHAREST",
+        "HTTP-MOUNTS",
+        "AUTH-CONFIG",
+        "CONFIG-CLASSES",
+        "CULTURE-TIME",
+        "PRINT-SINK"
+      ],
+      "commandRefs": [
+        "offline-reconcile"
+      ],
+      "coveredByFullSuiteGates": [],
+      "implementationRefs": [
+        "contracts/api-release-gates.json"
+      ],
+      "evidenceRefs": [
+        "EVID-055",
+        "EVID-089",
+        "EVID-090",
+        "EVID-091"
+      ],
+      "notes": [
+        "Completion percentage measures verified mandatory gates within the declared finite Python API scope; unavailable required API evidence blocks completion. Excluded UI/hardware does not."
+      ],
+      "evidenceRequirementsRef": "API-GATE-EVIDENCE",
+      "verificationRecord": {
+        "scope": "All20 prerequisite gates reconciled; independent40-check audit PASS, no blockers. Final status-only closure retains reviewed preclose hashes and unchanged certified source/profile composition.",
+        "evidenceRefs": [
+          "EVID-057",
+          "EVID-058",
+          "EVID-076",
+          "EVID-074",
+          "EVID-075",
+          "EVID-089",
+          "EVID-090",
+          "EVID-091"
+        ],
+        "notClaimed": "No final2559 single full run and no UI/hardware completion."
+      }
+    }
+  ],
+  "counters": {
+    "totalGates": 21,
+    "mandatoryApiGates": 21,
+    "implementation": {
+      "defined": 6,
+      "implemented": 15
+    },
+    "verification": {
+      "verified_scoped": 21
+    },
+    "overallPercentage": 100,
+    "percentageDefinition": "Verified mandatory Python API acceptance gates / all21 mandatory gates; finite pinned scope, not exhaustive input/client proof."
+  },
+  "completionRule": "All21 mandatory Python API gates are verified_scoped under the declared composed-evidence/identical-relevant-input policy. Independent final audit PASS. No full final2559 single execution, UI/hardware or v2-only feature parity is claimed.",
+  "evidenceRequirements": {
+    "API-GATE-EVIDENCE": [
+      "frozen relevant source/contract/runner hashes",
+      "actual command/environment/runtime and test-selection metadata",
+      "terminal exit and passed/failed/skipped/deselected counts where applicable",
+      "actual response and database/file state assertions for the named cases",
+      "Parent must attach current certification or justify unchanged relevant input hashes; this inventory invents no current pass."
+    ]
+  }
+}

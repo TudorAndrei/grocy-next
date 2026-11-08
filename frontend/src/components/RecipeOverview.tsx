@@ -7,25 +7,38 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
-import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { api, queryKeys } from "@/lib/api";
+import { Link, useRouter } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, queryKeys, request } from "@/lib/api";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import type { RecipeListItem, RecipeListMode, RecipeOverviewSearch } from "@/lib/recipe-view";
+import { recipeOverviewCells, recipeOverviewColumns } from "@/lib/recipes-overview";
+import { userfieldsQuery } from "@/lib/userfields";
+import { useTableOptions } from "@/lib/table-options";
+import { useTableOrder } from "@/lib/table-order";
+import { useTableSnapshot } from "@/lib/table-snapshot";
+import { matchesTableSearch } from "@/lib/table-search";
+import { tablePlainText } from "@/lib/native-table-cell";
+import { nativeQueryParameter } from "@/lib/native-query-flag";
+import { useNativeDocumentReload } from "@/lib/native-document";
+import { userSettingsQuery } from "@/hooks/queries";
+import { useGenericError } from "@/hooks/useGenericError";
+import { useNativeLabelPrint } from "@/hooks/useNativeLabelPrint";
 import { EntityManager } from "./EntityManager";
 import { EntityPicture } from "./EntityPicture";
 import { ErrorBlock } from "./ErrorBlock";
 import { FullscreenCard, FullscreenToggle } from "./FullscreenCard";
-import { Icon } from "./Icon";
 import { LoadingBlock } from "./LoadingBlock";
 import { PageHeader } from "./PageHeader";
 import { RecipeReader } from "./RecipeReader";
 import { RecipeMealPlanAction } from "./RecipeMealPlan";
 import { GrocycodeActions } from "./GrocycodeActions";
-
-type SortKey = "name" | "desired_servings" | "due_score" | "stock_status";
+import { NativeRecipeTableRowActions } from "./NativeRecipeTableRowActions";
+import { StockTableCells, StockTableOptions, StockTableStatus } from "./StockTableOptions";
+import { NativeUserfieldValue, NativeUserfieldRows } from "./NativeUserfieldTable";
+import { QuantityUnitDeleteDialog } from "./QuantityUnitEditor";
 
 export function RecipeOverview({
   search,
@@ -35,35 +48,71 @@ export function RecipeOverview({
   onSearchChange: (change: Partial<RecipeOverviewSearch>) => void;
 }) {
   const { t, n } = useI18n();
+  const router = useRouter();
+  const reloadDocument = useNativeDocumentReload("/recipes");
   const features = useFeatures();
-  const { recipesSideBySide, formatAmount } = usePreferences();
+  const preferences = usePreferences();
+  const { recipesSideBySide } = preferences;
+  const settings = useQuery({ ...userSettingsQuery(), refetchOnMount: "always" });
+  const sideBySide = settings.data?.recipes_show_list_side_by_side;
+  const split = sideBySide === undefined || (Boolean(sideBySide) && sideBySide !== "0");
+  const client = useQueryClient();
+  const genericError = useGenericError();
+  const printLabel = useNativeLabelPrint();
   const overview = useQuery({ queryKey: queryKeys.recipeOverview, queryFn: api.getRecipeOverview });
+  const definitions = useQuery(userfieldsQuery);
+
+  const fields =
+    definitions.data?.filter(
+      (field) => field.entity === "recipes" && field.show_as_column_in_tables === 1,
+    ) ?? [];
+
+  const ready =
+    overview.isSuccess && definitions.isSuccess && settings.isSuccess && !settings.isFetching;
+
+  const options = useTableOptions(
+    "recipes-table",
+    recipeOverviewColumns(features.enabled("STOCK"), fields),
+    { key: "name", descending: false },
+    ready,
+  );
+
+  const [reloading, setReloading] = useState(false);
   const [editing, setEditing] = useState(false);
+
+  const snapshot = useTableSnapshot(
+    overview.data,
+    ready && options.ready && !overview.isFetching && !definitions.isFetching && !reloading,
+    options.resetVersion + (editing ? overview.dataUpdatedAt : 0),
+    overview.dataUpdatedAt,
+  );
 
   const [savedTab, setSavedTab] = useState<RecipeListMode>(() =>
     localStorage.getItem("recipes_last_tab_id") === "gallery-tab" ? "gallery" : "list",
   );
 
-  const mode = search.tab ?? savedTab;
+  const mode = search.tab === "gallery" || savedTab === "gallery" ? "gallery" : "list";
 
-  const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({
-    key: "name",
-    descending: false,
+  const [galleryFilter, setGalleryFilter] = useState<{ kind: "search" | "status"; value: string }>({
+    kind:
+      nativeQueryParameter(router.history.location.search, "status") !== undefined
+        ? "status"
+        : "search",
+    value: search.status === "all" ? "" : (search.status ?? search.search ?? ""),
   });
 
-  const [showServings, setShowServings] = useState(false);
-  const [chosen, setChosen] = useState<number | undefined>();
+  const [chosen, setChosen] = useState<number | null | undefined>();
   const [previousRecipe, setPreviousRecipe] = useState(search.recipe);
 
   if (previousRecipe !== search.recipe) {
     setPreviousRecipe(search.recipe);
     setChosen(undefined);
+    options.reload();
   }
 
   const [overlay, setOverlay] = useState<number | undefined>();
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
-  const selected = search.recipe ?? overview.data?.[0]?.id;
-  const highlighted = recipesSideBySide ? selected : (chosen ?? selected);
+  const [defaultSelection, setDefaultSelection] = useState<{ version: number; id?: number }>();
   const listTab = useRef<HTMLButtonElement>(null);
   const galleryTab = useRef<HTMLButtonElement>(null);
   const prefix = useId();
@@ -83,40 +132,147 @@ export function RecipeOverview({
             "Not enough in stock, %s ingredients missing",
           );
 
-  const query = (search.search ?? "").trim().toLowerCase();
-  const words = query.match(/"[^"]+"|\S+/g)?.map((word) => word.replace(/^"|"$/g, "")) ?? [];
+  const groupText = (row: RecipeListItem) =>
+    row.stock_status === "Xenoughinstock"
+      ? t("Enough in stock")
+      : row.stock_status === "enoughinstockwithshoppinglist"
+        ? t("Not enough in stock, but already on the shopping list")
+        : t("Not enough in stock");
 
-  const visible = (overview.data ?? [])
-    .filter((recipe) => {
-      if (search.status && recipe.stock_status !== search.status) return false;
-      const galleryText = `${recipe.name} ${recipe.product_names}`.toLowerCase();
+  const source = (snapshot?.value ?? []).map((row) => ({
+    key: String(row.id),
+    row,
+    cells: recipeOverviewCells(
+      row,
+      fields,
+      statusText(row),
+      groupText(row),
+      preferences.priceDisplayPrecision,
+      String(features.query.data?.CURRENCY ?? "USD"),
+      features.query.data,
+    ),
+  }));
 
-      if (mode === "gallery") return galleryText.includes(query);
+  const cells = new Map(source.map((record) => [record.row.id, record.cells]));
+  const groupedField = fields.find((field) => options.groupColumn === `custom:${field.name}`);
+  const ordered = useTableOrder(source, options, !!snapshot);
 
-      const listText =
-        `${galleryText} ${recipe.desired_servings} ${recipe.due_score ?? ""} ${statusText(recipe)}`.toLowerCase();
+  if (snapshot && defaultSelection?.version !== options.resetVersion)
+    setDefaultSelection({ version: options.resetVersion, id: ordered[0]?.id });
 
-      return words.every((word) => listText.includes(word));
-    })
-    .sort((left, right) => {
-      let difference: number;
+  const selected = search.recipe ?? snapshot?.value[0]?.id;
+  const highlighted = chosen === undefined ? (search.recipe ?? defaultSelection?.id) : chosen;
 
-      if (sort.key === "name") {
-        const a = left.name.toLowerCase();
-        const b = right.name.toLowerCase();
-        difference = a < b ? -1 : a > b ? 1 : 0;
-      } else if (sort.key === "stock_status")
-        difference = left.missing_products_count - right.missing_products_count;
-      else difference = (left[sort.key] ?? 0) - (right[sort.key] ?? 0);
+  const visible = ordered.filter(
+    (row) =>
+      (!search.status || search.status === "all" || row.stock_status === search.status) &&
+      matchesTableSearch(
+        Object.values(cells.get(row.id)!)
+          .map((cell) => cell.search)
+          .join("  "),
+        search.search ?? "",
+      ),
+  );
 
-      return sort.descending ? -difference : difference;
-    });
+  const gallery = (snapshot?.value ?? []).filter((row) =>
+    galleryFilter.kind === "status"
+      ? !galleryFilter.value || row.stock_status === galleryFilter.value
+      : `${row.name} ${row.product_names}`
+          .toLowerCase()
+          .includes(galleryFilter.value.toLowerCase()),
+  );
+
+  const lifetime = useRef<AbortController | null>(null);
+  const generation = useRef(0);
+  const [deleting, setDeleting] = useState<RecipeListItem>();
+  useEffect(() => {
+    const scope = new AbortController();
+    lifetime.current = scope;
+
+    return () => scope.abort();
+  }, []);
+
+  const reload = async () => {
+    if (reloadDocument()) return;
+    const ownGeneration = ++generation.current;
+    setReloading(true);
+    setDeleting(undefined);
+    setOverlay(undefined);
+    setChosen(undefined);
+
+    try {
+      const result = await overview.refetch();
+
+      if (
+        !lifetime.current?.signal.aborted &&
+        ownGeneration === generation.current &&
+        result.isSuccess
+      )
+        options.reload();
+    } finally {
+      if (!lifetime.current?.signal.aborted && ownGeneration === generation.current)
+        setReloading(false);
+    }
+  };
+
+  const changed = async () => {
+    await Promise.all(
+      ["recipe-overview", "recipe-view", "recipe-form", "recipes", "objects"].map((key) =>
+        client.invalidateQueries({ queryKey: [key], refetchType: "none" }),
+      ),
+    );
+  };
+
+  const remove = useMutation({
+    mutationFn: (input: { id: number; generation: number }) =>
+      request(`/api/objects/recipes/${input.id}`, {
+        method: "DELETE",
+        signal: lifetime.current?.signal,
+      }),
+    onSuccess: async (_result, input) => {
+      await changed();
+
+      if (lifetime.current?.signal.aborted || input.generation !== generation.current) return;
+      setGalleryFilter({ kind: "status", value: "" });
+      onSearchChange({ recipe: undefined, search: undefined, status: undefined, tab: undefined });
+      await reload();
+    },
+    onError: (error, input) => {
+      if (!lifetime.current?.signal.aborted && input.generation === generation.current)
+        console.error(error);
+    },
+  });
+
+  const copy = useMutation({
+    mutationFn: async (input: { id: number; generation: number }) => api.copyRecipe(input.id),
+    onSuccess: async (id, input) => {
+      await changed();
+
+      if (lifetime.current?.signal.aborted || input.generation !== generation.current) return;
+      setGalleryFilter({ kind: "status", value: "" });
+      onSearchChange({ recipe: Number(id), search: undefined, status: undefined, tab: undefined });
+      await reload();
+    },
+    onError: (error, input) => {
+      if (!lifetime.current?.signal.aborted && input.generation === generation.current)
+        genericError("Error while saving, probably this item already exists", error);
+    },
+  });
 
   const open = (id: number) => {
     setChosen(id);
 
-    if (recipesSideBySide) onSearchChange({ recipe: id });
-    else setOverlay(id);
+    if (recipesSideBySide) {
+      if (mode === "gallery") {
+        reloadDocument();
+        void router.navigate({ to: "/recipes", search: { tab: "gallery", recipe: id } });
+      } else {
+        const current = router.history.location.search.split("recipe=")[1];
+
+        if (String(id) !== current) reloadDocument();
+        onSearchChange({ recipe: id });
+      }
+    } else setOverlay(id);
   };
 
   const select = (event: MouseEvent, id: number) => {
@@ -145,20 +301,17 @@ export function RecipeOverview({
     (next === "list" ? listTab : galleryTab).current?.focus();
   };
 
-  const heading = (key: SortKey, label: string) => (
+  const heading = (key: string, label: string) => (
     <th
+      key={key}
       scope="col"
-      aria-sort={sort.key === key ? (sort.descending ? "descending" : "ascending") : "none"}
+      aria-sort={
+        options.sort.key === key ? (options.sort.descending ? "descending" : "ascending") : "none"
+      }
     >
-      <button
-        className="recipe-sort"
-        onClick={() => setSort({ key, descending: sort.key === key && !sort.descending })}
-      >
+      <button className="recipe-sort" onClick={(event) => options.sortBy(key, event.shiftKey)}>
         {label}
         <span className="sr-only">: {t("Sort")}</span>
-        {sort.key === key ? (
-          <Icon name="sort" className={sort.descending ? "recipe-sort-desc" : undefined} />
-        ) : null}
       </button>
     </th>
   );
@@ -178,6 +331,39 @@ export function RecipeOverview({
     </span>
   );
 
+  const actions = (recipe: RecipeListItem, gallery = false) => (
+    <div className="recipe-row-actions">
+      <Link
+        className="btn btn-ghost btn-sm hide-when-embedded hide-on-fullscreen-card"
+        to="/recipe/$recipeId"
+        params={{ recipeId: String(recipe.id) }}
+        aria-label={t("Edit %s", recipe.name)}
+      >
+        {t("Edit this item")}
+      </Link>
+      {gallery ? (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setDeleting(recipe)}
+          >
+            {t("Delete this item")}
+          </button>
+          <RecipeMealPlanAction id={recipe.id} name={recipe.name} />
+          <GrocycodeActions kind="recipe" id={recipe.id} name={recipe.name} />
+        </>
+      ) : (
+        <NativeRecipeTableRowActions
+          recipe={recipe}
+          onDelete={() => setDeleting(recipe)}
+          onCopy={() => copy.mutate({ id: recipe.id, generation: generation.current })}
+          onPrint={() => printLabel(`/api/recipes/${recipe.id}/printlabel`)}
+        />
+      )}
+    </div>
+  );
+
   if (search.embedded) {
     if (selected !== undefined) return <RecipePreview id={selected} overlay />;
 
@@ -195,20 +381,28 @@ export function RecipeOverview({
       <PageHeader
         title={t("Recipes")}
         actions={
-          <button
-            className="btn btn-ghost"
-            aria-pressed={editing}
-            onClick={() => setEditing((value) => !value)}
-          >
-            {t(editing ? "Close editor" : "Edit recipes")}
-          </button>
+          <>
+            <Link className="btn btn-primary" to="/recipe/$recipeId" params={{ recipeId: "new" }}>
+              {t("Add")}
+            </Link>
+            <Link className="btn btn-ghost" to="/recipessettings">
+              {t("Recipes settings")}
+            </Link>
+            <button
+              className="btn btn-ghost"
+              aria-pressed={editing}
+              onClick={() => {
+                if (editing) options.reload();
+                setEditing((value) => !value);
+              }}
+            >
+              {t(editing ? "Close editor" : "Edit recipes")}
+            </button>
+          </>
         }
       />
       {editing ? <EntityManager entity="recipes" fixed={{ type: "normal" }} /> : null}
-      <div
-        className="recipes-layout"
-        data-split={(recipesSideBySide && selected !== undefined) || undefined}
-      >
+      <div className="recipes-layout" data-split={(split && selected !== undefined) || undefined}>
         <section aria-label={t("Recipe list")} className="recipes-catalog">
           <div className="toolbar recipe-filters">
             <label className="field">
@@ -216,19 +410,26 @@ export function RecipeOverview({
               <input
                 type="search"
                 value={search.search ?? ""}
-                onChange={(event) => onSearchChange({ search: event.target.value || undefined })}
+                onChange={(event) => {
+                  setGalleryFilter({ kind: "search", value: event.target.value });
+                  onSearchChange({ search: event.target.value || undefined });
+                }}
               />
             </label>
             <label className="field">
               <span>{t("Status")}</span>
               <select
                 value={search.status ?? "all"}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setGalleryFilter({
+                    kind: "status",
+                    value: event.target.value === "all" ? "" : event.target.value,
+                  });
                   onSearchChange({
                     status:
                       event.target.value === "all" ? undefined : recipeStatus(event.target.value),
-                  })
-                }
+                  });
+                }}
               >
                 <option value="all">{t("All")}</option>
                 <option value="Xenoughinstock">{t("Enough in stock")}</option>
@@ -240,7 +441,10 @@ export function RecipeOverview({
             </label>
             <button
               className="btn btn-ghost"
-              onClick={() => onSearchChange({ search: undefined, status: undefined })}
+              onClick={() => {
+                setGalleryFilter({ kind: "status", value: "" });
+                onSearchChange({ search: undefined, status: undefined });
+              }}
             >
               {t("Clear filter")}
             </button>
@@ -276,53 +480,86 @@ export function RecipeOverview({
           <div id={`${prefix}-results`} role="tabpanel" aria-labelledby={`${prefix}-${mode}`}>
             {overview.isPending ? <LoadingBlock label={t("Loading recipes…")} /> : null}
             {overview.isError ? <ErrorBlock message={overview.error.message} /> : null}
-            {overview.isSuccess && !visible.length ? (
+            <StockTableStatus options={options} />
+            {definitions.isError ? <ErrorBlock message={definitions.error.message} /> : null}
+            {snapshot && !(mode === "gallery" ? gallery : visible).length ? (
               <p className="empty-state">
-                {t(overview.data.length ? "No recipe matches this filter." : "No recipes yet.")}
+                {t(snapshot.value.length ? "No recipe matches this filter." : "No recipes yet.")}
               </p>
             ) : null}
-            {mode === "list" && visible.length ? (
-              <>
-                <details className="recipe-table-options">
-                  <summary>{t("Table options")}</summary>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showServings}
-                      onChange={(event) => setShowServings(event.target.checked)}
-                    />
-                    {t("Desired servings")}
-                  </label>
-                </details>
-                <div className="recipe-table-scroll">
-                  <table className="recipe-overview-table">
-                    <thead>
-                      <tr>
+            {mode === "list" && snapshot ? (
+              <div className="recipe-table-scroll">
+                <table className="recipe-overview-table">
+                  <caption className="sr-only">{t("Recipes")}</caption>
+                  <thead>
+                    <tr>
+                      <StockTableCells options={options} headers>
+                        <th>
+                          <StockTableOptions options={options} onReset={() => void reload()} />
+                        </th>
                         {heading("name", t("Name"))}
-                        {showServings ? heading("desired_servings", t("Desired servings")) : null}
+                        {heading("desired_servings", t("Desired servings"))}
                         {heading("due_score", t("Due score"))}
                         {features.enabled("STOCK")
-                          ? heading("stock_status", t("Requirements fulfilled"))
+                          ? heading("requirements", t("Requirements fulfilled"))
                           : null}
-                        <th>
-                          <span className="sr-only">{t("Actions")}</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visible.map((recipe) => (
-                        <tr
-                          key={recipe.id}
-                          data-selected={highlighted === recipe.id || undefined}
-                          onClick={(event) => {
-                            if (
-                              event.target instanceof Element &&
-                              event.target.closest("a, button, [popover]")
-                            )
-                              return;
-                            open(recipe.id);
-                          }}
-                        >
+                        {fields.map((field) => heading(`custom:${field.name}`, field.caption))}
+                      </StockTableCells>
+                    </tr>
+                  </thead>
+                  <NativeUserfieldRows
+                    options={options}
+                    interactiveField={
+                      groupedField &&
+                      ["image", "file", "link", "link-with-title"].includes(groupedField.type)
+                        ? groupedField
+                        : undefined
+                    }
+                    groups={visible.map((row) => {
+                      const cell = cells.get(row.id)![options.groupColumn ?? "name"];
+                      const name = tablePlainText(cell?.html ?? "");
+                      const value = row.custom_values?.[groupedField?.name ?? ""] ?? null;
+
+                      const present = Object.hasOwn(
+                        row.custom_values ?? {},
+                        groupedField?.name ?? "",
+                      );
+
+                      return {
+                        key: cell?.html ?? "",
+                        label: groupedField ? (
+                          <NativeUserfieldValue
+                            field={groupedField}
+                            value={value}
+                            present={present}
+                          />
+                        ) : (
+                          name
+                        ),
+                        name,
+                        value,
+                        present,
+                      };
+                    })}
+                  >
+                    {visible.map((recipe) => (
+                      <tr
+                        key={recipe.id}
+                        data-recipe-id={recipe.id}
+                        data-selected={highlighted === recipe.id || undefined}
+                        onClick={(event) => {
+                          if (
+                            event.target instanceof Element &&
+                            event.target.closest("a, button, [popover], td:first-child")
+                          )
+                            return;
+
+                          if (highlighted === recipe.id) setChosen(null);
+                          else open(recipe.id);
+                        }}
+                      >
+                        <StockTableCells options={options}>
+                          <td className="recipe-plan-cell">{actions(recipe)}</td>
                           <td>
                             <Link
                               to="/recipes/$recipeId"
@@ -333,38 +570,34 @@ export function RecipeOverview({
                               {recipe.name}
                             </Link>
                           </td>
-                          {showServings ? (
-                            <td className="num">{formatAmount(recipe.desired_servings)}</td>
-                          ) : null}
+                          <td className="num">{recipe.desired_servings}</td>
                           <td className="num">{recipe.due_score ?? ""}</td>
                           {features.enabled("STOCK") ? <td>{badge(recipe)}</td> : null}
-                          <td className="recipe-plan-cell">
-                            <div className="recipe-row-actions">
-                              <RecipeMealPlanAction id={recipe.id} name={recipe.name} compact />
-                              <GrocycodeActions
-                                kind="recipe"
-                                id={recipe.id}
-                                name={recipe.name}
-                                compact
+                          {fields.map((field) => (
+                            <td key={field.id}>
+                              <NativeUserfieldValue
+                                field={field}
+                                value={recipe.custom_values?.[field.name] ?? null}
+                                present={Object.hasOwn(recipe.custom_values ?? {}, field.name)}
                               />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
+                            </td>
+                          ))}
+                        </StockTableCells>
+                      </tr>
+                    ))}
+                  </NativeUserfieldRows>
+                </table>
+              </div>
             ) : null}
             {mode === "gallery" ? (
               <ul className="recipe-gallery">
-                {visible.map((recipe) => (
-                  <li key={recipe.id} data-selected={highlighted === recipe.id || undefined}>
+                {gallery.map((recipe) => (
+                  <li key={recipe.id} data-selected={search.recipe === recipe.id || undefined}>
                     <Link
                       to="/recipes/$recipeId"
                       params={{ recipeId: String(recipe.id) }}
                       aria-label={recipe.name}
-                      aria-current={highlighted === recipe.id ? "true" : undefined}
+                      aria-current={search.recipe === recipe.id ? "true" : undefined}
                       onClick={(event) => select(event, recipe.id)}
                     >
                       {recipe.picture_file_name ? (
@@ -375,22 +608,31 @@ export function RecipeOverview({
                         />
                       ) : null}
                       <h3>{recipe.name}</h3>
-                      {features.enabled("STOCK") ? badge(recipe) : null}
+                      {badge(recipe)}
                     </Link>
-                    <div className="recipe-gallery-actions">
-                      <RecipeMealPlanAction id={recipe.id} name={recipe.name} />
-                      <GrocycodeActions kind="recipe" id={recipe.id} name={recipe.name} />
-                    </div>
+                    <div className="recipe-gallery-actions">{actions(recipe, true)}</div>
                   </li>
                 ))}
               </ul>
             ) : null}
           </div>
         </section>
-        {recipesSideBySide && selected !== undefined ? (
+        {split && selected !== undefined ? (
           <RecipePreview key={selected} id={selected} focusOnLoad={search.recipe !== undefined} />
         ) : null}
       </div>
+      {deleting ? (
+        <QuantityUnitDeleteDialog
+          message={t('Are you sure you want to delete recipe "%s"?', deleting.name)}
+          pending={false}
+          error={null}
+          onClose={() => setDeleting(undefined)}
+          onDelete={() => {
+            remove.mutate({ id: deleting.id, generation: generation.current });
+            setDeleting(undefined);
+          }}
+        />
+      ) : null}
       {overlay !== undefined ? (
         <RecipePreview key={overlay} id={overlay} overlay onClose={closeOverlay} />
       ) : null}

@@ -1,6 +1,8 @@
 # Grocy Next
 
-Household management with FastAPI, SQLite, FastMCP, and React. The compatibility API uses the pinned Grocy v4.5.0 contract. The nutrition API adds proposals, review, evidence, and revision history. External assistants can use MCP. The server does not run an agent, OCR, or a vision model.
+Grocy Next is a Python household-management API built with FastAPI, SQLite and FastMCP. The compatibility API uses the pinned Grocy v4.5.0 contract. The nutrition API adds proposals, review, evidence and revision history. External assistants can use MCP. The server does not run an agent, OCR or a vision model.
+
+The Python API is the core product and the Grocy parity completion target. Its HTTP contract and behavior must support independent clients. The existing React app is one client; future cross-platform UI work will use [Native Shell](https://nsh.dev/). React page, animation, browser and physical-device parity do not gate API completion. See the [API-only acceptance status](docs/api-parity-status.md).
 
 ## Functions
 
@@ -15,7 +17,7 @@ Household management with FastAPI, SQLite, FastMCP, and React. The compatibility
 - Nutrition proposals, approval, rejection, revision restore, and label photos.
 - Database import with a source snapshot and a separate destination database.
 
-The Python API provides the 86 contract operations and reads for the 33 listable entities. The generic API blocks API key reads, as the contract requires. The release uses Python (`GROCY_USE_NATIVE_PHP=false`). PHP is used only as a test reference. State comparison tests use a temporary Grocy v4.5.0 server. Full behavior parity is still in progress. See [compatibility](docs/compatibility.md) for the test method and current limits.
+The Python API provides the 86 contract operations and reads for the 33 listable entities. The generic API blocks API key reads, as the contract requires. The release uses Python (`GROCY_USE_NATIVE_PHP=false`). PHP is used only as a test reference. State comparison tests use a temporary Grocy v4.5.0 server. See [API parity status](docs/api-parity-status.md) for the finite acceptance scope and certification results, and [compatibility](docs/compatibility.md) for implementation details and historical evidence.
 
 ## Local development
 
@@ -60,6 +62,8 @@ docker compose up --build
 ```
 
 Open <http://127.0.0.1:8080>. The API is also available at <http://127.0.0.1:8000>. The release image uses Python and does not install PHP. The volume stores the database and files under `/data`.
+
+To serve under `/grocy/`, set `GROCY_BASE_PATH=/grocy` and rebuild both services. Compose uses this prefix for routing, web assets and generated links, including login and logout. Set `GROCY_BASE_URL` separately when generated links need a different public base URL.
 
 For a new installation without demo records, set `GROCY_SEED_DEMO_DATA=false` and `GROCY_DEV_OPEN_API_KEY=` before startup. Create an administrator and a random API key:
 

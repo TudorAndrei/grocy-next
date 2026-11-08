@@ -1,32 +1,54 @@
-import { useEffect, useEffectEvent, useId, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import moment from "moment";
+import { flushSync } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { userSettingsQuery } from "@/hooks/queries";
 import { useModalDialog } from "@/hooks/useModalDialog";
+import { useGenericError } from "@/hooks/useGenericError";
 import { api, request } from "@/lib/api";
+import { getTopmostGrocyWindow } from "@/lib/embedded-window";
 import { useInvalidateStock } from "@/lib/catalog";
 import { isoDay, unitLabel } from "@/lib/format";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { stockEditorUnits } from "@/lib/stock-editor";
+import { nativeCurrencyValue, nativeQuantityValue } from "@/lib/native-quantity";
 import {
   getPurchaseCatalog,
   getPurchaseDetails,
-  getPurchaseSelection,
+  getPurchaseBarcode,
   type PurchaseCatalog,
   type PurchaseDetails,
   type PurchaseOptions,
 } from "@/lib/purchase";
-import { initialUserfields, saveUserfields } from "@/lib/userfields";
-import { printLabel } from "@/lib/printing";
+import { initialUserfields, userfieldUpload } from "@/lib/userfields";
+import { saveCustomObjectFields } from "@/lib/custom-object-form";
+import { postLabelWebhook } from "@/lib/printing";
+import { DocumentTasksProvider, useDocumentTasks } from "@/lib/document-tasks";
+import { usePurchaseDocument, type PurchaseDocument } from "@/lib/purchase-document";
+import { NativeScriptBindingsProvider } from "@/lib/native-script-bindings";
 import { tableText, tableAttribute } from "@/lib/native-table-cell";
 import type { JsonObject } from "@/lib/json";
 import type { Booking } from "@/lib/types";
 import { ProductPicker, type ProductCode } from "./ProductPicker";
 import { ProductCard } from "./ProductOverview";
 import { NumberPicker } from "./NumberPicker";
-import { BookingDateInput } from "./BookingDateInput";
-import { UserfieldsEditor } from "./UserfieldsEditor";
+import { NativeMainDateInput, type NativeMainDateHandle } from "./NativeMainDateInput";
+import { nativeMainDateFormat } from "@/lib/native-userfield-dates";
+import { NativeDateTimeInput } from "./NativeDateTimeInput";
+import { UserfieldsEditor, type UserfieldsEditorHandle } from "./UserfieldsEditor";
+import { NativeUserfieldsLoad } from "./NativeUserfieldsLoad";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { useNotify } from "./Toaster";
@@ -42,7 +64,6 @@ export function PurchaseDialog(props: Omit<Props, "onPendingChange">) {
   const { t } = useI18n();
   const dialog = useModalDialog();
   const title = useId();
-  const [pending, setPending] = useState(false);
 
   return (
     <dialog
@@ -53,18 +74,43 @@ export function PurchaseDialog(props: Omit<Props, "onPendingChange">) {
         event.preventDefault();
         event.stopPropagation();
 
-        if (!pending) props.onClose?.();
+        props.onClose?.();
       }}
     >
       <h2 id={title}>{t("Purchase")}</h2>
-      <PurchaseForm {...props} onPendingChange={setPending} />
+      <DocumentTasksProvider identity="purchase-dialog">
+        <PurchaseForm
+          {...props}
+          onClose={
+            props.onClose
+              ? () => {
+                  if (dialog.current?.open) props.onClose?.();
+                }
+              : undefined
+          }
+        />
+      </DocumentTasksProvider>
     </dialog>
   );
 }
 
 export function PurchaseForm(props: Props) {
+  const document = usePurchaseDocument(props.options);
+  const router = useRouter();
+  const physical = router.state.location.pathname.replace(/\/$/, "") === "/purchase";
+
+  return (
+    <NativeScriptBindingsProvider key={document.revision} physical={physical}>
+      <DocumentTasksProvider identity={`purchase:${document.revision}`}>
+        <PurchaseDocumentBody {...props} document={document} />
+      </DocumentTasksProvider>
+    </NativeScriptBindingsProvider>
+  );
+}
+
+function PurchaseDocumentBody({ document, ...props }: Props & { document: PurchaseDocument }) {
   const { t } = useI18n();
-  const settings = useQuery(userSettingsQuery());
+  const settings = useQuery({ ...userSettingsQuery(), refetchOnMount: "always" });
 
   const catalog = useQuery({
     queryKey: ["stock", "purchase-editor"],
@@ -76,39 +122,70 @@ export function PurchaseForm(props: Props) {
     retry: false,
   });
 
-  if (catalog.isSuccess && catalog.isFetchedAfterMount && settings.isSuccess)
-    return <PurchaseFields {...props} catalog={catalog.data} />;
+  let content: ReactNode;
 
-  return (
-    <>
-      {catalog.isPending || catalog.isFetching || settings.isPending ? <LoadingBlock /> : null}
-      {catalog.error || settings.error ? (
-        <>
-          <ErrorBlock message={(catalog.error || settings.error)!.message} />
-          <button
-            type="button"
-            className="btn"
-            onClick={() => void Promise.all([catalog.refetch(), settings.refetch()])}
-          >
-            {t("Retry")}
+  if (
+    catalog.isSuccess &&
+    catalog.isFetchedAfterMount &&
+    settings.isSuccess &&
+    settings.isFetchedAfterMount
+  )
+    content = (
+      <PurchaseFields
+        key={document.revision}
+        {...props}
+        options={document.initialOptions}
+        document={document}
+        catalog={catalog.data}
+      />
+    );
+  else
+    content = (
+      <>
+        {catalog.isPending || catalog.isFetching || settings.isPending || settings.isFetching ? (
+          <LoadingBlock />
+        ) : null}
+        {catalog.error || settings.error ? (
+          <>
+            <ErrorBlock message={(catalog.error || settings.error)!.message} />
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void Promise.all([catalog.refetch(), settings.refetch()])}
+            >
+              {t("Retry")}
+            </button>
+          </>
+        ) : null}
+        {props.onClose ? (
+          <button type="button" className="btn" onClick={props.onClose}>
+            {t("Cancel")}
           </button>
-        </>
-      ) : null}
-      {props.onClose ? (
-        <button type="button" className="btn" onClick={props.onClose}>
-          {t("Cancel")}
-        </button>
-      ) : null}
-    </>
-  );
+        ) : null}
+      </>
+    );
+
+  return content;
 }
 
+type PurchaseSubmission = {
+  product: string;
+  amount: string;
+  displayAmount: string;
+  price: string;
+  note: string;
+  label?: string;
+  unitId?: string;
+  store?: string;
+};
+
 type Receipt = {
-  bookings: (Booking & { stock_id: string })[];
+  bookings: (Booking & { stock_id: string; best_before_date?: string | null })[];
   details: PurchaseDetails;
   body: JsonObject;
   product: string;
-  amount: string;
+  embedded: boolean;
+  bestBefore: string | null;
 };
 
 function PurchaseFields({
@@ -116,27 +193,37 @@ function PurchaseFields({
   options: initialOptions,
   onClose,
   onPendingChange,
-  onOptionsChange,
-}: Props & { catalog: PurchaseCatalog }) {
+  document: purchaseDocument,
+}: Props & { catalog: PurchaseCatalog; document: PurchaseDocument }) {
   const { t, pluralIndex } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
   const invalidate = useInvalidateStock();
   const notify = useNotify();
+  const genericError = useGenericError();
+  const documentTasks = useDocumentTasks();
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
+  const userfields = useRef<UserfieldsEditorHandle>(null);
   const picker = useRef<HTMLDivElement>(null);
   const dueInput = useRef<HTMLInputElement>(null);
-  const read = useRef<AbortController>(undefined);
-  const version = useRef(0);
-  const autoSubmit = useRef(false);
+  const purchasedInput = useRef<HTMLInputElement>(null);
+  const duePicker = useRef<NativeMainDateHandle>(null);
+  const neverInput = useRef<HTMLInputElement>(null);
+  const quantityInput = useRef<HTMLSelectElement>(null);
+  const selectedDetails = useRef<PurchaseDetails>(undefined);
+  const currentCode = useRef<ProductCode>(undefined);
+  const lastCommit = useRef<string>(undefined);
   const alive = useRef(true);
-  const [options, setOptions] = useState(initialOptions);
+  const owner = useRef(new AbortController());
+  const options = initialOptions;
+  const [flowFinished, setFlowFinished] = useState(false);
+  const [additionalBarcodes, setAdditionalBarcodes] = useState<Record<string, string>>({});
   const prefill = options["product-name"];
 
   const named =
-    prefill === undefined
+    prefill === undefined || prefill === ""
       ? undefined
       : (catalog.products.find((row) =>
           (
@@ -153,8 +240,19 @@ function PurchaseFields({
 
   const [product, setProduct] = useState(initial ? String(initial.id) : "");
   const [details, setDetails] = useState<PurchaseDetails>();
-  const [code, setCode] = useState<ProductCode>();
-  const [amount, setAmount] = useState(String(preferences.purchaseAmount));
+
+  const [amount, setAmount] = useState(() =>
+    nativeQuantityValue(String(preferences.purchaseAmount), preferences.amountPrecision),
+  );
+
+  const [conversionAmount, setConversionAmount] = useState(() =>
+    nativeQuantityValue(String(preferences.purchaseAmount), preferences.amountPrecision),
+  );
+
+  const [hintAmount, setHintAmount] = useState(conversionAmount);
+  const [hintPrice, setHintPrice] = useState("");
+  const [units, setUnits] = useState<ReturnType<typeof stockEditorUnits>>([]);
+  const unitChoices = useRef<ReturnType<typeof stockEditorUnits>>([]);
   const [unitId, setUnitId] = useState("");
   const [location, setLocation] = useState("");
   const [store, setStore] = useState("");
@@ -165,15 +263,13 @@ function PurchaseFields({
   const [note, setNote] = useState("");
   const [label, setLabel] = useState("0");
   const [usedBarcode, setUsedBarcode] = useState<number>();
-  const [fields, setFields] = useState(() => initialUserfields(catalog.fields, {}, true));
-  const [error, setError] = useState<{ message: string; retry?: boolean }>();
+  const [fields, setFields] = useState(() => initialUserfields(catalog.fields, {}, false));
   const [pickerBusy, setPickerBusy] = useState(false);
+  const [externalBusy, setExternalBusy] = useState(false);
   const [finished, setFinished] = useState(false);
-  const [receipt, setReceipt] = useState<Receipt>();
-  const booked = useRef<Receipt>(undefined);
-  const labelsStarted = useRef(false);
-  const barcodeSaved = useRef(false);
-  const [card, setCard] = useState(initial?.id);
+  const [saving, setSaving] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [card, setCard] = useState<number>();
   const [expanded, setExpanded] = useState(false);
   const priceEnabled = features.enabled("STOCK_PRICE_TRACKING");
   const datesEnabled = features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
@@ -182,17 +278,48 @@ function PurchaseFields({
   const scanEnabled = options.embedded === undefined && preferences.scanPurchase;
   const precision = preferences.amountPrecision;
   const minimum = precision > 0 ? 10 ** -precision : 1;
-  const units = details ? stockEditorUnits(catalog, product, details.quantity_unit_stock.id) : [];
   const unit = units.find((row) => String(row.id) === unitId);
   const factor = unit?.factor ?? NaN;
 
-  const postedAmount = (Number(amount) / factor)
+  const postedAmount = (Number(conversionAmount) / factor)
     .toFixed(Math.max(1, precision))
     .replace(/0*$/g, "");
 
   const tare = details?.product.enable_tare_weight_handling === 1;
   const tareWeight = details?.product.tare_weight ?? 0;
   const minimumAmount = tare ? tareWeight / factor + (details?.stock_amount ?? 0) : minimum;
+
+  const live = useRef({
+    product,
+    factor,
+    totalPrice,
+    location,
+    store,
+    due,
+    purchased,
+    price,
+    usedBarcode,
+  });
+
+  useLayoutEffect(() => {
+    live.current = {
+      product,
+      factor,
+      totalPrice,
+      location,
+      store,
+      due,
+      purchased,
+      price,
+      usedBarcode,
+    };
+  }, [product, factor, totalPrice, location, store, due, purchased, price, usedBarcode]);
+
+  function captureAmountGroup(value: string) {
+    setConversionAmount(value);
+    setHintAmount(value);
+    setHintPrice(live.current.price);
+  }
 
   function fillDate(data: PurchaseDetails, selected: { is_freezer: number } | null | undefined) {
     if (!datesEnabled) return;
@@ -202,206 +329,372 @@ function PurchaseFields({
         ? data.product.default_best_before_days_after_freezing
         : data.product.default_best_before_days;
 
-    if (days != null && days !== 0) setDue(days === -1 ? "2999-12-31" : isoDay(days));
+    if (days === -1) {
+      if (!neverInput.current?.checked) setDue("2999-12-31");
+    } else if (days != null && days !== 0)
+      setDue(nativeMainDateFormat(isoDay(days), t("moment_locale"), false));
+  }
+
+  function attemptScan(singleUnit = true) {
+    if (!scanEnabled || owner.current.signal.aborted) return;
+
+    if (singleUnit)
+      flushSync(() => {
+        setAmount("1");
+        captureAmountGroup("1");
+      });
+
+    if (form.current?.checkValidity()) form.current.requestSubmit();
+    else
+      notify({
+        message: t("Scan mode is on but not all required fields could be populated automatically"),
+        tone: "warning",
+      });
   }
 
   const load = useMutation({
-    mutationFn: async (vars: {
-      product: string;
-      code?: ProductCode;
-      version: number;
-      signal: AbortSignal;
-    }) => ({
-      data: await getPurchaseSelection(vars.product, vars.signal, vars.code?.barcode),
+    mutationFn: async (vars: { product: string; signal: AbortSignal }) => ({
+      data: await getPurchaseDetails(vars.product, vars.signal),
       vars,
     }),
-    onSuccess: ({ data, vars }) => {
-      if (vars.version !== version.current || vars.signal.aborted) return;
-      const selected = data.details;
-      const choices = stockEditorUnits(catalog, vars.product, selected.quantity_unit_stock.id);
+    onSuccess: ({ data: selected, vars }) => {
+      if (vars.signal.aborted) return;
+      selectedDetails.current = selected;
+
+      const choices = stockEditorUnits(
+        catalog,
+        String(selected.product.id),
+        selected.quantity_unit_stock.id,
+      );
 
       const defaultUnit =
         selected.product.enable_tare_weight_handling === 1
           ? selected.quantity_unit_stock.id
           : selected.default_quantity_unit_purchase?.id;
 
-      const defaultFactor = choices.find((row) => row.id === defaultUnit)?.factor ?? NaN;
-      let nextUnit = defaultUnit;
+      let nextUnit = defaultUnit === undefined ? "" : String(defaultUnit);
       let nextAmount = String(preferences.purchaseAmount);
 
-      if (options.flow === "shoppinglistitemtostock") {
-        nextUnit = Number(options.quId);
+      if (purchaseDocument.read("flow") === "shoppinglistitemtostock") {
+        const requested = purchaseDocument.read("quId");
+        nextUnit = choices.some((row) => String(row.id) === String(requested))
+          ? String(requested)
+          : "";
         nextAmount = String(
-          Number.parseFloat(options.amount ?? "") *
-            (choices.find((row) => row.id === nextUnit)?.factor ?? NaN),
+          Number(purchaseDocument.read("amount")) *
+            (choices.find((row) => String(row.id) === nextUnit)?.factor ?? NaN),
         );
       }
 
-      const barcode = data.barcode;
+      const selectedFactor = choices.find((row) => String(row.id) === nextUnit)?.factor ?? NaN;
 
-      if (barcode?.qu_id) nextUnit = barcode.qu_id;
-
-      if (barcode?.amount) nextAmount = String(barcode.amount);
-
-      if (scanEnabled && !vars.code) nextAmount = "1";
-      setDetails(selected);
-      setUnitId(choices.some((row) => row.id === nextUnit) ? String(nextUnit) : "");
-      setAmount(nextAmount);
-      setLocation(
-        catalog.locations.some((row) => row.id === selected.location?.id)
-          ? String(selected.location!.id)
-          : "",
-      );
+      if (!Number.isFinite(Number(nextAmount))) nextAmount = "";
 
       const selectedStore =
-        priceEnabled && barcode?.shopping_location_id != null
-          ? barcode.shopping_location_id
-          : (selected.last_shopping_location_id ?? selected.default_shopping_location_id);
+        selected.last_shopping_location_id ?? selected.default_shopping_location_id;
 
-      setStore(catalog.stores.some((row) => row.id === selectedStore) ? String(selectedStore) : "");
-      setPrice(
-        barcode?.last_price
-          ? String(barcode.last_price)
-          : selected.last_price
-            ? (selected.last_price / defaultFactor).toFixed(preferences.priceDisplayPrecision)
-            : "",
-      );
+      unitChoices.current = choices;
+      flushSync(() => {
+        setUnlocked(false);
+        setDetails(selected);
+        setUnits(choices);
+        setUnitId(choices.some((row) => String(row.id) === nextUnit) ? nextUnit : "");
+        setAmount(nextAmount);
+        captureAmountGroup(nextAmount);
 
-      if (barcode?.last_price) setTotalPrice(true);
-      else if (
-        selected.product.default_purchase_price_type === 2 ||
-        selected.product.default_purchase_price_type === 3
+        if (locationsEnabled)
+          setLocation(
+            catalog.locations.some((row) => row.id === selected.location?.id)
+              ? String(selected.location!.id)
+              : "",
+          );
+
+        if (priceEnabled)
+          setStore(
+            catalog.stores.some((row) => row.id === selectedStore) ? String(selectedStore) : "",
+          );
+
+        const nextPrice = selected.last_price
+          ? (selected.last_price / selectedFactor).toFixed(preferences.priceDisplayPrecision)
+          : "";
+
+        setPrice(nextPrice);
+        setHintPrice(nextPrice);
+
+        if (
+          selected.product.default_purchase_price_type === 2 ||
+          selected.product.default_purchase_price_type === 3
+        )
+          setTotalPrice(selected.product.default_purchase_price_type === 3);
+
+        if (labelsEnabled) setLabel(String(selected.product.default_stock_label_type ?? 0));
+        fillDate(selected, selected.location);
+      });
+
+      // The shopping action validates and serializes before the later locale refresh.
+      if (
+        purchaseDocument.read("flow") === "shoppinglistitemtostock" &&
+        preferences.shoppingPurchaseAutoSubmit &&
+        form.current?.checkValidity()
       )
-        setTotalPrice(selected.product.default_purchase_price_type === 3);
+        form.current.requestSubmit();
+      flushSync(() => {
+        setAmount(nativeQuantityValue(nextAmount, precision));
 
-      if (barcode?.note) setNote(barcode.note);
-      setUsedBarcode(barcode?.id);
-      setLabel(String(selected.product.default_stock_label_type ?? 0));
-      fillDate(selected, selected.location);
-      autoSubmit.current =
-        scanEnabled ||
-        (options.flow === "shoppinglistitemtostock" && preferences.shoppingPurchaseAutoSubmit);
+        if (priceEnabled)
+          setPrice(nativeCurrencyValue(live.current.price, preferences.priceInputPrecision));
+        userfields.current?.refreshCurrencyValues(preferences.priceInputPrecision);
+      });
+      const selectedCode = currentCode.current;
+
+      if (selectedCode) {
+        void getPurchaseBarcode(selectedCode.barcode, vars.signal)
+          .then((barcode) => {
+            if (vars.signal.aborted) return;
+
+            if (barcode) {
+              let rawAmount =
+                form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.value ?? "";
+
+              if (barcode.amount) rawAmount = String(barcode.amount);
+              flushSync(() => {
+                setUsedBarcode(barcode.id);
+                setAmount(rawAmount);
+                captureAmountGroup(rawAmount);
+
+                if (barcode.qu_id)
+                  setUnitId(
+                    unitChoices.current.some((row) => row.id === barcode.qu_id)
+                      ? String(barcode.qu_id)
+                      : "",
+                  );
+
+                if (priceEnabled && barcode.shopping_location_id !== null)
+                  setStore(
+                    catalog.stores.some((row) => row.id === barcode.shopping_location_id)
+                      ? String(barcode.shopping_location_id)
+                      : "",
+                  );
+
+                if (barcode.last_price) {
+                  setPrice(String(barcode.last_price));
+                  setHintPrice(String(barcode.last_price));
+                  setTotalPrice(true);
+                }
+
+                if (barcode.note) setNote(barcode.note);
+              });
+              flushSync(() => {
+                setAmount(nativeQuantityValue(rawAmount, precision));
+
+                if (priceEnabled)
+                  setPrice(
+                    nativeCurrencyValue(live.current.price, preferences.priceInputPrecision),
+                  );
+                userfields.current?.refreshCurrencyValues(preferences.priceInputPrecision);
+              });
+            }
+
+            attemptScan(false);
+          })
+          .catch((reason: Error) => {
+            if (!vars.signal.aborted) console.error(reason);
+          });
+      } else {
+        flushSync(() => setUsedBarcode(undefined));
+        attemptScan();
+      }
+
+      // Native keyup runs after the details callback's refresh and scan attempt.
+      const formatted =
+        form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.value ?? "";
+
+      flushSync(() => captureAmountGroup(formatted));
       requestAnimationFrame(() =>
         form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.focus(),
       );
     },
     onError: (reason: Error, vars) => {
-      if (vars.version === version.current && !vars.signal.aborted)
-        setError({ message: reason.message, retry: true });
+      if (!vars.signal.aborted) console.error(reason);
     },
   });
 
   function selectProduct(value: string, selectedCode?: ProductCode) {
-    if (product === value && !selectedCode && (details || load.isPending)) return;
-    read.current?.abort();
-    const current = ++version.current;
+    if (value === product && !selectedCode && lastCommit.current === value) return;
+    lastCommit.current = value;
     setProduct(value);
-    setCode(selectedCode);
-    setDetails(undefined);
-    setError(undefined);
-    booked.current = undefined;
-    setReceipt(undefined);
-    labelsStarted.current = false;
-    barcodeSaved.current = false;
+    currentCode.current = selectedCode;
 
     if (!value) return;
     setCard(Number(value));
-    read.current = new AbortController();
-    load.mutate({
-      product: value,
-      code: selectedCode,
-      version: current,
-      signal: read.current.signal,
-    });
+    load.mutate({ product: value, signal: owner.current.signal });
   }
 
   const start = useEffectEvent(() => {
-    if (!initial) return;
+    const flow = purchaseDocument.read("flow");
 
-    // Native product-link events run before the purchase handler is installed.
-    // The page triggers a second event only for embedded or creation workflows.
     if (
-      options.embedded === undefined &&
-      options.flow !== "InplaceNewProductWithName" &&
-      options.flow !== "InplaceAddBarcodeToExistingProduct"
+      purchaseDocument.read("embedded") === undefined &&
+      flow !== "InplaceNewProductWithName" &&
+      flow !== "InplaceAddBarcodeToExistingProduct"
     )
       return;
-    read.current = new AbortController();
-    load.mutate({
-      product: String(initial.id),
-      version: ++version.current,
-      signal: read.current.signal,
-    });
+    selectProduct(initial ? String(initial.id) : "");
   });
 
   useEffect(() => {
     alive.current = true;
+    owner.current = new AbortController();
+    // Install the native document's initial picker event once.
+    // eslint-disable-next-line react/set-state-in-effect
     start();
 
     return () => {
       alive.current = false;
-      read.current?.abort();
+      owner.current.abort();
+      window.document.body.classList.remove("cursor-busy");
     };
   }, []);
 
   async function changed(identity: number) {
-    await invalidate();
+    await invalidate(identity);
     await client.invalidateQueries({ queryKey: ["product-overview", identity] });
   }
 
   const save = useMutation({
-    mutationFn: async (body: JsonObject) => {
-      if (!booked.current) {
-        const fresh = await getPurchaseDetails(product);
+    onMutate: () => {
+      setSaving(true);
+      document.body.classList.add("cursor-busy");
+    },
+    mutationFn: async (draft: PurchaseSubmission) => {
+      const signal = owner.current.signal;
+      signal.throwIfAborted();
 
-        const bookings = await request<Receipt["bookings"]>(`/api/stock/products/${product}/add`, {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
+      const printTask = documentTasks.capture();
 
-        if (!bookings[0]) throw new Error(t("The stock booking could not be read."));
-        booked.current = { details: fresh, bookings, body, product, amount };
-        setReceipt(booked.current);
+      const fresh = await getPurchaseDetails(draft.product, signal);
+      signal.throwIfAborted();
+
+      const current = live.current;
+      let cost = (Number(draft.price) * current.factor).toFixed(preferences.priceInputPrecision);
+
+      if (current.totalPrice) {
+        const weight =
+          fresh.product.enable_tare_weight_handling === 1 ? (fresh.product.tare_weight ?? 0) : 0;
+
+        cost = (Number(cost) / (Number.parseFloat(draft.displayAmount) - weight)).toFixed(
+          preferences.priceInputPrecision,
+        );
       }
 
-      const saved = booked.current;
+      const body: JsonObject = {
+        amount: draft.amount,
+        price: priceEnabled ? cost : 0,
+        best_before_date: datesEnabled ? (dueInput.current?.value ?? current.due) : null,
+        note: draft.note,
+      };
+
+      if (preferences.showPurchaseDate)
+        body.purchased_date = purchasedInput.current?.value ?? current.purchased;
+
+      if (priceEnabled) body.shopping_location_id = current.store;
+
+      if (locationsEnabled) body.location_id = current.location;
+
+      if (draft.label !== undefined) body.stock_label_type = draft.label;
+
+      const bookings = await request<Receipt["bookings"]>(
+        `/api/stock/products/${draft.product}/add`,
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+          signal,
+        },
+      ).finally(() =>
+        Promise.all(
+          [
+            "stock",
+            "products",
+            "recipes",
+            "recipe-fulfillment",
+            "recipe-view",
+            "recipe-overview",
+            "shopping",
+            "product-overview",
+            "mealplan-calendar",
+          ].map((key) => client.invalidateQueries({ queryKey: [key], refetchType: "none" })),
+        ),
+      );
+
+      signal.throwIfAborted();
+
+      if (!bookings[0]) throw new Error(t("The stock booking could not be read."));
+
+      const saved: Receipt = {
+        details: fresh,
+        bookings,
+        body,
+        product: draft.product,
+        embedded: false,
+        bestBefore: datesEnabled ? current.due : null,
+      };
+
       const first = saved.bookings[0]!;
 
-      if (!barcodeSaved.current) {
-        if (usedBarcode !== undefined) {
-          void request(`/api/objects/product_barcodes/${usedBarcode}`, {
-            method: "PUT",
-            body: JSON.stringify({ last_price: priceEnabled ? price : "0" }),
-          }).catch((reason: Error) => notify({ message: reason.message, tone: "error" }));
-        }
+      const barcodeValues = live.current;
 
-        if (
-          options.flow === "InplaceAddBarcodeToExistingProduct" &&
-          options.barcode !== undefined
-        ) {
-          const barcode: JsonObject = {
-            barcode: options.barcode,
-            product_id: saved.product,
-            qu_id: unitId,
-            amount: saved.amount,
-            note,
-          };
+      if (barcodeValues.usedBarcode !== undefined) {
+        void request(`/api/objects/product_barcodes/${barcodeValues.usedBarcode}`, {
+          method: "PUT",
+          body: JSON.stringify({ last_price: barcodeValues.price }),
+          signal,
+        })
+          .finally(() => {
+            void client.invalidateQueries({ queryKey: ["stock"], refetchType: "none" });
+            void client.invalidateQueries({ queryKey: ["product-related"], refetchType: "none" });
+          })
+          .catch(() => {});
+      }
 
-          if (priceEnabled) barcode.shopping_location_id = store;
-          void api
-            .action("/api/objects/product_barcodes", barcode)
-            .then(() => {
-              if (options.embedded !== undefined || !alive.current) return;
-              setOptions({});
-              onOptionsChange?.({});
-            })
-            .catch((reason: Error) => notify({ message: reason.message, tone: "error" }));
-        }
+      if (purchaseDocument.read("flow") === "InplaceAddBarcodeToExistingProduct") {
+        const barcode: JsonObject = {
+          product_id: saved.product,
+          amount: draft.displayAmount,
+          note: draft.note,
+        };
 
-        barcodeSaved.current = true;
+        const code = purchaseDocument.read("barcode");
+
+        if (code !== undefined) barcode.barcode = code;
+
+        if (draft.unitId !== undefined) barcode.qu_id = draft.unitId;
+
+        if (draft.store !== undefined) barcode.shopping_location_id = draft.store;
+        void request("/api/objects/product_barcodes", {
+          method: "POST",
+          body: JSON.stringify(barcode),
+          signal,
+        })
+          .finally(() => {
+            void client.invalidateQueries({ queryKey: ["stock"], refetchType: "none" });
+            void client.invalidateQueries({ queryKey: ["product-related"], refetchType: "none" });
+          })
+          .then(() => {
+            if (signal.aborted) return;
+            purchaseDocument.barcodeAdded();
+            setFlowFinished(true);
+          })
+          .catch((reason: Error) => {
+            if (signal.aborted) return;
+            setSaving(false);
+            setUnlocked(true);
+            document.body.classList.remove("cursor-busy");
+            genericError("Error while saving, probably this item already exists", reason);
+          });
       }
 
       const serverLabels = features.query.data?.LABEL_PRINTER_RUN_SERVER;
+      const labelType = Number(saved.body.stock_label_type);
 
       const browserLabels =
         serverLabels === false ||
@@ -410,31 +703,83 @@ function PurchaseFields({
         serverLabels === "" ||
         serverLabels === null;
 
-      if (labelsEnabled && browserLabels && Number(label) > 0 && !labelsStarted.current) {
-        labelsStarted.current = true;
+      if (labelsEnabled && browserLabels && (labelType === 1 || labelType === 2)) {
+        const printEntries = (entries: { stock_id: string }[]) => {
+          if (printTask.signal.aborted) return;
 
-        const entries =
-          label === "2"
-            ? await request<{ stock_id: string }[]>(
-                `/api/stock/transactions/${first.transaction_id}`,
-              )
-            : [first];
+          for (const entry of entries) {
+            const payload: JsonObject = {
+              product: saved.details.product.name,
+              grocycode: `grcy:p:${saved.product}:${entry.stock_id}`,
+            };
 
-        for (const entry of entries) {
-          void printLabel(
-            `/api/stock/entry/${encodeURIComponent(entry.stock_id)}/printlabel`,
-            features.query.data ?? {},
-          ).catch((reason: Error) => notify({ message: reason.message, tone: "error" }));
-        }
+            if (datesEnabled) payload.due_date = `${t("DD")}: ${first.best_before_date}`;
+
+            void postLabelWebhook(payload, features.query.data ?? {}, printTask.signal).catch(() =>
+              printTask.genericError("Error while executing WebHook"),
+            );
+          }
+        };
+
+        // Native printing runs beside field writes and keeps its callback after reset.
+        if (labelType === 2) {
+          void request<{ stock_id: string }[]>(`/api/stock/transactions/${first.transaction_id}`, {
+            signal: printTask.signal,
+          }).then(printEntries, (reason: Error) => {
+            if (!printTask.signal.aborted) console.error(reason);
+          });
+        } else printEntries([first]);
       }
 
-      await saveUserfields("stock", first.transaction_id, catalog.fields, fields, (name, value) =>
-        setFields((current) => ({ ...current, [name]: value })),
+      signal.throwIfAborted();
+      saved.embedded = purchaseDocument.read("embedded") !== undefined;
+
+      const edits = Object.fromEntries(
+        Object.entries(userfields.current?.snapshot() ?? fields).map(([name, edit]) => {
+          const file = edit.readFile ? edit.readFile() : edit.upload?.file;
+
+          return [name, file ? { ...edit, ...userfieldUpload(file) } : edit];
+        }),
       );
+
+      // Native Save dispatches fields in parallel and advances on the last dirty callback.
+      // Purchase supplies no error callback: a failed last field leaves this stage busy.
+      await new Promise<void>((resolve, reject) => {
+        const stop = () => reject(signal.reason);
+        signal.addEventListener("abort", stop, { once: true });
+        void saveCustomObjectFields(
+          "stock",
+          first.transaction_id,
+          catalog.fields,
+          edits,
+          () => {},
+          (error) => genericError("Error while saving, probably this item already exists", error),
+          signal,
+        ).then(
+          () => {
+            signal.removeEventListener("abort", stop);
+            resolve();
+          },
+          () => {},
+        );
+      });
+
+      signal.throwIfAborted();
 
       return saved;
     },
     onSuccess: async (saved) => {
+      if (!alive.current) return;
+
+      if (!saved.embedded) {
+        // EndUiBusy enables controls before the source picker's synchronous Clear/click callbacks.
+        flushSync(() => {
+          setSaving(false);
+          setUnlocked(true);
+        });
+        document.body.classList.remove("cursor-busy");
+      }
+
       const first = saved.bookings[0]!;
 
       const added =
@@ -455,20 +800,25 @@ function PurchaseFields({
         saved.details.product.name,
       );
 
-      notify({
-        message,
-        undo: async () => {
-          await api.undoTransaction(first.transaction_id);
-          await changed(saved.details.product.id);
-        },
-      });
+      if (!saved.embedded || window.parent === window)
+        notify({
+          message,
+          undo: async () => {
+            await api.undoTransaction(first.transaction_id);
+            await changed(saved.details.product.id);
+          },
+        });
 
-      if (options.embedded !== undefined) {
+      if (saved.embedded) {
         setFinished(true);
 
         if (window.parent !== window) {
-          const undo = `<br><a class="btn btn-secondary btn-sm mt-2" href="#" onclick="UndoStockTransaction(${tableAttribute(JSON.stringify(first.transaction_id))})"><i class="fa-solid fa-undo"></i> ${tableText(t("Undo"))}</a>`;
-          window.top?.postMessage(
+          const transaction = JSON.stringify(first.transaction_id)
+            .slice(1, -1)
+            .replaceAll("'", "\\'");
+
+          const undo = `<br><a class="btn btn-secondary btn-sm mt-2" href="#" onclick="UndoStockTransaction('${tableAttribute(transaction)}')"><i class="fa-solid fa-undo"></i> ${tableText(t("Undo"))}</a>`;
+          getTopmostGrocyWindow().postMessage(
             {
               Message: "BroadcastMessage",
               Payload: { Message: "ProductChanged", Payload: saved.product },
@@ -476,7 +826,7 @@ function PurchaseFields({
             window.location.origin,
           );
           window.parent.postMessage(
-            { Message: "AfterItemAdded", Payload: options.listitemid ?? null },
+            { Message: "AfterItemAdded", Payload: purchaseDocument.read("listitemid") ?? null },
             window.location.origin,
           );
           window.parent.postMessage(
@@ -490,91 +840,100 @@ function PurchaseFields({
           );
         }
       } else {
+        if (purchaseDocument.read("flow") === "InplaceAddBarcodeToExistingProduct") {
+          const selected = live.current.product;
+          const code = purchaseDocument.read("barcode");
+          setAdditionalBarcodes((current) => ({
+            ...current,
+            [selected]: `${current[selected] ?? ""}${code},`,
+          }));
+        }
+
+        purchaseDocument.finishFlow();
+        setFlowFinished(true);
+        const warningDate = saved.bestBefore;
+        const nextDue = selectedDetails.current?.next_due_date;
+
         if (
           preferences.warnEarlierPurchase &&
           datesEnabled &&
-          saved.details.next_due_date &&
-          String(saved.body.best_before_date) < saved.details.next_due_date
+          warningDate !== null &&
+          nextDue !== null &&
+          moment(warningDate).isBefore(nextDue)
         )
-          notify({ message: t("This is due earlier than already in stock items"), tone: "error" });
+          notify({
+            message: t("This is due earlier than already in stock items"),
+            tone: "warning",
+          });
         selectProduct("");
         setAmount(String(preferences.purchaseAmount));
+        captureAmountGroup(String(preferences.purchaseAmount));
+        setUnits([]);
+        unitChoices.current = [];
+        currentCode.current = undefined;
+        lastCommit.current = undefined;
         setUnitId("");
         setDue("");
+
+        if (datesEnabled) duePicker.current?.Clear();
         setPrice("");
+        setHintPrice("");
         setStore("");
         setLocation("");
         setNote("");
         setLabel("0");
         setUsedBarcode(undefined);
-        setFields(initialUserfields(catalog.fields, {}, true));
-
-        if (options.flow !== undefined) {
-          const next: PurchaseOptions = { ...options };
-          delete next.flow;
-          delete next.barcode;
-          delete next["product-name"];
-          setOptions(next);
-          onOptionsChange?.(next);
-        }
+        const signal = owner.current.signal;
+        void userfields.current?.clear("stock", signal).catch((reason) => {
+          if (!signal.aborted) console.error(reason);
+        });
 
         requestAnimationFrame(() => picker.current?.querySelector("input")?.focus());
       }
 
       await changed(saved.details.product.id);
-      onClose?.();
+
+      if (alive.current) onClose?.();
     },
-    onError: (reason: Error) => setError({ message: reason.message }),
+    onError: (reason: Error) => {
+      if (!alive.current) return;
+      setSaving(false);
+      setUnlocked(true);
+      document.body.classList.remove("cursor-busy");
+      console.error(reason);
+    },
   });
 
-  const busy =
-    load.isPending ||
-    save.isPending ||
-    pickerBusy ||
-    finished ||
-    (receipt !== undefined && save.isError);
+  const busy = saving || pickerBusy || finished;
 
-  const locked = save.isPending || receipt !== undefined || finished;
+  const locked = saving || finished;
 
   const validAmount =
     !!amount &&
     Number(amount) >= minimumAmount &&
     Number(amount) === Number(Number(amount).toFixed(precision));
 
-  useEffect(() => onPendingChange?.(save.isPending), [save.isPending, onPendingChange]);
+  useEffect(() => onPendingChange?.(saving), [saving, onPendingChange]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (
-      busy ||
-      (!receipt && (!details || !unit || !validAmount)) ||
-      !event.currentTarget.reportValidity()
-    )
-      return;
-    setError(undefined);
-    let cost = (Number(price) * factor).toFixed(preferences.priceInputPrecision);
+    if (busy || !details || !unit || !validAmount || !event.currentTarget.reportValidity()) return;
 
-    if (totalPrice)
-      cost = (Number(cost) / (Number(amount) - (tare ? tareWeight : 0))).toFixed(
-        preferences.priceInputPrecision,
-      );
-
-    const body: JsonObject = {
+    const draft: PurchaseSubmission = {
+      product,
       amount: postedAmount,
-      price: priceEnabled ? cost : 0,
-      best_before_date: datesEnabled ? due : null,
+      displayAmount: amount,
+      price,
       note,
     };
 
-    if (preferences.showPurchaseDate) body.purchased_date = purchased;
+    if (!quantityInput.current?.matches(":disabled")) draft.unitId = unitId;
 
-    if (priceEnabled) body.shopping_location_id = store;
+    if (priceEnabled) draft.store = store;
 
-    if (locationsEnabled) body.location_id = location;
-
-    if (labelsEnabled) body.stock_label_type = label;
-    save.mutate(body);
+    if (labelsEnabled) draft.label = label;
+    save.mutate(draft);
   }
 
   const scan = useMutation({
@@ -582,33 +941,17 @@ function PurchaseFields({
     onSuccess: () => client.invalidateQueries({ queryKey: userSettingsQuery().queryKey }),
   });
 
-  const scanReady = useEffectEvent(() => {
-    if (!autoSubmit.current || busy || !details || !form.current) return;
-    autoSubmit.current = false;
-
-    if (validAmount && unit && form.current.checkValidity()) form.current.requestSubmit();
-    else if (scanEnabled)
-      notify({
-        message: t("Scan mode is on but not all required fields could be populated automatically"),
-        tone: "error",
-      });
-  });
-
-  useEffect(() => {
-    scanReady();
-  }, [busy, details]);
-
-  const displayCost = (Number(price) * factor).toFixed(preferences.priceDisplayPrecision);
+  const displayCost = (Number(hintPrice) * factor).toFixed(preferences.priceDisplayPrecision);
 
   const displayUnitCost = totalPrice
-    ? (Number(displayCost) / (Number(amount) - (tare ? tareWeight : 0))).toFixed(
+    ? (Number(displayCost) / (Number(hintAmount) - (tare ? tareWeight : 0))).toFixed(
         preferences.priceDisplayPrecision,
       )
     : displayCost;
 
   const priceHint =
-    price &&
-    Number(price) !== 0 &&
+    hintPrice &&
+    Number(hintPrice) !== 0 &&
     Number(postedAmount) !== 0 &&
     details &&
     (totalPrice || unit?.name !== details.quantity_unit_stock.name)
@@ -623,301 +966,299 @@ function PurchaseFields({
         aria-label={t("Purchase")}
         onSubmit={submit}
       >
-        {options.embedded === undefined ? (
-          <button
-            type="button"
-            className="btn"
-            aria-pressed={scanEnabled}
-            disabled={scan.isPending || locked}
-            onClick={() => scan.mutate()}
-          >
-            {t("Scan mode")} {t(scanEnabled ? "on" : "off")}
-          </button>
-        ) : null}
-        {scan.error ? <ErrorBlock message={scan.error.message} /> : null}
-        <fieldset disabled={locked}>
-          <div ref={picker}>
-            <ProductPicker
-              products={catalog.products}
-              barcodes={catalog.barcodes}
-              plugin={catalog.barcode_lookup_plugin_name}
-              value={product}
-              required
-              disabled={busy}
-              lookupDisabled={options.flow !== undefined}
-              autoFocus
-              workflowPath={`/purchase${options.embedded === undefined ? "" : "?embedded"}`}
-              onChange={selectProduct}
-              onResolved={() =>
-                requestAnimationFrame(() => {
-                  if (
-                    document.activeElement !== document.body &&
-                    !picker.current?.contains(document.activeElement)
-                  )
-                    return;
-                  form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.focus();
-                })
-              }
-              onAssignBarcode={(barcode) => {
-                const next: PurchaseOptions = {
-                  flow: "InplaceAddBarcodeToExistingProduct",
-                  barcode,
-                };
-
-                if (options.embedded !== undefined) next.embedded = options.embedded;
-                setOptions(next);
-                onOptionsChange?.(next);
-                selectProduct("");
-              }}
-              onBusyChange={setPickerBusy}
-            />
-          </div>
-          {options.flow === "InplaceAddBarcodeToExistingProduct" ? (
-            <p role="status">
-              {options.barcode}{" "}
-              {t("will be added to the list of barcodes for the selected product on submit")}
-            </p>
+        <fieldset className="picker-form-lock" disabled={externalBusy}>
+          {options.embedded === undefined ? (
+            <button
+              type="button"
+              className="btn"
+              aria-pressed={scanEnabled}
+              disabled={scan.isPending || locked}
+              onClick={() => scan.mutate()}
+            >
+              {t("Scan mode")} {t(scanEnabled ? "on" : "off")}
+            </button>
           ) : null}
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor={`${id}-amount`}>{t("Amount")}</label>
-              <NumberPicker
-                id={`${id}-amount`}
-                label={t("Amount")}
-                value={amount}
+          {scan.error ? <ErrorBlock message={scan.error.message} /> : null}
+          <fieldset disabled={locked}>
+            <div ref={picker}>
+              <ProductPicker
+                products={catalog.products}
+                barcodes={catalog.products.map((row) => ({
+                  product_id: row.id,
+                  barcodes: `${catalog.barcodes.find((entry) => entry.product_id === row.id)?.barcodes ?? ""}${additionalBarcodes[String(row.id)] ?? ""}`,
+                }))}
+                plugin={catalog.barcode_lookup_plugin_name}
+                value={product}
                 required
-                min={minimumAmount}
-                step={String(minimum)}
                 disabled={busy}
-                onChange={setAmount}
+                lookupDisabled={purchaseDocument.read("flow") !== undefined}
+                autoFocus
+                workflowPath={`/purchase${options.embedded === undefined ? "" : "?embedded"}`}
+                onChange={selectProduct}
+                onResolved={() =>
+                  requestAnimationFrame(() => {
+                    if (
+                      document.activeElement !== document.body &&
+                      !picker.current?.contains(document.activeElement)
+                    )
+                      return;
+                    form.current?.querySelector<HTMLInputElement>(`[id="${id}-amount"]`)?.focus();
+                  })
+                }
+                onAssignBarcode={(barcode) => {
+                  purchaseDocument.assignBarcode(barcode);
+                }}
+                onBusyChange={setPickerBusy}
+                onFormBusyChange={setExternalBusy}
               />
             </div>
-            <label className="field">
-              <span>{t("Quantity unit")}</span>
-              <select
-                required
-                disabled={busy || units.length === 1 || tare}
-                value={unitId}
-                onChange={(event) => setUnitId(event.target.value)}
-              >
-                {!units.length ? <option value="" /> : null}
-                {units.map((row) => (
-                  <option key={String(row.id)} value={String(row.id)}>
-                    {row.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <input type="hidden" name="amount" value={postedAmount} />
-          {amount && details && unit && unit.name !== details.quantity_unit_stock.name ? (
-            <p className="field-help">
-              {t(
-                "This equals %1$s %2$s",
-                (Number(amount) / factor).toLocaleString(),
-                unitLabel(
-                  {
-                    ...details.quantity_unit_stock,
-                    plural_forms: catalog.units.find(
-                      (row) => row.id === details.quantity_unit_stock.id,
-                    )?.plural_forms,
-                  },
-                  Number(amount) / factor,
-                  pluralIndex,
-                  false,
-                ),
-              )}
-            </p>
-          ) : null}
-          {tare ? (
-            <p role="status">
-              {t("This product has tare weight enabled")}: {tareWeight}
-            </p>
-          ) : null}
-          {preferences.showPurchaseDate ? (
-            <div className="field">
-              <label htmlFor={`${id}-purchased-date`}>{t("Purchased date")}</label>
-              <BookingDateInput
+            {!flowFinished && options.flow === "InplaceAddBarcodeToExistingProduct" ? (
+              <p role="status">
+                {options.barcode}{" "}
+                {t("will be added to the list of barcodes for the selected product on submit")}
+              </p>
+            ) : null}
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor={`${id}-amount`}>{t("Amount")}</label>
+                <NumberPicker
+                  id={`${id}-amount`}
+                  label={t("Amount")}
+                  value={amount}
+                  required
+                  min={minimumAmount}
+                  step={String(minimum)}
+                  disabled={busy}
+                  onChange={(value) => {
+                    setAmount(value);
+                    captureAmountGroup(value);
+                  }}
+                />
+              </div>
+              <label className="field">
+                <span>{t("Quantity unit")}</span>
+                <select
+                  ref={quantityInput}
+                  required
+                  disabled={busy || (!unlocked && (units.length === 1 || tare))}
+                  value={unitId}
+                  onChange={(event) => {
+                    setUnitId(event.target.value);
+                    captureAmountGroup(amount);
+                  }}
+                >
+                  {!units.length ? <option value="" /> : null}
+                  {units.map((row) => (
+                    <option key={String(row.id)} value={String(row.id)}>
+                      {row.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <input type="hidden" name="amount" value={postedAmount} />
+            {amount && details && unit && unit.name !== details.quantity_unit_stock.name ? (
+              <p className="field-help">
+                {t(
+                  "This equals %1$s %2$s",
+                  (Number(conversionAmount) / factor).toLocaleString(),
+                  unitLabel(
+                    {
+                      ...details.quantity_unit_stock,
+                      plural_forms: catalog.units.find(
+                        (row) => row.id === details.quantity_unit_stock.id,
+                      )?.plural_forms,
+                    },
+                    Number(conversionAmount) / factor,
+                    pluralIndex,
+                    false,
+                  ),
+                )}
+              </p>
+            ) : null}
+            {tare ? (
+              <p role="status">
+                {t("This product has tare weight enabled")}: {tareWeight}
+              </p>
+            ) : null}
+            {preferences.showPurchaseDate ? (
+              <NativeDateTimeInput
+                inputRef={purchasedInput}
                 id={`${id}-purchased-date`}
-                label={t("Purchased date")}
+                caption={t("Purchased date")}
                 required
                 numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
-                firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
-                weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
-                initialCalendarValue={purchased}
-                parseOnBlur={false}
+                initWithNow
+                showInitialContext
+                nextInputSelector={`[id="${id}-due-date"]`}
                 value={purchased}
                 onChange={setPurchased}
               />
-            </div>
-          ) : null}
-          {datesEnabled ? (
-            <div>
-              <div className="field">
-                <label htmlFor={`${id}-due-date`}>{t("Due date")}</label>
-                <BookingDateInput
-                  inputRef={dueInput}
-                  id={`${id}-due-date`}
-                  label={t("Due date")}
-                  required
-                  numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
-                  firstDayOfWeek={features.query.data?.CALENDAR_FIRST_DAY_OF_WEEK}
-                  weekNumbers={features.query.data?.CALENDAR_SHOW_WEEK_OF_YEAR !== false}
-                  readOnly={due === "2999-12-31"}
-                  value={due}
-                  onChange={setDue}
-                  onShortcut={() =>
-                    form.current?.querySelector<HTMLInputElement>(`[id="${id}-price"]`)?.focus()
-                  }
-                />
-              </div>
-              <label className="check-field">
-                <input
-                  type="checkbox"
-                  tabIndex={-1}
-                  checked={due === "2999-12-31"}
-                  onChange={(event) => {
-                    setDue(event.target.checked ? "2999-12-31" : "");
-
-                    if (event.target.checked)
-                      form.current?.querySelector<HTMLInputElement>(`[id="${id}-price"]`)?.focus();
-                    else dueInput.current?.focus();
-                  }}
-                />
-                {t("Never overdue")}
-              </label>
-              {due && due < isoDay() ? (
-                <p className="field-help">
-                  {t("The given date is earlier than today, are you sure?")}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {priceEnabled ? (
-            <>
-              <div className="field">
-                <label htmlFor={`${id}-price`}>{t("Price")}</label>
-                <NumberPicker
-                  id={`${id}-price`}
-                  label={t("Price")}
-                  value={price}
-                  min={0}
-                  step={String(10 ** -preferences.priceInputPrecision)}
-                  onChange={setPrice}
-                />
-              </div>
-              <div className="field-row">
+            ) : null}
+            {datesEnabled ? (
+              <div>
+                <div className="field">
+                  <NativeMainDateInput
+                    ref={duePicker}
+                    inputRef={dueInput}
+                    id={`${id}-due-date`}
+                    caption={t("Due date")}
+                    datetime={false}
+                    syncValue="set"
+                    required
+                    numeric={features.enabled("STOCK_BEST_BEFORE_DATE_FIELD_NUMBER_PAD")}
+                    value={due}
+                    onChange={setDue}
+                    nextInputSelector={`[id="${id}-price"]`}
+                  />
+                </div>
                 <label className="check-field">
                   <input
-                    type="radio"
-                    name={`${id}-price-type`}
-                    checked={!totalPrice}
-                    onChange={() => setTotalPrice(false)}
+                    type="checkbox"
+                    ref={neverInput}
+                    data-native-date-shortcut="1"
+                    data-datetimepicker-shortcut-value="2999-12-31"
+                    tabIndex={-1}
+                    defaultChecked={false}
                   />
-                  {unit ? `${unit.name} ${t("price")}` : t("Unit price")}
+                  {t("Never overdue")}
                 </label>
-                <label className="check-field">
-                  <input
-                    type="radio"
-                    name={`${id}-price-type`}
-                    checked={totalPrice}
-                    onChange={() => setTotalPrice(true)}
-                  />
-                  {t("Total price")}
-                </label>
+                {due && due < isoDay() ? (
+                  <p className="field-help">
+                    {t("The given date is earlier than today, are you sure?")}
+                  </p>
+                ) : null}
               </div>
-              {priceHint ? <p className="field-help">{priceHint}</p> : null}
+            ) : null}
+            {priceEnabled ? (
+              <>
+                <div className="field">
+                  <label htmlFor={`${id}-price`}>{t("Price")}</label>
+                  <NumberPicker
+                    id={`${id}-price`}
+                    label={t("Price")}
+                    currency
+                    value={price}
+                    min={0}
+                    step={String(10 ** -preferences.priceInputPrecision)}
+                    onChange={(value) => {
+                      setHintAmount(amount);
+                      setHintPrice(value);
+                      setPrice(value);
+                    }}
+                  />
+                </div>
+                <div className="field-row">
+                  <label className="check-field">
+                    <input
+                      type="radio"
+                      name={`${id}-price-type`}
+                      checked={!totalPrice}
+                      onChange={() => {
+                        setHintAmount(amount);
+                        setHintPrice(price);
+                        setTotalPrice(false);
+                      }}
+                    />
+                    {unit ? `${unit.name} ${t("price")}` : t("Unit price")}
+                  </label>
+                  <label className="check-field">
+                    <input
+                      type="radio"
+                      name={`${id}-price-type`}
+                      checked={totalPrice}
+                      onChange={() => {
+                        setHintAmount(amount);
+                        setHintPrice(price);
+                        setTotalPrice(true);
+                      }}
+                    />
+                    {t("Total price")}
+                  </label>
+                </div>
+                {priceHint ? <p className="field-help">{priceHint}</p> : null}
+                <label className="field">
+                  <span>{t("Store")}</span>
+                  <select value={store} onChange={(event) => setStore(event.target.value)}>
+                    <option value="" />
+                    {catalog.stores.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : null}
+            {locationsEnabled ? (
               <label className="field">
-                <span>{t("Store")}</span>
-                <select value={store} onChange={(event) => setStore(event.target.value)}>
+                <span>{t("Location")}</span>
+                <select
+                  value={location}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setLocation(value);
+
+                    if (details && features.enabled("STOCK_PRODUCT_FREEZING") && value)
+                      fillDate(
+                        details,
+                        catalog.locations.find((row) => String(row.id) === value),
+                      );
+                  }}
+                >
                   <option value="" />
-                  {catalog.stores.map((row) => (
+                  {catalog.locations.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.name}
                     </option>
                   ))}
                 </select>
               </label>
-            </>
-          ) : null}
-          {locationsEnabled ? (
+            ) : null}
+            {labelsEnabled ? (
+              <label className="field">
+                <span>{t("Stock entry label")}</span>
+                <select value={label} onChange={(event) => setLabel(event.target.value)}>
+                  <option value="0">{t("No label")}</option>
+                  <option value="1">{t("Single label")}</option>
+                  <option value="2">{t("Label per unit")}</option>
+                </select>
+              </label>
+            ) : null}
             <label className="field">
-              <span>{t("Location")}</span>
-              <select
-                value={location}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setLocation(value);
-
-                  if (details && features.enabled("STOCK_PRODUCT_FREEZING") && value)
-                    fillDate(
-                      details,
-                      catalog.locations.find((row) => String(row.id) === value),
-                    );
-                }}
-              >
-                <option value="" />
-                {catalog.locations.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))}
-              </select>
+              <span>{t("Note")}</span>
+              <input value={note} onChange={(event) => setNote(event.target.value)} />
             </label>
-          ) : null}
-          {labelsEnabled ? (
-            <label className="field">
-              <span>{t("Stock entry label")}</span>
-              <select value={label} onChange={(event) => setLabel(event.target.value)}>
-                <option value="0">{t("No label")}</option>
-                <option value="1">{t("Single label")}</option>
-                <option value="2">{t("Label per unit")}</option>
-              </select>
-            </label>
-          ) : null}
-          <label className="field">
-            <span>{t("Note")}</span>
-            <input value={note} onChange={(event) => setNote(event.target.value)} />
-          </label>
-          <UserfieldsEditor
-            fields={catalog.fields}
-            values={fields}
-            creating
-            disabled={locked}
-            onChange={(name, value) => setFields((current) => ({ ...current, [name]: value }))}
-          />
-        </fieldset>
-        {load.isPending ? <LoadingBlock /> : null}
-        {error ? (
-          <>
-            <ErrorBlock message={error.message} />
-            {error.retry ? (
-              <button
-                type="button"
-                className="btn"
-                disabled={busy}
-                onClick={() => selectProduct(product, code)}
-              >
-                {t("Retry")}
+            <UserfieldsEditor
+              ref={userfields}
+              nativeFiles
+              nativeDirty
+              nativeLoadPending
+              fields={catalog.fields}
+              values={fields}
+              creating
+              disabled={locked}
+              onChange={(name, value) => setFields((current) => ({ ...current, [name]: value }))}
+            />
+            <NativeUserfieldsLoad
+              namespace={"stock"}
+              objectId={null}
+              fieldCount={catalog.fields.length}
+              editor={userfields}
+            />
+          </fieldset>
+          {load.isPending ? <LoadingBlock /> : null}
+          <div className="actions">
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              {saving ? t("Saving…") : t("OK")}
+            </button>
+            {onClose ? (
+              <button type="button" className="btn" disabled={saving} onClick={onClose}>
+                {t("Cancel")}
               </button>
             ) : null}
-          </>
-        ) : null}
-        {receipt && error ? <p role="status">{t("Stock entry saved.")}</p> : null}
-        <div className="actions">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={busy || (!receipt && (!details || !unit || !validAmount))}
-          >
-            {save.isPending ? t("Saving…") : t("OK")}
-          </button>
-          {onClose ? (
-            <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
-              {t("Cancel")}
-            </button>
-          ) : null}
-        </div>
+          </div>
+        </fieldset>
       </form>
       {options.embedded === undefined && card !== undefined ? (
         <section className="transfer-product">

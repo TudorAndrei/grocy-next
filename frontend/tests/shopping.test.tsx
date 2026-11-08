@@ -3,13 +3,50 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 import { writeApiConfig } from "@/lib/config";
-import { useState } from "react";
-import { ShoppingPage } from "@/components/ShoppingPage";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
+import { createAppRouter } from "@/router";
 
-function Shopping() {
-  const [id, setId] = useState(1);
+function applicationRead(path: string) {
+  if (path === "/api/v2/setup") return Response.json({ needs_setup: false });
 
-  return <ShoppingPage selectedListId={id} onListChange={setId} />;
+  if (path === "/api/user") return Response.json([{ id: 1, username: "owner" }]);
+
+  if (path === "/api/system/config")
+    return Response.json({ FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS: true });
+
+  if (path === "/api/user/settings") return Response.json({});
+
+  if (path === "/api/v2/user/permissions") return Response.json({ SHOPPINGLIST_ITEMS_ADD: true });
+
+  if (path.startsWith("/api/v2/localization"))
+    return Response.json({
+      locale: "en",
+      direction: "ltr",
+      languages: ["en"],
+      catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+    });
+
+  return undefined;
+}
+
+function mountShopping(id = 1) {
+  vi.stubGlobal("scrollTo", vi.fn());
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+  const router = createAppRouter({
+    history: createMemoryHistory({ initialEntries: ["/shopping?list=" + id] }),
+  });
+
+  const app = render(
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+
+  onTestFinished(() => {
+    app.unmount();
+    client.clear();
+  });
 }
 
 test("an imported shopping quantity displays its saved unit", async () => {
@@ -18,6 +55,9 @@ test("an imported shopping quantity displays its saved unit", async () => {
     "fetch",
     vi.fn<typeof fetch>(async (input) => {
       const path = String(input);
+      const common = applicationRead(path);
+
+      if (common) return common;
 
       if (path === "/api/objects/products") {
         return Response.json([{ id: 1, name: "Milk", qu_id_stock: 1, qu_id_purchase: 2 }]);
@@ -41,13 +81,7 @@ test("an imported shopping quantity displays its saved unit", async () => {
       return Response.json([]);
     }),
   );
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <Shopping />
-    </QueryClientProvider>,
-  );
+  mountShopping();
   await screen.findByText("2 Cases");
 });
 
@@ -63,6 +97,9 @@ test("a failed purchase leaves only unfinished shopping items for retry", async 
     "fetch",
     vi.fn<typeof fetch>(async (input) => {
       const path = String(input);
+      const common = applicationRead(path);
+
+      if (common) return common;
 
       if (path === "/api/objects/products") {
         return Response.json([
@@ -100,13 +137,7 @@ test("a failed purchase leaves only unfinished shopping items for retry", async 
       return Response.json([]);
     }),
   );
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <Shopping />
-    </QueryClientProvider>,
-  );
+  mountShopping();
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Put 2 in stock" }));
   await user.click(await screen.findByRole("button", { name: "Put 1 in stock" }));
@@ -121,6 +152,9 @@ test("notes save only trusted editor changes and retain the draft after a failed
 
   const transport = vi.fn<typeof fetch>(async (input, init) => {
     const path = String(input).replace(/^\/house/, "");
+    const common = applicationRead(path);
+
+    if (common) return common;
 
     if (path === "/api/system/config")
       return Response.json({ FEATURE_FLAG_SHOPPINGLIST_MULTIPLE_LISTS: true });
@@ -154,18 +188,7 @@ test("notes save only trusted editor changes and retain the draft after a failed
   });
 
   vi.stubGlobal("fetch", transport);
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-
-  const app = render(
-    <QueryClientProvider client={client}>
-      <Shopping />
-    </QueryClientProvider>,
-  );
-
-  onTestFinished(() => {
-    app.unmount();
-    client.clear();
-  });
+  mountShopping();
   const user = userEvent.setup();
   await screen.findByRole("option", { name: /^Weekend/ });
   await user.selectOptions(await screen.findByRole("combobox", { name: "Shopping list" }), "7");
@@ -233,6 +256,12 @@ test("clear done items retains open items in the selected list", async () => {
 
   const transport = vi.fn<typeof fetch>(async (input, init) => {
     const path = String(input);
+    const common = applicationRead(path);
+
+    if (common) return common;
+
+    if (path === "/api/v2/shopping-lists/1")
+      return Response.json({ id: 1, name: "Groceries", items: [] });
 
     if (path === "/api/v2/shopping-lists/7")
       return Response.json({ id: 7, name: "Trip", description: "", items });
@@ -248,13 +277,7 @@ test("clear done items retains open items in the selected list", async () => {
   });
 
   vi.stubGlobal("fetch", transport);
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <ShoppingPage selectedListId={7} onListChange={() => {}} />
-    </QueryClientProvider>,
-  );
+  mountShopping(7);
   const user = userEvent.setup();
   await screen.findByRole("checkbox", { name: "Bags in the basket" });
   await user.click(screen.getByRole("button", { name: "Clear done items" }));

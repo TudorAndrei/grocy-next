@@ -15,6 +15,7 @@ type Props = {
   firstDayOfWeek?: JsonValue;
   weekNumbers: boolean;
   above: boolean;
+  inline?: boolean;
   onDate: (date: number) => void;
   onView: (view: CalendarView) => void;
   onSelect: (date: string) => void;
@@ -82,13 +83,14 @@ export function BookingCalendar(props: Props) {
   const previousDisabled = props.view === "decades" && century === 0;
 
   const nextDisabled =
-    props.view === "days"
+    !props.inline &&
+    (props.view === "days"
       ? date.clone().add(1, "month").isAfter(maximum, "month")
       : props.view === "months"
         ? date.clone().add(1, "year").isAfter(maximum, "year")
         : props.view === "years"
           ? decade + 9 > maximum.year()
-          : century + 90 > maximum.year();
+          : century + 90 > maximum.year());
 
   function navigate(direction: number) {
     const amount =
@@ -119,7 +121,7 @@ export function BookingCalendar(props: Props) {
         year: date.year(),
         month,
         active: selected.isSame(candidate, "month"),
-        disabled: candidate.isAfter(maximum, "month"),
+        disabled: !props.inline && candidate.isAfter(maximum, "month"),
       });
     }
   } else if (props.view === "years") {
@@ -128,7 +130,7 @@ export function BookingCalendar(props: Props) {
         text: String(year),
         year,
         active: year >= decade && year <= decade + 9 && selected.year() === year,
-        disabled: (year === decade - 1 ? decade : year) > maximum.year(),
+        disabled: !props.inline && (year === decade - 1 ? decade : year) > maximum.year(),
         old: year < decade || year > decade + 9,
       });
     }
@@ -149,6 +151,7 @@ export function BookingCalendar(props: Props) {
         year: year + 6,
         active: selected.isAfter(start) && selected.year() <= year + 11,
         disabled:
+          !props.inline &&
           start.isAfter(maximum, "year") &&
           !(maximum.isAfter(start, "year") && maximum.year() <= year + 11),
       });
@@ -167,9 +170,9 @@ export function BookingCalendar(props: Props) {
   return (
     <div
       id={props.id}
-      role="dialog"
+      role={props.inline ? undefined : "dialog"}
       aria-label={props.label}
-      className={`booking-calendar${props.above ? " is-above" : ""}`}
+      className={`booking-calendar${props.inline ? " is-inline" : ""}${props.above ? " is-above" : ""}`}
       onMouseDown={(event) => event.preventDefault()}
     >
       <div className="booking-calendar-nav">
@@ -240,7 +243,7 @@ export function BookingCalendar(props: Props) {
                           aria-label={candidate.format("LL")}
                           aria-pressed={active}
                           aria-current={today ? "date" : undefined}
-                          disabled={candidate.isAfter(maximum, "day")}
+                          disabled={!props.inline && candidate.isAfter(maximum, "day")}
                           className={`${other ? "is-other " : ""}${active ? "is-selected " : ""}${today ? "is-today" : ""}`}
                           onClick={() => props.onSelect(candidate.format("YYYY-MM-DD"))}
                         >
@@ -294,15 +297,17 @@ export function BookingCalendar(props: Props) {
         >
           <Icon name="today" />
         </button>
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-label={t("Close the picker")}
-          title={t("Close the picker")}
-          onClick={props.onClose}
-        >
-          <Icon name="check" />
-        </button>
+        {!props.inline ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label={t("Close the picker")}
+            title={t("Close the picker")}
+            onClick={props.onClose}
+          >
+            <Icon name="check" />
+          </button>
+        ) : null}
       </div>
     </div>
   );

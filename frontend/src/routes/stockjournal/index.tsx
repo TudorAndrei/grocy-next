@@ -1,3 +1,4 @@
+import { useNativeDocumentReload } from "@/lib/native-document";
 import { createFileRoute } from "@tanstack/react-router";
 import { StockJournal } from "@/components/StockJournal";
 import { PageHeader } from "@/components/PageHeader";
@@ -13,6 +14,7 @@ function JournalPage() {
   const { t } = useI18n();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const reloadDocument = useNativeDocumentReload("/stockjournal");
 
   return (
     <>
@@ -21,6 +23,7 @@ function JournalPage() {
         key={`${search.product}:${search.months}`}
         search={search}
         onChange={(search) => {
+          reloadDocument();
           void navigate({ search });
         }}
       />

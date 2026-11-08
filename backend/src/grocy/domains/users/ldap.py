@@ -8,12 +8,13 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from ldap3 import NONE, SUBTREE, Connection, Server, Tls
-from ldap3.core.exceptions import LDAPException
+from ldap3.core.exceptions import LDAPException, LDAPInvalidFilterError
 from ldap3.utils.conv import escape_filter_chars
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
+from grocy.compatibility.php import php_error, php_string
 from grocy.core.config import Settings, get_settings
 from grocy.core.errors import GrocyError
 from grocy.db.models.users import User
@@ -57,8 +58,10 @@ def _attribute(value: Any) -> str:
     return str(value or "")
 
 
-def lookup_identity(settings: Settings, username: str, password: str) -> DirectoryIdentity | None:
-    if not password or not settings.ldap_address or not settings.ldap_base_dn:
+def lookup_identity(
+    settings: Settings, username: Any, password: Any, *, native: bool = False
+) -> DirectoryIdentity | None:
+    if (not native and not password) or not settings.ldap_address or not settings.ldap_base_dn:
         return None
     attribute = settings.ldap_uid_attr
     if re.fullmatch(r"[A-Za-z][A-Za-z0-9;-]*|[0-9]+(?:\.[0-9]+)+", attribute) is None:
@@ -97,7 +100,12 @@ def lookup_identity(settings: Settings, username: str, password: str) -> Directo
                 return None
         if not connection.bind():
             return None
-        query = f"(&({attribute}={escape_filter_chars(username)}){settings.ldap_user_filter})"
+        query_name = (
+            ("Array" if isinstance(username, dict) else php_string(username))
+            if native
+            else escape_filter_chars(username)
+        )
+        query = f"(&({attribute}={query_name}){settings.ldap_user_filter})"
         if not connection.search(
             settings.ldap_base_dn,
             query,
@@ -117,11 +125,21 @@ def lookup_identity(settings: Settings, username: str, password: str) -> Directo
         entry = entries[0]
         attributes = {name.lower(): value for name, value in entry["attributes"].items()}
         canonical = _attribute(attributes.get(attribute.lower()))
+        if native:
+            if isinstance(password, dict):
+                raise php_error(
+                    "ldap_bind(): Argument #3 ($password) must be of type ?string, array given"
+                )
+            password = php_string(password) if password is not None else None
         if not canonical or not connection.rebind(user=entry["dn"], password=password):
             return None
         return DirectoryIdentity(
             canonical, _attribute(attributes.get("givenname")), _attribute(attributes.get("sn"))
         )
+    except LDAPInvalidFilterError:
+        if native:
+            raise GrocyError("LDAP error: Bad search filter", code=None) from None
+        return None
     except (LDAPException, OSError):
         return None
     finally:
@@ -130,9 +148,11 @@ def lookup_identity(settings: Settings, username: str, password: str) -> Directo
 
 
 async def authenticate_user(
-    session: AsyncSession, username: str, password: str
+    session: AsyncSession, username: Any, password: Any, *, native: bool = False
 ) -> DirectoryUser | None:
-    identity = await run_in_threadpool(lookup_identity, get_settings(), username, password)
+    identity = await run_in_threadpool(
+        lookup_identity, get_settings(), username, password, native=native
+    )
     if identity is None:
         return None
     query = select(User.id, User.username).where(User.username == identity.username)

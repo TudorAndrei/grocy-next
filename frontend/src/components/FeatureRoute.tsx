@@ -1,6 +1,6 @@
 import { useI18n } from "@/lib/i18n";
 import { Link, Outlet } from "@tanstack/react-router";
-import { useFeatures } from "@/lib/features";
+import { isNativePagePath, useFeatures } from "@/lib/features";
 import { usePathname } from "./SiteNav";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
@@ -12,7 +12,7 @@ export function FeatureRoute() {
   const pathname = usePathname();
   const features = useFeatures();
 
-  if (pathname === "/settings") return <Outlet />;
+  if (isNativePagePath(pathname) || pathname === "/settings") return <Outlet />;
 
   if (features.query.isPending) return <LoadingBlock label={tr("Loading configuration…")} />;
 

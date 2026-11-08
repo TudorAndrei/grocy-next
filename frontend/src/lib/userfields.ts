@@ -1,7 +1,6 @@
 import { uploadId } from "@/lib/upload-id";
 import { z } from "zod";
-import { compareSqliteNames } from "./collation";
-import { api, filePath, request } from "./api";
+import { filePath, request } from "./api";
 
 export const userfieldSchema = z.object({
   id: z.number(),
@@ -16,27 +15,27 @@ export const userfieldSchema = z.object({
 const customFieldsSchema = z.array(
   userfieldSchema.extend({
     entity: z.string(),
-    sort_number: z.number().nullable().optional(),
+    sort_number: z.union([z.number(), z.string()]).nullable().optional(),
     show_as_column_in_tables: z.number().optional(),
   }),
 );
 
 export const userfieldsQuery = {
   queryKey: ["entity-manager-userfields"],
-  queryFn: async () =>
-    customFieldsSchema.parse(await api.objects("userfields")).sort((a, b) => {
-      const position = (a.sort_number ?? -Infinity) - (b.sort_number ?? -Infinity);
-
-      return position || compareSqliteNames(a.name, b.name);
-    }),
+  // SQL must sort before PDO turns stored empty TEXT into null, losing its storage class.
+  queryFn: async ({ signal }: { signal: AbortSignal }) =>
+    customFieldsSchema.parse(await request("/api/v2/custom-data/fields", { signal })),
 };
 
 export type UserfieldDefinition = z.infer<typeof userfieldSchema>;
 
 export type FieldEdit = {
   value: string;
+  // A native single select without a selected option serializes as null.
+  nativeValue?: string | null;
   dirty: boolean;
   upload?: { name: string; file: File };
+  readFile?: () => File | undefined;
   remove?: string;
 };
 
@@ -103,8 +102,10 @@ export async function saveUserfields(
   fields: UserfieldDefinition[],
   edits: FieldEdits,
   onSaved: (name: string, edit: FieldEdit) => void,
+  signal?: AbortSignal,
 ) {
   for (const field of fields) {
+    signal?.throwIfAborted();
     const edit = edits[field.name];
 
     if (!edit?.dirty) continue;
@@ -113,11 +114,14 @@ export async function saveUserfields(
       {
         method: "PUT",
         body: JSON.stringify({ [field.name]: edit.value }),
+        signal,
       },
     );
+    signal?.throwIfAborted();
 
     if (edit.remove) {
-      await request(filePath("userfiles", edit.remove), { method: "DELETE" });
+      await request(filePath("userfiles", edit.remove), { method: "DELETE", signal });
+      signal?.throwIfAborted();
       onSaved(field.name, { value: edit.value, dirty: true, upload: edit.upload });
     }
 
@@ -125,7 +129,9 @@ export async function saveUserfields(
       await request(filePath("userfiles", edit.upload.name), {
         method: "PUT",
         body: edit.upload.file,
+        signal,
       });
+    signal?.throwIfAborted();
     onSaved(field.name, { value: edit.value, dirty: false });
   }
 }

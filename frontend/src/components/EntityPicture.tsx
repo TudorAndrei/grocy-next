@@ -14,7 +14,7 @@ export type PictureSelection = {
   remove: boolean;
 };
 
-type PictureGroup = "productpictures" | "recipepictures" | "userfiles";
+type PictureGroup = "productpictures" | "recipepictures" | "userpictures" | "userfiles";
 
 type PictureResult = { source: File | string; group: PictureGroup } & (
   | { url: string }

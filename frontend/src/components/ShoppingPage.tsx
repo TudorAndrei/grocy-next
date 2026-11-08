@@ -1,25 +1,46 @@
 import { useI18n } from "@/lib/i18n";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
+import { z } from "zod";
 import { api, queryKeys } from "@/lib/api";
 import { useCatalog, useInvalidateStock } from "@/lib/catalog";
 import { unitLabel } from "@/lib/format";
-import { usePreferences } from "@/lib/preferences";
+import { userSettingsQuery } from "@/hooks/queries";
 import { ShoppingItemForm } from "@/components/ShoppingItemForm";
 import { ShoppingNotes } from "@/components/ShoppingNotes";
 import { ShoppingListActions } from "@/components/ShoppingListActions";
 import { shoppingListsQuery } from "@/lib/shopping-list";
 import { ShoppingPrintAction } from "@/components/ShoppingPrintAction";
-import type { ShoppingList, ShoppingListItem } from "@/lib/types";
+import type { ShoppingList, ShoppingListItem, UserSettings } from "@/lib/types";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { Icon } from "@/components/Icon";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { useNotify } from "@/components/Toaster";
 import { useFeatures } from "@/lib/features";
+import { ShoppingCalendar } from "./ShoppingCalendar";
+import { ShoppingPurchaseDialog, type ShoppingPurchaseRequest } from "./ShoppingPurchaseDialog";
+import { nativeShoppingListText, type NativeShoppingContext } from "@/lib/native-shopping";
+import { EmbeddedPageDialog, type EmbeddedPage } from "./EmbeddedPageDialog";
 
 type Mode = "plan" | "shop";
+
+const shoppingListChanged = z.object({
+  Message: z.literal("ShoppingListChanged"),
+  Payload: z
+    .union([z.number(), z.string().regex(/^\d+$/)])
+    .transform((value) => Number(value))
+    .pipe(z.number().int().positive().max(Number.MAX_SAFE_INTEGER)),
+});
+
+const nativeShoppingListChanged = z.object({
+  Message: z.literal("ShoppingListChanged"),
+  Payload: z
+    .union([z.number(), z.string().regex(/^[+-]?\d+$/)])
+    .transform(Number)
+    .pipe(z.number().int().min(Number.MIN_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER)),
+});
 
 function initialMode(): Mode {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches
@@ -27,33 +48,154 @@ function initialMode(): Mode {
     : "plan";
 }
 
-export function ShoppingPage({
-  selectedListId,
-  onListChange,
-}: {
+type ShoppingPageProps = {
+  nativePage?: boolean;
+  nativeContext?: NativeShoppingContext;
+  nativeSearch?: string;
+  onNativeReload?: () => void;
   selectedListId: number;
   onListChange: (id: number) => void;
-}) {
-  const { t: tr, locale } = useI18n();
+  onListReset?: () => void;
+};
+
+export function ShoppingPage(props: ShoppingPageProps) {
+  const [generation, setGeneration] = useState(0);
+  const { selectedListId, onListChange } = props;
+
+  const reload = useCallback(
+    (id: number) => {
+      if (props.nativePage) onListChange(id);
+      else if (id === selectedListId) setGeneration((previous) => previous + 1);
+      else onListChange(id);
+    },
+    [selectedListId, onListChange, props.nativePage],
+  );
+
+  return (
+    <ShoppingPageView key={`${selectedListId}:${generation}`} {...props} onReloadPage={reload} />
+  );
+}
+
+function ShoppingPageView({
+  nativePage = false,
+  nativeContext,
+  nativeSearch,
+  onNativeReload,
+  selectedListId,
+  onListChange,
+  onListReset,
+  onReloadPage,
+}: ShoppingPageProps & { onReloadPage: (id: number) => void }) {
+  const { t: tr, locale, pluralIndex } = useI18n();
 
   const features = useFeatures();
   const stockEnabled = features.enabled("STOCK");
   const datesEnabled = stockEnabled && features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING");
-  const { formatAmount } = usePreferences();
+  const router = useRouter();
+
+  const configuration = useQuery({
+    queryKey: queryKeys.systemConfig,
+    queryFn: api.getSystemConfig,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+  });
+
+  const settings = useQuery({ ...userSettingsQuery(), refetchOnMount: "always" });
+  const [initial, setInitial] = useState<UserSettings>();
+
+  if (
+    !initial &&
+    settings.isSuccess &&
+    !settings.isFetching &&
+    configuration.isSuccess &&
+    !configuration.isFetching
+  )
+    setInitial(settings.data);
+
+  const templateFlag = (name: string) => {
+    const value = initial?.[name];
+
+    return (
+      value !== undefined &&
+      value !== null &&
+      value !== false &&
+      value !== 0 &&
+      value !== "" &&
+      value !== "0"
+    );
+  };
+
+  const roundUp = templateFlag("shopping_list_round_up");
+  const showCalendar = templateFlag("shopping_list_show_calendar");
+
+  const precision = Math.max(
+    0,
+    Math.min(20, Math.trunc(Number(initial?.stock_decimal_places_amounts ?? 4))),
+  );
+
+  const amountText = (value: number) =>
+    value.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: Number.isFinite(precision) ? precision : 4,
+    });
+
   const queryClient = useQueryClient();
   const catalog = useCatalog();
   const notify = useNotify();
   const invalidateStock = useInvalidateStock();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [revision, setRevision] = useState(0);
+  const [actionsRevision, setActionsRevision] = useState(0);
   const [editing, setEditing] = useState<{ itemId?: number }>();
+  const [nativeEditor, setNativeEditor] = useState<EmbeddedPage>();
+  const nativeEditorHost = useRef<HTMLDivElement>(null);
+  const [purchase, setPurchase] = useState<ShoppingPurchaseRequest>();
+  const purchaseRows = useRef<HTMLUListElement>(null);
   const listId = features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedListId : 1;
+  const displayList = nativeContext ? nativeShoppingListText(nativeContext) : String(listId);
 
   const [notesDraft, setNotesDraft] = useState<{
     listId: number;
     html: string;
     visible: boolean;
   }>();
+
+  const receiveListChange = useEffectEvent((event: MessageEvent) => {
+    if (event.origin !== window.location.origin) return;
+
+    if (
+      nativeEditor &&
+      event.data?.Message === "CloseLastModal" &&
+      event.source === nativeEditorHost.current?.querySelector("iframe")?.contentWindow
+    ) {
+      setNativeEditor(undefined);
+
+      return;
+    }
+
+    const parsed = (nativePage ? nativeShoppingListChanged : shoppingListChanged).safeParse(
+      event.data,
+    );
+
+    if (!parsed.success) return;
+    const id = parsed.data.Payload;
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: shoppingListsQuery.queryKey, refetchType: "none" }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.objects("shopping_lists"),
+        refetchType: "none",
+      }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.shopping(id), refetchType: "none" }),
+    ]);
+    onReloadPage(id);
+  });
+
+  useEffect(() => {
+    const receive = (event: MessageEvent) => receiveListChange(event);
+    window.addEventListener("message", receive);
+
+    return () => window.removeEventListener("message", receive);
+  }, []);
 
   const updateNotes = useCallback(
     (notes: { html: string; visible: boolean }) => {
@@ -64,12 +206,46 @@ export function ShoppingPage({
 
   const lists = useQuery({
     ...shoppingListsQuery,
+    refetchOnMount: "always",
     enabled: features.enabled("SHOPPINGLIST_MULTIPLE_LISTS"),
   });
 
   const listKey = queryKeys.shopping(listId);
-  const list = useQuery({ queryKey: listKey, queryFn: () => api.getShoppingList(listId) });
+
+  const modernList = useQuery({
+    queryKey: listKey,
+    queryFn: () => api.getShoppingList(listId),
+    refetchOnMount: "always",
+    enabled: nativeContext === undefined,
+  });
+
+  const list = nativeContext
+    ? {
+        data: {
+          id: nativeContext.list?.id ?? listId,
+          name: nativeContext.list?.name ?? tr("Shopping list"),
+          description: nativeContext.list?.description ?? null,
+          items: nativeContext.items,
+        },
+        isSuccess: true,
+        isLoading: false,
+        isError: false,
+        error: null,
+      }
+    : modernList;
+
   const items = list.data?.items ?? [];
+
+  const itemEditorHref = (id: number | "new") =>
+    `${router.buildLocation({ to: "/shoppinglistitem/$itemId", params: { itemId: String(id) }, search: {} }).publicHref}?embedded&list=${displayList}`;
+
+  const openNativeItem = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+      return;
+    event.preventDefault();
+    setNativeEditor({ id: Date.now(), url: event.currentTarget.href, dialogType: "" });
+  };
+
   const open = items.filter((item) => !item.done);
   const checked = items.filter((item) => item.done);
 
@@ -77,11 +253,36 @@ export function ShoppingPage({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: listKey }),
       queryClient.invalidateQueries({ queryKey: shoppingListsQuery.queryKey }),
+      ...(nativeContext
+        ? [queryClient.invalidateQueries({ queryKey: ["shopping", "native-context"] })]
+        : []),
     ]);
   };
 
   const itemName = (item: ShoppingListItem) =>
     item.product_id != null ? catalog.productName(item.product_id) : (item.note ?? "Note");
+
+  const purchaseHref = (item: ShoppingListItem) => {
+    const amount = item.stock_amount ?? item.amount;
+    const quantity = roundUp ? Math.ceil(amount) : amount;
+
+    return `${router.buildLocation({ to: "/purchase", search: {} }).publicHref}?embedded&flow=shoppinglistitemtostock&product=${item.product_id}&amount=${quantity}&listitemid=${item.id}&quId=${item.qu_id ?? ""}`;
+  };
+
+  const startAllPurchases = () => {
+    const entries = Array.from(
+      purchaseRows.current?.querySelectorAll<HTMLLIElement>("li[data-stock-purchase-item]") ?? [],
+    ).flatMap((target) => {
+      const item = items.find((row) => String(row.id) === target.dataset.stockPurchaseItem);
+
+      return item
+        ? [{ itemId: item.id, url: new URL(purchaseHref(item), window.location.href).href, target }]
+        : [];
+    });
+
+    if (!entries.length) return;
+    setPurchase({ entries, all: true, version: (purchase?.version ?? 0) + 1 });
+  };
 
   const onError = (err: Error) => notify({ message: err.message, tone: "error" });
 
@@ -130,7 +331,8 @@ export function ShoppingPage({
   const clear = useMutation({
     mutationFn: (doneOnly: boolean) => api.clearShoppingList(listId, doneOnly),
     onSuccess: async () => {
-      await refresh();
+      if (nativeContext && onNativeReload) onNativeReload();
+      else await refresh();
       notify({ message: tr("Shopping list cleared") });
     },
     onError,
@@ -139,7 +341,8 @@ export function ShoppingPage({
   const addMissing = useMutation({
     mutationFn: () => api.addMissingToShoppingList(listId),
     onSuccess: async () => {
-      await refresh();
+      if (nativeContext) onReloadPage(listId);
+      else await refresh();
       notify({ message: tr("Added every product below its minimum") });
     },
     onError,
@@ -151,7 +354,8 @@ export function ShoppingPage({
         ? api.addOverdueToShoppingList(listId)
         : api.addExpiredToShoppingList(listId),
     onSuccess: async (_data, kind) => {
-      await refresh();
+      if (nativeContext) onReloadPage(listId);
+      else await refresh();
       notify({ message: tr("Added every %s product", String(kind)) });
     },
     onError,
@@ -186,6 +390,27 @@ export function ShoppingPage({
     },
   });
 
+  if (!initial)
+    return (
+      <>
+        <PageHeader title={tr("Shopping list")} />
+        {settings.error || configuration.error ? (
+          <>
+            <ErrorBlock message={(settings.error ?? configuration.error)!.message} />
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void Promise.all([settings.refetch(), configuration.refetch()])}
+            >
+              {tr("Retry")}
+            </button>
+          </>
+        ) : (
+          <LoadingBlock label={tr("Loading preferences…")} />
+        )}
+      </>
+    );
+
   return (
     <div className="shopping" data-mode={mode}>
       <PageHeader
@@ -201,13 +426,18 @@ export function ShoppingPage({
         }
         actions={
           <>
+            <Link to="/shoppinglistsettings" className="btn btn-ghost">
+              {tr("Shopping list settings")}
+            </Link>
             {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? (
               <label className="select-field">
                 <span className="sr-only">{tr("Shopping list")}</span>
                 <select
                   value={listId}
                   onChange={(e) => {
+                    setPurchase(undefined);
                     setNotesDraft(undefined);
+                    setActionsRevision((value) => value + 1);
                     onListChange(Number(e.target.value));
                   }}
                 >
@@ -221,14 +451,38 @@ export function ShoppingPage({
             ) : null}
             {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? (
               <ShoppingListActions
+                key={actionsRevision}
                 listId={listId}
-                name={list.data?.name ?? ""}
-                onChanged={(id) => {
+                name={
+                  nativeContext?.lists.find((row) => row.id === listId)?.name ??
+                  list.data?.name ??
+                  ""
+                }
+                editHref={
+                  nativeContext
+                    ? `${router.buildLocation({ to: "/shoppinglist", search: {} }).publicHref.replace(/\/$/, "")}/${displayList}?embedded`
+                    : undefined
+                }
+                onDeleted={() => {
+                  setPurchase(undefined);
                   setNotesDraft(undefined);
                   setRevision((value) => value + 1);
-                  onListChange(id);
+                  setActionsRevision((value) => value + 1);
+
+                  if (onListReset) onListReset();
+                  else onListChange(1);
                 }}
               />
+            ) : null}
+            {stockEnabled ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={!items.some((item) => Boolean(item.product_id))}
+                onClick={startAllPurchases}
+              >
+                {tr("Add all list items to stock")}
+              </button>
             ) : null}
             <div className="seg-group" role="group" aria-label={tr("Mode")}>
               <button
@@ -256,9 +510,15 @@ export function ShoppingPage({
         <div className="toolbar">
           <AddItemForm listId={listId} onAdded={refresh} />
           <div className="toolbar-end">
-            <button type="button" className="btn" onClick={() => setEditing({})}>
-              {tr("Create shopping list item")}
-            </button>
+            {nativeContext ? (
+              <a className="btn" href={itemEditorHref("new")} onClick={openNativeItem}>
+                {tr("Add item")}
+              </a>
+            ) : (
+              <button type="button" className="btn" onClick={() => setEditing({})}>
+                {tr("Create shopping list item")}
+              </button>
+            )}
             {stockEnabled ? (
               <button
                 type="button"
@@ -290,11 +550,13 @@ export function ShoppingPage({
               </button>
             ) : null}
             <ShoppingPrintAction
-              listId={listId}
+              nativePage={nativePage}
+              nativeSearch={nativeSearch}
+              listId={nativeContext?.list?.id ?? listId}
               paper
               notes={notesDraft?.listId === listId ? notesDraft : undefined}
             />
-            <ShoppingPrintAction listId={listId} />
+            <ShoppingPrintAction listId={listId} nativePage={nativePage} />
             {features.enabled("LABEL_PRINTER") ? (
               <Link to="/labels" className="btn btn-ghost">
                 {tr("Labels")}
@@ -343,89 +605,144 @@ export function ShoppingPage({
           }}
         />
       ) : null}
-      {list.isLoading ? <LoadingBlock label={tr("Loading shopping list…")} /> : null}
-      {list.isError ? <ErrorBlock message={list.error.message} /> : null}
-      {list.isSuccess && items.length === 0 ? (
-        <p className="empty-state">
-          {tr(
-            "The list is empty. Add a product above, press ⌘K and type “list coffee”, or pull in everything below its minimum with Add missing.",
-          )}
-        </p>
-      ) : null}
+      <div className="shopping-preference-layout" data-calendar={showCalendar || undefined}>
+        <div className="shopping-preference-items">
+          {list.isLoading ? <LoadingBlock label={tr("Loading shopping list…")} /> : null}
+          {list.isError ? <ErrorBlock message={list.error?.message ?? ""} /> : null}
+          {list.isSuccess && items.length === 0 ? (
+            <p className="empty-state">
+              {tr(
+                "The list is empty. Add a product above, press ⌘K and type “list coffee”, or pull in everything below its minimum with Add missing.",
+              )}
+            </p>
+          ) : null}
 
-      {items.length > 0 ? (
-        <ul className="shop-list panel">
-          {[...open, ...checked].map((item) => {
-            const product = item.product_id != null ? catalog.product(item.product_id) : undefined;
+          {items.length > 0 ? (
+            <ul ref={purchaseRows} className="shop-list panel">
+              {[...open, ...checked].map((item) => {
+                const product =
+                  item.product_id != null ? catalog.product(item.product_id) : undefined;
 
-            return (
-              <li key={item.id} className="shop-item" data-done={item.done ? "true" : "false"}>
-                <button
-                  type="button"
-                  className="shop-check"
-                  role="checkbox"
-                  aria-checked={item.done}
-                  aria-label={tr("%s in the basket", String(itemName(item)))}
-                  onClick={() => toggle.mutate(item)}
-                >
-                  <span className="shop-box">{item.done ? <Icon name="check" /> : null}</span>
-                  <span className="shop-name">
-                    {itemName(item)}
-                    <small>
-                      {product
-                        ? (catalog.location(product.location_id)?.name ?? tr("No location"))
-                        : tr("Note")}
-                      {item.product_id != null && item.note ? ` · ${item.note}` : ""}
-                    </small>
-                  </span>
-                  <span className="amount">
-                    {item.product_id != null
-                      ? `${formatAmount(item.amount)} ${unitLabel(catalog.unit(item.qu_id ?? product?.qu_id_stock), item.amount)}`
-                      : formatAmount(item.amount)}
-                  </span>
-                </button>
-                {mode === "plan" ? (
-                  <span className="row-actions">
+                const stockAmount = item.stock_amount ?? item.amount;
+                const purchaseAmount = roundUp ? Math.ceil(stockAmount) : stockAmount;
+
+                const displayAmount = roundUp
+                  ? purchaseAmount * (item.display_factor ?? 1)
+                  : item.amount;
+
+                return (
+                  <li
+                    key={item.id}
+                    className="shop-item"
+                    data-done={item.done ? "true" : "false"}
+                    data-stock-purchase-item={stockEnabled && item.product_id ? item.id : undefined}
+                  >
                     <button
                       type="button"
-                      className="btn btn-sm btn-ghost"
-                      aria-label={tr("Edit %s", itemName(item))}
-                      onClick={() => setEditing({ itemId: item.id })}
+                      className="shop-check"
+                      role="checkbox"
+                      aria-checked={item.done}
+                      aria-label={tr("%s in the basket", String(itemName(item)))}
+                      onClick={() => toggle.mutate(item)}
                     >
-                      {tr("Edit")}
+                      <span className="shop-box">{item.done ? <Icon name="check" /> : null}</span>
+                      <span className="shop-name">
+                        {itemName(item)}
+                        <small>
+                          {product
+                            ? (catalog.location(product.location_id)?.name ?? tr("No location"))
+                            : tr("Note")}
+                          {item.product_id != null && item.note ? ` · ${item.note}` : ""}
+                        </small>
+                      </span>
+                      <span className="amount">
+                        {item.product_id != null
+                          ? `${amountText(displayAmount)} ${unitLabel(catalog.unit(item.qu_id ?? product?.qu_id_stock), displayAmount, pluralIndex, false)}`
+                          : amountText(displayAmount)}
+                      </span>
                     </button>
-                    {item.product_id != null ? (
-                      <Link
-                        to="/products/$productId"
-                        params={{ productId: String(item.product_id) }}
-                        className="btn btn-sm btn-ghost"
-                      >
-                        {tr("Product")}
-                      </Link>
+                    {mode === "plan" ? (
+                      <span className="row-actions">
+                        {stockEnabled && item.product_id !== null ? (
+                          <a
+                            className="btn btn-sm btn-ghost"
+                            href={purchaseHref(item)}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setPurchase({
+                                entries: [{ itemId: item.id, url: event.currentTarget.href }],
+                                all: false,
+                                version: (purchase?.version ?? 0) + 1,
+                              });
+                            }}
+                          >
+                            {tr("Add this item to stock")}
+                          </a>
+                        ) : null}
+                        {nativeContext ? (
+                          <a
+                            className="btn btn-sm btn-ghost"
+                            aria-label={tr("Edit %s", itemName(item))}
+                            href={itemEditorHref(item.id)}
+                            onClick={openNativeItem}
+                          >
+                            {tr("Edit")}
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-ghost"
+                            aria-label={tr("Edit %s", itemName(item))}
+                            onClick={() => setEditing({ itemId: item.id })}
+                          >
+                            {tr("Edit")}
+                          </button>
+                        )}
+                        {item.product_id != null ? (
+                          <Link
+                            to="/products/$productId"
+                            params={{ productId: String(item.product_id) }}
+                            className="btn btn-sm btn-ghost"
+                          >
+                            {tr("Product")}
+                          </Link>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-ghost"
+                          disabled={remove.isPending}
+                          onClick={() => remove.mutate(item)}
+                        >
+                          {tr("Remove")}
+                        </button>
+                      </span>
                     ) : null}
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-ghost"
-                      disabled={remove.isPending}
-                      onClick={() => remove.mutate(item)}
-                    >
-                      {tr("Remove")}
-                    </button>
-                  </span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-
-      {list.isSuccess ? (
-        <ShoppingNotes
-          key={`${listId}:${locale}:${revision}`}
-          listId={listId}
-          description={list.data.description}
-          onDraft={updateNotes}
-        />
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+        {list.isSuccess ? (
+          <>
+            {showCalendar ? (
+              <ShoppingCalendar firstDayOfWeek={configuration.data?.CALENDAR_FIRST_DAY_OF_WEEK} />
+            ) : null}
+            <ShoppingNotes
+              key={`${listId}:${locale}:${revision}`}
+              listId={listId}
+              description={list.data.description}
+              initialDocument={nativeContext?.notes_document}
+              onDraft={updateNotes}
+            />
+          </>
+        ) : null}
+      </div>
+      <ShoppingPurchaseDialog key={listId} purchase={purchase} onRemoved={refresh} />
+      {nativeEditor ? (
+        <div ref={nativeEditorHost}>
+          <EmbeddedPageDialog page={nativeEditor} onClose={() => setNativeEditor(undefined)} />
+        </div>
       ) : null}
 
       {checked.length > 0 ? (

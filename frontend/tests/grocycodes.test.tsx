@@ -50,6 +50,16 @@ function mount(path: string, labelPrinter = true) {
 
     if (path === "/api/user") return Response.json([{ id: 1, username: "test" }]);
 
+    if (path === "/api/v2/user/permissions") return Response.json({});
+
+    if (path === "/api/v2/localization")
+      return Response.json({
+        locale: "en",
+        direction: "ltr",
+        languages: ["en"],
+        catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+      });
+
     if (path === "/api/user/settings") return Response.json({});
 
     if (path === "/api/objects/products") return Response.json([product]);
@@ -68,10 +78,59 @@ function mount(path: string, labelPrinter = true) {
 
     if (path.startsWith("/api/stock/volatile")) return Response.json({ missing_products: [] });
 
-    if (path === "/api/chores") return Response.json([{ id: 17, chore_name: "Code chore" }]);
+    if (path === "/api/v2/chores/overview")
+      return Response.json({
+        rows: [
+          {
+            chore_id: 17,
+            name: "Code chore",
+            period_type: "daily",
+            track_date_only: 0,
+            last_tracked_time: null,
+            next_estimated_execution_time: null,
+            next_execution_assigned_to_user_id: null,
+            is_rescheduled: 0,
+            is_reassigned: 0,
+            due_type: "",
+            custom_values: {},
+          },
+        ],
+        users: [],
+        next_x_days: 5,
+        current_user_id: 1,
+      });
+
+    if (path === "/api/v2/batteries/overview")
+      return Response.json({
+        rows: [
+          {
+            id: 17,
+            name: "Code battery",
+            used_in: null,
+            charge_interval_days: 1,
+            last_tracked_time: null,
+            next_estimated_charge_time: null,
+            due_type: "",
+            custom_values: {},
+          },
+        ],
+        next_x_days: 5,
+      });
+
+    if (path === "/api/chores")
+      return Response.json([
+        {
+          id: 17,
+          chore_name: "Code chore",
+          next_estimated_execution_time: null,
+          next_execution_assigned_to_user_id: null,
+        },
+      ]);
 
     if (path === "/api/batteries")
-      return Response.json([{ id: 17, battery: { name: "Code battery" } }]);
+      return Response.json([
+        { id: 17, battery: { name: "Code battery" }, next_estimated_charge_time: null },
+      ]);
 
     if (path === "/api/v2/recipes/overview")
       return Response.json([
@@ -198,25 +257,49 @@ test.each([
 });
 
 test.each([
-  { page: "/products", name: "Code product Grocycode", target: "/api/v2/products/17/grocycode" },
+  { page: "/catalog", name: "Code product Grocycode", target: "/api/v2/products/17/grocycode" },
   { page: "/products/17", name: "Grocycode", target: "/api/v2/products/17/grocycode" },
   { page: "/stock", name: "Code product Grocycode", target: "/api/v2/products/17/grocycode" },
-  { page: "/journal", name: "Code product Grocycode", target: "/api/v2/products/17/grocycode" },
-  { page: "/chores", name: "Code chore Grocycode", target: "/api/v2/chores/17/grocycode" },
-  { page: "/batteries", name: "Code battery Grocycode", target: "/api/v2/batteries/17/grocycode" },
+  {
+    page: "/choresoverview",
+    name: "More",
+    target: "/chore/17/grocycode",
+    menuItem: "Download Chore Grocycode",
+  },
+  {
+    page: "/batteriesoverview",
+    name: "Actions for Code battery",
+    target: "/battery/17/grocycode",
+    menuItem: "Download Battery Grocycode",
+  },
   {
     page: "/products/17",
     name: "Stock entry 991 Grocycode",
     target: "/api/v2/stock/entries/991/grocycode",
   },
-])("$page downloads the selected $name", async ({ page, name, target }) => {
+])("$page downloads the selected $name", async ({ page, name, target, menuItem }) => {
   const fetchMock = mount(page);
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-  const control = await screen.findByRole("button", { name });
-  const popover = document.getElementById(control.getAttribute("aria-controls")!)!;
-  await userEvent
-    .setup()
-    .click(within(popover).getByRole("button", { name: /Download .* Grocycode/, hidden: true }));
+
+  const control =
+    page === "/choresoverview"
+      ? within(
+          (await screen.findByRole("button", { name: "Code chore" })).closest("tr")!,
+        ).getByRole("button", { name })
+      : await screen.findByRole("button", { name });
+
+  const user = userEvent.setup();
+
+  if (menuItem) {
+    await user.click(control);
+    await user.click(screen.getByRole("menuitem", { name: menuItem }));
+  } else {
+    const popover = document.getElementById(control.getAttribute("aria-controls")!)!;
+    await user.click(
+      within(popover).getByRole("button", { name: /Download .* Grocycode/, hidden: true }),
+    );
+  }
+
   await waitFor(() => expect(click).toHaveBeenCalledOnce());
 
   const request = fetchMock.mock.calls.find(

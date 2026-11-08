@@ -6,6 +6,7 @@ from urllib.parse import unquote_to_bytes
 from fastapi import Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException
+from starlette.routing import Match
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from grocy.compatibility.php import php_error
@@ -49,27 +50,87 @@ async def legacy_http_error(request: Request, error: Exception) -> Response:
     return await grocy_error_handler(request, php_error(message, status_code=status))
 
 
+def _raw_prefix_length(raw: bytes, prefix: str) -> int:
+    """Locate the mount's original bytes without decoding the remaining resource name."""
+    position = 0
+    for expected in prefix.encode("utf-8", "surrogateescape"):
+        if raw[position : position + 1] == b"%" and len(raw[position + 1 : position + 3]) == 2:
+            try:
+                actual = int(raw[position + 1 : position + 3], 16)
+            except ValueError:
+                actual = raw[position]
+                position += 1
+            else:
+                position += 3
+        else:
+            actual = raw[position]
+            position += 1
+        if actual != expected:
+            raise ValueError("The raw path does not contain the decoded mount")
+    return position
+
+
+def application_scope(scope: Scope) -> Scope:
+    """Resolve the configured mount and one optional visible front-controller segment."""
+    if scope["type"] != "http":
+        return scope
+    settings = get_settings()
+    prefix = settings.base_path.rstrip("/")
+    raw = scope.get("raw_path", b"")
+    original = unquote_to_bytes(raw).decode("utf-8", "surrogateescape") if raw else scope["path"]
+    mount = ""
+    path = original
+    if prefix and original.startswith(prefix + "/"):
+        mount, path = prefix, original[len(prefix) :]
+    elif prefix:
+        return scope
+    # Source-valid BASE_PATH can already include index.php. Do not strip it twice.
+    # The optional segment also accepts the canonical URL generated for a base-only mount.
+    if (
+        settings.disable_url_rewriting is not False
+        and not prefix.endswith("/index.php")
+        and (path == "/index.php" or path.startswith("/index.php/"))
+    ):
+        mount += "/index.php"
+    if not mount:
+        return scope
+    path = (
+        scope["path"][len(mount) :] if scope["path"].startswith(mount) else original[len(mount) :]
+    )
+    path = path or "/"
+    return {
+        **scope,
+        "path": path,
+        "root_path": scope.get("root_path", "") + mount,
+        "raw_path": raw[_raw_prefix_length(raw, mount) :] if raw else raw,
+        "grocy_api_path": path,
+        "grocy_legacy_base_path": path.startswith("/api/")
+        and not path.startswith("/api/v2/")
+        and path != "/api/health",
+    }
+
+
+def _would_redirect_slashes(scope: Scope) -> bool:
+    router = scope["app"].router
+    if not router.redirect_slashes:
+        return False
+    # Preserve real path-converter matches and existing method errors. Slim's
+    # exact routes do not acquire Starlette's alternate trailing-slash alias.
+    if any(route.matches(scope)[0] != Match.NONE for route in router.routes):
+        return False
+    path = scope["path"]
+    alternate = {**scope, "path": path.rstrip("/") if path.endswith("/") else path + "/"}
+    if alternate["path"] == "/api/health":
+        return False
+    return any(route.matches(alternate)[0] != Match.NONE for route in router.routes)
+
+
 class LegacyHttpMiddleware:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http":
-            prefix = get_settings().base_path.rstrip("/")
-            if prefix and scope["path"].startswith(prefix + "/"):
-                path = scope["path"][len(prefix) :]
-                raw = scope.get("raw_path", b"")
-                encoded = prefix.encode()
-                scope = {
-                    **scope,
-                    "path": path,
-                    "root_path": scope.get("root_path", "") + prefix,
-                    "raw_path": raw[len(encoded) :] if raw.startswith(encoded) else raw,
-                    "grocy_api_path": path,
-                    "grocy_legacy_base_path": path.startswith("/api/")
-                    and not path.startswith("/api/v2/")
-                    and path != "/api/health",
-                }
+        scope = application_scope(scope)
         path = scope.get("path", "")
         if (
             scope["type"] != "http"
@@ -94,6 +155,13 @@ class LegacyHttpMiddleware:
                     message = {**message, "body": b""}
                 await send(message)
 
-            await self.app({**scope, "method": "GET"}, receive, send_head)
+            await self._dispatch({**scope, "method": "GET"}, receive, send_head)
+            return
+        await self._dispatch(scope, receive, send)
+
+    async def _dispatch(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if _would_redirect_slashes(scope):
+            response = await legacy_http_error(Request(scope), HTTPException(status_code=404))
+            await response(scope, receive, send)
             return
         await self.app(scope, receive, send)

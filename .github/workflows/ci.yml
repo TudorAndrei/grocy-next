@@ -141,6 +141,12 @@ jobs:
           uv run --project backend python scripts/check-web-resources.py
           --api-url "http://127.0.0.1:8000${GROCY_BASE_PATH}"
           --web-url "http://127.0.0.1:8080${GROCY_BASE_PATH}"
+      - name: Check release form authentication
+        run: >-
+          uv run --project backend python scripts/check-web-auth.py
+          --api-url "http://127.0.0.1:8000${GROCY_BASE_PATH}"
+          --web-url "http://127.0.0.1:8080${GROCY_BASE_PATH}"
+          --disposable
       - name: Check development resource links
         run: |
           npm ci --prefix frontend

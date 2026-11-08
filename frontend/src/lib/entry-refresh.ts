@@ -33,8 +33,14 @@ export type EntryRefresh = Partial<z.infer<typeof entry>> & {
   openDisabled?: boolean;
 };
 
-export async function refreshEntry(id: number, update: (value: EntryRefresh | null) => void) {
-  const saved = entry.nullable().parse(await request(`/api/stock/entry/${id}`));
+export async function refreshEntry(
+  id: number,
+  update: (value: EntryRefresh | null) => void,
+  signal?: AbortSignal,
+) {
+  const value = await request(`/api/stock/entry/${id}`, { signal });
+  signal?.throwIfAborted();
+  const saved = entry.nullable().parse(value);
 
   if (!saved || saved.amount === 0) {
     update(null);
@@ -46,10 +52,12 @@ export async function refreshEntry(id: number, update: (value: EntryRefresh | nu
   update({ ...saved, at, openDisabled: saved.open === 1 });
 
   const reads = await Promise.allSettled([
-    request(`/api/objects/locations/${saved.location_id}`).then((value) => {
+    request(`/api/objects/locations/${saved.location_id}`, { signal }).then((value) => {
+      signal?.throwIfAborted();
       update({ at, location_name: name.parse(value).name });
     }),
-    request(`/api/stock/products/${saved.product_id}`).then((value) => {
+    request(`/api/stock/products/${saved.product_id}`, { signal }).then((value) => {
+      signal?.throwIfAborted();
       const details = product.parse(value);
 
       const valueUpdate: EntryRefresh = {
@@ -63,8 +71,11 @@ export async function refreshEntry(id: number, update: (value: EntryRefresh | nu
       update(valueUpdate);
     }),
     saved.shopping_location_id
-      ? request(`/api/objects/shopping_locations/${saved.shopping_location_id}`).then((value) =>
-          update({ at, shopping_location_name: name.parse(value).name }),
+      ? request(`/api/objects/shopping_locations/${saved.shopping_location_id}`, { signal }).then(
+          (value) => {
+            signal?.throwIfAborted();
+            update({ at, shopping_location_name: name.parse(value).name });
+          },
         )
       : Promise.resolve(update({ at, shopping_location_name: "" })),
   ]);

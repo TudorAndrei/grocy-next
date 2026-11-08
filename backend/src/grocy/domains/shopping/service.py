@@ -1,14 +1,42 @@
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Any
 
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
+from grocy.compatibility.lessql import query_parameters
+from grocy.compatibility.php import loose_equals, pdo_parameter, php_error
 from grocy.core.actor import Actor
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.db.models.shopping import ShoppingList, ShoppingListItem
 from grocy.domains.products.service import ProductsService
+from grocy.domains.shopping.notes import notes_editor
+
+
+def native_list_selection(raw_query: bytes) -> tuple[Any, str | None]:
+    """Keep the raw selector separately from LessQL's single PDO binding."""
+    selected = query_parameters(raw_query).get("list", 1)
+    # Explicit equality does not expand arrays to IN. array_merge renumbers
+    # integer keys, and PDO accepts the exact named placeholder with one colon.
+    binding = None
+    if isinstance(selected, dict):
+        position = 0
+        for key, value in selected.items():
+            if isinstance(key, int):
+                valid = position == 0
+                position += 1
+            else:
+                valid = key in {"1", ":1"}
+            if not valid:
+                raise php_error("SQLSTATE[HY000]: General error: 25 column index out of range")
+            binding = pdo_parameter(value)
+    else:
+        binding = pdo_parameter(selected)
+    return selected, binding
 
 
 class ShoppingService:
@@ -24,6 +52,60 @@ class ShoppingService:
             )
         )
         return [dict(row) for row in result.mappings()]
+
+    async def native_context(self, raw_query: bytes, locale: str) -> dict[str, Any]:
+        """ShoppingList's raw PDO selection, distinct from the modern integer resource."""
+        await configure_compatibility_queries(self.session)
+        selected, binding = native_list_selection(raw_query)
+        rows = await self.session.execute(
+            text(
+                "SELECT s.*,COALESCE((SELECT c.factor FROM "
+                "cache__quantity_unit_conversions_resolved c JOIN products p ON p.id=s.product_id "
+                "WHERE c.product_id=s.product_id AND c.from_qu_id=p.qu_id_stock "
+                "AND c.to_qu_id=s.qu_id LIMIT 1),1) AS display_factor "
+                "FROM uihelper_shopping_list s WHERE shopping_list_id=:list_id "
+                "ORDER BY product_name COLLATE NOCASE"
+            ),
+            {"list_id": binding},
+        )
+        items = [
+            {
+                "id": row["id"],
+                "product_id": row["product_id"],
+                "amount": float(row["amount"]) * float(row["display_factor"]),
+                "stock_amount": float(row["amount"]),
+                "display_factor": float(row["display_factor"]),
+                "note": row["note"],
+                "done": bool(row["done"]),
+                "qu_id": row["qu_id"],
+            }
+            for row in rows.mappings()
+        ]
+        lists = await self.lists()
+        shopping = next((row for row in lists if loose_equals(row["id"], selected)), None)
+        products = await self.session.execute(
+            text(
+                "SELECT id,name,qu_id_stock,qu_id_purchase FROM products "
+                "WHERE active=1 ORDER BY name COLLATE NOCASE"
+            )
+        )
+        units = await self.session.execute(
+            text(
+                "SELECT id,name,name_plural,plural_forms FROM quantity_units "
+                "ORDER BY name COLLATE NOCASE"
+            )
+        )
+        return {
+            "list_id": selected,
+            "list": shopping,
+            "items": items,
+            "lists": lists,
+            "products": [dict(row) for row in products.mappings()],
+            "units": [dict(row) for row in units.mappings()],
+            "notes_document": await run_in_threadpool(
+                notes_editor, (shopping["description"] or "") if shopping else "", locale
+            ),
+        }
 
     async def editor(self, list_id: int | None = None) -> dict:
         from grocy.domains.catalog.objects import GenericObjectsService
@@ -104,7 +186,7 @@ class ShoppingService:
             else {},
         }
 
-    async def display_factors(self, shopping_list_id: int) -> dict[int, float]:
+    async def display_factors(self, shopping_list_id: int | str | None) -> dict[int, float]:
         rows = await self.session.execute(
             text(
                 "SELECT sl.id, COALESCE((SELECT c.factor "
@@ -138,6 +220,8 @@ class ShoppingService:
                     "id": item.id,
                     "product_id": item.product_id,
                     "amount": float(item.amount) * factors[item.id],
+                    "stock_amount": float(item.amount),
+                    "display_factor": factors[item.id],
                     "note": item.note,
                     "done": bool(item.done),
                     "qu_id": item.qu_id,

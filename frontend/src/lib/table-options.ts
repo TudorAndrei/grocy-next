@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { api, queryKeys, request } from "./api";
+import { ApiError, queryKeys, request } from "./api";
 import { userSettingsQuery } from "@/hooks/queries";
 import type { UserSettings } from "./types";
+import { nativeTableDocumentOwner, useNativeDocumentReload } from "./native-document";
+import { useGenericError } from "@/hooks/useGenericError";
 
 export type TableColumn = {
   key: string;
@@ -98,9 +100,20 @@ export function useTableOptions(
   columns: TableColumn[],
   defaultSort: Sort,
   enabled = true,
+  defaultGroup?: string,
 ) {
   const settings = useQuery(userSettingsQuery());
   const client = useQueryClient();
+  const genericError = useGenericError();
+  const reloadDocument = useNativeDocumentReload(nativeTableDocumentOwner(tableId));
+  const owner = useRef<AbortController>(undefined);
+  const seen = useRef<UserSettings>(undefined);
+  useEffect(() => {
+    const scope = new AbortController();
+    owner.current = scope;
+
+    return () => scope.abort();
+  }, []);
   const stateKey = `datatables_state_${tableId}`;
   const groupKey = `datatables_rowGroup_${tableId}`;
   const signature = columns.map((c) => c.key).join("\n");
@@ -132,6 +145,7 @@ export function useTableOptions(
   const [resetting, setResetting] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
   const [cellVersion, setCellVersion] = useState(0);
+  const [drawVersion, setDrawVersion] = useState(0);
   const [drawnGroup, setDrawnGroup] = useState<{ signature: string; column?: string }>();
 
   const state =
@@ -156,9 +170,11 @@ export function useTableOptions(
 
   const order = layout.ColReorder ?? columns.map((_, i) => i);
 
-  const groupSelection = state.group?.enable
-    ? columns[order[Number(state.group.dataSrc ?? 0)]]?.key
-    : undefined;
+  const groupSelection = state.group
+    ? state.group.enable
+      ? columns[order[Number(state.group.dataSrc ?? 0)]]?.key
+      : undefined
+    : columns.find((column) => column.key === defaultGroup)?.key;
 
   const groupColumn = drawnGroup?.signature === signature ? drawnGroup.column : groupSelection;
 
@@ -173,100 +189,127 @@ export function useTableOptions(
     columns[i]?.rendered !== false && layout.columns[i]?.visible ? [columns[i]] : [],
   );
 
-  function updateSetting(key: string, value: string | undefined) {
-    client.setQueryData<UserSettings>(queryKeys.userSettings, (current) => {
-      const next = { ...current };
-
-      if (value === undefined) delete next[key];
-      else next[key] = value;
-
-      return next;
-    });
-  }
-
-  const save = useMutation({
-    mutationFn: async (next: { layout: Layout; group?: Group }) => {
-      const saved = readLayout(
-        client.getQueryData<UserSettings>(queryKeys.userSettings)?.[stateKey],
-        columns.length,
-      );
-
-      if (!saved || canonical(saved) !== canonical(next.layout)) {
-        const value = JSON.stringify({ ...next.layout, time: Date.now() });
-        await api.putUserSetting(stateKey, value);
-        updateSetting(stateKey, value);
+  const updateSetting = useCallback(
+    (key: string, value: string | undefined) => {
+      if (seen.current) {
+        if (value === undefined) delete seen.current[key];
+        else seen.current[key] = value;
       }
 
-      if (next.group) {
-        const value = JSON.stringify(next.group);
+      client.setQueryData<UserSettings>(queryKeys.userSettings, (current) => {
+        const next = { ...current };
 
-        if (client.getQueryData<UserSettings>(queryKeys.userSettings)?.[groupKey] !== value) {
-          await api.putUserSetting(groupKey, value);
-          updateSetting(groupKey, value);
-        }
-      }
+        if (value === undefined) delete next[key];
+        else next[key] = value;
+
+        return next;
+      });
     },
-  });
+    [client],
+  );
+
+  const writeSetting = useCallback(
+    (key: string, value: string) => {
+      const scope = owner.current;
+
+      if (!scope || scope.signal.aborted || !seen.current || seen.current[key] == value) return;
+      const signal = scope.signal;
+
+      // SaveUserSetting remembers the value before dispatch; success has no state callback.
+      updateSetting(key, value);
+      void request(`/api/user/settings/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        signal,
+        body: JSON.stringify({ value }),
+      })
+        .catch((error) => {
+          if (!signal.aborted) console.error(error);
+        })
+        .finally(() => {
+          // An independent write may have committed even when this table departed.
+          void client.invalidateQueries({ queryKey: queryKeys.userSettings, refetchType: "none" });
+        });
+    },
+    [client, updateSetting],
+  );
 
   const desired = canonical(layout);
   const desiredGroup = state.group ? JSON.stringify(state.group) : undefined;
-  const saved = original ? canonical(original) : undefined;
-  const mutate = save.mutate;
 
-  const reset = useMutation({
-    mutationFn: async (onReset: () => void) => {
-      setResetting(true);
+  async function reset(onReset: () => void) {
+    const scope = owner.current;
 
-      if (client.getQueryData<UserSettings>(queryKeys.userSettings)?.[groupKey] !== undefined) {
-        await request(`/api/user/settings/${encodeURIComponent(groupKey)}`, { method: "DELETE" });
-        updateSetting(groupKey, undefined);
+    if (!scope || scope.signal.aborted) return;
+    const signal = scope.signal;
+    // state.clear() removes the saved preferences, not the living table's layout.
+    // Keep that layout until a successful document replacement or a later draw.
+    setDraft({ signature, layout: state.layout, group: state.group });
+    setResetting(true);
+    updateSetting(groupKey, undefined);
+    updateSetting(stateKey, undefined);
+
+    async function deleteSetting(key: string, reload: boolean) {
+      try {
+        await request(`/api/user/settings/${encodeURIComponent(key)}`, {
+          method: "DELETE",
+          signal,
+          body: "{}",
+        });
+      } catch (error) {
+        if (!signal.aborted && error instanceof ApiError && error.statusText)
+          genericError("Error while deleting, please retry", error);
+
+        return;
+      } finally {
+        // A dispatched DELETE may commit even if this document has departed.
+        void client.invalidateQueries({ queryKey: queryKeys.userSettings, refetchType: "none" });
       }
 
-      await request(`/api/user/settings/${encodeURIComponent(stateKey)}`, { method: "DELETE" });
-      updateSetting(stateKey, undefined);
-      save.reset();
+      if (signal.aborted || !reload || reloadDocument()) return;
       setDraft({ signature, layout: defaults });
       setCollapsed([]);
       setDrawnGroup(undefined);
+      setDrawVersion((current) => current + 1);
       setResetVersion((current) => current + 1);
+      setResetting(false);
       onReset();
-    },
-    onSettled: () => setResetting(false),
-  });
+    }
+
+    // Native Reset starts both requests even when neither preference is cached.
+    // Only state deletion owns the reload; group settlement is independent.
+    void deleteSetting(groupKey, false);
+    await deleteSetting(stateKey, true);
+  }
 
   useEffect(() => {
-    if (
-      !enabled ||
-      !settings.isSuccess ||
-      resetting ||
-      save.isPending ||
-      save.isError ||
-      reset.isError
-    )
-      return;
+    if (!enabled || !settings.isSuccess || resetting) return;
 
-    if (desired !== saved || (desiredGroup && desiredGroup !== settings.data[groupKey]))
-      mutate({ layout, group: state.group });
+    // Hydrate only from a successful read. Later responses cannot backdate this
+    // living table's remembered writes or cause an unchanged failed PUT to replay.
+    seen.current ??= { ...settings.data };
+
+    if (desiredGroup) writeSetting(groupKey, desiredGroup);
+    const saved = readLayout(seen.current[stateKey], columns.length);
+
+    if (!saved || desired !== canonical(saved))
+      writeSetting(stateKey, JSON.stringify({ ...layout, time: Date.now() }));
   }, [
     enabled,
     settings.isSuccess,
     settings.data,
     resetting,
-    save.isPending,
-    save.isError,
-    reset.isError,
     desired,
     desiredGroup,
-    saved,
     groupKey,
-    mutate,
+    stateKey,
+    columns.length,
+    writeSetting,
     layout,
-    state.group,
   ]);
 
   function patch(next: Layout, group = state.group) {
     setDraft({ signature, layout: next, group });
-    save.reset();
+    setResetting(false);
   }
 
   return {
@@ -276,27 +319,24 @@ export function useTableOptions(
     groupColumn,
     groupSelection,
     cellVersion,
+    drawVersion,
     sort,
     sorters,
     resetVersion,
     reload: () => {
       setCollapsed([]);
       setDrawnGroup(undefined);
+      setDrawVersion((current) => current + 1);
       setResetVersion((current) => current + 1);
     },
-    draw: () => setDrawnGroup(undefined),
+    draw: () => {
+      setResetting(false);
+      setDrawnGroup(undefined);
+      setDrawVersion((current) => current + 1);
+    },
     ready: settings.isSuccess,
-    pending: save.isPending || reset.isPending,
-    error: settings.error || save.error || reset.error,
+    error: settings.error,
     retry: () => {
-      if (reset.isError && reset.variables) {
-        reset.mutate(reset.variables);
-
-        return;
-      }
-
-      save.reset();
-      reset.reset();
       void settings.refetch();
     },
     visible: (key: string) =>
@@ -308,6 +348,7 @@ export function useTableOptions(
       }),
     sortBy: (key: string, multiple: boolean) => {
       setDrawnGroup(undefined);
+      setDrawVersion((current) => current + 1);
       const i = columns.findIndex((c) => c.key === key);
       const existing = layout.order.find(([column]) => column === i);
       const next: [number, "asc" | "desc"] = [i, existing?.[1] === "asc" ? "desc" : "asc"];
@@ -329,23 +370,28 @@ export function useTableOptions(
       patch({ ...layout, ColReorder: next });
     },
     groupBy: (key: string) => {
-      setDrawnGroup(undefined);
       const i = columns.findIndex((c) => c.key === key);
-      patch(
-        layout,
-        key
-          ? { enable: true, dataSrc: String(columns[i]?.groupIndex ?? order.indexOf(i)) }
-          : { enable: false },
-      );
+
+      const group: Group = key
+        ? { enable: true, dataSrc: String(columns[i]?.groupIndex ?? order.indexOf(i)) }
+        : { enable: false };
+
+      // The native group handler persists its preference before drawing/state-save.
+      if (enabled && settings.isSuccess) writeSetting(groupKey, JSON.stringify(group));
+      setDrawnGroup(undefined);
+      setDrawVersion((current) => current + 1);
+      patch(layout, group);
     },
     collapsed: (group: string) => collapsed.includes(group),
     toggleGroup: (group: string) => {
+      setResetting(false);
       setDrawnGroup(undefined);
+      setDrawVersion((current) => current + 1);
       setCollapsed((current) =>
         current.includes(group) ? current.filter((c) => c !== group) : [...current, group],
       );
     },
-    reset: (onReset: () => void) => reset.mutateAsync(onReset),
+    reset,
   };
 }
 

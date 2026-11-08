@@ -1,8 +1,9 @@
 import { filePath } from "./api";
+import type { JsonObject } from "./json";
 import type { StockOverviewRow } from "./stock-overview";
 import type { TableColumn } from "./table-options";
 import type { UserfieldDefinition } from "./userfields";
-import { userfieldFile } from "./userfields";
+import { userfieldTableCell } from "./userfield-table-cell";
 import {
   nativeNumberCell,
   nativeTableCell,
@@ -69,6 +70,7 @@ type Context = {
   amountPrecision: number;
   pricePrecision: number;
   currency: string;
+  config?: JsonObject;
   showShoppingIcon: boolean;
   dueDays: number;
   t: (text: string, ...values: (string | number)[]) => string;
@@ -268,6 +270,18 @@ export function overviewCells(
   ).search;
 
   for (const field of fields) {
+    if (["file", "image", "link", "link-with-title"].includes(field.type)) {
+      values["product:" + field.name] = userfieldTableCell(
+        field,
+        row.product_values[field.name] ?? null,
+        context.pricePrecision,
+        context.currency,
+        context.config,
+        Object.hasOwn(row.product_values, field.name),
+      );
+      continue;
+    }
+
     const value = row.product_values[field.name] ?? "";
     let html = tableText(value);
 
@@ -277,15 +291,6 @@ export function overviewCells(
     else if (field.type === "number-decimal") html = span(tableNumber(value, 0));
     else if (field.type === "number-currency")
       html = span(tableNumber(value, context.pricePrecision, context.currency));
-    else if (field.type === "file") html = tableText(userfieldFile(value).display);
-    else if (field.type === "image") html = "";
-    else if (field.type === "link-with-title") {
-      try {
-        html = tableText(JSON.parse(value).title ?? "");
-      } catch {
-        html = "";
-      }
-    }
 
     values["product:" + field.name] = nativeTableCell(html);
   }

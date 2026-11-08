@@ -17,6 +17,9 @@ function ShoppingRoute() {
       onListChange={(id) => {
         void navigate({ search: { list: id } });
       }}
+      onListReset={() => {
+        void navigate({ search: {} });
+      }}
     />
   );
 }

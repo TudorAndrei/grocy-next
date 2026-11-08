@@ -101,12 +101,9 @@ def test_legacy_code_head_and_login_redirect(client, api_headers, entity):
     assert head.headers["Content-Length"] == response.headers["Content-Length"]
 
 
-@pytest.mark.parametrize(
-    "permission,allowed",
-    [(7, {"products", "stock/entries"}), (10, {"chores"}), (11, {"batteries"})],
-)
-def test_application_codes_use_their_domain_permission(
-    client, api_headers, monkeypatch, permission, allowed
+@pytest.mark.parametrize("permission", [7, 10, 11])
+def test_application_codes_require_authentication_not_domain_permission(
+    client, api_headers, monkeypatch, permission
 ):
     paths = [
         (entity, f"/api/v2/{entity}/17/grocycode")
@@ -134,7 +131,7 @@ def test_application_codes_use_their_domain_permission(
     ]
     headers = {"GROCY-API-KEY": key}
     for _entity, path in paths:
-        assert client.get(path, headers=headers).status_code == 403
+        assert client.get(path, headers=headers).status_code == 200
     assert (
         client.put(
             f"/api/users/{identity}/permissions",
@@ -143,9 +140,9 @@ def test_application_codes_use_their_domain_permission(
         ).status_code
         == 204
     )
-    for entity, path in paths:
+    for _entity, path in paths:
         response = client.get(path, headers=headers)
-        assert response.status_code == (200 if entity in allowed else 403), response.text
+        assert response.status_code == 200, response.text
     for path in ["product", "chore", "battery", "stockentry"]:
         assert client.get(f"/{path}/17/grocycode", headers=headers).status_code == 200
     assert client.get("/stockentry/17/label", headers=headers).status_code == 200

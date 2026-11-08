@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { useI18n } from "@/lib/i18n";
+import { useNativeProductDocument } from "@/lib/native-product-document";
 import { fetchApiDocument } from "@/lib/open-document";
 import { ErrorBlock } from "./ErrorBlock";
 import { FullscreenCard } from "./FullscreenCard";
@@ -16,24 +17,43 @@ const messageSchema = z.object({
   fullscreen: z.boolean(),
 });
 
+const interactionMessage = z.discriminatedUnion("kind", [
+  z.object({
+    channel: z.literal("grocy-description"),
+    kind: z.literal("activity"),
+    event: z.enum(["mousemove", "mousedown", "click", "scroll", "keypress"]),
+  }),
+  z.object({
+    channel: z.literal("grocy-description"),
+    kind: z.literal("dirty"),
+    event: z.enum(["keyup", "paste", "change", "click"]),
+  }),
+]);
+
 export function DescriptionEditor({
   entity,
+  label = "Description",
   value,
   pasteInitial = false,
+  pasteHtml,
   onChange,
   onReady,
 }: {
   entity: "products" | "recipes" | "equipment";
+  label?: string;
   value: string;
   pasteInitial?: boolean;
+  pasteHtml?: string;
   onChange: (html: string) => void;
   onReady: (ready: boolean) => void;
 }) {
   const { t, locale } = useI18n();
+  const nativeProduct = useNativeProductDocument();
   const instance = useId();
   const frame = useRef<HTMLIFrameElement>(null);
   const leave = useRef<HTMLButtonElement>(null);
   const paste = useRef(pasteInitial);
+  const submittedPaste = useRef<string | undefined>(undefined);
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState({ document: -1, height: 390 });
 
@@ -47,13 +67,22 @@ export function DescriptionEditor({
           JSON.stringify({ html: value, paste: paste.current }),
         )
       ).text(),
-    staleTime: Infinity,
+    staleTime: nativeProduct ? "static" : Infinity,
     gcTime: 0,
     retry: false,
   });
 
   const ready = document.isSuccess && state.document === document.dataUpdatedAt;
   useEffect(() => onReady(ready), [ready, onReady]);
+
+  useEffect(() => {
+    const target = frame.current?.contentWindow;
+
+    if (!ready || !target || pasteHtml === undefined || pasteHtml === submittedPaste.current)
+      return;
+    target.postMessage({ channel: "grocy-description", command: "paste", html: pasteHtml }, "*");
+    submittedPaste.current = pasteHtml;
+  }, [pasteHtml, ready]);
 
   const appearance = useCallback(() => {
     frame.current?.contentWindow?.postMessage(
@@ -80,6 +109,19 @@ export function DescriptionEditor({
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow || event.origin !== "null") return;
+      const interaction = interactionMessage.safeParse(event.data);
+
+      if (interaction.success) {
+        if (interaction.data.kind === "activity")
+          window.dispatchEvent(new CustomEvent("grocy-native-activity"));
+        else {
+          frame.current?.classList.add("is-dirty");
+          frame.current?.closest("form")?.classList.add("is-dirty");
+        }
+
+        return;
+      }
+
       const parsed = messageSchema.safeParse(event.data);
 
       if (!parsed.success) return;
@@ -127,13 +169,13 @@ export function DescriptionEditor({
 
   return (
     <FullscreenCard
-      label={t("Description")}
+      label={t(label)}
       className="description-editor"
       expanded={expanded}
       onExpandedChange={changeFullscreen}
     >
       <div className="description-editor-heading">
-        <span>{t("Description")}</span>
+        <span>{t(label)}</span>
         {expanded ? (
           <button
             ref={leave}
@@ -166,7 +208,7 @@ export function DescriptionEditor({
         <iframe
           key={locale + ":" + document.dataUpdatedAt}
           ref={frame}
-          title={t("Description")}
+          title={t(label)}
           className="shopping-notes-frame"
           sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
           srcDoc={document.data}

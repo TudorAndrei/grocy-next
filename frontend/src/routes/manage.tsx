@@ -6,13 +6,23 @@ import { AccessManager } from "@/components/AccessManager";
 import { entities } from "@/lib/entities";
 import { useFeatures } from "@/lib/features";
 import { ResolvedConversionsDialog } from "@/components/ResolvedConversions";
+import { z } from "zod";
 
-export const Route = createFileRoute("/manage")({ component: ManagePage });
+export const Route = createFileRoute("/manage")({
+  validateSearch: z.object({ entity: z.string().optional().catch(undefined) }),
+  component: ManageRoute,
+});
 
-function ManagePage() {
+function ManageRoute() {
+  const { entity } = Route.useSearch();
+
+  return <ManagePage key={entity} initialEntity={entity} />;
+}
+
+function ManagePage({ initialEntity }: { initialEntity?: string }) {
   const { t: tr } = useI18n();
 
-  const [selection, setEntity] = useState("locations");
+  const [selection, setEntity] = useState(initialEntity ?? "locations");
   const [resolved, setResolved] = useState(false);
   const features = useFeatures();
 
@@ -29,6 +39,7 @@ function ManagePage() {
     "meal_plan_sections",
     "task_categories",
     "shopping_lists",
+    "equipment",
   ].filter((value) => {
     if (value === "locations") return features.routeEnabled("/locations");
 
@@ -43,6 +54,8 @@ function ManagePage() {
 
     if (value === "shopping_lists")
       return features.enabled("SHOPPINGLIST") && features.enabled("SHOPPINGLIST_MULTIPLE_LISTS");
+
+    if (value === "equipment") return features.routeEnabled("/equipment");
 
     return true;
   });

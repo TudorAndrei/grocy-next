@@ -11,6 +11,7 @@ import { writeApiConfig } from "@/lib/config";
 import type { EntityRow } from "@/lib/entities";
 import type { JsonObject } from "@/lib/json";
 import { pictureBytes } from "./fixtures/picture";
+import { nativeProductContext } from "./fixtures/native-product";
 
 beforeEach(() => {
   for (const method of ["showModal", "close"] as const) {
@@ -39,6 +40,7 @@ function mount(
     productFailure?: boolean;
     prices?: boolean;
     resolvedPage?: boolean;
+    modernCatalog?: boolean;
   } = {},
 ) {
   writeApiConfig({ baseUrl: "/house", apiKey: "catalog-key" });
@@ -66,6 +68,13 @@ function mount(
     qu_id_consume: 1,
     qu_id_price: 1,
     active: 1,
+    default_best_before_days: 0,
+    default_best_before_days_after_open: 0,
+    default_best_before_days_after_freezing: 0,
+    default_best_before_days_after_thawing: 0,
+    quick_consume_amount: 1,
+    quick_open_amount: 1,
+    default_stock_label_type: 0,
   };
 
   if (options.copying)
@@ -191,6 +200,16 @@ function mount(
 
     if (path === "/api/user") return Response.json([{ id: 1, username: "test" }]);
 
+    if (path === "/api/v2/user/permissions") return Response.json({});
+
+    if (path === "/api/v2/localization")
+      return Response.json({
+        locale: "en",
+        direction: "ltr",
+        languages: ["en"],
+        catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+      });
+
     if (path === "/api/system/config")
       return Response.json({ FEATURE_FLAG_STOCK_PRICE_TRACKING: options.prices !== false });
 
@@ -202,6 +221,36 @@ function mount(
         product_presets_treat_opened_as_out_of_stock: true,
         stock_decimal_places_amounts: 4,
       });
+
+    if (path === "/api/v2/products/native-editor") {
+      const raw = url.searchParams.get("row");
+      const row = raw === "new" ? null : products.find((item) => item.id === Number(raw));
+
+      if (raw !== "new" && !row)
+        return Response.json({ error_message: "Object not found" }, { status: 404 });
+
+      return Response.json(
+        nativeProductContext({
+          product: row ? { ...row, userfields: row.userfields ?? null } : null,
+          references: {
+            locations: [{ id: 1, name: "Shelf" }],
+            quantity_units: units,
+            shopping_locations: [{ id: 3, name: "Corner store", active: 1 }],
+            product_groups: [],
+            products: options.copying ? [...products, { id: 9, name: "Parent" }] : products,
+          },
+          fields: fields.filter((field) => field.entity === "products"),
+          user_settings: {
+            product_presets_location_id: 1,
+            product_presets_qu_id: options.copying ? 3 : 1,
+            product_presets_default_due_days: options.copying ? 99 : 0,
+            product_presets_treat_opened_as_out_of_stock: true,
+            stock_decimal_places_amounts: 4,
+          },
+          config: { FEATURE_FLAG_STOCK_PRICE_TRACKING: options.prices !== false },
+        }),
+      );
+    }
 
     if (path === "/api/objects/locations") return Response.json([{ id: 1, name: "Shelf" }]);
 
@@ -219,7 +268,8 @@ function mount(
         rows: resolved.map((row) => ({ ...row, factor: String(row.factor) })),
       });
 
-    if (path === "/api/objects/userfields") return Response.json(fields);
+    if (path === "/api/objects/userfields" || path === "/api/v2/custom-data/fields")
+      return Response.json(fields);
 
     if (/^\/api\/v2\/products\/(7|8)\/grocycode$/.test(path))
       return new Response(pictureBytes, { headers: { "Content-Type": "image/png" } });
@@ -345,16 +395,69 @@ function mount(
   supportProductOptions();
   supportDescriptionEditors();
 
+  // The editor runtime owns paste behavior. This form fixture only returns its
+  // normal change event so the existing save contract observes that transport.
+  const pasteCommand = z.object({
+    channel: z.literal("grocy-description"),
+    command: z.literal("paste"),
+    html: z.string(),
+  });
+
+  const descriptions = new WeakSet<HTMLIFrameElement>();
+  const disposeDescriptions: (() => void)[] = [];
+
+  const descriptionObserver = new MutationObserver(() => {
+    for (const frame of document.querySelectorAll<HTMLIFrameElement>(
+      'iframe[title="Description"]',
+    )) {
+      if (descriptions.has(frame) || !frame.contentWindow) continue;
+      descriptions.add(frame);
+      const child = frame.contentWindow;
+
+      const reply = (event: MessageEvent<unknown>) => {
+        const command = pasteCommand.safeParse(event.data);
+
+        if (!command.success || !frame.isConnected) return;
+        window.dispatchEvent(
+          new MessageEvent("message", {
+            source: child,
+            origin: "null",
+            data: {
+              channel: "grocy-description",
+              kind: "change",
+              html: command.data.html,
+              empty: false,
+              height: 390,
+              fullscreen: false,
+            },
+          }),
+        );
+      };
+
+      child.addEventListener("message", reply);
+      disposeDescriptions.push(() => child.removeEventListener("message", reply));
+    }
+  });
+
+  descriptionObserver.observe(document.body, { childList: true, subtree: true });
+  onTestFinished(() => {
+    descriptionObserver.disconnect();
+
+    for (const dispose of disposeDescriptions) dispose();
+  });
+
   const router = createAppRouter({
     history: createMemoryHistory({
       initialEntries: [
         options.copying
-          ? "/products"
-          : options.creating
-            ? "/product/new"
-            : options.resolvedPage
-              ? "/quantityunitconversionsresolved?product=7"
-              : "/product/7",
+          ? "/catalog?include_disabled"
+          : options.modernCatalog
+            ? "/catalog"
+            : options.creating
+              ? "/product/new"
+              : options.resolvedPage
+                ? "/quantityunitconversionsresolved?product=7"
+                : "/product/7",
       ],
     }),
   });
@@ -386,6 +489,100 @@ async function availableButton(name: string | RegExp) {
   return button;
 }
 
+async function openModernProduct() {
+  const user = userEvent.setup();
+  await user.click(await availableButton("Edit catalog"));
+  await user.click(await availableButton(/Edit.*Coffee/));
+  await screen.findByLabelText("Name");
+}
+
+test("native product relation anchors retain selected editor URLs and open embedded forms", async () => {
+  mount();
+  const user = userEvent.setup();
+  const add = await screen.findByRole("link", { name: "Add barcode" });
+  await waitFor(() => expect(add.getAttribute("aria-disabled")).not.toBe("true"));
+  expect(add.getAttribute("href")).toBe("/productbarcodes/new?embedded&product=7");
+  fireEvent.click(add, { ctrlKey: true });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  await user.click(add);
+
+  const frame = within(
+    await screen.findByRole("dialog", { name: "Barcode" }),
+  ).getByTitle<HTMLIFrameElement>("Barcode");
+
+  expect(new URL(frame.src).pathname + new URL(frame.src).search).toBe(
+    "/productbarcodes/new?embedded&product=7",
+  );
+  await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }));
+  const edit = screen.getByRole("link", { name: /Edit.*CODE/ });
+  expect(edit.getAttribute("href")).toBe("/productbarcodes/21?embedded&product=7");
+  await user.click(edit);
+  expect(
+    new URL(
+      within(screen.getByRole("dialog", { name: "Barcode" })).getByTitle<HTMLIFrameElement>(
+        "Barcode",
+      ).src,
+    ).pathname,
+  ).toBe("/productbarcodes/21");
+  await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }));
+  expect(screen.getByRole("link", { name: "Add conversion" }).getAttribute("href")).toBe(
+    "/quantityunitconversion/new?embedded&product=7",
+  );
+  const conversion = screen.getByRole("link", { name: /Edit.*Box.*Piece/ });
+  expect(conversion.getAttribute("href")).toBe("/quantityunitconversion/10?embedded&product=7");
+  await user.click(conversion);
+  const conversionDialog = screen.getByRole("dialog", { name: "Quantity unit conversion" });
+  expect(conversionDialog.classList.contains("wider")).toBe(true);
+  expect(
+    new URL(within(conversionDialog).getByTitle<HTMLIFrameElement>("Quantity unit conversion").src)
+      .pathname,
+  ).toBe("/quantityunitconversion/10");
+  await user.click(within(conversionDialog).getByRole("button", { name: "Close" }));
+  const resolved = screen.getByRole("link", { name: "Show resolved conversions" });
+  expect(resolved.getAttribute("href")).toBe("/quantityunitconversionsresolved?embedded&product=7");
+  await user.click(resolved);
+  const resolvedDialog = screen.getByRole("dialog");
+  expect(resolvedDialog.classList.contains("wider")).toBe(true);
+  expect(
+    new URL(resolvedDialog.querySelector("iframe")!.src).pathname +
+      new URL(resolvedDialog.querySelector("iframe")!.src).search,
+  ).toBe("/quantityunitconversionsresolved?embedded&product=7");
+});
+
+test.each(["barcode", "conversion"])(
+  "modern product owner refreshes %s messages without saving or discarding its draft",
+  async (kind) => {
+    const app = mount({ modernCatalog: true });
+    await openModernProduct();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Name"), " draft");
+    const Message = kind === "barcode" ? "ProductBarcodesChanged" : "ProductQUConversionChanged";
+
+    if (kind === "barcode") app.barcodes[0]!.barcode = "UPDATED";
+    else app.conversions[0]!.factor = 12;
+    fireEvent(
+      window,
+      new MessageEvent("message", {
+        origin: "https://foreign.example",
+        data: { Message, Payload: null },
+      }),
+    );
+    expect(screen.queryByRole("button", { name: /Edit.*UPDATED/ })).toBeNull();
+    fireEvent(
+      window,
+      new MessageEvent("message", {
+        origin: window.location.origin,
+        data: { Message, Payload: null },
+      }),
+    );
+
+    if (kind === "barcode") await screen.findByRole("button", { name: /Edit.*UPDATED/ });
+    else await screen.findByText("This means 1 Box is the same as 12 Piece");
+    expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Coffee draft");
+    expect(app.writes).toEqual([]);
+  },
+);
+
 test.each(["button", "keyboard"])(
   "%s saves continue after creation and return to the catalog after editing",
   async (mode) => {
@@ -397,7 +594,7 @@ test.each(["button", "keyboard"])(
 
     if (mode === "button") await user.click(form.getByRole("button", { name: "Save & continue" }));
     else await user.keyboard("{Enter}");
-    await availableButton("Add barcode");
+    await screen.findByRole("link", { name: "Add barcode" });
     expect(router.state.location.pathname).toBe("/product/7");
     expect(products).toHaveLength(1);
     expect(await screen.findByRole("img", { name: "New coffee Grocycode" })).toBeTruthy();
@@ -413,7 +610,8 @@ test.each(["button", "keyboard"])(
 );
 
 test("barcode creation uses product units and retries fields on the created barcode before reloading the parent", async () => {
-  const { barcodes, product, writes } = mount({ fieldFailure: true });
+  const { barcodes, product, writes } = mount({ fieldFailure: true, modernCatalog: true });
+  await openModernProduct();
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText("Name"), " draft");
   await user.click(await availableButton("Add barcode"));
@@ -459,7 +657,10 @@ test("barcode edits wait for both independent writes when a custom field fails",
     fieldFailure: true,
     holdBarcode: true,
     prices: false,
+    modernCatalog: true,
   });
+
+  await openModernProduct();
 
   const user = userEvent.setup();
   const edit = await screen.findByRole<HTMLButtonElement>("button", { name: /Edit.*CODE/ });
@@ -486,7 +687,8 @@ test("barcode edits wait for both independent writes when a custom field fails",
 });
 
 test("product conversions use the stock unit, reject equal units, and save fields after the row", async () => {
-  const { conversions, writes, resolved: cache } = mount();
+  const { conversions, writes, resolved: cache } = mount({ modernCatalog: true });
+  await openModernProduct();
   const user = userEvent.setup();
   await user.click(await availableButton("Add conversion"));
 
@@ -555,7 +757,8 @@ test.each([
 ])(
   "deleting a %s saves the product draft and retries it without another deletion",
   async (_kind, button, path) => {
-    const { product, writes } = mount({ productFailure: true });
+    const { product, writes } = mount({ productFailure: true, modernCatalog: true });
+    await openModernProduct();
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Name"), " changed");
     await user.click(await availableButton(button));
@@ -565,6 +768,11 @@ test.each([
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Yes" }));
     const dialog = within(screen.getByRole("dialog"));
     await dialog.findByText("Product save failed");
+    await user.click(dialog.getByRole("button", { name: /Click to show technical details/ }));
+    const details = await screen.findByRole("dialog", { name: "Error details" });
+    await within(details).findByText(/Product save failed/);
+    expect(writes).toHaveLength(2);
+    await user.click(within(details).getByRole("button", { name: "OK" }));
     expect(product.name).toBe("Coffee");
     await user.click(dialog.getByRole("button", { name: "Yes" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -578,7 +786,8 @@ test.each([
 );
 
 test("empty optional barcode fields retain the native explicit empty values", async () => {
-  const { writes } = mount();
+  const { writes } = mount({ modernCatalog: true });
+  await openModernProduct();
   const user = userEvent.setup();
   await user.click(await availableButton("Add barcode"));
   const form = within(await screen.findByRole("dialog", { name: "Create Barcode" }));
@@ -595,10 +804,9 @@ test("empty optional barcode fields retain the native explicit empty values", as
   });
 });
 
-test("catalog copy links create a separate product with native copy fields and retain it on a field retry", async () => {
+test("catalog copy retains native copied fields but a failed final metadata write leaves its committed native form busy", async () => {
   const { router, products, product, writes, barcodes, conversions } = mount({
     copying: true,
-    copyFailure: true,
     fieldFailure: true,
   });
 
@@ -611,16 +819,15 @@ test("catalog copy links create a separate product with native copy fields and r
     screen.getAllByRole("link", { name: "Copy Coffee" }).map((link) => link.getAttribute("href")),
   ).toEqual(["/product/new?copy-of=7", "/product/new?copy-of=7"]);
   await user.click(catalog.getByRole("link", { name: "Copy Coffee" }));
-  await screen.findByText("Source load failed");
-  expect(screen.queryByRole("form", { name: "Add product" })).toBeNull();
-  expect(writes).toEqual([]);
-  product.default_best_before_days = 21;
-  await user.click(screen.getByRole("button", { name: "Retry" }));
   const form = within(await screen.findByRole("form", { name: "Add product" }));
+  await waitFor(() =>
+    expect(form.getByLabelText<HTMLInputElement>("Days before expiry").value).toBe("20"),
+  );
+  expect(writes).toEqual([]);
   expect(form.getByLabelText<HTMLInputElement>("Name").value).toBe("");
   expect(form.getByLabelText<HTMLSelectElement>("Stock unit").value).toBe("1");
   expect(form.getByLabelText<HTMLSelectElement>("Purchase unit").value).toBe("2");
-  expect(form.getByLabelText<HTMLInputElement>("Days before expiry").value).toBe("21");
+  expect(form.getByLabelText<HTMLInputElement>("Days before expiry").value).toBe("20");
   expect(form.getByLabelText<HTMLInputElement>("Active").checked).toBe(true);
   expect(form.getByLabelText<HTMLInputElement>("Treat opened stock as missing").checked).toBe(
     false,
@@ -641,7 +848,9 @@ test("catalog copy links create a separate product with native copy fields and r
   expect(form.getByLabelText<HTMLSelectElement>("Price unit").value).toBe("1");
   await user.type(form.getByLabelText("Owner"), "New owner");
   await user.click(await availableButton("Save & continue"));
-  await screen.findByText("Field save failed");
+  await waitFor(() =>
+    expect(writes.some((write) => write.path === "/api/userfields/products/8")).toBe(true),
+  );
   expect(products).toHaveLength(2);
   expect(products[1]).toMatchObject({
     id: 8,
@@ -657,12 +866,14 @@ test("catalog copy links create a separate product with native copy fields and r
     parent_product_id: 9,
     min_stock_amount: 9.12,
   });
-  await user.click(await availableButton("Save & continue"));
-  await waitFor(() => expect(router.state.location.href).toBe("/product/8"));
-  await waitFor(() =>
-    expect(screen.getByLabelText<HTMLInputElement>("Minimum stock").disabled).toBe(true),
-  );
-  expect(products[1]?.userfields).toEqual({ Owner: "New owner" });
+  const save = form.getByRole<HTMLButtonElement>("button", { name: "Save & continue" });
+  expect(save.matches(":disabled")).toBe(true);
+  expect(form.getByLabelText<HTMLInputElement>("Owner").matches(":disabled")).toBe(true);
+  expect(screen.queryByText("Field save failed")).toBeNull();
+  expect(router.state.location.href).toBe("/product/new?copy-of=7");
+  await user.click(save);
+  expect(products).toHaveLength(2);
+  expect(products[1]?.userfields ?? {}).toEqual({});
   expect(product).toMatchObject({
     id: 7,
     name: "Coffee",
@@ -674,8 +885,6 @@ test("catalog copy links create a separate product with native copy fields and r
   expect(conversions[0]).toMatchObject({ product_id: 7, factor: 6 });
   expect(writes.map(({ path, method }) => `${method} ${path}`)).toEqual([
     "POST /api/objects/products",
-    "PUT /api/userfields/products/8",
-    "PUT /api/objects/products/8",
     "PUT /api/userfields/products/8",
   ]);
 });

@@ -1349,6 +1349,8 @@ def test_reference_encoded_barcode_paths(client, api_headers, reference, suffix,
             encoded = quote(encoded, safe="")
         path = "/api/stock/products/by-barcode/" + encoded
         found = app.get(path)
+        if (suffix, encodings) == ("box + café", 1):
+            assert found.status_code == 200, found.text
         results = [
             (
                 found.status_code,
@@ -1363,16 +1365,27 @@ def test_reference_encoded_barcode_paths(client, api_headers, reference, suffix,
                 {"amount": 1, "location_id_from": location, "location_id_to": destination},
             ),
             ("consume", {"amount": 1, "location_id": destination}),
-            ("inventory", {"new_amount": 2}),
         ]:
             response = app.post(path + "/" + action, json=body)
             results.append((response.status_code, None))
-        results.append(
-            [
-                app.get(f"/api/stock/products/{identity}").json()["stock_amount"]
-                for identity in products
-            ]
-        )
+        before_inventory = [
+            app.get(f"/api/stock/products/{identity}").json()["stock_amount"]
+            for identity in products
+        ]
+        inventory = app.post(path + "/inventory", json={"new_amount": 4})
+        if (suffix, encodings) == ("box + café", 1):
+            assert inventory.status_code == 200, inventory.text
+        results.append((inventory.status_code, None))
+        after_inventory = [
+            app.get(f"/api/stock/products/{identity}").json()["stock_amount"]
+            for identity in products
+        ]
+        if inventory.status_code == 200:
+            assert found.status_code == 200, found.text
+            selected = int(found.json()["product"]["id"])
+            assert before_inventory == [2 if identity == selected else 0 for identity in products]
+            assert after_inventory == [4 if identity == selected else 0 for identity in products]
+        results.extend([before_inventory, after_inventory])
         snapshots.append(results)
     assert snapshots[0] == snapshots[1]
 
@@ -2133,7 +2146,45 @@ def test_reference_native_thermal_network_output(client, api_headers, reference,
 
 @pytest.mark.parametrize(
     "locale,language",
-    [("", "de-DE,de;q=0.9,en;q=0.1"), ("fr", "de"), ("unknown", "xx,en;q=0.5"), ("", "unknown")],
+    [("", "de-DE,de;q=0.9,en;q=0.1"), ("fr", "de"), ("unknown", "xx,en;q=0.5"), ("", "unknown")]
+    + [
+        (locale, "de")
+        # Pinned v4.5.0 ZIP localization catalogs; the original row already covers fr.
+        for locale in (
+            "bg_BG",
+            "ca",
+            "cs",
+            "da",
+            "de",
+            "el_GR",
+            "en",
+            "en_GB",
+            "es",
+            "et_EE",
+            "fi",
+            "he_IL",
+            "hu",
+            "it",
+            "ja",
+            "ko_KR",
+            "lt",
+            "nl",
+            "no",
+            "pl",
+            "pt_BR",
+            "pt_PT",
+            "ro_RO",
+            "ru",
+            "sk_SK",
+            "sl",
+            "sv_SE",
+            "ta",
+            "tr",
+            "uk",
+            "zh_CN",
+            "zh_TW",
+        )
+    ],
 )
 def test_reference_native_system_locale_and_localized_copy(
     client, api_headers, reference, locale, language
@@ -2146,6 +2197,11 @@ def test_reference_native_system_locale_and_localized_copy(
         try:
             assert app.put("/api/user/settings/locale", json={"value": locale}).status_code == 204
             headers = {"Accept-Language": language}
+            configured = app.get("/api/system/config", headers=headers)
+            assert configured.status_code == 200, configured.text
+            config = configured.json()
+            if locale not in {"", "unknown"}:
+                assert config["LOCALE"] == locale
             response = app.get("/api/system/localization-strings", headers=headers)
             assert response.status_code == 200, response.text
             assert response.headers["cache-control"] == "max-age=2592000"
@@ -2155,7 +2211,6 @@ def test_reference_native_system_locale_and_localized_copy(
             copied_name = app.get(
                 "/api/objects/recipes/" + copied.json()["created_object_id"]
             ).json()["name"]
-            config = app.get("/api/system/config", headers=headers).json()
             results.append((config["LOCALE"], response.json(), copied_name))
         finally:
             if before is None:

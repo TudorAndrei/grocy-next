@@ -47,7 +47,10 @@ class EntriesView(BaseModel):
     stores: list[JournalChoice]
 
 
-async def entry_editor(session: AsyncSession, entry_id: int) -> dict:
+async def entry_editor(session: AsyncSession, entry_id: int | str) -> dict:
+    # StockEntryEditForm passes its route argument straight to LessQL/PDO. Keep
+    # raw aliases such as "02" and "2e0" for SQLite's column-affinity comparison;
+    # the typed modern route still supplies an int.
     await configure_compatibility_queries(session)
     result = await session.execute(
         text(

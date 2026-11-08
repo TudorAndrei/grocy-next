@@ -1,15 +1,15 @@
-import { useEffect, useId, useRef, useState } from "react";
-import moment from "moment/min/moment-with-locales.js";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useFeatures } from "@/lib/features";
 import { usePreferences } from "@/lib/preferences";
-import { unitLabel } from "@/lib/format";
-import { tableDate } from "@/lib/native-table-cell";
-import { getProductOverview } from "@/lib/product-overview";
+import type { ProductCardMemory } from "@/lib/product-card-memory";
+import { useProductCardMemory } from "@/hooks/useProductCardMemory";
+import { userSettingsQuery } from "@/hooks/queries";
 import { useModalDialog } from "@/hooks/useModalDialog";
+import { useDialogState } from "@/hooks/useDialogState";
 import { ProductEntries } from "./StockEntries";
 import { ProductJournal } from "./StockJournal";
 import { ShoppingItemForm } from "./ShoppingItemForm";
@@ -23,6 +23,7 @@ import { ErrorBlock } from "./ErrorBlock";
 
 type CardProps = {
   productId: number;
+  memory?: ProductCardMemory;
   embedded: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -45,23 +46,32 @@ export function ProductOverview(props: CardProps & { onClose: () => void }) {
         props.onClose();
       }}
     >
-      <ProductCard {...props} />
+      <ProductCard
+        {...props}
+        onClose={() => {
+          if (dialog.current?.open) props.onClose();
+        }}
+      />
     </dialog>
   );
 }
 
 export function ProductCard({
   productId,
+  memory: externalMemory,
   embedded,
   expanded,
   onExpandedChange,
   onReturn,
   onClose,
 }: CardProps) {
-  const { t, pluralIndex, ready } = useI18n();
+  const { t, pluralIndex, ready, locale } = useI18n();
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
+  const settings = useQuery(userSettingsQuery());
+  const memory = useProductCardMemory({ external: externalMemory });
+  const snapshot = useSyncExternalStore(memory.subscribe, memory.getSnapshot);
   const returnto = useLocation({ select: (location) => location.href });
   const close = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -69,13 +79,23 @@ export function ProductCard({
   const focusAfterRead = useRef(false);
   const title = useId();
   const descriptionId = useId();
-  const [shopping, setShopping] = useState(false);
+  const shopping = useDialogState<true>();
+
+  const closeShopping = () => {
+    if (shopping.state) shopping.close(shopping.state.id);
+  };
+
   const [editing, setEditing] = useState(false);
-  const [now] = useState(() => new Date());
 
   const data = useQuery({
-    queryKey: ["product-overview", productId],
-    queryFn: ({ signal }) => getProductOverview(productId, signal),
+    queryKey: ["product-overview", productId, memory.id],
+    queryFn: ({ signal }) => {
+      // Release query bookkeeping on close; the page still owns the native callback.
+      signal.throwIfAborted();
+
+      return memory.read(productId);
+    },
+    enabled: ready && features.query.isSuccess && settings.isSuccess,
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
@@ -88,46 +108,58 @@ export function ProductCard({
     ((data.isError ? retry : close).current ?? heading.current)?.focus();
   }, [data.isFetching, data.isError]);
 
+  const currency = String(features.query.data?.CURRENCY ?? "USD");
+  const priceTracking = features.enabled("STOCK_PRICE_TRACKING");
+
+  const formatVersion = JSON.stringify([
+    preferences.amountPrecision,
+    preferences.priceDisplayPrecision,
+    currency,
+    locale,
+    priceTracking,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!ready || !features.query.isSuccess || !settings.isSuccess) return;
+    memory.configure(
+      {
+        amountPrecision: preferences.amountPrecision,
+        pricePrecision: preferences.priceDisplayPrecision,
+        currency,
+        priceTracking,
+        now: new Date(),
+        locale: t("moment_locale"),
+        t,
+        pluralIndex,
+      },
+      formatVersion,
+    );
+  }, [
+    memory,
+    ready,
+    features.query.isSuccess,
+    settings.isSuccess,
+    formatVersion,
+    preferences.amountPrecision,
+    preferences.priceDisplayPrecision,
+    currency,
+    priceTracking,
+    t,
+    pluralIndex,
+  ]);
+
+  const value = snapshot.view;
+  const name = value.name;
+  const actionId = value.actionProductId;
+
   const description = useQuery({
-    queryKey: ["product-overview-description", productId],
-    queryFn: () => api.getContent("products", productId),
-    enabled: !!data.data?.product.description && !data.isFetching,
+    queryKey: ["product-overview-description", value.descriptionProductId, value.description],
+    queryFn: () => api.getContent("products", value.descriptionProductId ?? productId),
+    enabled: !!value.description && value.descriptionVisible,
     staleTime: 0,
     refetchOnMount: "always",
     retry: false,
   });
-
-  const value = data.isSuccess && !data.isFetching && ready ? data.data : undefined;
-  const name = value?.product.name ?? "";
-  const currency = String(features.query.data?.CURRENCY ?? "USD");
-
-  const number = (amount: number) =>
-    amount.toLocaleString(undefined, { maximumFractionDigits: preferences.amountPrecision });
-
-  const quantity = (amount: number) =>
-    `${number(amount)} ${unitLabel(value ? { ...value.quantity_unit_stock, name: value.quantity_unit_stock.name ?? "" } : undefined, amount, pluralIndex, false)}`;
-
-  const money = (amount: number) => preferences.formatCurrency(amount, currency);
-
-  const price = (amount: number) =>
-    t(
-      "%1$s per %2$s",
-      money(amount * (value?.qu_conversion_factor_price_to_stock ?? 1)),
-      value?.quantity_unit_price.name ?? "",
-    );
-
-  const stockPrice = (amount: number) =>
-    t("%1$s per %2$s", money(amount), value?.quantity_unit_stock.name ?? "");
-
-  const date = (source: string | null) => {
-    const value = tableDate(source || "2999-12-31", now, t("moment_locale"), t);
-
-    return (
-      <StockTableDate
-        value={{ ...value, date: value.date === source ? value.date.slice(0, 10) : value.date }}
-      />
-    );
-  };
 
   return (
     <>
@@ -158,17 +190,22 @@ export function ProductCard({
           </button>
         </>
       ) : null}
-      {value ? (
+      {snapshot.hasRead ? (
         <>
           <div className="toolbar product-overview-actions">
-            {embedded ? (
-              <button type="button" className="btn" onClick={() => setEditing(true)}>
+            {embedded || actionId === null ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={actionId === null}
+                onClick={() => setEditing(true)}
+              >
                 {t("Edit product")}
               </button>
             ) : (
               <Link
                 to="/product/$productId"
-                params={{ productId: String(productId) }}
+                params={{ productId: String(actionId) }}
                 search={{ returnto }}
                 className="btn"
               >
@@ -176,15 +213,28 @@ export function ProductCard({
               </Link>
             )}
             {features.enabled("SHOPPINGLIST") ? (
-              <button type="button" className="btn" onClick={() => setShopping(true)}>
+              <button
+                type="button"
+                className="btn"
+                disabled={actionId === null}
+                onClick={() => shopping.open(true)}
+              >
                 {t("Add to shopping list")}
               </button>
             ) : null}
-            <ProductJournal productId={productId} name={name} disabled={false} />
-            <ProductEntries productId={productId} name={name} disabled={false} />
+            <ProductJournal
+              productId={actionId ?? productId}
+              name={name}
+              disabled={actionId === null}
+            />
+            <ProductEntries
+              productId={actionId ?? productId}
+              name={name}
+              disabled={actionId === null}
+            />
           </div>
           <h3>{name}</h3>
-          {value.product.description ? (
+          {value.descriptionVisible ? (
             <div className="product-overview-description">
               {description.isPending ? <LoadingBlock /> : null}
               {description.error ? (
@@ -217,22 +267,13 @@ export function ProductCard({
             <div>
               <dt>{t("Stock amount")}</dt>
               <dd>
-                {value.product.no_own_stock !== 1 ? (
-                  <span>{quantity(value.stock_amount)}</span>
-                ) : null}
-                {value.stock_amount_opened > 0 ? (
-                  <small> {t("%s opened", value.stock_amount_opened.toLocaleString())}</small>
-                ) : null}
-                {value.is_aggregated_amount === 1 ? (
+                {!value.noOwnStock ? <span>{`${value.ownAmount} ${value.ownUnit}`}</span> : null}
+                {value.ownOpened ? <small> {value.ownOpened}</small> : null}
+                {value.aggregateVisible ? (
                   <span className="product-overview-aggregate">
                     <span aria-label={t("Total stock")}>Σ </span>
-                    {quantity(value.stock_amount_aggregated)}
-                    {value.stock_amount_opened_aggregated > 0 ? (
-                      <small>
-                        {" "}
-                        {t("%s opened", value.stock_amount_opened_aggregated.toLocaleString())}
-                      </small>
-                    ) : null}
+                    {`${value.aggregateAmount} ${value.aggregateUnit}`}
+                    {value.aggregateOpened ? <small> {value.aggregateOpened}</small> : null}
                   </span>
                 ) : null}
               </dd>
@@ -240,43 +281,39 @@ export function ProductCard({
             {features.enabled("STOCK_PRICE_TRACKING") ? (
               <div>
                 <dt>{t("Stock value")}</dt>
-                <dd>{money(value.stock_value)}</dd>
+                <dd>{value.stockValue}</dd>
               </div>
             ) : null}
             {features.enabled("STOCK_LOCATION_TRACKING") ? (
               <div>
                 <dt>{t("Default location")}</dt>
-                <dd>{value.location?.name}</dd>
+                <dd>{value.location}</dd>
               </div>
             ) : null}
             <div>
               <dt>{t("Last purchased")}</dt>
-              <dd>{date(value.last_purchased)}</dd>
+              <dd>
+                <StockTableDate value={value.lastPurchased} />
+              </dd>
             </div>
             <div>
               <dt>{t("Last used")}</dt>
-              <dd>{date(value.last_used)}</dd>
+              <dd>
+                <StockTableDate value={value.lastUsed} />
+              </dd>
             </div>
             {features.enabled("STOCK_PRICE_TRACKING") ? (
               <>
                 <div>
                   <dt>{t("Last price")}</dt>
                   <dd>
-                    {value.last_price === null ? (
-                      t("Unknown")
-                    ) : (
-                      <span title={stockPrice(value.last_price)}>{price(value.last_price)}</span>
-                    )}
+                    <span title={value.lastPrice.title}>{value.lastPrice.text}</span>
                   </dd>
                 </div>
                 <div>
                   <dt>{t("Average price")}</dt>
                   <dd>
-                    {value.avg_price === null ? (
-                      t("Unknown")
-                    ) : (
-                      <span title={stockPrice(value.avg_price)}>{price(value.avg_price)}</span>
-                    )}
+                    <span title={value.averagePrice.title}>{value.averagePrice.text}</span>
                   </dd>
                 </div>
               </>
@@ -284,53 +321,42 @@ export function ProductCard({
             {features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") ? (
               <div>
                 <dt>{t("Average shelf life")}</dt>
-                <dd>
-                  {value.average_shelf_life_days === -1
-                    ? t("Unknown")
-                    : value.average_shelf_life_days > 73000
-                      ? t("Unlimited")
-                      : moment
-                          .duration(value.average_shelf_life_days, "days")
-                          .locale(t("moment_locale"))
-                          .humanize()}
-                </dd>
+                <dd>{value.shelfLife}</dd>
               </div>
             ) : null}
             <div>
               <dt>{t("Spoil rate")}</dt>
-              <dd>
-                {(value.spoil_rate_percent / 100).toLocaleString(undefined, { style: "percent" })}
-              </dd>
+              <dd>{value.spoilRate}</dd>
             </div>
           </dl>
-          {value.product.picture_file_name ? (
+          {value.picture ? (
             <EntityPicture
               group="productpictures"
-              source={value.product.picture_file_name}
+              source={value.picture}
               label={t("%s picture", name)}
             />
           ) : null}
-          {features.enabled("STOCK_PRICE_TRACKING") ? (
+          {features.enabled("STOCK_PRICE_TRACKING") && value.history ? (
             <ProductPriceHistory
-              productId={productId}
-              factor={value.qu_conversion_factor_price_to_stock}
+              state={snapshot.history}
+              onRetry={memory.retryHistory}
               currency={currency}
             />
           ) : null}
-          {shopping ? (
+          {shopping.state ? (
             <ShoppingItemForm
               listId={1}
-              options={{ product: productId, merge: true }}
-              onClose={() => setShopping(false)}
+              options={{ product: actionId ?? productId, merge: true }}
+              onClose={closeShopping}
               onSaved={async () => {
                 await client.invalidateQueries({ queryKey: ["shopping"] });
-                setShopping(false);
+                closeShopping();
               }}
             />
           ) : null}
           {editing ? (
             <OverviewEditor
-              productId={productId}
+              productId={actionId ?? productId}
               onReturn={async () => {
                 await onReturn();
                 onClose?.();
@@ -364,7 +390,7 @@ function OverviewEditor({
         event.preventDefault();
         event.stopPropagation();
 
-        if (!pending) void onReturn();
+        void onReturn();
       }}
     >
       <div className="section-heading">

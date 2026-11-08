@@ -18,6 +18,7 @@ const FORMAT = "YYYY-MM-DD";
 
 type Props = {
   id: string;
+  name?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -36,6 +37,7 @@ type Props = {
 
 export function BookingDateInput({
   id,
+  name,
   label,
   value,
   onChange,
@@ -227,6 +229,7 @@ export function BookingDateInput({
         <input
           ref={input}
           id={id}
+          name={name}
           type="text"
           inputMode={numeric ? "numeric" : undefined}
           autoComplete="off"

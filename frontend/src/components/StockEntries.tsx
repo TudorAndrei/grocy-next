@@ -1,24 +1,29 @@
+import { useNativeDocumentReload } from "@/lib/native-document";
+import { z } from "zod";
+import { nativeQuantityUnit } from "@/lib/native-quantity-unit";
 import { ProductOverview } from "./ProductOverview";
-import { useId, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useProductCardMemory } from "@/hooks/useProductCardMemory";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
-import { useInvalidateStock } from "@/lib/catalog";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { unitLabel, isoDay } from "@/lib/format";
 import { userfieldsQuery } from "@/lib/userfields";
+import { userfieldTableCell } from "@/lib/userfield-table-cell";
 import type { EntriesSearch, EntryRow } from "@/lib/stock-entries";
 import type { Booking } from "@/lib/types";
-import { useModalDialog } from "@/hooks/useModalDialog";
+import { broadcastProductChanged, useProductChangedMessage } from "@/lib/stock-product-change";
+import { NativeStockPageDialog } from "./NativeStockPageDialog";
+import { NativePageDialog } from "./NativePageDialog";
+import { NativeStockRowMenu, useNativeStockReturnTo } from "./NativeStockRowMenu";
+import { useNativeLabelPrint } from "@/hooks/useNativeLabelPrint";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
-import { GrocycodeActions } from "./GrocycodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { useNotify } from "./Toaster";
-import { StockEntryDialog } from "./StockEntryEditor";
-import { TransferDialog } from "./TransferForm";
-import type { TransferOptions } from "@/lib/transfer";
 import {
   nativeNumberCell,
   nativeTableCell,
@@ -43,6 +48,17 @@ import {
   StockTableStatus,
 } from "./StockTableOptions";
 
+const bookingDetails = z.object({
+  product: z.object({ name: z.string().nullable(), move_on_open: z.number().optional() }),
+  quantity_unit_stock: z.object({
+    name: z.string().nullable(),
+    name_plural: z.string().nullable(),
+    plural_forms: z.string().nullable(),
+    active: z.number(),
+  }),
+  default_consume_location: z.object({ name: z.string().nullable() }).nullable().optional(),
+});
+
 export function StockEntries({
   search,
   onChange,
@@ -50,16 +66,38 @@ export function StockEntries({
   search: EntriesSearch;
   onChange: (search: EntriesSearch) => void;
 }) {
+  const router = useRouter();
+  const returnTo = useNativeStockReturnTo();
+  const print = useNativeLabelPrint();
   const [overview, setOverview] = useState<number>();
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const { t, pluralIndex, ready: translationsReady } = useI18n();
+  const reloadDocument = useNativeDocumentReload("/stockentries");
   const features = useFeatures();
   const preferences = usePreferences();
-  const invalidate = useInvalidateStock();
+  const client = useQueryClient();
+  const owner = useRef<AbortController>(undefined);
+  useEffect(() => {
+    const scope = new AbortController();
+    owner.current = scope;
+
+    return () => {
+      scope.abort();
+      document.body.classList.remove("cursor-busy");
+    };
+  }, []);
+
+  const invalidate = async () => {
+    await Promise.all(
+      ["stock", "recipe-fulfillment", "recipe-view", "recipe-overview", "shopping"].map((key) =>
+        client.invalidateQueries({ queryKey: [key], refetchType: "none" }),
+      ),
+    );
+  };
+
   const notify = useNotify();
   const table = useRef<HTMLDivElement>(null);
-  const [editing, setEditing] = useState<number>();
-  const [transfer, setTransfer] = useState<TransferOptions>();
+  const [page, setPage] = useState<{ url: string; dialogType?: string }>();
   const [location, setLocation] = useState("");
   const [reloading, setReloading] = useState(false);
   const [consumeLocation, setConsumeLocation] = useState<{ value: number; cellVersion: number }>();
@@ -115,51 +153,107 @@ export function StockEntries({
   const [lastBooking, setLastBooking] = useState<{ id: number; product: number }>();
 
   const undoBooking = async ({ id, product }: { id: number; product: number }) => {
-    await api.action(`/api/stock/bookings/${id}/undo`);
-    setLastBooking(undefined);
-    await invalidate();
-    await refresh.mutateAsync(product).catch(() => undefined);
+    const signal = owner.current?.signal;
+    signal?.throwIfAborted();
+
+    try {
+      await request(`/api/stock/bookings/${id}/undo`, { method: "POST", body: "{}", signal });
+    } finally {
+      await invalidate();
+    }
+
+    signal?.throwIfAborted();
+    setLastBooking((current) =>
+      current?.id === id && current.product === product ? undefined : current,
+    );
+    broadcastProductChanged(product);
+    notify({ message: t("Booking successfully undone") });
     table.current?.focus();
   };
 
   const action = useMutation({
-    mutationFn: ({ row, kind }: { row: EntryRow; kind: "consume" | "spoiled" | "open" }) =>
-      request<Booking[]>(
-        `/api/stock/products/${row.product_id}/${kind === "spoiled" ? "consume" : kind}`,
-        {
-          method: "POST",
-          body: JSON.stringify(
-            kind === "open"
-              ? { amount: row.amount, stock_entry_id: row.stock_id }
-              : {
-                  amount: row.amount,
-                  spoiled: kind === "spoiled",
-                  location_id: String(
-                    consumeLocation?.cellVersion === options.cellVersion
-                      ? consumeLocation.value
-                      : row.location_id,
-                  ),
-                  stock_entry_id: row.stock_id,
-                  exact_amount: true,
-                },
-          ),
-        },
-      ),
-    onSuccess: async (bookings, { row, kind }) => {
-      await invalidate();
-      await refresh.mutateAsync(row.product_id).catch(() => undefined);
+    mutationFn: async ({ row, kind }: { row: EntryRow; kind: "consume" | "spoiled" | "open" }) => {
+      const signal = owner.current?.signal;
+      signal?.throwIfAborted();
+      document.body.classList.add("cursor-busy");
+
+      try {
+        const bookings = await request<Booking[]>(
+          `/api/stock/products/${row.product_id}/${kind === "spoiled" ? "consume" : kind}`,
+          {
+            method: "POST",
+            signal,
+            body: JSON.stringify(
+              kind === "open"
+                ? { amount: row.amount, stock_entry_id: row.stock_id }
+                : {
+                    amount: row.amount,
+                    spoiled: kind === "spoiled",
+                    location_id: String(
+                      consumeLocation?.cellVersion === options.cellVersion
+                        ? consumeLocation.value
+                        : row.location_id,
+                    ),
+                    stock_entry_id: row.stock_id,
+                    exact_amount: true,
+                  },
+            ),
+          },
+        );
+
+        signal?.throwIfAborted();
+
+        const details = bookingDetails.parse(
+          await request(`/api/stock/products/${row.product_id}`, { signal }),
+        );
+
+        signal?.throwIfAborted();
+
+        return { bookings, details, signal };
+      } finally {
+        await invalidate();
+      }
+    },
+    onSuccess: ({ bookings, details, signal }, { row, kind }) => {
+      if (signal?.aborted) return;
+      document.body.classList.remove("cursor-busy");
+
+      if (kind === "open")
+        setDisplay((current) => {
+          const rows =
+            current.version === options.resetVersion
+              ? new Map(current.rows)
+              : new Map<number, (EntryRefresh & { cellVersion: number }) | null>();
+
+          rows.set(row.id, {
+            ...rows.get(row.id),
+            at: Date.now(),
+            openDisabled: true,
+            cellVersion: options.cellVersion,
+          });
+
+          return { version: options.resetVersion, rows };
+        });
+      void refresh.mutateAsync({ product: row.product_id, entry: row.id }).catch(() => undefined);
       const bookingId = bookings[0]?.id;
       const last = bookingId === undefined ? undefined : { id: bookingId, product: row.product_id };
       notify({
         message:
           t(
             kind === "open" ? "Marked %1$s of %2$s as opened" : "Removed %1$s of %2$s from stock",
-            `${amount(row)} ${unit(row)}`,
-            row.product_name ?? "",
+            `${amount(row)} ${nativeQuantityUnit(details.quantity_unit_stock, row.amount, pluralIndex)}`,
+            details.product.name ?? "",
           ) + (kind === "spoiled" ? ` (${t("Spoiled")})` : ""),
         undo: last === undefined ? undefined : () => undoBooking(last),
       });
+
+      if (kind === "open" && details.product.move_on_open === 1 && details.default_consume_location)
+        notify({ message: t("Moved to %1$s", details.default_consume_location.name ?? "") });
       setLastBooking(last);
+      broadcastProductChanged(row.product_id);
+    },
+    onError: () => {
+      if (!owner.current?.signal.aborted) document.body.classList.remove("cursor-busy");
     },
   });
 
@@ -167,9 +261,12 @@ export function StockEntries({
     mutationFn: undoBooking,
   });
 
-  const refresh = useMutation({ mutationFn: (product: number) => refreshProduct(product) });
+  const refresh = useMutation({
+    mutationFn: ({ product, entry }: { product: number; entry?: number }) =>
+      refreshProduct(product, entry),
+  });
 
-  const pending = action.isPending || undo.isPending || refresh.isPending || reloading;
+  const pending = reloading;
 
   const tableColumns: TableColumn[] = [
     { key: "actions", label: "", configurable: false },
@@ -210,6 +307,8 @@ export function StockEntries({
     data.isSuccess && definitions.isSuccess,
   );
 
+  const overviewMemory = useProductCardMemory({ resetVersion: options.resetVersion });
+
   const sort = options.sort;
 
   const initial = useTableSnapshot(
@@ -230,12 +329,22 @@ export function StockEntries({
     display.version === options.resetVersion ? display.rows.get(row.id) : undefined;
 
   const reload = async () => {
+    const signal = owner.current?.signal;
+
+    if (signal?.aborted) return;
+
+    if (reloadDocument()) {
+      owner.current?.abort();
+
+      return;
+    }
+
     setReloading(true);
 
     try {
       const result = await data.refetch();
 
-      if (result.isSuccess) {
+      if (!signal?.aborted && result.isSuccess) {
         options.reload();
         setConsumeLocation(undefined);
         setLocation("");
@@ -245,45 +354,57 @@ export function StockEntries({
         refresh.reset();
       }
     } finally {
-      setReloading(false);
+      if (!signal?.aborted) setReloading(false);
     }
   };
 
-  const refreshProduct = async (productId: number) => {
-    const targets = rows.filter((row) => row.product_id === productId);
+  const refreshProduct = async (productId: number, entryId?: number) => {
+    const signal = owner.current?.signal;
+    signal?.throwIfAborted();
 
-    if (targets.some((row) => changed(row) === null)) {
-      await reload();
-
-      return;
-    }
+    const targets = rows.filter(
+      (row) => row.product_id === productId && (entryId === undefined || row.id === entryId),
+    );
 
     const updates = await Promise.allSettled(
       targets.map((row) =>
-        refreshEntry(row.id, (update) => {
-          if (update?.location_id !== undefined)
-            setConsumeLocation({ value: update.location_id, cellVersion: options.cellVersion });
-          setDisplay((current) => {
-            const rows =
-              current.version === options.resetVersion
-                ? new Map(current.rows)
-                : new Map<number, (EntryRefresh & { cellVersion: number }) | null>();
+        refreshEntry(
+          row.id,
+          (update) => {
+            if (signal?.aborted) return;
 
-            const previous = rows.get(row.id);
-            rows.set(
-              row.id,
-              update === null
-                ? null
-                : {
-                    ...(previous?.cellVersion === options.cellVersion ? previous : undefined),
-                    ...update,
-                    cellVersion: options.cellVersion,
-                  },
-            );
+            if (changed(row) === null) {
+              void reload();
+              signal?.throwIfAborted();
 
-            return { version: options.resetVersion, rows };
-          });
-        }),
+              return;
+            }
+
+            if (update?.location_id !== undefined)
+              setConsumeLocation({ value: update.location_id, cellVersion: options.cellVersion });
+            setDisplay((current) => {
+              const rows =
+                current.version === options.resetVersion
+                  ? new Map(current.rows)
+                  : new Map<number, (EntryRefresh & { cellVersion: number }) | null>();
+
+              const previous = rows.get(row.id);
+              rows.set(
+                row.id,
+                update === null
+                  ? null
+                  : {
+                      ...(previous?.cellVersion === options.cellVersion ? previous : undefined),
+                      ...update,
+                      cellVersion: options.cellVersion,
+                    },
+              );
+
+              return { version: options.resetVersion, rows };
+            });
+          },
+          signal,
+        ),
       ),
     );
 
@@ -351,13 +472,31 @@ export function StockEntries({
         ...Object.fromEntries(
           productFields.map((field) => [
             `product:${field.name}`,
-            nativeTableCell(tableText(row.product_values[field.name] ?? null)),
+            ["file", "image", "link", "link-with-title"].includes(field.type)
+              ? userfieldTableCell(
+                  field,
+                  row.product_values[field.name] ?? null,
+                  preferences.priceDisplayPrecision,
+                  String(features.query.data?.CURRENCY ?? "USD"),
+                  features.query.data,
+                  Object.hasOwn(row.product_values, field.name),
+                )
+              : nativeTableCell(tableText(row.product_values[field.name] ?? null)),
           ]),
         ),
         ...Object.fromEntries(
           stockFields.map((field) => [
             `stock:${field.name}`,
-            nativeTableCell(tableText(row.stock_values[field.name] ?? null)),
+            ["file", "image", "link", "link-with-title"].includes(field.type)
+              ? userfieldTableCell(
+                  field,
+                  row.stock_values[field.name] ?? null,
+                  preferences.priceDisplayPrecision,
+                  String(features.query.data?.CURRENCY ?? "USD"),
+                  features.query.data,
+                  Object.hasOwn(row.stock_values, field.name),
+                )
+              : nativeTableCell(tableText(row.stock_values[field.name] ?? null)),
           ]),
         ),
       };
@@ -385,6 +524,11 @@ export function StockEntries({
       matchesTableSearch(value(row, "location_name").search, locationName),
   );
 
+  useProductChangedMessage(async (productId) => {
+    if (owner.current?.signal.aborted) return;
+    await refresh.mutateAsync({ product: productId }).catch(() => undefined);
+  });
+
   const columns = tableColumns.flatMap((c) =>
     c.key !== "actions" && c.rendered !== false ? [[c.key, c.label]] : [],
   );
@@ -393,38 +537,7 @@ export function StockEntries({
 
   return (
     <>
-      {transfer ? (
-        <TransferDialog
-          options={transfer}
-          onClose={() => setTransfer(undefined)}
-          onChanged={async (productId) => {
-            await refresh.mutateAsync(productId).catch(() => undefined);
-            requestAnimationFrame(() => table.current?.focus());
-          }}
-        />
-      ) : null}
-      {editing !== undefined ? (
-        <StockEntryDialog
-          entryId={editing}
-          onCancel={() => setEditing(undefined)}
-          onSaved={async (bookings) => {
-            const booking = bookings[0];
-
-            if (booking) {
-              await refresh.mutateAsync(booking.product_id).catch(() => undefined);
-              const last = { id: booking.id, product: booking.product_id };
-              setLastBooking(last);
-              notify({
-                message: t("Stock entry successfully updated"),
-                undo: () => undoBooking(last),
-              });
-            }
-
-            setEditing(undefined);
-            requestAnimationFrame(() => table.current?.focus());
-          }}
-        />
-      ) : null}
+      {page ? <NativePageDialog {...page} onClose={() => setPage(undefined)} /> : null}
       <StockTableStatus options={options} />
       <div className="toolbar journal-filters">
         {search.embedded === undefined ? (
@@ -537,6 +650,8 @@ export function StockEntries({
                       <StockTableOptions
                         options={options}
                         onReset={() => {
+                          setOverview(undefined);
+                          setOverviewExpanded(false);
                           setLocation("");
                           setLastBooking(undefined);
                           void reload();
@@ -566,6 +681,15 @@ export function StockEntries({
               <StockTableRows
                 options={options}
                 groups={rows.map((row) => {
+                  const groupedField =
+                    productFields.find(
+                      (field) => options.groupColumn === `product:${field.name}`,
+                    ) ?? stockFields.find((field) => options.groupColumn === `stock:${field.name}`);
+
+                  const groupedValues = options.groupColumn?.startsWith("product:")
+                    ? row.product_values
+                    : row.stock_values;
+
                   const cell = value(row, options.groupColumn ?? "");
 
                   const name =
@@ -588,7 +712,20 @@ export function StockEntries({
 
                   const label = date ? <StockTableDate value={date} /> : name;
 
-                  return { key: cell.html, label, name };
+                  return {
+                    key: cell.html,
+                    label,
+                    name,
+                    userfield:
+                      groupedField &&
+                      ["link", "link-with-title", "file", "image"].includes(groupedField.type)
+                        ? {
+                            field: groupedField,
+                            value: groupedValues[groupedField.name] ?? null,
+                            present: Object.hasOwn(groupedValues, groupedField.name),
+                          }
+                        : undefined,
+                  };
                 })}
               >
                 {rows.map((row) => {
@@ -687,38 +824,67 @@ export function StockEntries({
                                 {t("Open")}
                               </button>
                             ) : null}
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-sm"
-                              disabled={pending}
+                            <a
+                              href={
+                                router.buildLocation({
+                                  to: "/stockentry/$entryId",
+                                  params: { entryId: String(row.id) },
+                                  search: {},
+                                }).publicHref + "?embedded"
+                              }
+                              className="btn btn-ghost btn-sm show-as-dialog-link"
                               aria-label={t("Edit stock entry %s", String(row.id))}
-                              onClick={() => setEditing(row.id)}
+                              onClick={(event) => {
+                                if (
+                                  event.button !== 0 ||
+                                  event.ctrlKey ||
+                                  event.metaKey ||
+                                  event.shiftKey ||
+                                  event.altKey
+                                )
+                                  return;
+                                event.preventDefault();
+                                setPage({ url: event.currentTarget.href });
+                              }}
                             >
                               {t("Edit")}
-                            </button>
+                            </a>
                             {features.enabled("STOCK_LOCATION_TRACKING") ? (
-                              <button
-                                type="button"
-                                className="btn btn-ghost btn-sm"
-                                disabled={pending}
-                                aria-label={t("Transfer stock entry %s", String(row.id))}
-                                onClick={() =>
-                                  setTransfer({
-                                    embedded: "",
-                                    product: String(row.product_id),
-                                    locationId: String(row.location_id),
-                                    stockId: row.stock_id,
-                                  })
+                              <a
+                                href={
+                                  router.buildLocation({ to: "/transfer", search: {} }).publicHref +
+                                  `?embedded&product=${row.product_id}&locationId=${row.location_id}&stockId=${row.stock_id}`
                                 }
+                                className="btn btn-ghost btn-sm show-as-dialog-link"
+                                aria-label={t("Transfer stock entry %s", String(row.id))}
+                                onClick={(event) => {
+                                  if (
+                                    event.button !== 0 ||
+                                    event.ctrlKey ||
+                                    event.metaKey ||
+                                    event.shiftKey ||
+                                    event.altKey
+                                  )
+                                    return;
+                                  event.preventDefault();
+                                  setPage({ url: event.currentTarget.href });
+                                }}
                               >
                                 {t("Transfer")}
-                              </button>
+                              </a>
                             ) : null}
-                            <GrocycodeActions
-                              kind="stock-entry"
-                              id={row.id}
-                              name={t("Stock entry %s", String(row.id))}
-                              compact
+                            <NativeStockRowMenu
+                              variant="entries"
+                              rowId={row.id}
+                              productId={row.product_id}
+                              productName={row.product_name}
+                              locationId={row.location_id}
+                              stockId={row.stock_id}
+                              returnTo={returnTo}
+                              onDialog={(url, dialogType) => setPage({ url, dialogType })}
+                              onOverview={() => setOverview(row.product_id)}
+                              onSpoiled={() => action.mutate({ row, kind: "spoiled" })}
+                              onPrint={() => print(`/api/stock/entry/${row.id}/printlabel`)}
                             />
                           </div>
                         </td>
@@ -770,12 +936,22 @@ export function StockEntries({
                         <td>{current.note}</td>
                         {productFields.map((f) => (
                           <td key={f.id}>
-                            <UserfieldValue field={f} value={row.product_values[f.name] ?? null} />
+                            <UserfieldValue
+                              nativeTable
+                              field={f}
+                              value={row.product_values[f.name] ?? null}
+                              present={Object.hasOwn(row.product_values, f.name)}
+                            />
                           </td>
                         ))}
                         {stockFields.map((f) => (
                           <td key={f.id}>
-                            <UserfieldValue field={f} value={row.stock_values[f.name] ?? null} />
+                            <UserfieldValue
+                              nativeTable
+                              field={f}
+                              value={row.stock_values[f.name] ?? null}
+                              present={Object.hasOwn(row.stock_values, f.name)}
+                            />
                           </td>
                         ))}
                       </StockTableCells>
@@ -791,6 +967,7 @@ export function StockEntries({
       {overview !== undefined ? (
         <ProductOverview
           productId={overview}
+          memory={overviewMemory}
           embedded={search.embedded !== undefined}
           expanded={overviewExpanded}
           onExpandedChange={setOverviewExpanded}
@@ -815,16 +992,35 @@ export function ProductEntries({
   disabled: boolean;
 }) {
   const { t } = useI18n();
-  const features = useFeatures();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  if (!features.enabled("STOCK")) return null;
+  const href =
+    router.buildLocation({ to: "/stockentries", search: {} }).publicHref +
+    `?embedded&product=${productId}`;
 
   return (
     <>
-      <button type="button" className="btn" disabled={disabled} onClick={() => setOpen(true)}>
+      <a
+        href={href}
+        className={`btn show-as-dialog-link${disabled ? " disabled" : ""}`}
+        aria-disabled={disabled || undefined}
+        data-dialog-type="table"
+        onClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+          event.preventDefault();
+          setOpen(true);
+        }}
+      >
         {t("Stock entries")}
-      </button>
+      </a>
       {open ? (
         <EntriesDialog productId={productId} name={name} onClose={() => setOpen(false)} />
       ) : null}
@@ -832,39 +1028,13 @@ export function ProductEntries({
   );
 }
 
-function EntriesDialog({
+export function EntriesDialog({
   productId,
-  name,
   onClose,
 }: {
   productId: number;
   name: string;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
-  const dialog = useModalDialog();
-  const title = useId();
-  const [search, setSearch] = useState<EntriesSearch>({ product: String(productId), embedded: "" });
-
-  return (
-    <dialog
-      ref={dialog}
-      className="recipe-action-dialog stock-journal-dialog"
-      aria-labelledby={title}
-      onCancel={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }}
-    >
-      <div className="section-heading">
-        <h2 id={title}>{t("Stock entries")}</h2>
-        <button type="button" className="btn btn-ghost" onClick={onClose}>
-          {t("Close")}
-        </button>
-      </div>
-      <p>{name}</p>
-      <StockEntries search={search} onChange={setSearch} />
-    </dialog>
-  );
+  return <NativeStockPageDialog kind="stockentries" productId={productId} onClose={onClose} />;
 }

@@ -7,7 +7,7 @@ import { stockAmount, stockMinimumAmount, useCatalog } from "@/lib/catalog";
 import { daysUntil, relativeTime, todayLine } from "@/lib/format";
 import { useStockMove } from "@/lib/stockActions";
 import { usePreferences } from "@/lib/preferences";
-import { stockVolatileQuery } from "@/hooks/queries";
+import { currentUserQuery, stockVolatileQuery } from "@/hooks/queries";
 import { useChoreActions } from "@/lib/householdActions";
 import { useCommandBar } from "@/components/CommandBar";
 import { DueBar, DUE_WINDOW_DAYS } from "@/components/DueBar";
@@ -88,7 +88,7 @@ function TodayPage() {
     enabled: shoppingEnabled,
   });
 
-  const me = useQuery({ queryKey: queryKeys.currentUser, queryFn: api.getCurrentUser });
+  const me = useQuery(currentUserQuery());
   const toBuy = (shopping.data?.items ?? []).filter((item) => !item.done);
 
   const consume = useStockMove("consume", stockEnabled);

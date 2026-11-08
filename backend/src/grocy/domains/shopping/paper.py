@@ -21,9 +21,10 @@ from grocy.compatibility.php import empty, loose_equals, numeric_value, php_stri
 from grocy.compatibility.sanitizer import render_html
 from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, NotFoundError
+from grocy.db.compatibility_views import configure_compatibility_queries
 from grocy.domains.files.service import FilesService
 from grocy.domains.print_assets import print_font_styles
-from grocy.domains.shopping.service import ShoppingService
+from grocy.domains.shopping.service import ShoppingService, native_list_selection
 from grocy.domains.system.service import localization
 
 _ASSETS = Path(__file__).parents[2] / "_vendor" / "shopping-print"
@@ -141,11 +142,24 @@ class ShoppingPaper:
         layout: str,
         base_url: str,
         notes: tuple[str, bool] | None = None,
+        native_query: bytes | None = None,
     ) -> str:
-        lists = await self._rows("SELECT * FROM shopping_lists_view WHERE id=:id", id=list_id)
-        if not lists:
-            raise NotFoundError(f"Shopping list {list_id} not found")
-        shopping = lists[0]
+        list_binding: int | str | None = list_id
+        if native_query is None:
+            lists = await self._rows("SELECT * FROM shopping_lists_view WHERE id=:id", id=list_id)
+            if not lists:
+                raise NotFoundError(f"Shopping list {list_id} not found")
+            shopping = lists[0]
+        else:
+            await configure_compatibility_queries(self.session)
+            selected, list_binding = native_list_selection(native_query)
+            lists = await self._rows(
+                "SELECT * FROM shopping_lists_view ORDER BY name COLLATE NOCASE"
+            )
+            shopping = next(
+                (row for row in lists if loose_equals(row["id"], selected)),
+                {"name": None, "description": None},
+            )
         stored = await self._rows(
             "SELECT key,value FROM user_settings WHERE user_id=:id", id=user_id
         )
@@ -163,7 +177,7 @@ class ShoppingPaper:
         items = await self._rows(
             "SELECT * FROM uihelper_shopping_list WHERE shopping_list_id=:id "
             "ORDER BY product_name COLLATE NOCASE",
-            id=list_id,
+            id=list_binding,
         )
         units = await self._rows("SELECT * FROM quantity_units")
         fields = []
@@ -185,7 +199,7 @@ class ShoppingPaper:
                         entity=entity,
                     )
                 )
-        factors = await ShoppingService(self.session).display_factors(list_id)
+        factors = await ShoppingService(self.session).display_factors(list_binding)
         rows = []
         for item in items:
             amount = numeric_value(item["amount"])

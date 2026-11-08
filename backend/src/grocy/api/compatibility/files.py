@@ -3,10 +3,11 @@ from html import escape
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse
 
+from grocy.compatibility.lessql import query_parameters
 from grocy.core.auth import AuthenticatedActor, CurrentActor
 from grocy.core.config import get_settings
 from grocy.core.deps import DbSession
-from grocy.core.errors import GrocyError, NotFoundError
+from grocy.core.errors import GrocyError
 from grocy.core.urls import construct_url, request_base
 from grocy.domains.files.service import FilesService
 from grocy.domains.system.service import SystemService, localization
@@ -14,18 +15,23 @@ from grocy.domains.system.service import SystemService, localization
 router = APIRouter(tags=["files"])
 
 
-@router.get("/api/files/{group}/{file_name:path}")
-@router.head("/api/files/{group}/{file_name:path}", include_in_schema=False)
-@router.put("/api/files/{group}/{file_name:path}")
-@router.delete("/api/files/{group}/{file_name:path}")
+def _file_query(request: Request) -> dict[str, str]:
+    """File options use PHP query registration and ignore array-valued options."""
+    return {
+        key: value
+        for key, value in query_parameters(request.scope.get("query_string", b"")).items()
+        if isinstance(key, str) and isinstance(value, str)
+    }
+
+
+@router.get("/api/files/{group}/{file_name}")
+@router.head("/api/files/{group}/{file_name}", include_in_schema=False)
+@router.put("/api/files/{group}/{file_name}")
+@router.delete("/api/files/{group}/{file_name}")
 async def file_request(
     group: str, file_name: str, request: Request, _actor: CurrentActor, session: DbSession
 ) -> Response:
     await session.rollback()
-    raw_path = request.scope.get("raw_path") or request.url.path.encode()
-    raw_group, _, raw_name = raw_path.partition(b"/api/files/")[2].partition(b"/")
-    if not raw_group or not raw_name or b"/" in raw_name:
-        raise NotFoundError("Not found.", code=None)
     service = FilesService(compatibility=True)
     if request.method == "PUT":
         await service.put(request, group, file_name)
@@ -33,7 +39,7 @@ async def file_request(
     if request.method == "DELETE":
         await service.delete(group, file_name)
         return Response(status_code=204)
-    query = request.query_params
+    query = _file_query(request)
     return await service.get(
         group,
         file_name,
@@ -58,7 +64,7 @@ async def show_file(
     group: str, file_name: str, request: Request, actor: AuthenticatedActor, session: DbSession
 ) -> Response:
     await session.rollback()
-    query = request.query_params
+    query = _file_query(request)
     try:
         return await FilesService(compatibility=True).get(
             group,

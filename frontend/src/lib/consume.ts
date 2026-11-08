@@ -101,17 +101,16 @@ export async function getConsumeBarcode(barcode: string, signal: AbortSignal) {
     )[0];
 }
 
-export async function getConsumeSelection(product: string, signal: AbortSignal) {
-  const selected = await getConsumeDetails(product, signal);
-
-  const found = locations.parse(
+export async function getConsumeLocations(product: string, signal: AbortSignal) {
+  return locations.parse(
     await request(`/api/stock/products/${product}/locations?include_sub_products=true`, {
       signal,
       cache: "default",
     }),
   );
-
-  return { details: selected, locations: found };
 }
 
-export type ConsumeSelection = Awaited<ReturnType<typeof getConsumeSelection>>;
+export type ConsumeSelection = {
+  details: ConsumeDetails;
+  locations: z.infer<typeof locations>;
+};

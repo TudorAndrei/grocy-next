@@ -7,6 +7,7 @@ import type { EntityRow } from "@/lib/entities";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { useModalDialog } from "@/hooks/useModalDialog";
+import { useGenericError } from "@/hooks/useGenericError";
 import { CameraScanner } from "./CameraScanner";
 import { ErrorBlock } from "./ErrorBlock";
 
@@ -16,6 +17,7 @@ type ProductChoice = { id: number; name: string };
 
 export function ProductPicker({
   products,
+  label = "Product",
   barcodes,
   plugin,
   value,
@@ -26,6 +28,7 @@ export function ProductPicker({
   listId = 1,
   itemId,
   allowCreate = true,
+  disallowAllProductWorkflows = false,
   workflowPath,
   deferSelection = false,
   onChange,
@@ -33,8 +36,10 @@ export function ProductPicker({
   onEmptyCommit,
   onAssignBarcode,
   onBusyChange,
+  onFormBusyChange,
 }: {
   products: ProductChoice[];
+  label?: string;
   barcodes: { product_id: number; barcodes: string | null }[];
   plugin: string;
   value: string;
@@ -45,6 +50,7 @@ export function ProductPicker({
   listId?: number;
   itemId?: number;
   allowCreate?: boolean;
+  disallowAllProductWorkflows?: boolean;
   workflowPath?: string;
   deferSelection?: boolean;
   onChange: (value: string, code?: ProductCode) => void;
@@ -52,8 +58,10 @@ export function ProductPicker({
   onEmptyCommit?: () => void;
   onAssignBarcode: (barcode: string) => void;
   onBusyChange: (busy: boolean) => void;
+  onFormBusyChange: (busy: boolean) => void;
 }) {
   const { t } = useI18n();
+  const genericError = useGenericError();
   const features = useFeatures();
   const navigate = useNavigate();
   const client = useQueryClient();
@@ -179,6 +187,8 @@ export function ProductPicker({
   };
 
   const external = useMutation({
+    onError: (error) => genericError("Error while executing the barcode lookup plugin", error),
+    onMutate: () => setUnknown(undefined),
     mutationFn: (code: string) => api.externalBarcodeLookup(code, true),
     onSuccess: async (product, code) => {
       if (!alive.current) return;
@@ -205,6 +215,8 @@ export function ProductPicker({
     () => onBusyChange(check.isPending || external.isPending),
     [check.isPending, external.isPending, onBusyChange],
   );
+
+  useEffect(() => onFormBusyChange(external.isPending), [external.isPending, onFormBusyChange]);
 
   const resolve = (code: string) => {
     lookupCode.current = code;
@@ -243,6 +255,7 @@ export function ProductPicker({
       }
     }
 
+    found ??= products.find((product) => product.name === code);
     found ??= products.find((product) => product.name.toLowerCase() === code.toLowerCase());
     found ??= products.find((product) => product.name.includes(code));
 
@@ -257,7 +270,7 @@ export function ProductPicker({
     onEmptyCommit?.();
     onChange("");
 
-    if (!lookupDisabled) check.mutate(code);
+    if (!lookupDisabled && !disallowAllProductWorkflows) check.mutate(code);
   };
 
   const cancel = () => {
@@ -281,7 +294,7 @@ export function ProductPicker({
 
   return (
     <div className="field" ref={container}>
-      <label htmlFor={id}>{t("Product")}</label>
+      <label htmlFor={id}>{t(label)}</label>
       <input
         ref={input}
         id={id}
@@ -352,14 +365,13 @@ export function ProductPicker({
       {check.isPending ? <p role="status">{t("Loading…")}</p> : null}
       {message ? <p role="status">{message}</p> : null}
       {check.isError ? <ErrorBlock message={check.error.message} /> : null}
-      {unknown !== undefined
+      {unknown !== undefined && !disallowAllProductWorkflows
         ? createPortal(
             <ProductWorkflows
               code={unknown}
               plugin={allowCreate ? plugin : ""}
               allowCreate={allowCreate}
               busy={external.isPending}
-              error={external.error?.message}
               camera={!features.enabled("DISABLE_BROWSER_BARCODE_CAMERA_SCANNING")}
               onCancel={cancel}
               onAssign={assign}
@@ -384,7 +396,6 @@ function ProductWorkflows({
   plugin,
   allowCreate,
   busy,
-  error,
   camera,
   onCancel,
   onAssign,
@@ -397,7 +408,6 @@ function ProductWorkflows({
   plugin: string;
   allowCreate: boolean;
   busy: boolean;
-  error?: string;
   camera: boolean;
   onCancel: () => void;
   onAssign: () => void;
@@ -420,7 +430,7 @@ function ProductWorkflows({
   return (
     <dialog
       ref={dialog}
-      className="recipe-action-dialog shopping-product-workflows"
+      className="recipe-action-dialog wider shopping-product-workflows custom-escape-key-handling"
       aria-labelledby={title}
       onCancel={(event) => {
         event.preventDefault();
@@ -439,7 +449,6 @@ function ProductWorkflows({
     >
       <h2 id={title}>{t("Create or assign product")}</h2>
       <p>{t('"%s" could not be resolved to a product, how do you want to proceed?', code)}</p>
-      {error ? <ErrorBlock message={error} /> : null}
       <div className="actions">
         <button type="button" className="btn" disabled={busy} onClick={onCancel}>
           {t("Cancel")}

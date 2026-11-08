@@ -2,7 +2,6 @@ import base64
 import os
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
@@ -18,6 +17,7 @@ from grocy.core.config import get_settings
 from grocy.core.errors import GrocyError, UnauthorizedError
 from grocy.core.permissions import resolve_permissions
 from grocy.core.time import server_timezone
+from grocy.db.change_signal import AUTHENTICATION_WRITE
 from grocy.db.models.users import ApiKey, ImportedApiKey, User, UserPermission
 from grocy.db.session import get_session_factory
 
@@ -348,17 +348,13 @@ async def authenticate_key(
     if not is_valid:
         raise UnauthorizedError("API key expired")
     stamp = datetime.now(server_timezone()).replace(tzinfo=None)
-    database = session.get_bind().engine.url.database
-    path: Path | None = None
-    preserve_mtime = None
-    if database and database != ":memory:":
-        path = Path(database)
-        if path.exists():
-            preserve_mtime = path.stat()
-    await session.execute(update(ApiKey).where(ApiKey.api_key == key).values(last_used=stamp))
+    await session.execute(
+        update(ApiKey)
+        .where(ApiKey.api_key == key)
+        .values(last_used=stamp)
+        .execution_options(**AUTHENTICATION_WRITE)
+    )
     await session.commit()
-    if preserve_mtime is not None and path is not None:
-        os.utime(path, (preserve_mtime.st_atime, preserve_mtime.st_mtime))
     if existing_user_id is None:
         raise _MissingKeyUser("Invalid API key")
     return await actor_for_user(session, user_id, key=key)
@@ -468,7 +464,9 @@ def request_permission(request: Request, user_id: int | None = None) -> str:
     if path.startswith("objects/"):
         entity = path.split("/")[1]
         if entity == "api_keys":
-            return "ADMIN"
+            # Native DeleteObject explicitly allows API-key deletion; Add/Edit still
+            # check master-data access before rejecting this NoEdit entity.
+            return "" if request.method == "DELETE" else "MASTER_DATA_EDIT"
         if entity == "permission_hierarchy":
             return ""
         if write and entity in {"shopping_list", "shopping_lists"}:

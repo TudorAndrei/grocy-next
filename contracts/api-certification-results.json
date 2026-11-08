@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "scope": "Grocy 4.5.0 Python API only; UI/physical-device parity excluded by explicit user clarification",
+  "recordedAt": "2026-11-08T16:55:06.626922+00:00",
+  "status": "profiles_passed",
+  "baseline": {
+    "version": "4.5.0",
+    "commit": "21aa5eab218c8466f90729154cb293fffbe10c21",
+    "releaseSha256": "f8b72c9dd0415d899e308d100c07be85e059c9927f6c07db039cba75903e9d95"
+  },
+  "implementation": {
+    "nativeOperations": 86,
+    "listableEntities": 33,
+    "confirmedImplementationGaps": 0,
+    "confirmedBehaviorGaps": 0
+  },
+  "candidate": {
+    "sourceManifest": "/tmp/api-parity-final-candidate-source.json",
+    "sourceCount": 3725,
+    "changedSinceFullProfiles": [
+      "backend/tests/differential/test_reference.py",
+      "backend/tests/differential/test_workflows.py"
+    ],
+    "productionApiInputsUnchanged": true,
+    "finalCollectedCases": 2559
+  },
+  "profiles": [
+    {
+      "id": "normal-full",
+      "passed": 1382,
+      "skipped": 1137,
+      "deselected": 0,
+      "exitCode": 0,
+      "collection": 2519
+    },
+    {
+      "id": "php-full-utc",
+      "passed": 2005,
+      "skipped": 56,
+      "deselected": 0,
+      "exitCode": 0
+    },
+    {
+      "id": "php-full-bucharest",
+      "passed": 2005,
+      "skipped": 56,
+      "deselected": 0,
+      "exitCode": 0
+    },
+    {
+      "id": "disabled-each-zone",
+      "passedPerZone": 2,
+      "deselectedPerZone": 2059,
+      "skippedPerZone": 0,
+      "exitCode": 0
+    },
+    {
+      "id": "state-assertions-each-zone",
+      "passedPerZone": 25,
+      "deselectedPerZone": 2044,
+      "skippedPerZone": 0,
+      "exitCode": 0
+    },
+    {
+      "id": "catalogs-each-zone",
+      "passedPerZone": 36,
+      "deselectedPerZone": 2065,
+      "skippedPerZone": 0,
+      "catalogCount": 33,
+      "exitCode": 0
+    },
+    {
+      "id": "final-selected-normal",
+      "passed": 10,
+      "skipped": 51,
+      "deselected": 2040,
+      "exitCode": 0
+    }
+  ],
+  "composition": "Full profiles executed original test owners. Only two differential test files changed afterward. All final changed owners executed against actual PHP in both required time zones; final live normal selection also passed. Production API inputs are byte-identical. This is composed certification, not a single full 2559-case run. Prior state-owner formatting change has recorded AST equality. No skipped case is counted as passed.",
+  "skipClassification": {
+    "python-full-admitted": {
+      "Set GROCY_REFERENCE_URL for PHP comparison": 1079,
+      "The PHP template cache is checked only on the reference runtime": 6,
+      "PHP interpreter output is checked only on the reference runtime": 49,
+      "requires GROCY_USE_NATIVE_PHP": 3
+    },
+    "reference-utc-tests": {
+      "Run the disabled feature flag reference profile": 1,
+      "The PHP template cache is checked only on the reference runtime": 6,
+      "PHP interpreter output is checked only on the reference runtime": 49
+    },
+    "reference-bucharest-tests": {
+      "Run the disabled feature flag reference profile": 1,
+      "The PHP template cache is checked only on the reference runtime": 6,
+      "PHP interpreter output is checked only on the reference runtime": 49
+    }
+  },
+  "staticChecks": [
+    {
+      "name": "ruff",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "--config",
+        "pyproject.toml",
+        ".",
+        "../scripts"
+      ],
+      "cwd": "backend",
+      "exitCode": 0,
+      "log": "/tmp/api-parity-final-ruff.log"
+    },
+    {
+      "name": "format",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "--config",
+        "pyproject.toml",
+        ".",
+        "../scripts"
+      ],
+      "cwd": "backend",
+      "exitCode": 0,
+      "log": "/tmp/api-parity-final-format.log"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        ".venv/bin/ty",
+        "check",
+        ".",
+        "../scripts",
+        "--error-on-warning"
+      ],
+      "cwd": "backend",
+      "exitCode": 0,
+      "log": "/tmp/api-parity-final-typecheck.log"
+    }
+  ],
+  "artifacts": {
+    "/tmp/api-parity-candidate-source.json": {
+      "sha256": "33113344e4b990bff7ceae25158c15f01a980886ab2e02b456057af1545575a5"
+    },
+    "/tmp/api-parity-final-candidate-source.json": {
+      "sha256": "55c6df08c5a6593ba732d786288a9046c721282d1a4fd1db7471ba3d05e943f1"
+    },
+    "/tmp/api-parity-python-full-admitted.log": {
+      "sha256": "148da8739644852ca23bbd88863993708bf30ec79a8813d936d565941aec71d8"
+    },
+    "/tmp/api-parity-reference-admission.json": {
+      "sha256": "7a15eb559e66cf144e301f5380da121c17f78ed9bb3b1ec4769f1aa2b7675fe1"
+    },
+    "/tmp/api-parity-final-collection.log": {
+      "sha256": "e3e4746bb41b849eed0659ce30a011c0acaceb155e7e195353c0d216d7d883c8"
+    },
+    "/tmp/api-parity-final-selected.log": {
+      "sha256": "e7b7c6c0df36ee9c16ddc8ffb520922367e23eaa1da18d5ff9cfbb25e898278c"
+    },
+    "/tmp/api-parity-ledger-review.json": {
+      "sha256": "718e80aa16a75144492e18e86bfbe234805699fdae12413677ed2ab18f9b503c"
+    },
+    "/tmp/api-parity-ledger-review.md": {
+      "sha256": "a9dbe263c57d848bd6cc79891cda3f7760dddaf53bbc697a6a1b7f5460da31eb"
+    },
+    "/tmp/api-parity-reference-utc-result.json": {
+      "sha256": "230473ee9522131177108ce0ada40410d916331e256bce3dd67cab63e5d6824b"
+    },
+    "/tmp/api-parity-reference-utc-tests.log": {
+      "sha256": "13726f27f02cc2974797c7d5645a21389425c59441888a634bf6cd2103ae3c15"
+    },
+    "/tmp/api-parity-disabled-utc-result.json": {
+      "sha256": "246f1a7b4684a21fce4a573b30249627cb927ed8ea4b392437871f1922e335a3"
+    },
+    "/tmp/api-parity-disabled-utc-tests.log": {
+      "sha256": "5a600c30b1ccb78c599d81486e8c3ae84b0e66c69ca1e800d9520768f94e9d29"
+    },
+    "/tmp/python-api-assertion-draft/scoped-utc-result.json": {
+      "sha256": "44bba29e4df5577d4c1ef65082b7dfd54b05b06960fbc8c18167e193d141e59d"
+    },
+    "/tmp/python-api-assertion-draft/scoped-utc-tests.log": {
+      "sha256": "a03324eda161aa53fe2557248e544da13b9e4b86ee5deaa3993ff9748271d395"
+    },
+    "/tmp/python-api-assertion-draft/locale-utc-result.json": {
+      "sha256": "74f54228a07d0469edab2b504f9bbfceb9a73427df8d5631de327743a44dbb32"
+    },
+    "/tmp/python-api-assertion-draft/locale-utc-tests.log": {
+      "sha256": "16ae44199e70157cd52e74111e61f5129a59faec833c6ca720a0e0f4af33c087"
+    },
+    "/tmp/api-parity-reference-bucharest-result.json": {
+      "sha256": "21b2c90789a87eb7f8a96b47082311b24ad978973492e4b5f45752ebeb6eb826"
+    },
+    "/tmp/api-parity-reference-bucharest-tests.log": {
+      "sha256": "f21fd7340afec77da819716925a094f87ad5664a64785d2c47bd19bdc67be22b"
+    },
+    "/tmp/api-parity-disabled-bucharest-result.json": {
+      "sha256": "833bd335c8584a75537c9f249b5e114f124b0eff7faff4fb8b5aeca62564f49c"
+    },
+    "/tmp/api-parity-disabled-bucharest-tests.log": {
+      "sha256": "7362b7d4f7484550502f85940e317570666221670e531d88f0964861a9965d37"
+    },
+    "/tmp/python-api-assertion-draft/scoped-bucharest-result.json": {
+      "sha256": "9580baa060832c32d06a46b8846152868bba92ec7ff36aefb901aecbbedbdc46"
+    },
+    "/tmp/python-api-assertion-draft/scoped-bucharest-tests.log": {
+      "sha256": "a03324eda161aa53fe2557248e544da13b9e4b86ee5deaa3993ff9748271d395"
+    },
+    "/tmp/python-api-assertion-draft/locale-bucharest-result.json": {
+      "sha256": "2f5ee8e8c2da9185d4ca632a481673407910cfb65172d9a72497d2eb2bb69caf"
+    },
+    "/tmp/python-api-assertion-draft/locale-bucharest-tests.log": {
+      "sha256": "84273f66b1e5d9e277ee334e46419c521e2558aedd216e978c25e7c654f08ceb"
+    },
+    "/tmp/python-api-assertion-draft/scoped-results.json": {
+      "sha256": "c634c6c316a01a55cf795614045d540bc2ff1e7f84883812c885902175bcb872"
+    },
+    "/tmp/python-api-assertion-draft/scoped-cleanup.json": {
+      "sha256": "633772f53b3f9fdb81fe46d8e63dee238ff07692ebc51b37dcfb2aaaa7da48cb"
+    },
+    "/tmp/python-api-assertion-draft/locale-handoff.json": {
+      "sha256": "3e6fc2140c5867e75e8c4c88a727b3d0364730c8b865ad7068292360cb1c5237"
+    },
+    "/tmp/python-api-assertion-draft/locale-results.json": {
+      "sha256": "1145e3c430b08c26b593f6606c990fbd38f816a38e20c1e6e2b2c049917bf5e6"
+    },
+    "/tmp/python-api-assertion-draft/locale-cleanup.json": {
+      "sha256": "4ffba5c5662e5e9dcac94c0a952b00147a12fb6c0292c88cf7dc2900998414f5"
+    },
+    "/tmp/python-api-assertion-draft/combined-api-test-draft.patch": {
+      "sha256": "8b1329362dc3140c9d7ed5d06e0355ed94e8ceb7ff9655783c1cfbcfaa0f83b1"
+    },
+    "/tmp/api-parity-final-ruff.log": {
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "/tmp/api-parity-final-format.log": {
+      "sha256": "aed20c5cdfe9f925fe3d0e35cc2b37455ed39da2dab16a5441a0d6530c2e51af"
+    },
+    "/tmp/api-parity-final-typecheck.log": {
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  },
+  "limitations": [
+    "Finite pinned API acceptance scope, not exhaustive proof for all inputs.",
+    "React/frontend/browser/device parity and PHP interpreter/template mechanics excluded.",
+    "Production Python API runs without PHP; PHP is the separate test oracle.",
+    "Image root/literal-path evidence is reused with relevant-input equality, not relabeled as direct current-image execution."
+  ],
+  "finalAcceptanceRecord": "contracts/api-release-gates.json"
+}

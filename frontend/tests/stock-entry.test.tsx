@@ -8,6 +8,7 @@ import { supportDialogs } from "./fixtures/dialogs";
 test("the product detail ledger opens the shared entry editor and closes after its save", async () => {
   supportDialogs();
   let saved: object | undefined;
+  const fieldReads: string[] = [];
 
   const entry = {
     id: 1,
@@ -30,6 +31,12 @@ test("the product detail ledger opens the shared entry editor and closes after i
     vi.fn<typeof fetch>(async (input, init) => {
       const path = String(input);
 
+      if (path.startsWith("/api/userfields/") && !init?.method) {
+        fieldReads.push(path);
+
+        return Response.json({ note: "Unexpected native Load" });
+      }
+
       if (path === "/api/system/config") return Response.json({});
 
       if (path === "/api/user/settings") return Response.json({});
@@ -39,8 +46,18 @@ test("the product detail ledger opens the shared entry editor and closes after i
           entry,
           locations: [{ id: 2, name: "Fridge" }],
           stores: [{ id: 3, name: "Market" }],
-          fields: [],
-          values: {},
+          fields: [
+            {
+              id: 1,
+              name: "note",
+              caption: "Generic custom note",
+              type: "text-single-line",
+              input_required: 0,
+              default_value: null,
+              config: null,
+            },
+          ],
+          values: { note: "Generic stored note" },
         });
 
       if (path === "/api/stock/entry/1") {
@@ -70,10 +87,14 @@ test("the product detail ledger opens the shared entry editor and closes after i
   await user.click(await screen.findByRole("button", { name: "Edit" }));
   const dialog = within(await screen.findByRole("dialog", { name: "Edit stock entry" }));
   const amount = await dialog.findByRole("spinbutton", { name: /^Amount/ });
+  expect(dialog.getByLabelText<HTMLInputElement>("Generic custom note").value).toBe(
+    "Generic stored note",
+  );
   await user.clear(amount);
   await user.type(amount, "3");
   await user.click(dialog.getByRole("button", { name: "OK" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(fieldReads).toEqual([]);
   expect(saved).toEqual({
     amount: "3",
     best_before_date: "2027-01-01",

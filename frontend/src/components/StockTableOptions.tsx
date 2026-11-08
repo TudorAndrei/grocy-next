@@ -11,9 +11,12 @@ import {
 import type { TableOptions } from "@/lib/table-options";
 import { useI18n } from "@/lib/i18n";
 import { useModalDialog } from "@/hooks/useModalDialog";
+import type { UserfieldDefinition } from "@/lib/userfields";
+import { nativeUserfieldFileDisplay } from "@/lib/native-userfield-file";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { Icon } from "./Icon";
+import { UserfieldValue } from "./UserfieldValue";
 
 function cells(children: ReactNode): ReactNode[] {
   return Children.toArray(children).flatMap((child) =>
@@ -60,10 +63,17 @@ export function StockTableRows({
   options,
   groups,
   children,
+  refreshDrawVersions,
 }: {
   options: TableOptions;
-  groups: { key: string; label: ReactNode; name: string }[];
+  groups: {
+    key: string;
+    label: ReactNode;
+    name: string;
+    userfield?: { field: UserfieldDefinition; value: string | null; present: boolean };
+  }[];
   children: ReactNode;
+  refreshDrawVersions?: Array<number | undefined>;
 }) {
   const { t } = useI18n();
   const rows = Children.toArray(children);
@@ -74,21 +84,54 @@ export function StockTableRows({
         ? rows
         : rows.map((row, i) => {
             const group = groups[i] ?? { key: "", label: "", name: "" };
+            const userfield = groups[i]?.userfield;
+
+            const interactive =
+              userfield &&
+              ["link", "link-with-title", "file", "image"].includes(userfield.field.type)
+                ? userfield
+                : undefined;
+
+            const nonempty =
+              interactive?.value !== null &&
+              interactive?.value !== "" &&
+              interactive?.value !== "0";
+
+            const control =
+              interactive?.present &&
+              (!["file", "image"].includes(interactive.field.type) || nonempty);
+
+            const name =
+              interactive?.field.type === "image" && nonempty
+                ? nativeUserfieldFileDisplay(interactive.value!, "attribute")
+                : group.name;
+
             const collapsed = options.collapsed(group.key);
 
             return (
               <Fragment key={isValidElement(row) ? row.key : i}>
                 {i === 0 || groups[i - 1]?.key !== group.key ? (
-                  <tr className="stock-table-group">
+                  <tr
+                    className="stock-table-group"
+                    onClick={interactive ? () => options.toggleGroup(group.key) : undefined}
+                  >
                     <td colSpan={Math.max(1, options.visibleColumns.length)}>
+                      {interactive ? (
+                        <UserfieldValue
+                          nativeTable
+                          field={interactive.field}
+                          value={interactive.value}
+                          present={interactive.present}
+                        />
+                      ) : null}
                       <button
                         type="button"
                         className="btn btn-ghost stock-table-group-toggle"
-                        aria-label={group.name || t("Group")}
+                        aria-label={control && name ? `${t("Group")}: ${name}` : name || t("Group")}
                         aria-expanded={!collapsed}
-                        onClick={() => options.toggleGroup(group.key)}
+                        onClick={interactive ? undefined : () => options.toggleGroup(group.key)}
                       >
-                        <span>{group.label}</span>
+                        {interactive ? null : <span>{group.label}</span>}
                         <Icon name="back" />
                       </button>
                     </td>
@@ -98,7 +141,10 @@ export function StockTableRows({
                   ? cloneElement(row, {
                       style: {
                         ...row.props.style,
-                        display: collapsed ? "none" : row.props.style?.display,
+                        display:
+                          collapsed && refreshDrawVersions?.[i] !== options.drawVersion
+                            ? "none"
+                            : row.props.style?.display,
                       },
                     })
                   : row}
@@ -138,6 +184,7 @@ export function StockTableOptions({
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState(false);
 
   return (
     <>
@@ -145,7 +192,23 @@ export function StockTableOptions({
         {t("Table options")}
       </button>
       {open ? (
-        <OptionsDialog options={options} onClose={() => setOpen(false)} onReset={onReset} />
+        <OptionsDialog
+          options={options}
+          onClose={() => setOpen(false)}
+          onReset={() => {
+            setOpen(false);
+            setConfirm(true);
+          }}
+        />
+      ) : null}
+      {confirm ? (
+        <ResetConfirmation
+          onCancel={() => setConfirm(false)}
+          onReset={() => {
+            setConfirm(false);
+            void options.reset(onReset);
+          }}
+        />
       ) : null}
     </>
   );
@@ -163,7 +226,6 @@ function OptionsDialog({
   const { t } = useI18n();
   const dialog = useModalDialog();
   const title = useId();
-  const [confirm, setConfirm] = useState(false);
   const ordered = options.order.flatMap((i) => (options.columns[i] ? [options.columns[i]] : []));
 
   const label = (column: TableOptions["columns"][number]) =>
@@ -178,7 +240,7 @@ function OptionsDialog({
         event.preventDefault();
         event.stopPropagation();
 
-        if (!options.pending) onClose();
+        onClose();
       }}
     >
       <h2 id={title}>{t("Table options")}</h2>
@@ -268,46 +330,18 @@ function OptionsDialog({
         )}
       </fieldset>
       <div className="actions">
-        <button
-          type="button"
-          className="btn"
-          disabled={options.pending}
-          onClick={() => setConfirm(true)}
-        >
+        <button type="button" className="btn" onClick={onReset}>
           {t("Reset")}
         </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={options.pending}
-          onClick={onClose}
-        >
+        <button type="button" className="btn btn-primary" onClick={onClose}>
           {t("OK")}
         </button>
       </div>
-      {confirm ? (
-        <ResetConfirmation
-          options={options}
-          onCancel={() => setConfirm(false)}
-          onReset={() => {
-            onReset();
-            onClose();
-          }}
-        />
-      ) : null}
     </dialog>
   );
 }
 
-function ResetConfirmation({
-  options,
-  onCancel,
-  onReset,
-}: {
-  options: TableOptions;
-  onCancel: () => void;
-  onReset: () => void;
-}) {
+function ResetConfirmation({ onCancel, onReset }: { onCancel: () => void; onReset: () => void }) {
   const { t } = useI18n();
   const dialog = useModalDialog();
   const title = useId();
@@ -321,24 +355,15 @@ function ResetConfirmation({
         event.preventDefault();
         event.stopPropagation();
 
-        if (!options.pending) onCancel();
+        onCancel();
       }}
     >
       <h2 id={title}>{t("Are you sure you want to reset the table options?")}</h2>
-      {options.error ? <ErrorBlock message={options.error.message} /> : null}
       <div className="actions">
-        <button type="button" className="btn" disabled={options.pending} onClick={onCancel}>
+        <button type="button" className="btn" onClick={onCancel}>
           {t("No")}
         </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={options.pending}
-          onClick={() => {
-            // The confirmation and shared status display a failed reset.
-            void options.reset(onReset).catch(() => {});
-          }}
-        >
+        <button type="button" className="btn btn-primary" onClick={onReset}>
           {t("Yes")}
         </button>
       </div>

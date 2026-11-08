@@ -38,7 +38,13 @@ test("the due-soon filter uses the saved number of days", async () => {
           { product_id: 1, product, amount: 1, amount_opened: 0, best_before_date: isoDay(10) },
         ]);
 
-      if (path.startsWith("/api/stock/volatile")) return Response.json({ missing_products: [] });
+      if (path === "/api/stock/volatile?due_soon_days=14")
+        return Response.json({
+          due_products: [{ product }],
+          overdue_products: [],
+          expired_products: [],
+          missing_products: [],
+        });
 
       return Response.json([]);
     }),

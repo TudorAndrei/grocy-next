@@ -1,23 +1,34 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import NoSleep from "nosleep.js";
-import { usePreferences } from "@/lib/preferences";
+import { preferenceEnabled, usePreferences } from "@/lib/preferences";
+import { queryKeys } from "@/lib/api";
+import type { UserSettings } from "@/lib/types";
 
 export function ScreenOn() {
   const { keepScreenOn, keepScreenOnWhenFullscreen } = usePreferences();
+  const client = useQueryClient();
+  const syncCurrent = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
-    if (!keepScreenOn && !keepScreenOnWhenFullscreen) return;
     let cancelled = false;
     let pending = false;
     let activated = navigator.userActivation?.hasBeenActive ?? false;
     let lock: WakeLockSentinel | undefined;
     let fallback: NoSleep | undefined;
 
-    const wanted = () =>
-      !cancelled &&
-      activated &&
-      document.visibilityState === "visible" &&
-      (keepScreenOn || document.body.classList.contains("fullscreen-card"));
+    const wanted = (always?: boolean) => {
+      const settings = client.getQueryData<UserSettings>(queryKeys.userSettings);
+
+      return (
+        !cancelled &&
+        activated &&
+        document.visibilityState === "visible" &&
+        ((always ?? preferenceEnabled(settings?.keep_screen_on)) ||
+          (preferenceEnabled(settings?.keep_screen_on_when_fullscreen_card) &&
+            document.body.classList.contains("fullscreen-card")))
+      );
+    };
 
     const release = () => {
       const owned = lock;
@@ -27,8 +38,8 @@ export function ScreenOn() {
       fallback?.disable();
     };
 
-    const sync = () => {
-      if (!wanted()) {
+    const sync = (always?: boolean) => {
+      if (!wanted(always)) {
         release();
 
         return;
@@ -63,24 +74,42 @@ export function ScreenOn() {
       }
     };
 
-    const onClick = () => {
+    const onClick = (event: MouseEvent) => {
       activated = true;
-      sync();
+      const target = event.target;
+
+      const always =
+        target instanceof HTMLInputElement &&
+        target.type === "checkbox" &&
+        target.dataset.settingKey === "keep_screen_on"
+          ? target.checked
+          : undefined;
+
+      sync(always);
     };
 
-    const observer = new MutationObserver(sync);
+    const refresh = () => sync();
+    syncCurrent.current = refresh;
+    const observer = new MutationObserver(refresh);
     observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    document.addEventListener("click", onClick);
-    document.addEventListener("visibilitychange", sync);
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("visibilitychange", refresh);
     sync();
 
     return () => {
       cancelled = true;
       observer.disconnect();
-      document.removeEventListener("click", onClick);
-      document.removeEventListener("visibilitychange", sync);
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("visibilitychange", refresh);
+
+      if (syncCurrent.current === refresh) syncCurrent.current = undefined;
+
       release();
     };
+  }, [client]);
+
+  useEffect(() => {
+    syncCurrent.current?.();
   }, [keepScreenOn, keepScreenOnWhenFullscreen]);
 
   return null;

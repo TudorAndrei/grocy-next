@@ -1,10 +1,104 @@
 from base64 import b64encode
 
+from grocy.core.config import get_settings
+
 
 def create(client, headers, entity, body):
     response = client.post(f"/api/objects/{entity}", headers=headers, json=body)
     assert response.status_code == 200, response.text
     return int(response.json()["created_object_id"])
+
+
+def test_shopping_display_metadata_keeps_raw_quantity_and_purchase_booking(client, api_headers):
+    stock_unit = create(client, api_headers, "quantity_units", {"name": "Display stock unit"})
+    display_unit = create(client, api_headers, "quantity_units", {"name": "Display selected unit"})
+    product = create(
+        client,
+        api_headers,
+        "products",
+        {
+            "name": "Shopping display fraction",
+            "location_id": 1,
+            "qu_id_stock": stock_unit,
+            "qu_id_purchase": stock_unit,
+        },
+    )
+    create(
+        client,
+        api_headers,
+        "quantity_unit_conversions",
+        {"product_id": product, "from_qu_id": stock_unit, "to_qu_id": display_unit, "factor": 0.25},
+    )
+    item = create(
+        client,
+        api_headers,
+        "shopping_list",
+        {"product_id": product, "amount": 1.2, "qu_id": display_unit, "done": 1},
+    )
+    client.put(
+        "/api/user/settings/shopping_list_round_up", headers=api_headers, json={"value": True}
+    ).raise_for_status()
+    response = client.get("/api/v2/shopping-lists/1", headers=api_headers)
+    response.raise_for_status()
+    row = next(row for row in response.json()["items"] if row["id"] == item)
+    assert row["stock_amount"] == 1.2
+    assert row["display_factor"] == 0.25
+    assert row["amount"] == 0.3
+    assert (
+        client.get(f"/api/objects/shopping_list/{item}", headers=api_headers).json()["amount"]
+        == 1.2
+    )
+    purchased = client.post(f"/api/v2/shopping-lists/1/items/{item}/purchase", headers=api_headers)
+    assert purchased.status_code == 200, purchased.text
+    assert purchased.json()["purchased"] is True
+    assert (
+        client.get(f"/api/stock/products/{product}", headers=api_headers).json()["stock_amount"]
+        == 1.2
+    )
+
+
+def test_native_list_form_context_is_authenticated_without_write_or_domain_grants(
+    client, api_headers, monkeypatch
+):
+    assert client.get("/api/v2/shopping-lists/editor").status_code == 401
+    selected = create(client, api_headers, "shopping_lists", {"name": "Reader list"})
+    create(
+        client,
+        api_headers,
+        "userfields",
+        {"entity": "shopping_lists", "name": "Delivery", "caption": "Delivery", "type": "date"},
+    )
+    monkeypatch.setattr(get_settings(), "default_permissions", [])
+    client.post(
+        "/api/users", headers=api_headers, json={"username": "List reader", "password": ""}
+    ).raise_for_status()
+    user = next(
+        row
+        for row in client.get("/api/users", headers=api_headers).json()
+        if row["username"] == "List reader"
+    )
+    key = client.post("/api/v2/api-keys", headers=api_headers, json={"user_id": user["id"]}).json()[
+        "api_key"
+    ]
+    reader = {"GROCY-API-KEY": key}
+    response = client.get(f"/api/v2/shopping-lists/editor?list_id={selected}", headers=reader)
+    assert response.status_code == 200, response.text
+    assert response.json()["list"] == {"id": selected, "name": "Reader list"}
+    assert response.json()["fields"][0]["name"] == "Delivery"
+    assert client.get("/api/v2/shopping-lists/editor", headers=reader).json()["list"] is None
+    assert client.get("/api/users", headers=reader).status_code == 403
+    assert (
+        client.put(
+            f"/api/objects/shopping_lists/{selected}", headers=reader, json={"name": "Denied"}
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            "/api/objects/shopping_lists", headers=reader, json={"name": "Denied"}
+        ).status_code
+        == 403
+    )
 
 
 def test_shopping_list_catalog_editor_and_lifecycle(client, api_headers):

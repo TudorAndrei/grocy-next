@@ -118,10 +118,11 @@ export const shoppingItemEditorSchema = z.object({
 
 export type ShoppingItemEditor = z.infer<typeof shoppingItemEditorSchema>;
 
-export async function shoppingItemEditor(itemId?: number) {
+export async function shoppingItemEditor(itemId?: number, signal?: AbortSignal) {
   return shoppingItemEditorSchema.parse(
     await request(
       `/api/v2/shopping-lists/items/editor${itemId === undefined ? "" : `?item_id=${itemId}`}`,
+      { signal },
     ),
   );
 }

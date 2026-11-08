@@ -22,7 +22,7 @@ async def web_localization(
             raise NotFoundError("Language not found")
     else:
         locale = await SystemService(session).locale(
-            -1, ",".join(request.headers.getlist("accept-language"))
+            None, ",".join(request.headers.getlist("accept-language"))
         )
     response.headers["Cache-Control"] = "max-age=2592000"
     response.headers["Vary"] = "Accept-Language"

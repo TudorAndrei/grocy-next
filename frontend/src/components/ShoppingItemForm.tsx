@@ -35,7 +35,6 @@ export function ShoppingItemForm({
   const { t } = useI18n();
   const dialog = useModalDialog();
   const title = useId();
-  const [pending, setPending] = useState(false);
 
   const data = useQuery({
     queryKey: ["shopping-item-editor", itemId],
@@ -53,7 +52,7 @@ export function ShoppingItemForm({
         event.preventDefault();
         event.stopPropagation();
 
-        if (!pending) onClose();
+        onClose();
       }}
     >
       <h2 id={title}>
@@ -66,9 +65,10 @@ export function ShoppingItemForm({
           data={data.data}
           listId={listId}
           options={options}
-          onSaved={onSaved}
+          onSaved={async (id) => {
+            if (dialog.current?.open) await onSaved(id);
+          }}
           onClose={onClose}
-          onPending={setPending}
         />
       ) : (
         <button type="button" className="btn" onClick={onClose}>
@@ -111,14 +111,12 @@ function ItemFields({
   options,
   onClose,
   onSaved,
-  onPending,
 }: {
   data: ShoppingItemEditor;
   listId: number;
   options?: ShoppingItemOptions;
   onClose: () => void;
   onSaved: (id: number) => Promise<void> | void;
-  onPending: (pending: boolean) => void;
 }) {
   const { t, pluralIndex } = useI18n();
   const features = useFeatures();
@@ -181,6 +179,7 @@ function ItemFields({
   const createdId = useRef<number>(undefined);
   const amountInput = useRef<HTMLInputElement>(null);
   const [pickerBusy, setPickerBusy] = useState(false);
+  const [externalBusy, setExternalBusy] = useState(false);
   const [barcodeToLink, setBarcodeToLink] = useState(options?.barcode);
   const mergeSaved = useRef(false);
   const barcodeSaved = useRef(false);
@@ -200,8 +199,6 @@ function ItemFields({
 
   const save = useMutation({
     mutationFn: async () => {
-      onPending(true);
-
       const body = {
         shopping_list_id: features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedList : 1,
         product_id: productId,
@@ -278,7 +275,6 @@ function ItemFields({
       ]);
       await onSaved(id);
     },
-    onSettled: () => onPending(false),
   });
 
   const submit = (event: FormEvent) => {
@@ -300,113 +296,116 @@ function ItemFields({
 
   return (
     <form onSubmit={submit}>
-      {barcodeToLink !== undefined && !barcodeLinked ? (
-        <p className="field-hint">
-          <strong>{barcodeToLink}</strong>{" "}
-          {t("will be added to the list of barcodes for the selected product on submit")}
-        </p>
-      ) : null}
-      {stagedFlow && recordSaved && save.isError ? (
-        <p role="status">{t("The item is saved. Retry to save the remaining changes.")}</p>
-      ) : null}
-      <fieldset disabled={save.isPending || (stagedFlow && recordSaved)}>
-        {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? (
-          <label className="field">
-            {t("Shopping list")}
-            <select
-              value={selectedList}
-              onChange={(event) => setSelectedList(Number(event.target.value))}
-            >
-              {data.lists.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <ProductPicker
-          products={data.products}
-          barcodes={data.barcodes}
-          plugin={data.barcode_lookup_plugin_name}
-          value={productId}
-          required={!note.length}
-          disabled={barcodeLinked}
-          autoFocus={!data.item && !initialProduct}
-          lookupDisabled={options?.flow !== undefined || barcodeToLink !== undefined}
-          listId={features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedList : 1}
-          itemId={data.item?.id}
-          onChange={selectProduct}
-          onResolved={() => requestAnimationFrame(() => amountInput.current?.focus())}
-          onAssignBarcode={setBarcodeToLink}
-          onBusyChange={setPickerBusy}
-        />
-        <div className="form-grid">
-          <label className="field">
-            {t("Amount")}
-            <input
-              ref={amountInput}
-              type="number"
-              autoFocus={!!data.item || !!initialProduct}
-              required
-              min={increment}
-              step={increment}
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              onFocus={(event) => event.target.select()}
-            />
-          </label>
-          <label className="field">
-            {t("Quantity unit")}
-            <select
-              value={unitId}
-              disabled={!choices.length}
-              onChange={(event) => setUnitId(event.target.value)}
-            >
-              <option value="" />
-              {choices.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {product && choice && choice.id !== product.qu_id_stock && amount ? (
+      <fieldset className="picker-form-lock" disabled={externalBusy}>
+        {barcodeToLink !== undefined && !barcodeLinked ? (
           <p className="field-hint">
-            {t(
-              "This equals %1$s %2$s",
-              formatAmount(stockAmount),
-              unitLabel(stockUnit, stockAmount, pluralIndex, false),
-            )}
+            <strong>{barcodeToLink}</strong>{" "}
+            {t("will be added to the list of barcodes for the selected product on submit")}
           </p>
         ) : null}
-        <label className="field">
-          {t("Note")}
-          <textarea
-            rows={10}
-            required={!productId}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
+        {stagedFlow && recordSaved && save.isError ? (
+          <p role="status">{t("The item is saved. Retry to save the remaining changes.")}</p>
+        ) : null}
+        <fieldset disabled={save.isPending || (stagedFlow && recordSaved)}>
+          {features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? (
+            <label className="field">
+              {t("Shopping list")}
+              <select
+                value={selectedList}
+                onChange={(event) => setSelectedList(Number(event.target.value))}
+              >
+                {data.lists.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <ProductPicker
+            products={data.products}
+            barcodes={data.barcodes}
+            plugin={data.barcode_lookup_plugin_name}
+            value={productId}
+            required={!note.length}
+            disabled={barcodeLinked}
+            autoFocus={!data.item && !initialProduct}
+            lookupDisabled={options?.flow !== undefined || barcodeToLink !== undefined}
+            listId={features.enabled("SHOPPINGLIST_MULTIPLE_LISTS") ? selectedList : 1}
+            itemId={data.item?.id}
+            onChange={selectProduct}
+            onResolved={() => requestAnimationFrame(() => amountInput.current?.focus())}
+            onAssignBarcode={setBarcodeToLink}
+            onBusyChange={setPickerBusy}
+            onFormBusyChange={setExternalBusy}
           />
-        </label>
+          <div className="form-grid">
+            <label className="field">
+              {t("Amount")}
+              <input
+                ref={amountInput}
+                type="number"
+                autoFocus={!!data.item || !!initialProduct}
+                required
+                min={increment}
+                step={increment}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                onFocus={(event) => event.target.select()}
+              />
+            </label>
+            <label className="field">
+              {t("Quantity unit")}
+              <select
+                value={unitId}
+                disabled={!choices.length}
+                onChange={(event) => setUnitId(event.target.value)}
+              >
+                <option value="" />
+                {choices.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {product && choice && choice.id !== product.qu_id_stock && amount ? (
+            <p className="field-hint">
+              {t(
+                "This equals %1$s %2$s",
+                formatAmount(stockAmount),
+                unitLabel(stockUnit, stockAmount, pluralIndex, false),
+              )}
+            </p>
+          ) : null}
+          <label className="field">
+            {t("Note")}
+            <textarea
+              rows={10}
+              required={!productId}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </label>
+        </fieldset>
+        <UserfieldsEditor
+          fields={data.fields}
+          values={values}
+          creating={!data.item}
+          disabled={save.isPending}
+          onChange={(field, edit) => setValues((current) => ({ ...current, [field]: edit }))}
+        />
+        {save.isError ? <ErrorBlock message={save.error.message} /> : null}
+        <div className="actions">
+          <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
+            {t("Cancel")}
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || pickerBusy}>
+            {t("Save")}
+          </button>
+        </div>
       </fieldset>
-      <UserfieldsEditor
-        fields={data.fields}
-        values={values}
-        creating={!data.item}
-        disabled={save.isPending}
-        onChange={(field, edit) => setValues((current) => ({ ...current, [field]: edit }))}
-      />
-      {save.isError ? <ErrorBlock message={save.error.message} /> : null}
-      <div className="actions">
-        <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
-          {t("Cancel")}
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={save.isPending || pickerBusy}>
-          {t("Save")}
-        </button>
-      </div>
     </form>
   );
 }

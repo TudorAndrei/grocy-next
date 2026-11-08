@@ -95,6 +95,48 @@ def check_assets(web: str) -> int:
             for name in ["jquery.min", "daterangepicker"]
         ]
         + [("/vendor/grocy/logo.svg", {"image/svg+xml"})]
+        + [(f"/img/icon-{size}.png", {"image/png"}) for size in [32, 1024]]
+        + [
+            (f"/vendor/swagger-ui/{name}", {"application/javascript", "text/javascript"})
+            for name in [
+                "swagger-ui-bundle.js",
+                "swagger-ui-standalone-preset.js",
+                "grocy-initializer.js",
+            ]
+        ]
+        + [(f"/vendor/swagger-ui/{name}.css", {"text/css"}) for name in ["swagger-ui", "grocy"]]
+        + [("/vendor/swagger-ui/index.html", {"text/html"})]
+        + [
+            (f"/vendor/fullcalendar/{name}.js", {"application/javascript", "text/javascript"})
+            for name in [
+                "jquery.min",
+                "moment-with-locales.min",
+                "fullcalendar.min",
+                "locale-all",
+                "grocy-initializer",
+            ]
+        ]
+        + [
+            (f"/vendor/fullcalendar/{name}.css", {"text/css"})
+            for name in [
+                "bootstrap.min",
+                "css/fontawesome.min",
+                "css/solid.min",
+                "fullcalendar.min",
+                "grocy",
+            ]
+        ]
+        + [("/vendor/fullcalendar/index.html", {"text/html"})]
+        + [
+            (
+                "/vendor/fullcalendar/webfonts/fa-solid-900.woff2",
+                {"font/woff2", "application/font-woff2"},
+            ),
+            (
+                "/vendor/fullcalendar/webfonts/fa-solid-900.ttf",
+                {"font/ttf", "application/x-font-ttf"},
+            ),
+        ]
     )
     count = 0
     for path, content_types in assets:
@@ -129,7 +171,7 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
     ]
     for headers in credentials:
         for path in paths:
-            for query in ["", "?size=40&download=false"]:
+            for query in ["", "?size=40&download=false", "?size=25"]:
                 for method in ["GET", "HEAD"]:
                     result = compare(api, web, path + query, headers, method)
                     require(result.status == 200, f"{method} {web}{path}: access failed")
@@ -147,6 +189,13 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
     for path in [paths[0], f"/stockentry/{entry}/label"]:
         compare(api, web, path, {}, "GET")
         count += 1
+    for headers in [*credentials, {}]:
+        for method in ["GET", "HEAD"]:
+            result = compare(
+                api, web, "/manifest?data=U3RvY2sjL3N0b2Nrb3ZlcnZpZXc=", headers, method
+            )
+            require(result.status == (200 if headers else 302), "Unexpected manifest access")
+            count += 1
     index = fetch(web, "/", {})
     for path in [
         "/product/new",
@@ -157,6 +206,21 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
         "/stockreports/spendings?embedded&group-by=store",
         "/locationcontentsheet",
         "/locationcontentsheet?embedded&include_out_of_stock=false",
+        "/about?tab=changelog",
+        "/barcodescannertesting?barcode=123",
+        "/api",
+        "/calendar",
+        "/calendar?view=agendaDay&start=2027-01-04",
+        "/calendar-agenda",
+        "/products",
+        "/products?include_disabled&only_in_stock",
+        "/products?include_disabled[]&product-group=03",
+        "/catalog",
+        "/shoppinglist?list=01&embedded",
+        "/shoppinglist?list[]=1",
+        "/shopping",
+        "/mealplan",
+        "/tasks",
     ]:
         form = fetch(web, path, {})
         require(
@@ -164,7 +228,61 @@ def check(api: str, web: str, credentials: list[dict[str, str]]) -> None:
             f"Application form routing changed: {path}",
         )
         count += 1
+    context = fetch(web, "/api/v2/calendar/context", credentials[0])
+    require(context.status == 200, "The native calendar context could not be read")
+    calendar = json.loads(context.body)
+    if calendar["config"]["BASE_URL"] == "/":
+        for event in calendar["events"]:
+            require(
+                urlsplit(event["link"]).netloc == urlsplit(web).netloc,
+                "Native calendar navigation escaped the web origin",
+            )
+    count += 1
+    products = fetch(web, "/api/v2/products/context?include_disabled&only_in_stock", credentials[0])
+    require(products.status == 200, "The native products context could not be read")
+    require(
+        "userfield_values" in json.loads(products.body), "Expected native product custom-field data"
+    )
+    count += 1
+    for query in ["?list=01", "?list=unknown"]:
+        native = fetch(web, "/api/v2/shopping-lists/native-context" + query, credentials[0])
+        require(native.status == 200, "The native shopping context could not be read")
+        shopping = json.loads(native.body)
+        require("notes_document" in shopping, "Expected the native Notes document")
+        if query == "?list=unknown":
+            require(
+                shopping["list"] is None and shopping["items"] == [],
+                "Unknown native shopping selectors must retain their empty page",
+            )
+        count += 1
+    for headers in [*credentials, {}]:
+        context = fetch(web, "/api/v2/shopping-lists/native-context?list=unknown", headers)
+        require(context.status == (200 if headers else 401), "Unexpected shopping context access")
+        count += 1
+        document = compare(
+            api, web, "/api/v2/shopping-lists/native-print?list=unknown", headers, "GET"
+        )
+        require(document.status == (200 if headers else 401), "Unexpected shopping print access")
+        count += 1
     parsed_web = urlsplit(web)
+    config = calendar["config"]
+    public_root = (
+        parsed_web._replace(path="", query="", fragment="").geturl()
+        if config["BASE_URL"] == "/"
+        else config["BASE_URL"]
+    )
+    canonical = public_root.rstrip("/") + (
+        "" if config.get("DISABLE_URL_REWRITING", False) is False else "/index.php"
+    )
+    for headers in [*credentials, {}]:
+        login = fetch(web, "/api/v2/system/login-context", headers)
+        require(login.status == 200, "Public native login presentation was denied")
+        require(
+            json.loads(login.body)
+            == {"login_url": canonical + "/login", "logout_url": canonical + "/logout"},
+            "Native login targets escaped the public URL rules",
+        )
+        count += 1
     prefix = parsed_web.path
     if "." in prefix:
         alternate = parsed_web._replace(path=prefix.replace(".", "X", 1)).geturl()

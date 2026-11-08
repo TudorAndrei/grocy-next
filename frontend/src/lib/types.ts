@@ -1,4 +1,5 @@
 export type ProductSummary = {
+  active?: number;
   picture_file_name?: string | null;
   disable_open?: number;
   treat_opened_as_out_of_stock?: number | boolean;
@@ -212,6 +213,8 @@ export type ShoppingListItem = {
   id: number;
   product_id: number | null;
   amount: number;
+  stock_amount?: number;
+  display_factor?: number;
   note?: string | null;
   done: boolean;
   qu_id?: number | null;

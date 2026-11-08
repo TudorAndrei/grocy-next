@@ -1,8 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { usePreferences } from "@/lib/preferences";
+import { NativeDatabaseRefresh } from "./NativeDatabaseRefresh";
 
-export function DatabaseRefresh() {
+export function DatabaseRefresh({ native = false }: { native?: boolean }) {
+  return native ? <NativeDatabaseRefresh /> : <ModernDatabaseRefresh />;
+}
+
+function ModernDatabaseRefresh() {
   const { autoReload } = usePreferences();
   const client = useQueryClient();
 

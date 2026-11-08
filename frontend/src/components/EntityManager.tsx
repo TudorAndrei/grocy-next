@@ -1,6 +1,18 @@
 import { useI18n } from "@/lib/i18n";
+import { useGenericError } from "@/hooks/useGenericError";
+import { saveCustomObjectFields } from "@/lib/custom-object-form";
+import { invalidateNativeProduct, nativeProductPictureFilename } from "@/lib/native-product-form";
+import type { NativeProductContext } from "@/lib/native-product-context";
+import {
+  copyNativeProductControls,
+  nativeProductControls,
+  normalizeNativeProductEnums,
+  type NativeProductControls,
+} from "@/lib/native-product-controls";
+import { nativeQueryParameter } from "@/lib/native-query-flag";
 import {
   useEffect,
+  useLayoutEffect,
   useCallback,
   useMemo,
   useId,
@@ -25,16 +37,18 @@ import { LoadingBlock } from "./LoadingBlock";
 import { DescriptionEditor } from "./DescriptionEditor";
 import { NumberPicker } from "./NumberPicker";
 import { RichText } from "./RichDescription";
-import { useFeatures } from "@/lib/features";
-import { userSettingsQuery } from "@/hooks/queries";
+import { configuredFeatures, useFeatures } from "@/lib/features";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { preferenceEnabled, usePreferences } from "@/lib/preferences";
 import { unitLabel } from "@/lib/format";
 import { compareSqliteNames } from "@/lib/collation";
 import { CameraScanner } from "./CameraScanner";
-import { UserfieldsEditor } from "./UserfieldsEditor";
+import { UserfieldsEditor, type UserfieldsEditorHandle } from "./UserfieldsEditor";
+import { NativeUserfieldsLoad } from "./NativeUserfieldsLoad";
 import {
   initialUserfields,
   saveUserfields,
+  userfieldUpload,
   userfieldsQuery,
   type FieldEdits,
   type UserfieldDefinition,
@@ -48,6 +62,8 @@ import {
 
 type Props = {
   entity: string;
+  nativeProduct?: boolean;
+  nativeProductContext?: NativeProductContext;
   detail?: (row: EntityRow) => ReactNode;
   actions?: (row: EntityRow) => ReactNode;
   editorActions?: (row: EntityRow, pending: boolean) => ReactNode;
@@ -63,8 +79,11 @@ type Props = {
   editor?: {
     recordId: number | null;
     copyOf?: number;
+    nativeCopyOf?: string;
+    nativeInitialSearch?: string;
     initialValues?: Record<string, string>;
     onSaved: (id: number, body: JsonObject, returnToList: boolean) => Promise<void>;
+    onRefresh?: () => Promise<void>;
     onCancel: () => void;
     continueLabel?: string;
     allowReturn?: boolean;
@@ -81,15 +100,33 @@ export function EntityManager({
   editor,
   related,
   onPendingChange,
+  nativeProduct = false,
+  nativeProductContext,
 }: Props) {
   const { t: tr, pluralIndex } = useI18n();
+  const genericError = useGenericError();
 
   const features = useFeatures();
+
+  const nativeControls: NativeProductControls | undefined = useMemo(
+    () =>
+      nativeProduct
+        ? nativeProductControls(configuredFeatures(features.query.data).enabled)
+        : undefined,
+    [nativeProduct, features.query.data],
+  );
+
+  const copyRequested = nativeProduct
+    ? editor?.nativeCopyOf !== undefined
+    : editor?.copyOf !== undefined;
+
+  const nativeReferences: Record<string, EntityRow[]> | undefined =
+    nativeProductContext?.references;
 
   const copySource = useQuery({
     queryKey: ["product-copy", editor?.copyOf],
     queryFn: () => request<EntityRow>(`/api/objects/products/${editor?.copyOf}`),
-    enabled: entity === "products" && editor?.recordId === null && editor.copyOf !== undefined,
+    enabled: !nativeProduct && entity === "products" && editor?.recordId === null && copyRequested,
     retry: false,
     gcTime: 0,
   });
@@ -106,7 +143,7 @@ export function EntityManager({
     entity,
   );
 
-  const productSettings = useQuery({ ...userSettingsQuery(), enabled: needsSettings });
+  const productSettings = useUserSettings(needsSettings);
 
   const barcodeConversions = useQuery({
     queryKey: ["objects", "quantity_unit_conversions_resolved"],
@@ -138,9 +175,15 @@ export function EntityManager({
   );
 
   const fieldEnabled = (field: EntityField) =>
-    !field.features || field.features.every(features.enabled);
+    nativeControls?.[field.key]
+      ? nativeControls[field.key].presence === "visible"
+      : !field.features || field.features.every(features.enabled);
 
   const [values, setValues] = useState<Record<string, string>>({});
+  const latestValues = useRef(values);
+  useLayoutEffect(() => {
+    latestValues.current = values;
+  }, [values]);
   const [descriptionReady, setDescriptionReady] = useState(!richEntity);
   const [editorRevision, setEditorRevision] = useState(0);
   const initializedReferences = useRef(-1);
@@ -151,13 +194,74 @@ export function EntityManager({
   );
 
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdits>>({});
+  const latestFields = useRef(fieldEdits);
+  const nativeProductFields = useRef<UserfieldsEditorHandle>(null);
+  const nativeNameInput = useRef<HTMLInputElement>(null);
+  const nativeDescriptionInput = useRef<HTMLTextAreaElement>(null);
+  const nativeCopyStarted = useRef(false);
+  const nativeParentStarted = useRef(false);
+  const nativeInitialParent = useRef("");
+  const nativeUnselected = useRef(new Set<string>());
+  const [nativeCopyDescription, setNativeCopyDescription] = useState<string>();
+  useLayoutEffect(() => {
+    latestFields.current = fieldEdits;
+  }, [fieldEdits]);
+  const nativeOwner = useRef<AbortController | null>(null);
+  const nativeCreatedId = useRef<number | undefined>(undefined);
+  const nativeReloadRequested = useRef(false);
+  const [nativeBusy, setNativeBusy] = useState(false);
+
+  useEffect(() => {
+    if (!nativeProduct) return;
+    const owner = new AbortController();
+    nativeOwner.current = owner;
+
+    return () => {
+      owner.abort();
+
+      if (nativeOwner.current === owner) nativeOwner.current = null;
+    };
+  }, [nativeProduct]);
+
+  useEffect(() => {
+    if (!nativeProduct) return;
+    document.body.classList.toggle("cursor-busy", nativeBusy);
+
+    return () => document.body.classList.remove("cursor-busy");
+  }, [nativeProduct, nativeBusy]);
   const [creating, setCreating] = useState(false);
   const [factorChanged, setFactorChanged] = useState(false);
   const [tareEditable, setTareEditable] = useState(false);
   const [minimumStockDisabled, setMinimumStockDisabled] = useState(false);
+  const [nativeParentUnlocked, setNativeParentUnlocked] = useState(false);
   const [parentReadError, setParentReadError] = useState<{ id: string; error: Error } | null>(null);
   const [parentReadRevision, setParentReadRevision] = useState(0);
   const [parentSelected, setParentSelected] = useState(false);
+
+  const readNativeParent = useCallback((identity: string) => {
+    const signal = nativeOwner.current?.signal;
+
+    if (!signal || signal.aborted) return;
+
+    if (!identity) {
+      setMinimumStockDisabled(false);
+
+      return;
+    }
+
+    void request<EntityRow>(`/api/objects/products/${identity}`, { signal }).then(
+      (parent) => {
+        if (!signal.aborted)
+          setMinimumStockDisabled(
+            preferenceEnabled(String(parent.cumulate_min_stock_amount_of_sub_products ?? "")),
+          );
+      },
+      (error: Error) => {
+        if (!signal.aborted) console.error(error);
+      },
+    );
+  }, []);
+
   const form = useRef<HTMLFormElement>(null);
 
   const pictureGroup =
@@ -169,6 +273,11 @@ export function EntityManager({
     remove: false,
   });
 
+  const latestPicture = useRef(picture);
+  useLayoutEffect(() => {
+    latestPicture.current = picture;
+  }, [picture]);
+
   const recordTypes = useQuery({
     queryKey: ["objects", "userentities"],
     queryFn: () => api.objects("userentities"),
@@ -177,7 +286,11 @@ export function EntityManager({
 
   const custom = useQuery({
     ...userfieldsQuery,
-    enabled: !["userfields", "userentities"].includes(entity),
+    queryKey: nativeProductContext
+      ? ["native-product-fields", editor?.recordId]
+      : userfieldsQuery.queryKey,
+    initialData: nativeProductContext?.fields,
+    enabled: !nativeProductContext && !["userfields", "userentities"].includes(entity),
   });
 
   const customGroups = (typeId: string | undefined) => {
@@ -225,26 +338,27 @@ export function EntityManager({
       if (
         loaded &&
         creating &&
-        editor?.copyOf !== undefined &&
+        copyRequested &&
         document.activeElement instanceof HTMLIFrameElement &&
         form.current?.contains(document.activeElement)
       )
         document.getElementById(`${prefix}-name`)?.focus();
     },
-    [creating, editor?.copyOf, prefix],
+    [creating, copyRequested, prefix],
   );
 
   const client = useQueryClient();
   const [editing, setEditing] = useState<number | null | undefined>(undefined);
 
-  const productOptions = useQuery({
+  const productOptions = useQuery<NativeProductContext["options"]>({
     queryKey: [
-      "product-form-options",
+      nativeProductContext ? "native-product-options" : "product-form-options",
       editor ? editor.recordId : creating ? null : (editing ?? null),
     ],
     queryFn: () =>
       api.getProductFormOptions(editor ? editor.recordId : creating ? null : (editing ?? null)),
-    enabled: entity === "products",
+    initialData: nativeProductContext?.options,
+    enabled: !nativeProductContext && entity === "products",
     retry: false,
   });
 
@@ -253,7 +367,24 @@ export function EntityManager({
   const editorStarted = useRef(false);
 
   const query = useQuery({
-    queryKey: ["entity-manager", entity],
+    queryKey: nativeProductContext
+      ? ["native-product-record", editor?.recordId]
+      : ["entity-manager", entity],
+    enabled: !nativeProductContext,
+    initialData: nativeProductContext
+      ? nativeProductContext.product
+        ? [
+            {
+              ...nativeProductContext.product,
+              custom_values: Object.fromEntries(
+                Object.entries(nativeProductContext.product.userfields ?? {}).map(
+                  ([key, value]) => [`custom:products:${key}`, value],
+                ),
+              ),
+            },
+          ]
+        : []
+      : undefined,
     queryFn: async () => {
       const [rows, types, conversions] = await Promise.all([
         api.objects(entity),
@@ -321,7 +452,11 @@ export function EntityManager({
 
   const options = useQueries({
     queries: refs.map((ref) => ({
-      queryKey: ["objects", ref],
+      queryKey: nativeProductContext
+        ? ["native-product-reference", editor?.recordId, ref]
+        : ["objects", ref],
+      enabled: !nativeProductContext,
+      initialData: nativeReferences?.[ref],
       queryFn: () => (ref === "users" ? request<EntityRow[]>("/api/users") : api.objects(ref)),
     })),
   });
@@ -339,11 +474,11 @@ export function EntityManager({
       ? values.parent_product_id
       : "";
 
-  const parentReadEnabled =
-    productOptionsReady && !(creating && editor?.copyOf !== undefined && !parentSelected);
+  const parentReadEnabled = productOptionsReady && !(creating && copyRequested && !parentSelected);
 
   useEffect(() => {
-    if (!parentId || !parentReadEnabled) return;
+    if (nativeProduct || !parentId || !parentReadEnabled) return;
+
     let current = true;
 
     void request<EntityRow>(`/api/objects/products/${parentId}`).then(
@@ -362,7 +497,7 @@ export function EntityManager({
     return () => {
       current = false;
     };
-  }, [parentId, parentReadEnabled, editorRevision, parentReadRevision]);
+  }, [parentId, parentReadEnabled, editorRevision, parentReadRevision, nativeProduct]);
 
   const parentError = parentReadError?.id === parentId ? parentReadError.error : null;
 
@@ -370,7 +505,7 @@ export function EntityManager({
     query.error ||
     productOptions.error ||
     parentError ||
-    copySource.error ||
+    (!nativeProduct && copySource.error) ||
     custom.error ||
     descriptions.error ||
     (entity === "product_barcodes" ? barcodeConversions.error : null) ||
@@ -380,7 +515,7 @@ export function EntityManager({
   const ready =
     query.isSuccess &&
     productOptionsReady &&
-    (!copySource.isEnabled || (copySource.isSuccess && !copySource.isFetching)) &&
+    (nativeProduct || !copySource.isEnabled || (copySource.isSuccess && !copySource.isFetching)) &&
     features.query.isSuccess &&
     (!custom.isEnabled || custom.isSuccess) &&
     (!recordTypes.isEnabled || recordTypes.isSuccess) &&
@@ -424,28 +559,34 @@ export function EntityManager({
       const fieldsBeforeRecord = entity === "shopping_lists" && editing !== null;
       const parallelBarcodeEdit = entity === "product_barcodes" && editing !== null;
 
+      const recordWrite = <T,>(result: Promise<T>) =>
+        result.catch((error: Error) => {
+          genericError("Error while saving, probably this item already exists", error);
+          throw error;
+        });
+
       if (entity === "products") delete body.qu_factor_purchase_to_stock;
       let id = editing!;
 
       if (fieldsBeforeRecord) await saveFields(id);
 
       if (editing === null) {
-        const created = await api.createObject(entity, body);
+        const created = await recordWrite(api.createObject(entity, body));
         id = Number(created.created_object_id);
         setEditing(id);
       } else if (parallelBarcodeEdit) {
         const results = await Promise.allSettled([
           saveFields(id),
-          api.updateObject(entity, id, body),
+          recordWrite(api.updateObject(entity, id, body)),
         ]);
 
         for (const result of results) if (result.status === "rejected") throw result.reason;
-      } else await api.updateObject(entity, id, body);
+      } else await recordWrite(api.updateObject(entity, id, body));
 
       if (
         entity === "products" &&
         operation.factorChanged &&
-        !(creating && editor?.copyOf !== undefined) &&
+        !(creating && copyRequested) &&
         operation.intent !== "refresh" &&
         purchaseFactor != null &&
         body.qu_id_purchase !== body.qu_id_stock
@@ -523,10 +664,173 @@ export function EntityManager({
     },
   });
 
-  useEffect(() => onPendingChange?.(mutate.isPending), [mutate.isPending, onPendingChange]);
+  const pending = nativeBusy || mutate.isPending;
+
+  const endNativeProductBusy = () => {
+    setNativeBusy(false);
+    setTareEditable(true);
+    setMinimumStockDisabled(false);
+    setNativeParentUnlocked(true);
+  };
+
+  const saveNativeProduct = async (operation: {
+    body?: JsonObject;
+    intent?: "continue" | "return" | "refresh";
+  }) => {
+    const signal = nativeOwner.current?.signal;
+
+    if (!signal || signal.aborted || !editor) return;
+
+    if (operation.intent === "refresh") nativeReloadRequested.current = true;
+    setNativeBusy(true);
+    const creatingRecord = editor.recordId === null;
+    const body = { ...operation.body };
+    delete body.qu_factor_purchase_to_stock;
+    const submittedPicture = latestPicture.current;
+
+    if (submittedPicture.upload)
+      body.picture_file_name = nativeProductPictureFilename(submittedPicture.upload.file);
+
+    if (!creatingRecord && submittedPicture.remove) {
+      body.picture_file_name = null;
+
+      if (submittedPicture.original)
+        void request(filePath("productpictures", submittedPicture.original), {
+          method: "DELETE",
+          signal,
+        })
+          .catch((error: Error) => {
+            if (!signal.aborted) {
+              endNativeProductBusy();
+              genericError("Error while saving, probably this item already exists", error);
+            }
+          })
+          .finally(() => invalidateNativeProduct(client));
+    }
+
+    let identity: number;
+
+    try {
+      let result: { created_object_id?: string | number };
+
+      try {
+        result = await request(
+          creatingRecord ? "/api/objects/products" : `/api/objects/products/${editor.recordId}`,
+          {
+            method: creatingRecord ? "POST" : "PUT",
+            body: JSON.stringify(body),
+            signal,
+          },
+        );
+      } finally {
+        invalidateNativeProduct(client);
+      }
+
+      signal.throwIfAborted();
+      identity = editor.recordId ?? nativeCreatedId.current ?? Number(result?.created_object_id);
+      nativeCreatedId.current = identity;
+    } catch (error) {
+      if (!signal.aborted) {
+        endNativeProductBusy();
+
+        if (creatingRecord)
+          genericError(
+            "Error while saving, probably this item already exists",
+            error instanceof Error ? error : undefined,
+          );
+        else console.error(error);
+      }
+
+      return;
+    }
+
+    const fields = groups.products ?? [];
+
+    const edits = Object.fromEntries(
+      Object.entries(
+        nativeProductFields.current?.snapshot() ?? latestFields.current.products ?? {},
+      ).map(([name, edit]) => {
+        const file = edit.readFile ? edit.readFile() : edit.upload?.file;
+
+        return [
+          name,
+          file && edit.dirty
+            ? { ...edit, ...userfieldUpload(file), remove: edit.remove, readFile: edit.readFile }
+            : edit,
+        ];
+      }),
+    );
+
+    const dirty = fields.filter((field) => edits[field.name]?.dirty);
+
+    // Each native field settles independently. Earlier fields can finish after
+    // the last-field callback has already replaced this document.
+    const jobs = dirty.map((field) =>
+      saveCustomObjectFields(
+        "products",
+        identity,
+        [field],
+        edits,
+        () => {},
+        (error) => genericError("Error while saving, probably this item already exists", error),
+        signal,
+      ).finally(() => invalidateNativeProduct(client)),
+    );
+
+    for (const job of jobs.slice(0, -1)) void job.catch(() => {});
+
+    try {
+      await jobs.at(-1);
+      signal.throwIfAborted();
+    } catch {
+      return;
+    }
+
+    if (Object.hasOwn(body, "picture_file_name") && !latestPicture.current.remove) {
+      try {
+        try {
+          await request(filePath("productpictures", String(body.picture_file_name)), {
+            method: "PUT",
+            body: latestPicture.current.upload?.file,
+            signal,
+          });
+        } finally {
+          invalidateNativeProduct(client);
+        }
+
+        signal.throwIfAborted();
+      } catch (error) {
+        if (!signal.aborted) {
+          endNativeProductBusy();
+          genericError(
+            "Error while saving, probably this item already exists",
+            error instanceof Error ? error : undefined,
+          );
+        }
+
+        return;
+      }
+    }
+
+    if (!signal.aborted) {
+      if (nativeReloadRequested.current && editor.onRefresh) await editor.onRefresh();
+      else
+        await editor.onSaved(
+          identity,
+          { ...body, name: nativeNameInput.current?.value ?? latestValues.current.name ?? "" },
+          operation.intent === "return",
+        );
+    }
+  };
+
+  useEffect(() => onPendingChange?.(pending), [pending, onPendingChange]);
 
   const selectValue = (field: EntityField, value: string, fromInput = false) => {
+    if (nativeProduct && (field.ref || field.choices)) nativeUnselected.current.delete(field.key);
+
     if (entity === "products" && field.key === "parent_product_id") setParentSelected(true);
+
+    if (nativeProduct && field.key === "parent_product_id") readNativeParent(value);
 
     if (entity === "products" && field.key === "parent_product_id" && !value)
       setMinimumStockDisabled(false);
@@ -545,7 +849,7 @@ export function EntityManager({
             namespace,
             namespace === entity && previous[namespace]
               ? previous[namespace]
-              : initialUserfields(definitions, {}, true),
+              : initialUserfields(definitions, {}, !(nativeProduct && namespace === "products")),
           ]),
         ),
       );
@@ -558,9 +862,26 @@ export function EntityManager({
 
       if (entity === "product_barcodes" && field.key === "product_id") next.qu_id = "";
 
-      if (entity === "products" && next.qu_id_stock && (field.key === "qu_id_stock" || fromInput)) {
+      if (
+        entity === "products" &&
+        (next.qu_id_stock || (nativeProduct && nativeUnselected.current.has("qu_id_stock"))) &&
+        (field.key === "qu_id_stock" || fromInput)
+      ) {
         for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"]) {
-          if (!referenceValue(key, next[key]) && referenceValue(key, next.qu_id_stock))
+          if (nativeProduct) {
+            if (next[key] || nativeUnselected.current.has(key)) continue;
+
+            const index = nativeUnselected.current.has("qu_id_stock")
+              ? -1
+              : (productOptions.data?.references.qu_id_stock?.indexOf(Number(next.qu_id_stock)) ??
+                -1);
+
+            const selected = productOptions.data?.references[key]?.[index];
+
+            next[key] = selected === undefined ? "" : String(selected);
+
+            if (selected === undefined) nativeUnselected.current.add(key);
+          } else if (!referenceValue(key, next[key]) && referenceValue(key, next.qu_id_stock))
             next[key] = next.qu_id_stock;
         }
       }
@@ -648,9 +969,10 @@ export function EntityManager({
       const next = { ...previous };
 
       for (const [key, ids] of Object.entries(references))
-        next[key] = previous[key] && ids.includes(Number(previous[key])) ? previous[key] : "";
+        if (!nativeControls || nativeControls[key]?.presence === "visible")
+          next[key] = previous[key] && ids.includes(Number(previous[key])) ? previous[key] : "";
 
-      if (!(creating && editor?.copyOf !== undefined))
+      if (!nativeProduct && !(creating && copyRequested))
         for (const key of ["qu_id_purchase", "qu_id_consume", "qu_id_price"])
           if (!next[key] && next.qu_id_stock && references[key]?.includes(Number(next.qu_id_stock)))
             next[key] = next.qu_id_stock;
@@ -672,7 +994,9 @@ export function EntityManager({
     productOptionsReady,
     productOptions.data,
     creating,
-    editor?.copyOf,
+    copyRequested,
+    nativeProduct,
+    nativeControls,
   ]);
 
   const namedUnit = (id: EntityRow["qu_id"], count: number) => {
@@ -729,6 +1053,7 @@ export function EntityManager({
   };
 
   const start = (row?: EntityRow) => {
+    nativeUnselected.current.clear();
     mutate.reset();
     setDescriptionReady(!richEntity);
     setEditorRevision((revision) => revision + 1);
@@ -737,6 +1062,7 @@ export function EntityManager({
     setFactorChanged(false);
     setTareEditable(Boolean(row && Number(row.enable_tare_weight_handling)));
     setMinimumStockDisabled(false);
+    setNativeParentUnlocked(false);
     setParentReadError(null);
     setParentSelected(false);
     setPicture({
@@ -745,12 +1071,12 @@ export function EntityManager({
       remove: false,
     });
 
-    const initialValues = Object.fromEntries(
+    let initialValues = Object.fromEntries(
       baseSpec.fields.map((f) => [
         f.key,
         row
           ? f.type === "checkbox"
-            ? Number(row[f.key])
+            ? (nativeProduct ? Number(row[f.key]) === 1 : Number(row[f.key]))
               ? "1"
               : "0"
             : String(row[f.key] ?? "")
@@ -758,7 +1084,14 @@ export function EntityManager({
       ]),
     );
 
-    if (!row && entity === "products" && editor?.copyOf === undefined) {
+    if (nativeControls) {
+      initialValues = normalizeNativeProductEnums(initialValues, nativeControls);
+
+      for (const [key, control] of Object.entries(nativeControls))
+        if (control.presence === "hidden") initialValues[key] = control.value ?? "";
+    }
+
+    if (!row && entity === "products" && !copyRequested) {
       const settings = productSettings.data;
 
       const references = [
@@ -775,13 +1108,28 @@ export function EntityManager({
         const value = String(settings?.[setting] ?? -1);
 
         if (value === "-1") continue;
+
+        if (nativeControls?.[field]?.presence === "hidden") {
+          if (nativeControls[field].addressable) initialValues[field] = value;
+
+          continue;
+        }
+
         const rows = options[refs.indexOf(reference)]?.data ?? [];
-        initialValues[field] = rows.some((row) => String(row.id) === value) ? value : "";
+
+        const eligible = nativeControls
+          ? productOptions.data?.references[field]?.some((id) => String(id) === value)
+          : rows.some((row) => String(row.id) === value);
+
+        initialValues[field] = eligible ? value : "";
+
+        if (nativeProduct && !eligible && value) nativeUnselected.current.add(field);
       }
 
-      initialValues.default_best_before_days = String(
-        settings?.product_presets_default_due_days ?? 0,
-      );
+      const presetDueDays = String(settings?.product_presets_default_due_days ?? 0);
+
+      if (!nativeProduct || presetDueDays !== "0")
+        initialValues.default_best_before_days = presetDueDays;
       const treatOpened = settings?.product_presets_treat_opened_as_out_of_stock;
       initialValues.treat_opened_as_out_of_stock = preferenceEnabled(
         treatOpened === undefined ? true : treatOpened,
@@ -791,9 +1139,17 @@ export function EntityManager({
       initialValues.default_stock_label_type = String(
         settings?.product_presets_default_stock_label_type ?? 0,
       );
+
+      if (
+        nativeControls?.default_stock_label_type?.presence === "visible" &&
+        !["0", "1", "2"].includes(initialValues.default_stock_label_type)
+      ) {
+        initialValues.default_stock_label_type = "";
+        nativeUnselected.current.add("default_stock_label_type");
+      }
     }
 
-    if (!row && entity === "products" && editor?.copyOf !== undefined) {
+    if (!nativeProduct && !row && entity === "products" && copyRequested) {
       const source = copySource.data;
 
       if (source) {
@@ -841,6 +1197,8 @@ export function EntityManager({
     if (entity === "products")
       for (const field of baseSpec.fields) {
         if (!field.precision) continue;
+
+        if (nativeControls && nativeControls[field.key]?.presence !== "visible") continue;
         let value = row && row[field.key] == null ? "1" : initialValues[field.key];
 
         if (
@@ -869,7 +1227,43 @@ export function EntityManager({
       }
     }
 
-    setValues(!row ? { ...initialValues, ...editor?.initialValues } : initialValues);
+    if (nativeProduct) {
+      const rawSearch = editor?.nativeInitialSearch ?? "";
+      const parents = nativeReferences?.products ?? [];
+      const name = nativeQueryParameter(rawSearch, "product-name");
+      let parent = "";
+
+      if (name !== undefined) {
+        const text = String(name);
+
+        // ProductEditForm supplies raw barcode rows; the picker reads their
+        // missing plural "barcodes" property, leaving only its comma separator.
+        const selected = parents.find((row) =>
+          text === "" || text === "," ? true : String(row.name ?? "").includes(text),
+        );
+
+        if (selected) parent = String(selected.id);
+      }
+
+      const stored = row?.parent_product_id;
+
+      const identity =
+        stored && stored !== "0" ? String(stored) : nativeQueryParameter(rawSearch, "product");
+
+      if (identity !== undefined) {
+        const selected = parents.find((row) => String(row.id) === String(identity));
+        parent = selected ? String(selected.id) : "";
+
+        if (!selected && String(identity) !== "") nativeUnselected.current.add("parent_product_id");
+      }
+
+      initialValues.parent_product_id = parent;
+      nativeInitialParent.current = parent;
+    }
+
+    setValues(
+      nativeProduct || !row ? { ...initialValues, ...editor?.initialValues } : initialValues,
+    );
     setFieldEdits(
       Object.fromEntries(
         Object.entries(customGroups(String(row?.userentity_id ?? initialValues.userentity_id))).map(
@@ -877,13 +1271,15 @@ export function EntityManager({
             namespace,
             initialUserfields(
               definitions,
-              Object.fromEntries(
-                definitions.map((field) => [
-                  field.name,
-                  row?.custom_values?.[`custom:${namespace}:${field.name}`] ?? null,
-                ]),
-              ),
-              !row,
+              nativeProduct && namespace === "products"
+                ? {}
+                : Object.fromEntries(
+                    definitions.map((field) => [
+                      field.name,
+                      row?.custom_values?.[`custom:${namespace}:${field.name}`] ?? null,
+                    ]),
+                  ),
+              !row && !(nativeProduct && namespace === "products"),
             ),
           ],
         ),
@@ -895,6 +1291,12 @@ export function EntityManager({
   const editorMissing = editor && editor.recordId !== null && query.isSuccess && !editorRecord;
 
   const reload = async (id = editing) => {
+    if (nativeProduct && editor?.onRefresh) {
+      await editor.onRefresh();
+
+      return;
+    }
+
     const result = await query.refetch();
 
     if (result.error) throw result.error;
@@ -910,18 +1312,89 @@ export function EntityManager({
     start(editorRecord);
   });
 
+  useEffect(() => {
+    if (
+      !nativeProduct ||
+      editing !== null ||
+      editor?.nativeCopyOf === undefined ||
+      nativeCopyStarted.current
+    )
+      return;
+    const signal = nativeOwner.current?.signal;
+
+    if (!signal || signal.aborted) return;
+    nativeCopyStarted.current = true;
+
+    void request<EntityRow>(`/api/objects/products/${editor.nativeCopyOf}`, { signal }).then(
+      (source) => {
+        if (signal.aborted) return;
+
+        if (!nativeControls) return;
+
+        const copied = copyNativeProductControls(latestValues.current, source, nativeControls);
+
+        if (copied.description) setNativeCopyDescription(copied.description);
+
+        if (copied.error) console.error(copied.error);
+
+        setValues((current) => {
+          const next = { ...current };
+
+          for (const key of copied.assigned) next[key] = copied.values[key];
+
+          for (const key of copied.assigned) {
+            const ids = productOptions.data?.references[key];
+
+            if (!ids || nativeControls[key]?.presence !== "visible") continue;
+
+            if (next[key] && !ids.some((id) => String(id) === next[key])) {
+              next[key] = "";
+              nativeUnselected.current.add(key);
+            } else nativeUnselected.current.delete(key);
+          }
+
+          if (
+            copied.assigned.includes("default_stock_label_type") &&
+            nativeControls.default_stock_label_type?.presence === "visible"
+          ) {
+            if (!["0", "1", "2"].includes(next.default_stock_label_type)) {
+              next.default_stock_label_type = "";
+              nativeUnselected.current.add("default_stock_label_type");
+            } else nativeUnselected.current.delete("default_stock_label_type");
+          }
+
+          return next;
+        });
+      },
+      (error: Error) => {
+        if (!signal.aborted) console.error(error);
+      },
+    );
+  }, [nativeProduct, editing, editor?.nativeCopyOf, productOptions.data, nativeControls]);
+
+  useEffect(() => {
+    if (!nativeProduct || editing === undefined || nativeParentStarted.current) return;
+    nativeParentStarted.current = true;
+    readNativeParent(nativeInitialParent.current);
+  }, [nativeProduct, editing, readNativeParent]);
+
   const recordBody = (): JsonObject => {
     const body: JsonObject = {};
     Object.assign(body, fixed);
 
-    for (const field of baseSpec.fields) {
-      if (!fieldEnabled(field) && field.disabledValue !== undefined) {
-        body[field.key] = Number(field.disabledValue);
+    if (nativeControls)
+      for (const [key, control] of Object.entries(nativeControls)) {
+        if (control.presence === "hidden") body[key] = values[key] ?? control.value ?? "";
       }
-    }
+    else
+      for (const field of baseSpec.fields) {
+        if (!fieldEnabled(field) && field.disabledValue !== undefined)
+          body[field.key] = Number(field.disabledValue);
+      }
 
     if (
       entity === "products" &&
+      !nativeProduct &&
       features.enabled("STOCK_BEST_BEFORE_DATE_TRACKING") &&
       !features.enabled("STOCK_PRODUCT_OPENED_TRACKING")
     ) {
@@ -930,6 +1403,8 @@ export function EntityManager({
 
     for (const field of spec.fields) {
       if (fixed && field.key in fixed) continue;
+
+      if (nativeProduct && nativeUnselected.current.has(field.key)) continue;
 
       if (field.when && !field.when.values.includes(values[field.when.key])) continue;
 
@@ -941,10 +1416,21 @@ export function EntityManager({
       if (
         entity === "products" &&
         field.key === "parent_product_id" &&
-        productOptions.data?.parent_disabled
+        productOptions.data?.parent_disabled &&
+        !(nativeProduct && nativeParentUnlocked)
       )
         continue;
-      const stored = values[field.key] ?? field.value ?? "";
+
+      const stored =
+        nativeProduct && field.key === "name"
+          ? (nativeNameInput.current?.value ?? values[field.key] ?? "")
+          : nativeProduct && field.key === "description"
+            ? (nativeDescriptionInput.current?.value ?? values[field.key] ?? "").replace(
+                /\r?\n/g,
+                "\r\n",
+              )
+            : (values[field.key] ?? field.value ?? "");
+
       const value = entity === "products" && field.ref ? referenceValue(field.key, stored) : stored;
 
       if (field.key === "description" && richEntity) body.description = value;
@@ -989,18 +1475,22 @@ export function EntityManager({
 
     if (!descriptionReady || !productOptionsReady) return;
     const submitter = event.nativeEvent instanceof SubmitEvent ? event.nativeEvent.submitter : null;
-    mutate.mutate(
-      saveOperation(
-        submitter instanceof HTMLButtonElement && submitter.value === "return"
-          ? "return"
-          : "continue",
-      ),
+
+    const operation = saveOperation(
+      submitter instanceof HTMLButtonElement && submitter.value === "return"
+        ? "return"
+        : "continue",
     );
+
+    if (nativeProduct) void saveNativeProduct(operation);
+    else mutate.mutate(operation);
   };
 
   const afterDelete = async () => {
     if (!descriptionReady || !productOptionsReady || !form.current?.reportValidity()) return;
-    await mutate.mutateAsync(saveOperation("refresh"));
+
+    if (nativeProduct) await saveNativeProduct(saveOperation("refresh"));
+    else await mutate.mutateAsync(saveOperation("refresh"));
   };
 
   const rows = (query.data ?? []).filter(
@@ -1017,17 +1507,24 @@ export function EntityManager({
       {!editor ? (
         <div className="section-heading">
           <h2>{title ?? spec.label}</h2>
-          <button
-            className="btn btn-primary"
-            disabled={mutate.isPending || !ready}
-            onClick={() => start()}
-          >
+          <button className="btn btn-primary" disabled={pending || !ready} onClick={() => start()}>
             {tr("Add")} {spec.singular}
           </button>
         </div>
       ) : null}
       {relatedRecord && editorActions ? (
-        <div className="actions">{editorActions(relatedRecord, mutate.isPending)}</div>
+        <div className="actions">{editorActions(relatedRecord, pending)}</div>
+      ) : null}
+      {editing !== undefined && nativeProduct && pictureGroup ? (
+        <div className="panel panel-inner native-product-picture">
+          <EntityPictureField
+            group={pictureGroup}
+            value={picture}
+            onChange={setPicture}
+            disabled={false}
+            label={tr("Product picture")}
+          />
+        </div>
       ) : null}
       {editing !== undefined && (
         <form
@@ -1046,11 +1543,16 @@ export function EntityManager({
                 descriptionReady &&
                 productOptionsReady &&
                 event.currentTarget.reportValidity() &&
-                !mutate.isPending
+                !pending
               )
-                mutate.mutate(
-                  saveOperation(!creating && editor.allowReturn ? "return" : "continue"),
-                );
+                if (nativeProduct)
+                  void saveNativeProduct(
+                    saveOperation(!creating && editor.allowReturn ? "return" : "continue"),
+                  );
+                else
+                  mutate.mutate(
+                    saveOperation(!creating && editor.allowReturn ? "return" : "continue"),
+                  );
             }
           }}
           className="panel panel-inner"
@@ -1067,341 +1569,415 @@ export function EntityManager({
                 : tr("Edit %s", String(spec.singular))}
             </h3>
           ) : null}
-          <div className="form-grid">
-            {pictureGroup ? (
-              <EntityPictureField
-                group={pictureGroup}
-                value={picture}
-                onChange={setPicture}
-                disabled={mutate.isPending}
-                label={tr("%s picture", entity === "products" ? tr("Product") : tr("Recipe"))}
-              />
-            ) : null}
-            {spec.fields
-              .filter(
-                (f) =>
-                  (!fixed || !(f.key in fixed)) &&
-                  !(
-                    f.key === "qu_factor_purchase_to_stock" &&
-                    creating &&
-                    editor?.copyOf !== undefined
-                  ) &&
-                  (!f.when || f.when.values.includes(values[f.when.key])),
-              )
-              .map((field) => {
-                if (field.key === "description" && richEntity)
+          <fieldset
+            disabled={nativeProduct && nativeBusy}
+            style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+          >
+            {nativeControls
+              ? Object.entries(nativeControls).map(([key, control]) =>
+                  control.presence === "hidden" ? (
+                    <input
+                      key={key}
+                      type="hidden"
+                      name={key}
+                      id={control.addressable ? key : undefined}
+                      value={values[key] ?? control.value ?? ""}
+                    />
+                  ) : null,
+                )
+              : null}
+            <div className="form-grid">
+              {pictureGroup && !nativeProduct ? (
+                <EntityPictureField
+                  group={pictureGroup}
+                  value={picture}
+                  onChange={setPicture}
+                  disabled={pending}
+                  label={tr("%s picture", entity === "products" ? tr("Product") : tr("Recipe"))}
+                />
+              ) : null}
+              {spec.fields
+                .filter(
+                  (f) =>
+                    (!fixed || !(f.key in fixed)) &&
+                    (!nativeProduct || f.key !== "qu_factor_purchase_to_stock") &&
+                    !(f.key === "qu_factor_purchase_to_stock" && creating && copyRequested) &&
+                    (!f.when || f.when.values.includes(values[f.when.key])),
+                )
+                .map((field) => {
+                  if (
+                    nativeProduct &&
+                    ["due_type", "default_purchase_price_type"].includes(field.key)
+                  )
+                    return (
+                      <fieldset key={field.key} className="field native-product-radio-group">
+                        <legend>{field.label}</legend>
+                        {field.choices?.map((choice) => (
+                          <label key={choice} className="check-field">
+                            <input
+                              type="radio"
+                              name={field.key}
+                              value={choice}
+                              checked={values[field.key] === choice}
+                              onChange={() => selectValue(field, choice)}
+                            />
+                            {field.key === "due_type" && choice === "2"
+                              ? tr("Expiration date")
+                              : (field.choiceLabels?.[choice] ?? choice)}
+                          </label>
+                        ))}
+                      </fieldset>
+                    );
+
+                  if (field.key === "description" && richEntity)
+                    return (
+                      <div key={field.key} className="field description-field">
+                        {nativeProduct ? (
+                          <textarea
+                            ref={nativeDescriptionInput}
+                            hidden
+                            readOnly
+                            name="description"
+                            value={values.description ?? ""}
+                          />
+                        ) : null}
+                        <DescriptionEditor
+                          key={editorRevision}
+                          entity={richEntity}
+                          value={values.description ?? ""}
+                          pasteInitial={creating && copyRequested}
+                          pasteHtml={nativeCopyDescription}
+                          onChange={changeDescription}
+                          onReady={descriptionLoaded}
+                        />
+                      </div>
+                    );
+                  const id = `${prefix}-${field.key}`;
+
+                  const optionsQuery = field.ref ? options[refs.indexOf(field.ref)] : undefined;
+
                   return (
-                    <div key={field.key} className="field description-field">
-                      <DescriptionEditor
-                        key={editorRevision}
-                        entity={richEntity}
-                        value={values.description ?? ""}
-                        pasteInitial={creating && editor?.copyOf !== undefined}
-                        onChange={changeDescription}
-                        onReady={descriptionLoaded}
-                      />
+                    <div className="field" key={field.key}>
+                      <label htmlFor={id}>{field.label}</label>
+                      {field.type === "multiple" ? (
+                        <div role="group" aria-label={field.label} className="weekday-options">
+                          {(
+                            field.choices?.map((name) => ({ id: name, name })) ??
+                            optionsQuery?.data ??
+                            []
+                          ).map((row) => {
+                            const selected = (values[field.key] ?? "").split(",").filter(Boolean);
+
+                            const value = String(row.id);
+
+                            return (
+                              <label key={row.id}>
+                                <input
+                                  type="checkbox"
+                                  checked={selected.includes(value)}
+                                  onChange={(e) =>
+                                    setValues({
+                                      ...values,
+                                      [field.key]: (e.target.checked
+                                        ? [...selected, value]
+                                        : selected.filter((item) => item !== value)
+                                      ).join(","),
+                                    })
+                                  }
+                                />{" "}
+                                {String(
+                                  "display_name" in row
+                                    ? row.display_name
+                                    : "username" in row
+                                      ? row.username
+                                      : (row.name ?? row.id),
+                                )}
+                              </label>
+                            );
+                          })}
+                          {optionsQuery?.isSuccess && !optionsQuery.data.length && (
+                            <span className="muted">
+                              {tr("Create a user in Manage to assign this chore.")}
+                            </span>
+                          )}
+                        </div>
+                      ) : field.type === "weekdays" ? (
+                        <div role="group" aria-label={field.label} className="weekday-options">
+                          {[
+                            "monday",
+                            "tuesday",
+                            "wednesday",
+                            "thursday",
+                            "friday",
+                            "saturday",
+                            "sunday",
+                          ].map((day) => {
+                            const days = (values[field.key] ?? "").split(",").filter(Boolean);
+
+                            return (
+                              <label key={day}>
+                                <input
+                                  type="checkbox"
+                                  checked={days.includes(day)}
+                                  onChange={(e) =>
+                                    setValues({
+                                      ...values,
+                                      [field.key]: (e.target.checked
+                                        ? [...days, day]
+                                        : days.filter((value) => value !== day)
+                                      ).join(","),
+                                    })
+                                  }
+                                />{" "}
+                                {tr(day[0].toUpperCase() + day.slice(1))}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : field.ref || field.choices ? (
+                        <select
+                          ref={(select) => {
+                            if (nativeProduct && select && nativeUnselected.current.has(field.key))
+                              select.selectedIndex = -1;
+
+                            if (entity === "quantity_unit_conversions" && field.key === "to_qu_id")
+                              select?.setCustomValidity(
+                                values.from_qu_id && values.from_qu_id === values.to_qu_id
+                                  ? tr("The source and destination units must be different.")
+                                  : "",
+                              );
+                          }}
+                          id={id}
+                          value={
+                            entity === "products" && field.ref
+                              ? referenceValue(field.key, values[field.key])
+                              : (values[field.key] ?? field.value ?? "")
+                          }
+                          required={field.required}
+                          aria-describedby={
+                            entity === "products" &&
+                            field.key === "parent_product_id" &&
+                            productOptions.data?.parent_disabled
+                              ? `${id}-hint`
+                              : undefined
+                          }
+                          disabled={
+                            entity === "products" &&
+                            (!productOptionsReady ||
+                              (field.key === "parent_product_id" &&
+                                productOptions.data?.parent_disabled &&
+                                !(nativeProduct && nativeParentUnlocked)))
+                          }
+                          onChange={(e) => selectValue(field, e.target.value)}
+                        >
+                          {!(nativeProduct && field.key === "default_stock_label_type") ? (
+                            <option value="">
+                              {field.required ? tr("Select an option") : tr("None")}
+                            </option>
+                          ) : null}
+                          {field.choices?.map((choice) => (
+                            <option key={choice} value={choice}>
+                              {field.choiceLabels?.[choice] ?? choice}
+                            </option>
+                          ))}
+                          {referenceRows(field).map((row) => (
+                            <option key={row.id} value={row.id}>
+                              {String(
+                                row.display_name ??
+                                  row.caption ??
+                                  row.name ??
+                                  row.username ??
+                                  `#${row.id}`,
+                              )}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.type === "textarea" ? (
+                        <textarea
+                          id={id}
+                          value={values[field.key] ?? field.value ?? ""}
+                          required={field.required}
+                          onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
+                        />
+                      ) : field.precision ? (
+                        <NumberPicker
+                          id={id}
+                          label={field.label}
+                          value={values[field.key] ?? field.value ?? ""}
+                          required={field.required}
+                          disabled={
+                            (field.key === "tare_weight" && !tareEditable) ||
+                            (field.key === "min_stock_amount" && minimumStockDisabled)
+                          }
+                          min={field.min === "step" ? amountStep : field.min}
+                          step={field.precision === "amount" ? amountStep : "1"}
+                          onChange={(value) => selectValue(field, value, true)}
+                        />
+                      ) : (
+                        <input
+                          ref={nativeProduct && field.key === "name" ? nativeNameInput : undefined}
+                          id={id}
+                          autoFocus={!!editor && field.key === "name"}
+                          type={field.type ?? "text"}
+                          value={
+                            field.type === "checkbox"
+                              ? undefined
+                              : (values[field.key] ?? field.value ?? "")
+                          }
+                          checked={
+                            field.type === "checkbox"
+                              ? (values[field.key] ?? field.value) === "1"
+                              : undefined
+                          }
+                          required={field.required}
+                          min={
+                            (entity === "quantity_unit_conversions" && field.key === "factor") ||
+                            (entity === "product_barcodes" && field.key === "amount")
+                              ? amountStep
+                              : field.min === "step"
+                                ? amountStep
+                                : field.min
+                          }
+                          step={
+                            field.type === "number"
+                              ? (entity === "quantity_unit_conversions" &&
+                                  field.key === "factor") ||
+                                (entity === "product_barcodes" && field.key === "amount")
+                                ? amountStep
+                                : "any"
+                              : undefined
+                          }
+                          onChange={(e) => {
+                            if (
+                              entity === "products" &&
+                              field.key === "enable_tare_weight_handling"
+                            )
+                              setTareEditable(e.target.checked);
+                            selectValue(
+                              field,
+                              field.type === "checkbox"
+                                ? e.target.checked
+                                  ? "1"
+                                  : "0"
+                                : e.target.value,
+                              field.type !== "checkbox",
+                            );
+                          }}
+                        />
+                      )}
+                      {entity === "products" &&
+                      field.key === "parent_product_id" &&
+                      productOptions.data?.parent_disabled ? (
+                        <p className="field-hint" id={`${id}-hint`}>
+                          {tr(
+                            "Not possible because this product is already used as a parent product in another product",
+                          )}
+                        </p>
+                      ) : null}
+                      {entity === "product_barcodes" && field.key === "barcode" ? (
+                        <CameraScanner onScan={(code) => setValues({ ...values, barcode: code })} />
+                      ) : null}
                     </div>
                   );
-                const id = `${prefix}-${field.key}`;
-
-                const optionsQuery = field.ref ? options[refs.indexOf(field.ref)] : undefined;
-
-                return (
-                  <div className="field" key={field.key}>
-                    <label htmlFor={id}>{field.label}</label>
-                    {field.type === "multiple" ? (
-                      <div role="group" aria-label={field.label} className="weekday-options">
-                        {(
-                          field.choices?.map((name) => ({ id: name, name })) ??
-                          optionsQuery?.data ??
-                          []
-                        ).map((row) => {
-                          const selected = (values[field.key] ?? "").split(",").filter(Boolean);
-
-                          const value = String(row.id);
-
-                          return (
-                            <label key={row.id}>
-                              <input
-                                type="checkbox"
-                                checked={selected.includes(value)}
-                                onChange={(e) =>
-                                  setValues({
-                                    ...values,
-                                    [field.key]: (e.target.checked
-                                      ? [...selected, value]
-                                      : selected.filter((item) => item !== value)
-                                    ).join(","),
-                                  })
-                                }
-                              />{" "}
-                              {String(
-                                "display_name" in row
-                                  ? row.display_name
-                                  : "username" in row
-                                    ? row.username
-                                    : (row.name ?? row.id),
-                              )}
-                            </label>
-                          );
-                        })}
-                        {optionsQuery?.isSuccess && !optionsQuery.data.length && (
-                          <span className="muted">
-                            {tr("Create a user in Manage to assign this chore.")}
-                          </span>
-                        )}
-                      </div>
-                    ) : field.type === "weekdays" ? (
-                      <div role="group" aria-label={field.label} className="weekday-options">
-                        {[
-                          "monday",
-                          "tuesday",
-                          "wednesday",
-                          "thursday",
-                          "friday",
-                          "saturday",
-                          "sunday",
-                        ].map((day) => {
-                          const days = (values[field.key] ?? "").split(",").filter(Boolean);
-
-                          return (
-                            <label key={day}>
-                              <input
-                                type="checkbox"
-                                checked={days.includes(day)}
-                                onChange={(e) =>
-                                  setValues({
-                                    ...values,
-                                    [field.key]: (e.target.checked
-                                      ? [...days, day]
-                                      : days.filter((value) => value !== day)
-                                    ).join(","),
-                                  })
-                                }
-                              />{" "}
-                              {tr(day[0].toUpperCase() + day.slice(1))}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : field.ref || field.choices ? (
-                      <select
-                        ref={(select) => {
-                          if (entity === "quantity_unit_conversions" && field.key === "to_qu_id")
-                            select?.setCustomValidity(
-                              values.from_qu_id && values.from_qu_id === values.to_qu_id
-                                ? tr("The source and destination units must be different.")
-                                : "",
-                            );
-                        }}
-                        id={id}
-                        value={
-                          entity === "products" && field.ref
-                            ? referenceValue(field.key, values[field.key])
-                            : (values[field.key] ?? field.value ?? "")
-                        }
-                        required={field.required}
-                        aria-describedby={
-                          entity === "products" &&
-                          field.key === "parent_product_id" &&
-                          productOptions.data?.parent_disabled
-                            ? `${id}-hint`
-                            : undefined
-                        }
-                        disabled={
-                          entity === "products" &&
-                          (!productOptionsReady ||
-                            (field.key === "parent_product_id" &&
-                              productOptions.data?.parent_disabled))
-                        }
-                        onChange={(e) => selectValue(field, e.target.value)}
-                      >
-                        <option value="">
-                          {field.required ? tr("Select an option") : tr("None")}
-                        </option>
-                        {field.choices?.map((choice) => (
-                          <option key={choice} value={choice}>
-                            {field.choiceLabels?.[choice] ?? choice}
-                          </option>
-                        ))}
-                        {referenceRows(field).map((row) => (
-                          <option key={row.id} value={row.id}>
-                            {String(
-                              row.display_name ??
-                                row.caption ??
-                                row.name ??
-                                row.username ??
-                                `#${row.id}`,
-                            )}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === "textarea" ? (
-                      <textarea
-                        id={id}
-                        value={values[field.key] ?? field.value ?? ""}
-                        required={field.required}
-                        onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
-                      />
-                    ) : field.precision ? (
-                      <NumberPicker
-                        id={id}
-                        label={field.label}
-                        value={values[field.key] ?? field.value ?? ""}
-                        required={field.required}
-                        disabled={
-                          (field.key === "tare_weight" && !tareEditable) ||
-                          (field.key === "min_stock_amount" && minimumStockDisabled)
-                        }
-                        min={field.min === "step" ? amountStep : field.min}
-                        step={field.precision === "amount" ? amountStep : "1"}
-                        onChange={(value) => selectValue(field, value, true)}
-                      />
-                    ) : (
-                      <input
-                        id={id}
-                        autoFocus={!!editor && field.key === "name"}
-                        type={field.type ?? "text"}
-                        value={
-                          field.type === "checkbox"
-                            ? undefined
-                            : (values[field.key] ?? field.value ?? "")
-                        }
-                        checked={
-                          field.type === "checkbox"
-                            ? (values[field.key] ?? field.value) === "1"
-                            : undefined
-                        }
-                        required={field.required}
-                        min={
-                          (entity === "quantity_unit_conversions" && field.key === "factor") ||
-                          (entity === "product_barcodes" && field.key === "amount")
-                            ? amountStep
-                            : field.min === "step"
-                              ? amountStep
-                              : field.min
-                        }
-                        step={
-                          field.type === "number"
-                            ? (entity === "quantity_unit_conversions" && field.key === "factor") ||
-                              (entity === "product_barcodes" && field.key === "amount")
-                              ? amountStep
-                              : "any"
-                            : undefined
-                        }
-                        onChange={(e) => {
-                          if (entity === "products" && field.key === "enable_tare_weight_handling")
-                            setTareEditable(e.target.checked);
-                          selectValue(
-                            field,
-                            field.type === "checkbox"
-                              ? e.target.checked
-                                ? "1"
-                                : "0"
-                              : e.target.value,
-                            field.type !== "checkbox",
-                          );
-                        }}
-                      />
-                    )}
-                    {entity === "products" &&
-                    field.key === "parent_product_id" &&
-                    productOptions.data?.parent_disabled ? (
-                      <p className="field-hint" id={`${id}-hint`}>
-                        {tr(
-                          "Not possible because this product is already used as a parent product in another product",
-                        )}
-                      </p>
-                    ) : null}
-                    {entity === "product_barcodes" && field.key === "barcode" ? (
-                      <CameraScanner onScan={(code) => setValues({ ...values, barcode: code })} />
-                    ) : null}
-                  </div>
-                );
-              })}
-          </div>
-          {entity === "product_barcodes" && barcodeHint() ? (
-            <p className="muted">{barcodeHint()}</p>
-          ) : null}
-          {entity === "quantity_unit_conversions" &&
-          values.from_qu_id &&
-          values.to_qu_id &&
-          Number(values.factor) > 0 ? (
-            <div className="muted">
-              <p>{conversionHint(values.from_qu_id, values.to_qu_id, Number(values.factor))}</p>
-              <p>{conversionHint(values.to_qu_id, values.from_qu_id, 1 / Number(values.factor))}</p>
+                })}
             </div>
-          ) : null}
-          {Object.entries(groups).map(([namespace, fields]) => (
-            <UserfieldsEditor
-              key={namespace}
-              fields={fields}
-              values={fieldEdits[namespace] ?? {}}
-              creating={creating}
-              disabled={mutate.isPending}
-              onChange={(name, edit) =>
-                setFieldEdits((previous) => ({
-                  ...previous,
-                  [namespace]: { ...previous[namespace], [name]: edit },
-                }))
-              }
-            />
-          ))}
-          {editor?.continueLabel && entity === "products" && editing === null ? (
-            <p className="muted">
-              {tr("Save & continue to add quantity unit conversions & barcodes")}
-            </p>
-          ) : null}
-          <div className="actions">
-            <button
-              className="btn btn-primary"
-              name="intent"
-              value="continue"
-              disabled={
-                mutate.isPending ||
-                !descriptionReady ||
-                !productOptionsReady ||
-                options.some((q) => q.isPending)
-              }
-            >
-              {editor?.continueLabel ? (
-                tr(editor.continueLabel)
-              ) : (
-                <>
-                  {tr("Save")} {spec.singular}
-                </>
-              )}
-            </button>
-            {editor?.allowReturn ? (
+            {entity === "product_barcodes" && barcodeHint() ? (
+              <p className="muted">{barcodeHint()}</p>
+            ) : null}
+            {entity === "quantity_unit_conversions" &&
+            values.from_qu_id &&
+            values.to_qu_id &&
+            Number(values.factor) > 0 ? (
+              <div className="muted">
+                <p>{conversionHint(values.from_qu_id, values.to_qu_id, Number(values.factor))}</p>
+                <p>
+                  {conversionHint(values.to_qu_id, values.from_qu_id, 1 / Number(values.factor))}
+                </p>
+              </div>
+            ) : null}
+            {Object.entries(groups).map(([namespace, fields]) => (
+              <UserfieldsEditor
+                key={namespace}
+                ref={nativeProduct && namespace === "products" ? nativeProductFields : undefined}
+                fields={fields}
+                values={fieldEdits[namespace] ?? {}}
+                creating={creating}
+                nativeFiles={nativeProduct}
+                nativeDirty={nativeProduct && namespace === "products"}
+                nativeLoadPending={nativeProduct && namespace === "products"}
+                disabled={pending}
+                onChange={(name, edit) =>
+                  setFieldEdits((previous) => ({
+                    ...previous,
+                    [namespace]: { ...previous[namespace], [name]: edit },
+                  }))
+                }
+              />
+            ))}
+            {nativeProduct ? (
+              <NativeUserfieldsLoad
+                namespace="products"
+                objectId={nativeProductContext?.product?.id ?? editing ?? null}
+                fieldCount={groups.products?.length ?? 0}
+                editor={nativeProductFields}
+              />
+            ) : null}
+            {editor?.continueLabel && entity === "products" && editing === null ? (
+              <p className="muted">
+                {tr("Save & continue to add quantity unit conversions & barcodes")}
+              </p>
+            ) : null}
+            <div className="actions">
               <button
-                className="btn"
+                className="btn btn-primary"
                 name="intent"
-                value="return"
+                value="continue"
                 disabled={
-                  mutate.isPending ||
+                  pending ||
                   !descriptionReady ||
                   !productOptionsReady ||
                   options.some((q) => q.isPending)
                 }
               >
-                {tr("Save & return to products")}
+                {editor?.continueLabel ? (
+                  tr(editor.continueLabel)
+                ) : (
+                  <>
+                    {tr("Save")} {spec.singular}
+                  </>
+                )}
               </button>
-            ) : null}
-            <button
-              type="button"
-              className="btn btn-ghost"
-              disabled={mutate.isPending}
-              onClick={() => (editor ? editor.onCancel() : setEditing(undefined))}
-            >
-              {tr("Cancel")}
-            </button>
-          </div>
+              {editor?.allowReturn ? (
+                <button
+                  className="btn"
+                  name="intent"
+                  value="return"
+                  disabled={
+                    pending ||
+                    !descriptionReady ||
+                    !productOptionsReady ||
+                    options.some((q) => q.isPending)
+                  }
+                >
+                  {tr("Save & return to products")}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={pending}
+                onClick={() => (editor ? editor.onCancel() : setEditing(undefined))}
+              >
+                {tr("Cancel")}
+              </button>
+            </div>
+          </fieldset>
         </form>
       )}
       {Related && relatedRecord ? (
         <Related
           row={relatedRecord}
-          pending={mutate.isPending || !descriptionReady || !productOptionsReady}
+          pending={pending || !descriptionReady || !productOptionsReady}
           reload={reload}
           afterDelete={afterDelete}
         />
@@ -1514,7 +2090,7 @@ export function EntityManager({
                 {actions?.(row)}
                 <button
                   className="btn btn-ghost"
-                  disabled={mutate.isPending || !ready}
+                  disabled={pending || !ready}
                   onClick={() => start(row)}
                 >
                   {tr("Edit")}
@@ -1522,7 +2098,7 @@ export function EntityManager({
                 </button>
                 <button
                   className="btn btn-ghost"
-                  disabled={mutate.isPending}
+                  disabled={pending}
                   onClick={() =>
                     deleteId === row.id
                       ? mutate.mutate({ kind: "delete", id: row.id })

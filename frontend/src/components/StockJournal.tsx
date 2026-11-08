@@ -1,19 +1,23 @@
+import { useNativeDocumentReload } from "@/lib/native-document";
 import { ProductOverview } from "./ProductOverview";
-import { useId, useRef, useState } from "react";
+import { useProductCardMemory } from "@/hooks/useProductCardMemory";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { api } from "@/lib/api";
+import { Link, useRouter } from "@tanstack/react-router";
+import { api, request } from "@/lib/api";
 import { useFeatures } from "@/lib/features";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { unitLabel } from "@/lib/format";
 import { userfieldsQuery } from "@/lib/userfields";
+import { userfieldTableCell } from "@/lib/userfield-table-cell";
 import type { JournalSearch, JournalRow } from "@/lib/stock-journal";
-import { useModalDialog } from "@/hooks/useModalDialog";
+import { NativeStockPageDialog } from "./NativeStockPageDialog";
+import { NativePageDialog } from "./NativePageDialog";
+import { NativeStockRowMenu, useNativeStockReturnTo } from "./NativeStockRowMenu";
+import { useNativeLabelPrint } from "@/hooks/useNativeLabelPrint";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
-import { GrocycodeActions } from "./GrocycodeActions";
-import { TransferDialog } from "./TransferForm";
 import { usePermissions } from "@/lib/permissions";
 import { UserfieldValue } from "./UserfieldValue";
 import {
@@ -43,8 +47,22 @@ import {
 
 type JournalUndo = { timestamp: string; at: number; contextual: boolean };
 
-async function undoBooking(identity: number) {
-  await api.action(`/api/stock/bookings/${identity}/undo`);
+type JournalUndoOperation = { identity: number; signal: AbortSignal };
+
+async function undoBooking({ identity, signal }: JournalUndoOperation, onSettled: () => void) {
+  signal.throwIfAborted();
+
+  try {
+    await request(`/api/stock/bookings/${identity}/undo`, {
+      method: "POST",
+      body: "{}",
+      signal,
+    });
+  } finally {
+    onSettled();
+  }
+
+  signal.throwIfAborted();
 
   return Date.now();
 }
@@ -66,15 +84,20 @@ export function StockJournal({
 }) {
   const [overview, setOverview] = useState<number>();
   const [overviewExpanded, setOverviewExpanded] = useState(false);
-  const [transfer, setTransfer] = useState<number>();
+  const [page, setPage] = useState<{ url: string; dialogType?: string }>();
+  const router = useRouter();
+  const returnTo = useNativeStockReturnTo();
+  const print = useNativeLabelPrint();
   const can = usePermissions();
   const { t, pluralIndex, ready: translationsReady } = useI18n();
+  const reloadDocument = useNativeDocumentReload("/stockjournal");
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
   const notify = useNotify();
   const id = useId();
   const table = useRef<HTMLDivElement>(null);
+  const owner = useRef<AbortController | null>(null);
   const [text, setText] = useState("");
   const [transaction, setTransaction] = useState("");
   const [location, setLocation] = useState("");
@@ -103,14 +126,34 @@ export function StockJournal({
     ) ?? [];
 
   const undo = useMutation({
-    mutationFn: undoBooking,
-    onSuccess: async (at, identity) => {
+    mutationFn: (operation: JournalUndoOperation) =>
+      undoBooking(operation, () => {
+        void client.invalidateQueries({
+          predicate: (query) =>
+            query.queryKey[0] === "stock" && query.queryKey[1] !== "journal-view",
+          refetchType: "none",
+        });
+
+        for (const key of [
+          "products",
+          "recipe-fulfillment",
+          "recipe-view",
+          "recipe-overview",
+          "shopping",
+          "mealplan-calendar",
+        ])
+          void client.invalidateQueries({ queryKey: [key], refetchType: "none" });
+      }),
+    onSuccess: (at, { identity, signal }) => {
+      if (signal.aborted) return;
       const view = initial?.value;
       const clicked = view?.rows.find((row) => row.id === identity);
 
       if (clicked && view) {
         const timestamp = localTimestampText(new Date(at), t("moment_locale"));
         setUndoDisplay((current) => {
+          if (signal.aborted) return current;
+
           const rows =
             current.version === options.resetVersion && current.cellVersion === options.cellVersion
               ? new Map(current.rows)
@@ -130,9 +173,11 @@ export function StockJournal({
       }
 
       notify({ message: t("Booking successfully undone") });
-      await client.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === "stock" && query.queryKey[1] !== "journal-view",
-      });
+    },
+    onError: (error, { signal }) => {
+      if (signal.aborted) return;
+      console.error(error);
+      notify({ message: error.message, tone: "error" });
     },
   });
 
@@ -181,6 +226,19 @@ export function StockJournal({
     data.isSuccess && definitions.isSuccess,
   );
 
+  useLayoutEffect(() => {
+    const controller = new AbortController();
+    owner.current = controller;
+
+    return () => {
+      controller.abort();
+
+      if (owner.current === controller) owner.current = null;
+    };
+  }, [options.resetVersion]);
+
+  const overviewMemory = useProductCardMemory({ resetVersion: options.resetVersion });
+
   const sort = options.sort;
 
   const initial = useTableSnapshot(
@@ -198,14 +256,18 @@ export function StockJournal({
   const now = new Date(initial?.at ?? 0);
 
   const reload = async () => {
+    if (reloadDocument()) return;
+    const signal = owner.current?.signal;
+
+    if (!signal || signal.aborted) return;
     setReloading(true);
 
     try {
       const result = await data.refetch();
 
-      if (result.isSuccess) options.reload();
+      if (!signal.aborted && result.isSuccess) options.reload();
     } finally {
-      setReloading(false);
+      if (!signal.aborted) setReloading(false);
     }
   };
 
@@ -267,7 +329,16 @@ export function StockJournal({
         ...Object.fromEntries(
           fields.map((field) => [
             `custom:${field.name}`,
-            nativeTableCell(tableText(row.custom_values[field.name] ?? null)),
+            ["file", "image", "link", "link-with-title"].includes(field.type)
+              ? userfieldTableCell(
+                  field,
+                  row.custom_values[field.name] ?? null,
+                  preferences.priceDisplayPrecision,
+                  String(features.query.data?.CURRENCY ?? "USD"),
+                  features.query.data,
+                  Object.hasOwn(row.custom_values, field.name),
+                )
+              : nativeTableCell(tableText(row.custom_values[field.name] ?? null)),
           ]),
         ),
       };
@@ -312,7 +383,7 @@ export function StockJournal({
     });
   })();
 
-  const error = data.error || definitions.error || undo.error;
+  const error = data.error || definitions.error;
 
   const columns = tableColumns.flatMap((c) =>
     c.key !== "actions" && c.rendered !== false ? [[c.key, c.label]] : [],
@@ -493,6 +564,8 @@ export function StockJournal({
                       <StockTableOptions
                         options={options}
                         onReset={() => {
+                          setOverview(undefined);
+                          setOverviewExpanded(false);
                           setText("");
                           setTransaction("");
                           setLocation("");
@@ -524,6 +597,11 @@ export function StockJournal({
               <StockTableRows
                 options={options}
                 groups={rows.map((row) => {
+                  const groupedField = fields.find(
+                    (field) => options.groupColumn === `custom:${field.name}`,
+                  );
+
+                  const groupedValues = row.custom_values;
                   const cell = value(row, options.groupColumn ?? "");
                   const name = tablePlainText(cell.html);
 
@@ -538,7 +616,20 @@ export function StockJournal({
                       name
                     );
 
-                  return { key: cell.html, label, name };
+                  return {
+                    key: cell.html,
+                    label,
+                    name,
+                    userfield:
+                      groupedField &&
+                      ["link", "link-with-title", "file", "image"].includes(groupedField.type)
+                        ? {
+                            field: groupedField,
+                            value: groupedValues[groupedField.name] ?? null,
+                            present: Object.hasOwn(groupedValues, groupedField.name),
+                          }
+                        : undefined,
+                  };
                 })}
               >
                 {rows.map((row) => (
@@ -549,28 +640,54 @@ export function StockJournal({
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm"
-                            disabled={undo.isPending || isUndone(row)}
+                            disabled={isUndone(row)}
                             aria-label={t("Undo transaction %s", String(row.id))}
-                            onClick={() => undo.mutate(row.id)}
+                            onClick={() => {
+                              const signal = owner.current?.signal;
+
+                              if (signal && !signal.aborted)
+                                undo.mutate({ identity: row.id, signal });
+                            }}
                           >
                             {t("Undo")}
                           </button>
                           {features.enabled("STOCK_LOCATION_TRACKING") ? (
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-sm"
-                              disabled={!can("STOCK_TRANSFER")}
+                            <a
+                              href={
+                                router.buildLocation({ to: "/transfer", search: {} }).publicHref +
+                                `?embedded&product=${row.product_id}`
+                              }
+                              className={`btn btn-ghost btn-sm show-as-dialog-link permission-STOCK_TRANSFER${can("STOCK_TRANSFER") ? "" : " disabled not-allowed"}`}
+                              aria-disabled={!can("STOCK_TRANSFER") || undefined}
                               aria-label={t("Transfer transaction product %s", String(row.id))}
-                              onClick={() => setTransfer(row.product_id)}
+                              onClick={(event) => {
+                                if (
+                                  event.button !== 0 ||
+                                  event.ctrlKey ||
+                                  event.metaKey ||
+                                  event.shiftKey ||
+                                  event.altKey
+                                )
+                                  return;
+                                event.preventDefault();
+                                setPage({ url: event.currentTarget.href });
+                              }}
                             >
                               {t("Transfer")}
-                            </button>
+                            </a>
                           ) : null}
-                          <GrocycodeActions
-                            kind="product"
-                            id={row.product_id}
-                            name={row.product_name ?? ""}
-                            compact
+                          <NativeStockRowMenu
+                            variant="journal"
+                            rowId={row.id}
+                            productId={row.product_id}
+                            productName={row.product_name}
+                            can={can}
+                            returnTo={returnTo}
+                            onDialog={(url, dialogType) => setPage({ url, dialogType })}
+                            onOverview={() => setOverview(row.product_id)}
+                            onPrint={() =>
+                              print(`/api/stock/products/${row.product_id}/printlabel`)
+                            }
                           />
                         </div>
                       </td>
@@ -604,8 +721,10 @@ export function StockJournal({
                       {fields.map((field) => (
                         <td key={field.id}>
                           <UserfieldValue
+                            nativeTable
                             field={field}
                             value={row.custom_values[field.name] ?? null}
+                            present={Object.hasOwn(row.custom_values, field.name)}
                           />
                         </td>
                       ))}
@@ -620,25 +739,26 @@ export function StockJournal({
           ) : null}
         </>
       ) : null}
-      {transfer !== undefined ? (
-        <TransferDialog
-          options={{ embedded: "", product: String(transfer) }}
-          onClose={() => setTransfer(undefined)}
-        />
-      ) : null}
+      {page ? <NativePageDialog {...page} onClose={() => setPage(undefined)} /> : null}
       {overview !== undefined ? (
         <ProductOverview
           productId={overview}
+          memory={overviewMemory}
           embedded={search.embedded !== undefined}
           expanded={overviewExpanded}
           onExpandedChange={setOverviewExpanded}
           onReturn={async () => {
+            const signal = owner.current?.signal;
+
+            if (!signal || signal.aborted) return;
             setText("");
             setTransaction("");
             setLocation("");
             setUser("");
             await reload();
-            requestAnimationFrame(() => table.current?.focus());
+            requestAnimationFrame(() => {
+              if (!signal.aborted) table.current?.focus();
+            });
           }}
           onClose={() => setOverview(undefined)}
         />
@@ -657,16 +777,34 @@ export function ProductJournal({
   disabled: boolean;
 }) {
   const { t } = useI18n();
-  const features = useFeatures();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-
-  if (!features.enabled("STOCK")) return null;
 
   return (
     <>
-      <button type="button" className="btn" disabled={disabled} onClick={() => setOpen(true)}>
+      <a
+        className={`btn show-as-dialog-link${disabled ? " disabled" : ""}`}
+        aria-disabled={disabled || undefined}
+        data-dialog-type="table"
+        href={
+          router.buildLocation({ to: "/stockjournal", search: {} }).publicHref +
+          `?embedded&product=${productId}`
+        }
+        onClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.metaKey ||
+            event.altKey
+          )
+            return;
+          event.preventDefault();
+          setOpen(true);
+        }}
+      >
         {t("Stock journal")}
-      </button>
+      </a>
       {open ? (
         <JournalDialog productId={productId} name={name} onClose={() => setOpen(false)} />
       ) : null}
@@ -674,43 +812,13 @@ export function ProductJournal({
   );
 }
 
-function JournalDialog({
+export function JournalDialog({
   productId,
-  name,
   onClose,
 }: {
   productId: number;
   name: string;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
-  const dialog = useModalDialog();
-  const title = useId();
-  const [search, setSearch] = useState<JournalSearch>({ product: String(productId), embedded: "" });
-
-  return (
-    <dialog
-      ref={dialog}
-      className="recipe-action-dialog stock-journal-dialog"
-      aria-labelledby={title}
-      onCancel={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-      }}
-    >
-      <div className="section-heading">
-        <h2 id={title}>{t("Stock journal")}</h2>
-        <button type="button" className="btn btn-ghost" onClick={onClose}>
-          {t("Close")}
-        </button>
-      </div>
-      <p>{name}</p>
-      <StockJournal
-        key={`${search.product}:${search.months}`}
-        search={search}
-        onChange={setSearch}
-      />
-    </dialog>
-  );
+  return <NativeStockPageDialog kind="stockjournal" productId={productId} onClose={onClose} />;
 }

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
-import { Route } from "@/routes/calendar";
+import { Route } from "@/routes/calendar-agenda";
 
 test("the agenda shows stock dates and named meals at their section time", async () => {
   vi.stubGlobal(

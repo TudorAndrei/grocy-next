@@ -24,6 +24,7 @@ const detailsSchema = z.object({
     name: z.string(),
     enable_tare_weight_handling: z.number().nullable(),
     should_not_be_frozen: z.number().nullable(),
+    tare_weight: z.number().nullable().optional(),
   }),
   stock_amount: z.number(),
   quantity_unit_stock: z.object({
@@ -56,57 +57,47 @@ const entriesSchema = z.array(
 
 export type TransferEntry = z.infer<typeof entriesSchema>[number];
 
+export type TransferDetails = z.infer<typeof detailsSchema>;
+
+export type TransferLocation = z.infer<typeof locationsSchema>[number];
+
 export async function getTransferCatalog(signal: AbortSignal) {
   return stockEditorSchema.parse(await request("/api/v2/stock/transfer/editor", { signal }));
 }
 
 export async function getTransferDetails(productId: string, signal?: AbortSignal) {
-  return detailsSchema.parse(await request(`/api/stock/products/${productId}`, { signal }));
-}
-
-export async function getTransferSelection(
-  productId: string,
-  signal: AbortSignal,
-  code?: { barcode: string; stockId?: string },
-) {
-  const details = await getTransferDetails(productId, signal);
-
-  let stockLocation: number | undefined;
-
-  const readLocations = request(`/api/stock/products/${productId}/locations`, { signal }).then(
-    (result) => {
-      // The native location callback replaces an earlier stock-code source value.
-      stockLocation = undefined;
-
-      return locationsSchema.parse(result);
-    },
+  return detailsSchema.parse(
+    await request(`/api/stock/products/${productId}`, { signal, cache: "default" }),
   );
-
-  const readBarcode = (async () => {
-    if (!code) return undefined;
-    const params = new URLSearchParams([["query[]", `barcode=${code.barcode}`]]);
-
-    return z
-      .array(z.object({ amount: z.number().nullable(), qu_id: z.number().nullable() }))
-      .parse(await request(`/api/objects/product_barcodes_view?${params}`, { signal }))[0];
-  })();
-
-  const readStockLocation = (async () => {
-    if (code?.stockId === undefined) return;
-    const params = new URLSearchParams([["query[]", `stock_id=${code.stockId}`]]);
-
-    stockLocation = z
-      .array(z.object({ location_id: z.number() }))
-      .parse(await request(`/api/objects/stock?${params}`, { signal }))[0]?.location_id;
-  })();
-
-  const [locations, barcode] = await Promise.all([readLocations, readBarcode, readStockLocation]);
-
-  return { details, locations, barcode, stockLocation };
 }
 
-export type TransferSelection = Awaited<ReturnType<typeof getTransferSelection>>;
+export async function getTransferLocations(productId: string, signal: AbortSignal) {
+  return locationsSchema.parse(
+    await request(`/api/stock/products/${productId}/locations`, { signal, cache: "default" }),
+  );
+}
+
+export async function getTransferBarcode(code: string, signal: AbortSignal) {
+  const params = new URLSearchParams([["query[]", `barcode=${code}`]]);
+
+  return z
+    .array(z.object({ amount: z.number().nullable(), qu_id: z.number().nullable() }))
+    .parse(
+      await request(`/api/objects/product_barcodes_view?${params}`, { signal, cache: "default" }),
+    )[0];
+}
+
+export async function getTransferStockLocation(stockId: string, signal: AbortSignal) {
+  const params = new URLSearchParams([["query[]", `stock_id=${stockId}`]]);
+
+  return z
+    .array(z.object({ location_id: z.number() }))
+    .parse(await request(`/api/objects/stock?${params}`, { signal, cache: "default" }))[0]
+    ?.location_id;
+}
 
 export async function getTransferEntries(productId: string, signal: AbortSignal) {
-  return entriesSchema.parse(await request(`/api/stock/products/${productId}/entries`, { signal }));
+  return entriesSchema.parse(
+    await request(`/api/stock/products/${productId}/entries`, { signal, cache: "default" }),
+  );
 }

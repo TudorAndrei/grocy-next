@@ -7,15 +7,19 @@ import {
   useEffect,
   useEffectEvent,
   useRef,
+  useId,
   useState,
   type ReactNode,
 } from "react";
+import { useModalDialog } from "@/hooks/useModalDialog";
 
 type Toast = {
   id: number;
   message: string;
-  tone: "ok" | "error";
-  undo?: () => Promise<void>;
+  content?: ReactNode;
+  tone: "ok" | "error" | "warning" | "info";
+  undo?: () => Promise<void | false>;
+  details?: string;
 };
 
 type Notify = (toast: Omit<Toast, "id" | "tone"> & { tone?: Toast["tone"] }) => void;
@@ -26,11 +30,12 @@ export function useNotify(): Notify {
   return useContext(ToastContext);
 }
 
-const TOAST_MS = 6000;
+const TOAST_MS = 20000;
 
 export function Toaster({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [details, setDetails] = useState<Array<{ id: number; value: string }>>([]);
   const nextId = useRef(1);
 
   const [host] = useState(() => {
@@ -91,30 +96,84 @@ export function Toaster({ children }: { children: ReactNode }) {
       {children}
       {createPortal(
         toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onDone={() => dismiss(toast.id)} />
+          <ToastItem
+            key={toast.id}
+            toast={toast}
+            onDone={() => dismiss(toast.id)}
+            onDetails={() => {
+              const value = toast.details;
+
+              if (value === undefined) return;
+              setDetails((current) => [...current, { id: toast.id, value }]);
+              dismiss(toast.id);
+            }}
+          />
         )),
         host,
+      )}
+      {createPortal(
+        details.map((detail) => (
+          <ErrorDetailsDialog
+            key={detail.id}
+            value={detail.value}
+            onClose={() => setDetails((current) => current.filter((item) => item.id !== detail.id))}
+          />
+        )),
+        document.body,
       )}
     </ToastContext.Provider>
   );
 }
 
-function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
+function ToastItem({
+  toast,
+  onDone,
+  onDetails,
+}: {
+  toast: Toast;
+  onDone: () => void;
+  onDetails: () => void;
+}) {
   const { t: tr } = useI18n();
 
   const [undoing, setUndoing] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const finish = useEffectEvent(onDone);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [timeout, setTimeoutMs] = useState(TOAST_MS);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => finish(), TOAST_MS);
+    if (hovered || focused) return;
+    const timer = window.setTimeout(() => finish(), timeout);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [hovered, focused, timeout]);
 
   return (
-    <div className="toast" data-tone={toast.tone}>
-      <span>{failed ?? toast.message}</span>
+    <div
+      className="toast"
+      data-tone={toast.tone}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        setTimeoutMs(5000);
+      }}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget)) return;
+        setFocused(false);
+        setTimeoutMs(5000);
+      }}
+    >
+      {toast.details !== undefined ? (
+        <button type="button" className="toast-details" onClick={onDetails}>
+          <span>{toast.message}</span>
+          <span>{tr("Click to show technical details")}</span>
+        </button>
+      ) : (
+        <span>{failed ?? toast.content ?? toast.message}</span>
+      )}
       {toast.undo && !failed ? (
         <button
           type="button"
@@ -124,8 +183,10 @@ function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
             setUndoing(true);
 
             try {
-              await toast.undo?.();
-              onDone();
+              const result = await toast.undo?.();
+
+              if (result === false) setUndoing(false);
+              else onDone();
             } catch (err) {
               setFailed(err instanceof Error ? err.message : "Undo failed.");
             }
@@ -140,5 +201,36 @@ function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
         </svg>
       </button>
     </div>
+  );
+}
+
+function ErrorDetailsDialog({ value, onClose }: { value: string; onClose: () => void }) {
+  const { t } = useI18n();
+  const dialog = useModalDialog();
+  const title = useId();
+  const ok = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    ok.current?.focus();
+  }, []);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="recipe-action-dialog wider"
+      aria-labelledby={title}
+      onCancel={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }}
+    >
+      <h2 id={title}>{t("Error details")}</h2>
+      <p className="error-details-text">{value}</p>
+      <div className="actions">
+        <button ref={ok} type="button" className="btn btn-primary" onClick={onClose}>
+          {t("OK")}
+        </button>
+      </div>
+    </dialog>
   );
 }

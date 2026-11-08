@@ -7,6 +7,7 @@ services:
       GROCY_HOST: "0.0.0.0"
       GROCY_PORT: "8000"
       GROCY_BASE_PATH: "${GROCY_BASE_PATH:-}"
+      GROCY_BASE_URL: "${GROCY_BASE_URL:-${GROCY_BASE_PATH:-/}}"
       GROCY_DATABASE_URL: "sqlite+aiosqlite:////data/grocy.db"
       GROCY_FILES_ROOT: "/data/files"
       GROCY_SEED_DEMO_DATA: "${GROCY_SEED_DEMO_DATA:-true}"

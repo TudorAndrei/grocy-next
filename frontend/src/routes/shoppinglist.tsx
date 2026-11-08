@@ -1,9 +1,5 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { shoppingSearchSchema } from "@/lib/shopping-list";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/shoppinglist")({
-  validateSearch: shoppingSearchSchema,
-  beforeLoad: ({ search }) => {
-    throw redirect({ to: "/shopping", search, replace: true });
-  },
+  component: Outlet,
 });

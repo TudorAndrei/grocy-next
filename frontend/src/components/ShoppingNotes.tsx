@@ -18,14 +18,29 @@ const editorMessage = z.object({
   fullscreen: z.boolean(),
 });
 
+const interactionMessage = z.discriminatedUnion("kind", [
+  z.object({
+    channel: z.literal("grocy-shopping-notes"),
+    kind: z.literal("activity"),
+    event: z.enum(["mousemove", "mousedown", "click", "scroll", "keypress"]),
+  }),
+  z.object({
+    channel: z.literal("grocy-shopping-notes"),
+    kind: z.literal("dirty"),
+    event: z.enum(["keyup", "paste", "change", "click"]),
+  }),
+]);
+
 export function ShoppingNotes({
   listId,
   description,
   onDraft,
+  initialDocument,
 }: {
   listId: number;
   description: string | null | undefined;
   onDraft: (notes: { html: string; visible: boolean }) => void;
+  initialDocument?: string;
 }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
@@ -48,7 +63,11 @@ export function ShoppingNotes({
       (await fetchApiDocument(`/api/v2/shopping-lists/${listId}/notes/editor`, signal)).text(),
     staleTime: Infinity,
     gcTime: 0,
+    enabled: initialDocument === undefined,
   });
+
+  const editorDocument = initialDocument ?? document.data;
+  const documentError = initialDocument === undefined ? document.error : null;
 
   const save = useMutation({
     mutationFn: (html: string) => api.updateObject("shopping_lists", listId, { description: html }),
@@ -88,6 +107,19 @@ export function ShoppingNotes({
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow || event.origin !== "null") return;
+      const interaction = interactionMessage.safeParse(event.data);
+
+      if (interaction.success) {
+        if (interaction.data.kind === "activity")
+          window.dispatchEvent(new CustomEvent("grocy-native-activity"));
+        else {
+          frame.current?.classList.add("is-dirty");
+          frame.current?.closest("form")?.classList.add("is-dirty");
+        }
+
+        return;
+      }
+
       const parsed = editorMessage.safeParse(event.data);
 
       if (!parsed.success) return;
@@ -189,19 +221,19 @@ export function ShoppingNotes({
           ) : null}
         </div>
       </div>
-      {document.isPending || (document.isSuccess && !state.ready) ? (
+      {(!editorDocument && document.isPending) || (editorDocument && !state.ready) ? (
         <LoadingBlock label={t("Loading…")} />
       ) : null}
-      {document.error || save.error ? (
-        <ErrorBlock message={(document.error ?? save.error)?.message ?? ""} />
+      {documentError || save.error ? (
+        <ErrorBlock message={(documentError ?? save.error)?.message ?? ""} />
       ) : null}
-      {document.data ? (
+      {editorDocument ? (
         <iframe
           ref={frame}
           className="shopping-notes-frame"
           title={t("Notes")}
           sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-          srcDoc={document.data}
+          srcDoc={editorDocument}
           style={{ height: state.height }}
         />
       ) : null}

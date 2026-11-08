@@ -103,7 +103,12 @@ test.each([
 
         if (path.startsWith("/api/stock/volatile"))
           return Response.json({
-            missing_products: [{ id: 1, name: "Milk", amount_missing: 1, is_partly_in_stock: 1 }],
+            due_products: [],
+            overdue_products: [],
+            expired_products: [],
+            missing_products: [
+              { id: 1, name: "Milk", amount_missing: 1, is_partly_in_stock: 1, product: milk },
+            ],
           });
 
         if (path.startsWith("/api/v2/shopping-lists/")) return Response.json({ items: [] });

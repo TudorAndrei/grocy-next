@@ -1,49 +1,73 @@
-import { initialUserfields, saveUserfields, type FieldEdits } from "@/lib/userfields";
-import { useId, useRef, useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useModalDialog } from "@/hooks/useModalDialog";
-import { shoppingEditor, shoppingListsQuery, type shoppingEditorSchema } from "@/lib/shopping-list";
-import type { z } from "zod";
-import { ErrorBlock } from "./ErrorBlock";
-import { LoadingBlock } from "./LoadingBlock";
-import { UserfieldsEditor } from "./UserfieldsEditor";
+import { shoppingListsQuery } from "@/lib/shopping-list";
+import { Link } from "@tanstack/react-router";
+import { EmbeddedPageDialog, type EmbeddedPage } from "./EmbeddedPageDialog";
 
 export function ShoppingListActions({
   listId,
   name,
-  onChanged,
+  onDeleted,
+  editHref,
 }: {
   listId: number;
   name: string;
-  onChanged: (id: number) => void;
+  onDeleted: () => void;
+  editHref?: string;
 }) {
   const { t } = useI18n();
   const menu = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const firstAction = useRef<HTMLButtonElement>(null);
+  const firstAction = useRef<HTMLAnchorElement>(null);
   const [expanded, setExpanded] = useState(false);
   const menuId = useId();
-  const [action, setAction] = useState<"create" | "edit" | "delete">();
+  const [deleting, setDeleting] = useState(false);
+  const [embedded, setEmbedded] = useState<EmbeddedPage>();
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
 
-  const open = (next: "create" | "edit" | "delete") => {
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  const close = () => {
+    setDeleting(false);
+  };
+
+  const open = () => {
     menu.current?.hidePopover();
     trigger.current?.focus();
-    setAction(next);
+    setDeleting(true);
+  };
+
+  const openEditor = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+      return;
+    event.preventDefault();
+    menu.current?.hidePopover();
+    trigger.current?.focus();
+    setEmbedded({ id: Date.now(), url: event.currentTarget.href, dialogType: "" });
   };
 
   const client = useQueryClient();
 
-  const changed = async (id: number) => {
-    await Promise.all([
-      client.invalidateQueries({ queryKey: shoppingListsQuery.queryKey }),
-      client.invalidateQueries({ queryKey: queryKeys.objects("shopping_lists") }),
-      client.invalidateQueries({ queryKey: queryKeys.shopping(id) }),
-    ]);
-    setAction(undefined);
-    onChanged(id);
-  };
+  const deletion = useMutation({
+    mutationFn: (id: number) => api.deleteObject("shopping_lists", id),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: shoppingListsQuery.queryKey }),
+        client.invalidateQueries({ queryKey: queryKeys.objects("shopping_lists") }),
+        client.invalidateQueries({ queryKey: queryKeys.shopping(1) }),
+      ]);
+
+      if (alive.current) onDeleted();
+    },
+  });
 
   return (
     <>
@@ -69,65 +93,69 @@ export function ShoppingListActions({
           if (open) firstAction.current?.focus();
         }}
       >
-        <button
-          type="button"
+        <Link
+          to="/shoppinglist/$listId"
+          params={{ listId: "new" }}
+          search={{ embedded: "" }}
           className="btn btn-ghost"
           ref={firstAction}
-          onClick={() => open("create")}
+          onClick={openEditor}
         >
           {t("New shopping list")}
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={() => open("edit")}>
-          {t("Edit shopping list")}
-        </button>
+        </Link>
+        {editHref ? (
+          <a className="btn btn-ghost" href={editHref} onClick={openEditor}>
+            {t("Edit shopping list")}
+          </a>
+        ) : (
+          <Link
+            to="/shoppinglist/$listId"
+            params={{ listId: String(listId) }}
+            search={{ embedded: "" }}
+            className="btn btn-ghost"
+            onClick={openEditor}
+          >
+            {t("Edit shopping list")}
+          </Link>
+        )}
         <button
           type="button"
           className="btn btn-danger-quiet"
           disabled={listId === 1}
-          onClick={() => open("delete")}
+          onClick={open}
         >
           {t("Delete shopping list")}
         </button>
       </div>
-      {action === "delete" ? (
+      {deleting ? (
         <DeleteList
-          listId={listId}
           name={name}
-          onClose={() => setAction(undefined)}
-          onDeleted={() => changed(1)}
+          onClose={close}
+          onDelete={() => {
+            deletion.mutate(listId);
+            close();
+          }}
         />
       ) : null}
-      {action === "create" || action === "edit" ? (
-        <ListForm
-          key={`${action}:${listId}`}
-          listId={action === "edit" ? listId : undefined}
-          onClose={() => setAction(undefined)}
-          onSaved={changed}
-        />
+      {embedded ? (
+        <EmbeddedPageDialog page={embedded} onClose={() => setEmbedded(undefined)} />
       ) : null}
     </>
   );
 }
 
 function DeleteList({
-  listId,
   name,
   onClose,
-  onDeleted,
+  onDelete,
 }: {
-  listId: number;
   name: string;
   onClose: () => void;
-  onDeleted: () => Promise<void>;
+  onDelete: () => void;
 }) {
   const { t } = useI18n();
   const dialog = useModalDialog();
   const title = useId();
-
-  const deletion = useMutation({
-    mutationFn: () => api.deleteObject("shopping_lists", listId),
-    onSuccess: onDeleted,
-  });
 
   return (
     <dialog
@@ -137,153 +165,19 @@ function DeleteList({
       onCancel={(event) => {
         event.preventDefault();
 
-        if (!deletion.isPending) onClose();
+        onClose();
       }}
     >
       <h2 id={title}>{t("Delete shopping list")}</h2>
       <p>{t('Are you sure you want to delete shopping list "%s"?', name)}</p>
-      {deletion.isError ? <ErrorBlock message={deletion.error.message} /> : null}
       <div className="actions">
-        <button type="button" className="btn" disabled={deletion.isPending} onClick={onClose}>
+        <button type="button" className="btn" onClick={onClose}>
           {t("No")}
         </button>
-        <button
-          type="button"
-          className="btn btn-danger-quiet"
-          disabled={deletion.isPending}
-          onClick={() => deletion.mutate()}
-        >
+        <button type="button" className="btn btn-danger-quiet" onClick={onDelete}>
           {t("Yes")}
         </button>
       </div>
     </dialog>
-  );
-}
-
-function ListForm({
-  listId,
-  onClose,
-  onSaved,
-}: {
-  listId?: number;
-  onClose: () => void;
-  onSaved: (id: number) => Promise<void>;
-}) {
-  const { t } = useI18n();
-  const dialog = useModalDialog();
-  const title = useId();
-  const [pending, setPending] = useState(false);
-
-  const editor = useQuery({
-    queryKey: ["shopping-list-editor", listId],
-    queryFn: () => shoppingEditor(listId),
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnWindowFocus: false,
-  });
-
-  return (
-    <dialog
-      ref={dialog}
-      className="recipe-action-dialog shopping-list-dialog"
-      aria-labelledby={title}
-      onCancel={(event) => {
-        event.preventDefault();
-
-        if (!pending) onClose();
-      }}
-    >
-      <h2 id={title}>{t(listId === undefined ? "Create shopping list" : "Edit shopping list")}</h2>
-      {editor.isLoading ? <LoadingBlock label={t("Loading…")} /> : null}
-      {editor.isError ? <ErrorBlock message={editor.error.message} /> : null}
-      {editor.isSuccess ? (
-        <ListFields data={editor.data} onSaved={onSaved} onClose={onClose} onPending={setPending} />
-      ) : (
-        <button type="button" className="btn" onClick={onClose}>
-          {t("Cancel")}
-        </button>
-      )}
-    </dialog>
-  );
-}
-
-function ListFields({
-  data,
-  onSaved,
-  onClose,
-  onPending,
-}: {
-  data: z.infer<typeof shoppingEditorSchema>;
-  onSaved: (id: number) => Promise<void>;
-  onClose: () => void;
-  onPending: (value: boolean) => void;
-}) {
-  const { t } = useI18n();
-  const [name, setName] = useState(data.list?.name ?? "");
-
-  const [values, setValues] = useState<FieldEdits>(() =>
-    initialUserfields(data.fields, data.values, !data.list),
-  );
-
-  const createdId = useRef<number>(undefined);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      onPending(true);
-      let id = data.list?.id ?? createdId.current;
-      const creating = id === undefined;
-
-      if (id === undefined) {
-        const result = await api.createObject("shopping_lists", { name });
-        id = Number(result.created_object_id);
-        createdId.current = id;
-      }
-
-      await saveUserfields("shopping_lists", id, data.fields, values, (field, edit) =>
-        setValues((current) => ({ ...current, [field]: edit })),
-      );
-
-      if (!creating) await api.updateObject("shopping_lists", id, { name });
-
-      return id;
-    },
-    onSuccess: onSaved,
-    onSettled: () => onPending(false),
-  });
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    save.mutate();
-  };
-
-  return (
-    <form onSubmit={submit}>
-      <label className="field">
-        {t("Name")}
-        <input
-          autoFocus
-          required
-          value={name}
-          disabled={save.isPending}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </label>
-      <UserfieldsEditor
-        fields={data.fields}
-        values={values}
-        creating={!data.list}
-        disabled={save.isPending}
-        onChange={(field, edit) => setValues((current) => ({ ...current, [field]: edit }))}
-      />
-      {save.isError ? <ErrorBlock message={save.error.message} /> : null}
-      <div className="actions">
-        <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
-          {t("Cancel")}
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={save.isPending}>
-          {t("Save")}
-        </button>
-      </div>
-    </form>
   );
 }

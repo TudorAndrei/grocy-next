@@ -1,36 +1,51 @@
 import { useI18n } from "@/lib/i18n";
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import moment from "moment/min/moment-with-locales.js";
+import { z } from "zod";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntityManager } from "@/components/EntityManager";
 import { ErrorBlock } from "@/components/ErrorBlock";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { PageHeader } from "@/components/PageHeader";
 import { api } from "@/lib/api";
+import { useFeatures } from "@/lib/features";
 import type { EntityRow } from "@/lib/entities";
 import type { ProductSummary, Recipe } from "@/lib/types";
 import { objectsQuery, productsQuery, recipesQuery } from "@/hooks/queries";
 
-export const Route = createFileRoute("/meal-plan")({ component: MealPlanPage });
+export const mealPlanSearchSchema = z
+  .object({ start: z.string().optional().catch(undefined) })
+  .passthrough();
+
+export const Route = createFileRoute("/meal-plan")({
+  validateSearch: mealPlanSearchSchema,
+  component: MealPlanPage,
+});
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 function toDateKey(date: Date): string {
-  const y = date.getFullYear();
+  const y = String(date.getFullYear()).padStart(4, "0");
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
 
   return `${y}-${m}-${d}`;
 }
 
-function startOfWeek(date: Date): Date {
-  const monday = new Date(date);
-  monday.setHours(0, 0, 0, 0);
-  const day = monday.getDay();
-  const offset = day === 0 ? -6 : 1 - day;
-  monday.setDate(monday.getDate() + offset);
+function bookmarkedDate(value: string | undefined): Date | undefined {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const date = new Date(`${value}T00:00:00`);
 
-  return monday;
+  return Number.isFinite(date.getTime()) && toDateKey(date) === value ? date : undefined;
+}
+
+function startOfWeek(date: Date, firstDay: number): Date {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() - firstDay + 7) % 7));
+
+  return start;
 }
 
 function addDays(date: Date, days: number): Date {
@@ -62,9 +77,46 @@ function mealLabel(
 
 function MealPlanPage() {
   const { t: tr } = useI18n();
+  const search = Route.useSearch();
+  const config = useFeatures().query.data;
+  const [openedAt] = useState(() => new Date());
+
+  const configuredFirstDay =
+    String(config?.MEAL_PLAN_FIRST_DAY_OF_WEEK ?? "") ||
+    String(config?.CALENDAR_FIRST_DAY_OF_WEEK ?? "");
+
+  const parsedFirstDay = Number.parseInt(configuredFirstDay, 10);
+
+  const firstDay =
+    parsedFirstDay === -1 && String(config?.MEAL_PLAN_FIRST_DAY_OF_WEEK ?? "") !== ""
+      ? openedAt.getDay()
+      : Number.isInteger(parsedFirstDay) && parsedFirstDay >= 0 && parsedFirstDay <= 6
+        ? parsedFirstDay
+        : moment.localeData(tr("moment_locale")).firstDayOfWeek();
+
+  const bookmarkKey = `${search.start ?? ""}:${firstDay}`;
+
+  const [selection, setSelection] = useState(() => ({
+    bookmarkKey,
+    date: startOfWeek(bookmarkedDate(search.start) ?? openedAt, firstDay),
+  }));
+
+  if (selection.bookmarkKey !== bookmarkKey) {
+    setSelection({
+      bookmarkKey,
+      date: startOfWeek(bookmarkedDate(search.start) ?? openedAt, firstDay),
+    });
+  }
+
+  const weekStart = selection.date;
+
+  const moveWeek = (offset: number) =>
+    setSelection((current) => ({
+      ...current,
+      date: addDays(current.date, offset),
+    }));
 
   const client = useQueryClient();
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const meals = useQuery(objectsQuery("meal_plan"));
   const sections = useQuery(objectsQuery("meal_plan_sections"));
   const recipes = useQuery(recipesQuery());
@@ -80,8 +132,9 @@ function MealPlanPage() {
 
   const days = useMemo(
     () =>
-      WEEKDAY_LABELS.map((label, index) => {
+      WEEKDAY_LABELS.map((_, index) => {
         const date = addDays(weekStart, index);
+        const label = WEEKDAY_LABELS[(date.getDay() + 6) % 7];
 
         return { label, date, key: toDateKey(date) };
       }),
@@ -131,29 +184,26 @@ function MealPlanPage() {
         lead={tr(
           "Plan the week by day. Complete meals or add missing ingredients to your shopping list.",
         )}
+        actions={
+          <Link className="btn btn-ghost" to="/mealplansections">
+            {tr("Configure sections")}
+          </Link>
+        }
       />
       {error ? <ErrorBlock message={error.message} /> : null}
       <div className="toolbar">
         <div className="actions" style={{ margin: 0 }}>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => setWeekStart((w) => addDays(w, -7))}
-          >
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveWeek(-7)}>
             {tr("Previous week")}
           </button>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={() => setWeekStart(startOfWeek(new Date()))}
+            onClick={() => setSelection({ bookmarkKey, date: startOfWeek(new Date(), firstDay) })}
           >
             {tr("This week")}
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => setWeekStart((w) => addDays(w, 7))}
-          >
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveWeek(7)}>
             {tr("Next week")}
           </button>
         </div>

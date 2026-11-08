@@ -225,6 +225,13 @@ kbd {
   line-height: 1.1;
 }
 
+.wordmark-initial {
+  display: none;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
 .wordmark-sub {
   font-stretch: 125%;
   font-weight: 600;
@@ -241,6 +248,31 @@ kbd {
   color: inherit;
   padding: 8px;
   cursor: pointer;
+}
+
+.rail-toggle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.rail-toggle:hover,
+.nav-master-toggle:hover {
+  background: rgb(230 235 248 / 12%);
+}
+
+.rail-toggle:focus-visible,
+.nav-master-toggle:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
 }
 
 .command-trigger {
@@ -296,6 +328,40 @@ kbd {
   color: #a9b7e2;
 }
 
+.nav-master-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.nav-master-toggle > span {
+  flex: 1;
+}
+
+.nav-master-toggle > .icon {
+  flex-shrink: 0;
+}
+
+.nav-master-links {
+  display: grid;
+  gap: 2px;
+}
+
+.nav-master-links[hidden] {
+  display: none;
+}
+
 .site-nav a {
   --mark: var(--mark-stock);
   position: relative;
@@ -330,6 +396,11 @@ kbd {
 
 .site-nav a:hover {
   background: #ffffff14;
+}
+
+.site-nav .not-allowed {
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 .site-nav a[aria-current="page"] {
@@ -630,8 +701,28 @@ kbd {
   color: var(--ink);
   overflow: auto;
 }
+.recipe-action-dialog.wider {
+  width: min(800px, calc(100% - 32px));
+}
+
 .recipe-action-dialog::backdrop {
   background: rgb(20 43 107 / 0.42);
+}
+
+.embedded-page-dialog {
+  width: min(800px, calc(100% - 32px));
+}
+.embedded-page-dialog.form {
+  width: min(650px, calc(100% - 32px));
+}
+.embedded-page-dialog.table {
+  width: min(90vw, calc(100% - 32px));
+}
+.embedded-page-frame {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  border: 0;
 }
 .recipe-action-dialog h2 {
   margin-top: 0;
@@ -667,6 +758,106 @@ kbd {
 .recipe-ingredients {
   list-style: none;
   padding: 0;
+}
+
+.form-grid.recipe-editor {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.recipe-editor > * {
+  min-inline-size: 0;
+}
+
+.recipe-editor aside > section + section {
+  margin-block-start: 28px;
+}
+
+@media (max-width: 1180px) {
+  .form-grid.recipe-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 901px) {
+  .app-shell[data-compact="true"] {
+    --rail: 76px;
+  }
+
+  .app-shell[data-compact="true"] .site-rail {
+    padding-inline: 12px;
+  }
+
+  .app-shell[data-compact="true"] .rail-head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .app-shell[data-compact="true"] .wordmark {
+    align-items: center;
+    padding-inline: 0;
+  }
+
+  .app-shell[data-compact="true"] .wordmark-initial {
+    display: block;
+  }
+
+  .app-shell[data-compact="true"] .wordmark-name,
+  .app-shell[data-compact="true"] .wordmark-sub,
+  .app-shell[data-compact="true"] .command-trigger > span,
+  .app-shell[data-compact="true"] .command-trigger > kbd,
+  .app-shell[data-compact="true"] .nav-group-label,
+  .app-shell[data-compact="true"] .nav-master-toggle > .icon:last-child,
+  .app-shell[data-compact="true"] .sign-out-label,
+  .app-shell[data-compact="true"] .native-account-trigger > span,
+  .app-shell[data-compact="true"] .native-account-trigger > .icon:last-child,
+  .app-shell[data-compact="true"] .native-view-settings-trigger > span,
+  .app-shell[data-compact="true"] .native-view-settings-trigger > .icon:last-child {
+    display: none;
+  }
+
+  .app-shell[data-compact="true"] .nav-link-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .app-shell[data-compact="true"] .command-trigger,
+  .app-shell[data-compact="true"] .site-nav a,
+  .app-shell[data-compact="true"] .nav-master-toggle,
+  .app-shell[data-compact="true"] .sign-out,
+  .app-shell[data-compact="true"] .native-account-trigger,
+  .app-shell[data-compact="true"] .native-view-settings-trigger {
+    justify-content: center;
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+
+  .app-shell[data-compact="true"] .site-nav em {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+
+  .app-shell[data-compact="true"] .native-account-links,
+  .app-shell[data-compact="true"] .native-view-settings-controls {
+    position: fixed;
+    inset-inline-start: var(--rail);
+    inset-block-end: 16px;
+    width: 280px;
+    max-block-size: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid rgb(230 235 248 / 25%);
+    border-radius: var(--radius-sm);
+    background: var(--cobalt-fill);
+    color: #e6ebf8;
+    box-shadow: 8px 12px 28px rgb(16 37 94 / 25%);
+  }
 }
 
 .recipe-ingredient-group h3,
@@ -722,6 +913,28 @@ kbd {
   display: grid;
   gap: 28px;
   margin-block: 24px;
+}
+
+.equipment-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.equipment-list,
+.equipment-selected {
+  min-width: 0;
+}
+
+.equipment-table tr[aria-selected="true"] {
+  background: var(--cobalt-soft);
+}
+
+@media (max-width: 1180px) {
+  .equipment-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .equipment-manual {
@@ -1177,6 +1390,71 @@ input[type="date"][data-empty="true"]::-webkit-datetime-edit {
   bottom: calc(100% + 4px);
 }
 
+.booking-calendar.is-inline {
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+}
+
+.shopping-preference-layout {
+  display: grid;
+  gap: 24px;
+  margin-block: 16px;
+}
+
+.shopping-preference-items {
+  min-width: 0;
+}
+
+.shopping-calendar {
+  align-self: start;
+  min-width: 0;
+}
+
+.shopping-calendar > h2 {
+  margin: 0;
+  padding: 12px 16px;
+  border-block-end: 1px solid var(--line);
+  font-size: 1rem;
+}
+
+.native-settings {
+  max-width: 36rem;
+}
+
+@media (min-width: 768px) {
+  .shopping-preference-layout[data-calendar="true"] {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .shopping-preference-layout[data-calendar="true"] > .shopping-preference-items {
+    grid-column: 1;
+  }
+
+  .shopping-preference-layout[data-calendar="true"] > .shopping-calendar {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .shopping-preference-layout[data-calendar="true"]
+    > :not(.shopping-preference-items, .shopping-calendar) {
+    grid-column: 1;
+  }
+}
+
+@media print {
+  .shopping-calendar {
+    display: none;
+  }
+
+  .shopping-preference-layout {
+    display: block;
+  }
+}
+
 .booking-calendar button {
   width: 100%;
   min-height: 36px;
@@ -1370,6 +1648,20 @@ input[type="checkbox"] {
 
 .journal-filters {
   align-items: end;
+}
+
+.household-journal-filter-toggle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .household-journal-filter-toggle {
+    display: inline-flex;
+  }
+
+  .household-journal-filters[data-expanded="false"] {
+    display: none;
+  }
 }
 
 .journal-sort {
@@ -2051,6 +2343,29 @@ a.btn[aria-disabled="true"] {
   text-decoration: line-through;
 }
 
+.household-journal tr[data-undone="true"] .household-journal-name {
+  color: var(--ink-3);
+}
+
+.household-journal tr[data-skipped="true"] {
+  font-style: italic;
+}
+
+.household-journal tr[data-late="true"] td {
+  background: var(--tomato-soft);
+}
+
+.household-journal tr[data-undone="true"][data-late="true"] td {
+  color: var(--ink-2);
+}
+
+.stock-reference-table tr[data-disabled="true"] td,
+.stock-reference-table tr[data-disabled="true"] th,
+.household-master-table tr[data-disabled="true"] td,
+.household-master-table tr[data-disabled="true"] th {
+  color: var(--ink-3);
+}
+
 /* ---------- Shopping ---------- */
 
 .add-form {
@@ -2676,6 +2991,14 @@ a.btn[aria-disabled="true"] {
   background: var(--tomato);
 }
 
+.toast[data-tone="warning"] {
+  background: var(--mustard);
+}
+
+.toast[data-tone="info"] {
+  background: var(--cobalt);
+}
+
 .toast-undo {
   padding: 5px 12px;
   border-radius: 999px;
@@ -2685,6 +3008,33 @@ a.btn[aria-disabled="true"] {
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
+}
+
+.toast-details {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.toast-details > span {
+  display: block;
+}
+
+.toast-details > span + span {
+  margin-top: 1rem;
+}
+
+.error-details-text {
+  max-height: 60vh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 
 .toast-undo:hover {
@@ -2732,6 +3082,9 @@ a.btn[aria-disabled="true"] {
 }
 
 @media (max-width: 900px) {
+  .rail-toggle {
+    display: none;
+  }
   .site-rail {
     inset-inline-start: calc(-1 * min(300px, 86vw));
     transition: inset-inline-start 280ms var(--ease);
@@ -2971,6 +3324,101 @@ a.btn[aria-disabled="true"] {
     margin-inline-start: 0;
   }
 
+  .tasks-statistics .btn,
+  .overview-messages .btn {
+    max-inline-size: 100%;
+    text-align: start;
+    white-space: normal;
+  }
+
+  .tasks-table tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tasks-table td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .tasks-table td:has(> .row-actions),
+  .tasks-table th[scope="row"] {
+    grid-column: 1 / -1;
+  }
+
+  .tasks-table th[scope="row"] {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    font-stretch: normal;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .tasks-table .row-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .tasks-table .row-actions .btn {
+    flex: 1 1 6rem;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .chores-overview tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chores-overview td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .chores-overview td:has(> button.btn-ghost) {
+    grid-column: 1 / -1;
+  }
+
+  .chores-overview td:has(> button.btn-ghost) > .btn {
+    max-inline-size: 100%;
+    justify-content: flex-start;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .chores-overview td.row-actions {
+    flex-wrap: wrap;
+  }
+
+  .chores-overview td.row-actions > .btn {
+    flex: 1 1 6rem;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .household-master-table tr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .household-master-table td,
+  .household-master-table th[scope="row"] {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .household-master-table th[scope="row"] {
+    display: block;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+
   .household-table td.date,
   .products-table td.code {
     display: none;
@@ -3040,6 +3488,206 @@ a.btn[aria-disabled="true"] {
 .sign-out {
   margin-top: auto;
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.native-account {
+  margin-top: auto;
+  flex-shrink: 0;
+  border-top: 1px solid rgb(230 235 248 / 25%);
+  padding-top: 12px;
+}
+
+.native-account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.native-account-trigger > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.native-account-trigger > img {
+  flex-shrink: 0;
+  max-width: 32px;
+  max-height: 32px;
+  border-radius: 50%;
+}
+
+.native-account-trigger > .icon {
+  flex-shrink: 0;
+}
+
+.native-account-links {
+  display: grid;
+  gap: 2px;
+  padding-top: 4px;
+}
+
+.native-account-links > a {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.native-account-trigger:hover,
+.native-account-links > a:hover {
+  background: rgb(230 235 248 / 12%);
+}
+
+.native-account-trigger:focus-visible,
+.native-account-links > a:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+.native-view-settings {
+  flex-shrink: 0;
+  border-top: 1px solid rgb(230 235 248 / 25%);
+  padding-top: 12px;
+}
+
+.native-view-settings-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.native-view-settings-trigger > span {
+  flex: 1;
+}
+
+.native-view-settings-trigger > .icon,
+.native-view-setting > input {
+  flex-shrink: 0;
+}
+
+.native-view-settings-trigger:hover {
+  background: rgb(230 235 248 / 12%);
+}
+
+.native-view-settings-trigger:focus-visible,
+.native-view-setting > input:focus-visible,
+.native-view-settings-time > input:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+.native-view-settings-controls {
+  display: grid;
+  max-block-size: calc(100dvh - 96px);
+  overflow-y: auto;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.native-view-settings-controls[hidden] {
+  display: none;
+}
+
+.native-view-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding-block: 6px;
+  cursor: pointer;
+}
+
+.native-view-setting > input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  color: inherit;
+  accent-color: var(--cobalt-fill);
+}
+
+.native-view-setting > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.native-view-settings-night {
+  min-width: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.native-view-settings-night > legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.native-view-settings-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+
+.native-view-settings-times {
+  display: grid;
+  gap: 8px;
+}
+
+.native-view-settings-time {
+  display: grid;
+  gap: 4px;
+}
+
+.native-view-settings-time > input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--cobalt-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.native-view-settings-time > input[readonly] {
+  background: var(--cobalt-soft);
+}
+
+.native-view-settings-time > input[aria-invalid="true"] {
+  border-color: var(--tomato-fill);
+  background: var(--tomato-soft);
+  color: var(--tomato);
+}
+
+.native-view-settings-wake {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(230 235 248 / 25%);
 }
 
 .setup-page {
@@ -3283,6 +3931,27 @@ a.btn[aria-disabled="true"] {
   margin-bottom: 16px;
 }
 
+.native-permissions {
+  list-style: none;
+  margin-block: 8px 16px;
+  padding-inline-start: 24px;
+}
+
+.native-permissions > li > label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-block: 4px;
+}
+
+.native-permissions > li > label:has(input:disabled) {
+  color: var(--ink-2);
+}
+
+#apikeys-table tr[aria-selected="true"] > td {
+  background: var(--cobalt-soft);
+}
+
 .weekday-options {
   display: flex;
   flex-wrap: wrap;
@@ -3404,6 +4073,178 @@ a.btn[aria-disabled="true"] {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.native-mealplan-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-block: 16px;
+}
+
+.native-mealplan-toolbar h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.mealplan-week-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.native-mealplan-section {
+  margin-block: 24px;
+}
+
+.native-mealplan-section > h3 {
+  margin-block: 0 8px;
+  font-size: 1rem;
+}
+
+.native-mealplan-section > h3 small {
+  margin-inline-start: 10px;
+  color: var(--ink-2);
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.native-mealplan-scroll {
+  overflow-x: auto;
+}
+
+.native-mealplan-calendar {
+  width: 100%;
+  min-inline-size: 48rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.native-mealplan-calendar[data-mode="day"] {
+  min-inline-size: 0;
+}
+
+.native-mealplan-calendar th,
+.native-mealplan-calendar td {
+  padding: 8px;
+  border: 1px solid var(--line);
+  vertical-align: top;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.native-mealplan-calendar th {
+  background: var(--surface-sunk);
+  font-size: 0.875rem;
+}
+
+.native-mealplan-calendar td {
+  height: 6rem;
+}
+
+.native-mealplan-calendar td[data-today="true"] {
+  background: var(--surface-sunk);
+}
+
+.mealplan-day-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-block: 8px;
+}
+
+.mealplan-day-menu {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  display: grid;
+  min-inline-size: 10rem;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 2px 4px 12px rgb(0 0 0 / 12%);
+}
+
+.mealplan-day-summary {
+  display: block;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--line-soft);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.mealplan-event-card {
+  padding-block: 12px;
+  border-block-end: 1px solid var(--line-soft);
+}
+
+.mealplan-event-card:last-child {
+  border-block-end: 0;
+}
+
+.mealplan-event-card p {
+  margin-block: 4px;
+  font-size: 0.8rem;
+}
+
+.mealplan-event-title {
+  margin-block: 0 6px;
+  font-size: 1rem;
+}
+
+.mealplan-event-title[data-done="true"] {
+  color: var(--ink-2);
+  text-decoration: line-through;
+}
+
+.mealplan-event-title .btn {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mealplan-event-card .entity-picture {
+  width: auto;
+  max-width: 90%;
+  max-height: 140px;
+}
+
+.native-mealplan-calendar .row-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media print {
+  .native-mealplan {
+    --ink: #000;
+    --ink-2: #333;
+    --surface: #fff;
+    --surface-sunk: #fff;
+    --line: #bbb;
+    --line-soft: #ddd;
+    color: #000;
+    color-scheme: light;
+  }
+
+  .native-mealplan .mealplan-actions,
+  .native-mealplan dialog,
+  .native-mealplan .d-print-none {
+    display: none !important;
+  }
+
+  .native-mealplan-calendar {
+    min-inline-size: 0;
+  }
+
+  .native-mealplan-section {
+    break-inside: avoid;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -3851,6 +4692,21 @@ a.btn[aria-disabled="true"] {
   border: 0;
 }
 
+.household-editor {
+  max-inline-size: 48rem;
+}
+
+.household-editor > fieldset:first-child {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.household-editor > .actions {
+  margin-block-start: 1rem;
+}
+
 .stock-product-trigger {
   padding: 0;
   border: 0;
@@ -3875,7 +4731,24 @@ a.btn[aria-disabled="true"] {
   padding: 1rem;
 }
 
-.transfer-form > fieldset {
+.embedded-close {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+}
+
+.picker-form-lock {
+  display: inherit;
+  gap: inherit;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.transfer-form > .picker-form-lock > fieldset,
+.household-tracking-form > fieldset:first-child {
   display: grid;
   gap: 1rem;
   min-width: 0;
@@ -3886,6 +4759,10 @@ a.btn[aria-disabled="true"] {
 
 .transfer-form .field-row {
   margin: 0;
+}
+
+.tracking-description {
+  white-space: pre-line;
 }
 
 .transfer-product {
@@ -3998,4 +4875,490 @@ a.btn[aria-disabled="true"] {
 .product-price-chart {
   position: relative;
   height: 240px;
+}
+
+/* Native household tables retain independent due and refresh states. */
+.household-row-menu {
+  display: inline-block;
+  position: relative;
+}
+
+.household-row-menu-items {
+  position: fixed;
+  z-index: 30;
+  inset: auto;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  inline-size: min(16rem, calc(100vw - 2rem));
+  min-inline-size: min(16rem, calc(100vw - 2rem));
+  max-inline-size: calc(100vw - 2rem);
+  max-block-size: calc(100dvh - 1rem);
+  overflow-y: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.household-row-menu-items > :is(button, a) {
+  justify-content: flex-start;
+  text-align: start;
+  white-space: normal;
+}
+
+.household-related-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.household-related-toggle,
+.household-overview-filter-toggle {
+  display: none;
+}
+
+.chores-overview tr[data-status="duetoday"] > :is(td, th),
+.batteries-overview tr[data-info="true"] > :is(td, th),
+.tasks-table tr[data-due="duetoday"] > :is(td, th) {
+  background: var(--cobalt-soft);
+}
+
+.chores-overview tr[data-status="duesoon"] > :is(td, th),
+.batteries-overview tr[data-warning="true"] > :is(td, th),
+.tasks-table tr[data-due="duesoon"] > :is(td, th) {
+  background: var(--mustard-soft);
+}
+
+.chores-overview tr[data-status="overdue"] > :is(td, th),
+.batteries-overview tr[data-danger="true"] > :is(td, th),
+.tasks-table tr[data-due="overdue"] > :is(td, th) {
+  background: var(--tomato-soft);
+}
+
+.tasks-table tr[data-local-complete="true"] > :is(td, th) {
+  color: var(--ink-2);
+}
+
+.tasks-table tr.task-delete-fade {
+  animation: task-delete-fade 500ms both;
+}
+
+@keyframes task-delete-fade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media print {
+  .tasks-table tr.task-delete-fade {
+    animation-duration: 1ms;
+  }
+}
+
+body.cursor-busy,
+body.cursor-busy :is(button, a, input, select) {
+  cursor: progress;
+}
+
+@keyframes household-flash-odd {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
+
+@keyframes household-flash-even {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
+
+.batteries-overview tr[data-flash="odd"] > :is(td, th):not(:first-child) {
+  animation: household-flash-odd 1s;
+}
+
+.batteries-overview tr[data-flash="even"] > :is(td, th):not(:first-child) {
+  animation: household-flash-even 1s;
+}
+
+@media (max-width: 767px) {
+  .household-related-toggle,
+  .household-overview-filter-toggle {
+    display: inline-flex;
+  }
+
+  .household-related-links[data-expanded="false"],
+  .household-overview-filters[data-expanded="false"] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .batteries-overview tr[data-flash] > :is(td, th) {
+    animation: none;
+  }
+}
+
+.userobject-editor .userfields-editor {
+  border: 0;
+  padding: 0;
+}
+.userobject-editor .userfields-editor > legend {
+  display: none;
+}
+
+.native-about {
+  max-width: 64rem;
+  margin-inline: auto;
+}
+
+.embedded-main .native-about > .page-header {
+  padding-right: 3.5rem;
+}
+
+.about-system-info {
+  margin-block: 24px;
+  max-width: 100%;
+}
+
+.about-system-info :is(th, td) {
+  padding: 6px 12px;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.about-system-info th {
+  text-align: end;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  .about-system-info {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .about-system-info th {
+    width: 50%;
+    white-space: normal;
+  }
+}
+
+.about-changelog {
+  display: grid;
+  gap: 12px;
+  margin-block: 24px;
+}
+
+.about-release > h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.about-release-toggle {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.about-release-toggle:hover {
+  background: var(--surface-sunk);
+}
+
+.about-release pre {
+  overflow-x: auto;
+}
+
+.about-thanks,
+.about-credits {
+  padding-block: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.about-credits {
+  color: var(--ink-3);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.scanner-diagnostic {
+  display: grid;
+  gap: 20px;
+}
+
+.scanner-diagnostic-counts {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.scanner-diagnostic-counts > [data-result] {
+  padding: 6px 10px;
+}
+
+.scanner-diagnostic-counts [data-result="hit"],
+.scanner-diagnostic-history option[data-result="hit"] {
+  color: var(--green);
+}
+
+.scanner-diagnostic-counts [data-result="miss"],
+.scanner-diagnostic-history option[data-result="miss"] {
+  color: var(--tomato);
+}
+
+.scanner-diagnostic-counts [data-flash="odd"] {
+  animation: household-flash-odd 1s;
+}
+
+.scanner-diagnostic-counts [data-flash="even"] {
+  animation: household-flash-even 1s;
+}
+
+.scanner-diagnostic-history {
+  width: 100%;
+  max-height: 60vh;
+}
+
+.native-api-main {
+  min-height: 100dvh;
+}
+
+.native-api-browser iframe {
+  width: 100%;
+  min-height: 100dvh;
+  border: 0;
+  display: block;
+}
+
+.shopping-purchase-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.native-calendar iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+
+.native-calendar-actions,
+.native-calendar-related-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.native-calendar-actions-toggle {
+  display: none;
+}
+
+.native-products-related,
+.native-product-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.native-products-related {
+  flex-wrap: wrap;
+}
+
+.native-products-filters {
+  margin-block: 16px;
+}
+
+.native-products-filters .field {
+  flex: 1 1 12rem;
+}
+
+.native-products-filters-toggle,
+.native-products-related-toggle {
+  display: none;
+}
+
+.native-products-scroll {
+  overflow-x: auto;
+}
+
+.native-products-table {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.native-products-table th[scope="row"] {
+  color: var(--ink);
+}
+
+.native-products .productcard-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.native-products .productcard-trigger:hover {
+  color: var(--cobalt);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.native-products .productcard-trigger .icon {
+  color: var(--ink-3);
+}
+
+.native-product-picture .entity-picture {
+  width: 64px;
+  height: 64px;
+  max-height: 64px;
+}
+
+.native-products-table .btn > .entity-picture {
+  width: 32px;
+  height: 32px;
+  max-height: 32px;
+}
+
+.native-products-table .native-product-inactive :is(td, th) {
+  color: var(--ink-3);
+}
+
+@media (max-width: 767px) {
+  .native-calendar-actions-toggle {
+    display: inline-flex;
+  }
+
+  .native-calendar-related-links[data-expanded="false"] {
+    display: none;
+  }
+
+  .native-products-filters-toggle,
+  .native-products-related-toggle {
+    display: inline-flex;
+  }
+
+  .native-products-filters[data-expanded="false"],
+  .native-products-related[data-expanded="false"] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanner-diagnostic-counts [data-flash] {
+    animation: none;
+  }
+}
+
+.native-stock-row-menu,
+.native-recipe-row-menu {
+  position: fixed;
+  z-index: 1100;
+  display: grid;
+  inline-size: max-content;
+  min-inline-size: min(10rem, calc(100vw - 1rem));
+  max-inline-size: calc(100vw - 1rem);
+  max-block-size: calc(100dvh - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.native-stock-row-menu[data-variant="journal"] {
+  inline-size: min(400px, 96vw);
+}
+
+.native-stock-row-menu > :is(a, button),
+.native-recipe-row-menu > :is(a, button) {
+  display: flex;
+  justify-content: flex-start;
+  text-align: start;
+  white-space: normal;
+}
+
+.native-stock-row-menu > hr,
+.native-recipe-row-menu > hr {
+  inline-size: 100%;
+  margin-block: 0.3rem;
+  border: 0;
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.native-product-picture {
+  margin-bottom: 12px;
+}
+
+.native-product-radio-group {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.native-product-radio-group legend {
+  margin-block-end: 4px;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.native-product-radio-group .check-field {
+  display: flex;
+  min-height: 44px;
+}
+
+.native-product-radio-group input[type="radio"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  min-height: 0;
+  flex: 0 0 1.125rem;
+  margin: 0;
+  padding: 0;
+  appearance: auto;
+  accent-color: var(--cobalt);
+}
+
+@media print {
+  .native-stock-row-menu,
+  .native-recipe-row-menu {
+    display: none !important;
+  }
 }

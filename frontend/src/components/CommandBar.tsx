@@ -17,9 +17,10 @@ import { stockAmount, useCatalog } from "@/lib/catalog";
 import { usePreferences } from "@/lib/preferences";
 import { useStockMove } from "@/lib/stockActions";
 import { useFeatures } from "@/lib/features";
+import { usePermissions } from "@/lib/permissions";
 import { Icon, type IconName } from "./Icon";
 import { useNotify } from "./Toaster";
-import { NAV_GROUPS } from "./SiteNav";
+import { NAV_GROUPS, navLinkVisible } from "./SiteNav";
 
 export type Verb = "find" | "purchase" | "consume" | "list";
 
@@ -138,6 +139,8 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
   const notify = useNotify();
   const queryClient = useQueryClient();
   const features = useFeatures();
+  const allowed = usePermissions();
+  const disableAuth = features.query.data?.DISABLE_AUTH;
   const stockEnabled = features.enabled("STOCK");
   const shoppingEnabled = features.enabled("SHOPPINGLIST");
   const catalog = useCatalog(stockEnabled);
@@ -207,14 +210,18 @@ function CommandPanel({ initialVerb, onClose }: { initialVerb: Verb; onClose: ()
 
     const pages: Result[] = NAV_GROUPS.flatMap((group) => group.links)
       .filter(
-        (link) => features.routeEnabled(link.to) && q && tr(link.label).toLowerCase().includes(q),
+        (link) =>
+          navLinkVisible(link, features, disableAuth) &&
+          (!link.permission || allowed(link.permission)) &&
+          q &&
+          tr(link.label).toLowerCase().includes(q),
       )
       .map((link) => ({
         kind: "page",
         key: `n${link.to}`,
         label: tr(link.label),
         to: link.to,
-        icon: link.icon,
+        icon: link.icon ?? "manage",
       }));
 
     return [...pages, ...products];

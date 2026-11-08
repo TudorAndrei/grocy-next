@@ -24,6 +24,7 @@ from grocy.db.models.settings import UserfieldDefinition, UserfieldValue
 from grocy.db.models.shopping import ShoppingListItem
 from grocy.db.models.stock import CachedAveragePrice, CachedLastPurchase, StockEntry, StockLog
 from grocy.db.models.units import QuantityUnitConversion
+from grocy.db.native_schema import SCHEMA
 from grocy.db.types import database_time
 from grocy.domains.printing import automatic_stock_labels_enabled, stock_label
 from grocy.domains.products.barcodes import parse_product_code
@@ -900,10 +901,15 @@ class StockService:
     ) -> dict[str, Any] | None:
         if object_id is None:
             return None
+        projection = (
+            ",".join(f'"{column}"' for column in SCHEMA["tables"]["products"])
+            if table == "products"
+            else "*"
+        )
         row = (
             (
                 await self.session.execute(
-                    text(f"SELECT * FROM {table} WHERE id = :id"), {"id": object_id}
+                    text(f"SELECT {projection} FROM {table} WHERE id = :id"), {"id": object_id}
                 )
             )
             .mappings()

@@ -1,5 +1,6 @@
 """A disposable OpenLDAP directory for real authentication checks."""
 
+import os
 import shutil
 import socket
 import subprocess
@@ -48,14 +49,17 @@ def directory(root: Path, protocol: str = "ldap"):
             capture_output=True,
         )
         tls = f"TLSCertificateFile {certificate}\nTLSCertificateKeyFile {private_key}\n"
+    schema = Path(os.environ.get("GROCY_TEST_LDAP_SCHEMA", "/etc/ldap/schema"))
+    module_path = os.environ.get("GROCY_TEST_LDAP_MODULE_PATH", "/usr/lib/ldap")
+    module = os.environ.get("GROCY_TEST_LDAP_MDB_MODULE", "back_mdb")
+    modules = f'modulepath "{module_path}"\nmoduleload {module}\n' if module else ""
     configuration = root / "slapd.conf"
-    configuration.write_text(f"""include /etc/ldap/schema/core.schema
-include /etc/ldap/schema/cosine.schema
-include /etc/ldap/schema/inetorgperson.schema
+    configuration.write_text(f"""include "{schema / "core.schema"}"
+include "{schema / "cosine.schema"}"
+include "{schema / "inetorgperson.schema"}"
 pidfile {root / "slapd.pid"}
 argsfile {root / "slapd.args"}
-modulepath /usr/lib/ldap
-moduleload back_mdb
+{modules}
 {tls}
 database mdb
 maxsize 10485760

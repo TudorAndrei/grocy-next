@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { createAppRouter } from "@/router";
@@ -29,12 +29,28 @@ test("appearance settings control the whole app and save the legacy schedule", a
 
       if (path === "/api/user") return Response.json([{ id: 1, username: "tester" }]);
 
+      if (path === "/api/v2/user/permissions") return Response.json({});
+
       if (path === "/api/system/info")
         return Response.json({ grocy_version: { Version: "4.5.0", ReleaseDate: "" } });
 
       if (path === "/api/system/config") return Response.json({ MODE: "production" });
 
       if (path === "/api/user/settings") return Response.json(settings);
+
+      if (path.startsWith("/api/v2/products/context"))
+        return Response.json({
+          products: [],
+          locations: [],
+          quantity_units: [],
+          product_groups: [],
+          shopping_locations: [],
+          userfields: [],
+          userfield_values: [],
+          user_settings: settings,
+          config: { MODE: "production" },
+          locale: "en",
+        });
 
       if (path === "/api/v2/user/settings" && init?.method === "PUT") {
         const body: UserSettings = JSON.parse(String(init.body));
@@ -70,13 +86,18 @@ test("appearance settings control the whole app and save the legacy schedule", a
 
   const user = userEvent.setup();
   const mode = await screen.findByRole("combobox", { name: "Night mode" });
-  expect(screen.getByLabelText<HTMLInputElement>("From").readOnly).toBe(true);
+  expect(
+    within(screen.getByRole("tabpanel", { name: "Appearance" })).getByLabelText<HTMLInputElement>(
+      "From",
+    ).readOnly,
+  ).toBe(true);
   await user.click(screen.getByRole("checkbox", { name: "Show clock in header" }));
   await user.selectOptions(mode, "on");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
   await waitFor(() => expect(view.container.querySelector("time")?.dateTime).toBeTruthy());
   expect(settings.show_clock_in_header).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Manage master data" }));
   await user.click(screen.getByRole("link", { name: "Products" }));
   await screen.findByRole("heading", { name: "Products", level: 1 });
   expect(document.documentElement.dataset.theme).toBe("dark");
@@ -84,8 +105,13 @@ test("appearance settings control the whole app and save the legacy schedule", a
   await user.click(screen.getByRole("link", { name: "Settings" }));
   await user.click(await screen.findByRole("tab", { name: "Appearance" }));
   await user.click(await screen.findByRole("checkbox", { name: "Auto enable in time range" }));
-  const from = screen.getByLabelText<HTMLInputElement>("From");
+
+  const from = within(
+    screen.getByRole("tabpanel", { name: "Appearance" }),
+  ).getByLabelText<HTMLInputElement>("From");
+
   expect(from.readOnly).toBe(false);
+
   await user.clear(from);
   await user.type(from, "24:00");
   await user.click(screen.getByRole("button", { name: "Save" }));

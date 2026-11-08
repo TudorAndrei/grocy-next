@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { userSettingsQuery } from "@/hooks/queries";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { formatAmount } from "./format";
 import type { UserSettings } from "./types";
 
@@ -10,7 +9,7 @@ export function preferenceEnabled(value: UserSettings[string] | undefined): bool
 }
 
 export function usePreferences() {
-  const settings = useQuery(userSettingsQuery());
+  const settings = useUserSettings();
 
   const number = (key: string, fallback: number) => {
     const value = settings.data?.[key];
@@ -23,6 +22,20 @@ export function usePreferences() {
     const value = settings.data?.[key];
 
     return preferenceEnabled(value);
+  };
+
+  // Recipe ingredient controls are rendered by PHP, whose nonempty "false" is truthy.
+  const templateEnabled = (key: string) => {
+    const value = settings.data?.[key];
+
+    return (
+      value !== undefined &&
+      value !== null &&
+      value !== false &&
+      value !== 0 &&
+      value !== "" &&
+      value !== "0"
+    );
   };
 
   const amountPrecision = Math.max(
@@ -58,8 +71,8 @@ export function usePreferences() {
     showClock: enabled("show_clock_in_header"),
     keepScreenOn: enabled("keep_screen_on"),
     keepScreenOnWhenFullscreen: enabled("keep_screen_on_when_fullscreen_card"),
-    showIngredientCheckbox: enabled("recipes_show_ingredient_checkbox"),
-    groupIngredientsByProductGroup: enabled("recipe_ingredients_group_by_product_group"),
+    showIngredientCheckbox: templateEnabled("recipes_show_ingredient_checkbox"),
+    groupIngredientsByProductGroup: templateEnabled("recipe_ingredients_group_by_product_group"),
     recipesSideBySide:
       settings.data?.recipes_show_list_side_by_side === undefined ||
       enabled("recipes_show_list_side_by_side"),

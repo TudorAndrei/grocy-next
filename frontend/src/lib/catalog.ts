@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
+import { StockProductChangeContext } from "./stock-product-change";
 import { api, queryKeys } from "./api";
 import { formatAmount, unitLabel } from "./format";
 import type { Location, ProductSummary, QuantityUnit, StockOverviewItem } from "./types";
@@ -93,14 +94,21 @@ export function useCatalog(enabled = true): Catalog {
 /** Refresh everything a stock movement can change. */
 export function useInvalidateStock() {
   const queryClient = useQueryClient();
+  const refreshProduct = useContext(StockProductChangeContext);
 
-  return async () => {
+  return async (productId?: number) => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["stock"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["stock"],
+        predicate: (query) =>
+          !refreshProduct || productId === undefined || query.queryKey[1] !== "overview-view",
+      }),
       queryClient.invalidateQueries({ queryKey: ["recipe-fulfillment"] }),
       queryClient.invalidateQueries({ queryKey: ["recipe-view"] }),
       queryClient.invalidateQueries({ queryKey: ["recipe-overview"] }),
       queryClient.invalidateQueries({ queryKey: ["shopping"] }),
     ]);
+
+    if (refreshProduct && productId !== undefined) await refreshProduct(productId);
   };
 }

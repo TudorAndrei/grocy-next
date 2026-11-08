@@ -1,4 +1,6 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { nativeObjectUserfieldPresent } from "@/lib/native-userfield-values";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useMatch, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "@/lib/api";
 import type { EntityRow } from "@/lib/entities";
@@ -7,14 +9,18 @@ import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { unitLabel } from "@/lib/format";
 import { userfieldsQuery } from "@/lib/userfields";
+import { useNativeLabelPrint } from "@/hooks/useNativeLabelPrint";
 import { useModalDialog } from "@/hooks/useModalDialog";
 import { fetchApiDocument } from "@/lib/open-document";
 import { EntityManager } from "./EntityManager";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 import { GrocycodeActions } from "./GrocycodeActions";
+import { NativeProductCodeActions } from "./NativeProductCodeActions";
 import { UserfieldValue } from "./UserfieldValue";
 import { ResolvedConversionsDialog } from "./ResolvedConversions";
+import { useDialogState } from "@/hooks/useDialogState";
+import { EmbeddedPageDialog, type EmbeddedPage } from "./EmbeddedPageDialog";
 
 type Relation = "product_barcodes" | "quantity_unit_conversions";
 
@@ -35,9 +41,81 @@ export function ProductRelatedData({
   const features = useFeatures();
   const preferences = usePreferences();
   const client = useQueryClient();
-  const [action, setAction] = useState<Action>();
+  const router = useRouter();
+  const native = useMatch({ from: "/product/$productId", shouldThrow: false });
+  const print = useNativeLabelPrint();
+  const [embedded, setEmbedded] = useState<EmbeddedPage>();
+  const nextEmbedded = useRef(0);
+  const dialogs = useDialogState<Action>();
+  const action = dialogs.state?.value;
+  const setAction = dialogs.open;
+
+  const close = () => {
+    if (dialogs.state) dialogs.close(dialogs.state.id);
+  };
+
   const [resolved, setResolved] = useState(false);
   const fields = useQuery(userfieldsQuery);
+
+  const editorControl = (action: Action, label: ReactNode) => {
+    if (!native)
+      return (
+        <button
+          type="button"
+          className={action.id === null ? "btn" : "btn btn-ghost"}
+          disabled={disabled}
+          onClick={() => setAction(action)}
+        >
+          {label}
+        </button>
+      );
+    const id = String(action.id ?? "new");
+
+    const href =
+      (action.entity === "product_barcodes"
+        ? router.buildLocation({
+            to: "/productbarcodes/$barcodeId",
+            params: { barcodeId: id },
+            search: {},
+          })
+        : router.buildLocation({
+            to: "/quantityunitconversion/$conversionId",
+            params: { conversionId: id },
+            search: {},
+          })
+      ).publicHref + `?embedded&product=${product.id}`;
+
+    const dialogType = action.entity === "product_barcodes" ? "form" : "wider";
+
+    return (
+      <a
+        className={`${action.id === null ? "btn" : "btn btn-ghost"} show-as-dialog-link`}
+        href={href}
+        aria-disabled={disabled || undefined}
+        data-dialog-type={dialogType}
+        onClick={(event) => {
+          if (disabled) {
+            event.preventDefault();
+
+            return;
+          }
+
+          if (
+            event.button !== 0 ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.metaKey ||
+            event.altKey
+          )
+            return;
+          event.preventDefault();
+          setEmbedded({ id: ++nextEmbedded.current, url: event.currentTarget.href, dialogType });
+        }}
+      >
+        {label}
+      </a>
+    );
+  };
 
   const data = useQuery({
     queryKey: ["product-related", product.id],
@@ -73,10 +151,43 @@ export function ProductRelatedData({
     await onDeleted();
   };
 
-  if (data.error || fields.error)
-    return <ErrorBlock message={(data.error ?? fields.error)!.message} />;
+  const nativeCode = native ? (
+    <section key="native-grocycode" aria-label={t("Grocycode")}>
+      <div className="section-heading">
+        <h3
+          title={t(
+            "Grocycode is a unique referer to this %s in your Grocy instance - print it onto a label and scan it like any other barcode",
+            t("Product"),
+          )}
+        >
+          {t("Grocycode")}
+        </h3>
+      </div>
+      <div className="product-code-preview">
+        <CodePreview id={product.id} name={String(product.name ?? "")} native />
+        <NativeProductCodeActions
+          productId={product.id}
+          onPrint={() => print(`/api/stock/products/${product.id}/printlabel`)}
+        />
+      </div>
+    </section>
+  ) : null;
 
-  if (!data.data || !fields.data) return <LoadingBlock label={t("Loading product details…")} />;
+  if (data.error || fields.error)
+    return (
+      <div className="product-related">
+        {nativeCode}
+        <ErrorBlock message={(data.error ?? fields.error)!.message} />
+      </div>
+    );
+
+  if (!data.data || !fields.data)
+    return (
+      <div className="product-related">
+        {nativeCode}
+        <LoadingBlock label={t("Loading product details…")} />
+      </div>
+    );
   const unit = (id: EntityRow["qu_id"]) => data.data.units.find((row) => row.id === Number(id));
 
   const unitName = (id: EntityRow["qu_id"], count = 1) => {
@@ -120,14 +231,7 @@ export function ProductRelatedData({
         <section aria-label={t("Barcodes")}>
           <div className="section-heading">
             <h3>{t("Barcodes")}</h3>
-            <button
-              type="button"
-              className="btn"
-              disabled={disabled}
-              onClick={() => setAction({ entity: "product_barcodes", id: null })}
-            >
-              {t("Add barcode")}
-            </button>
+            {editorControl({ entity: "product_barcodes", id: null }, t("Add barcode"))}
           </div>
           <div className="table-scroll" tabIndex={0}>
             <table className="stock-table">
@@ -171,22 +275,24 @@ export function ProductRelatedData({
                     {columns.map((field) => (
                       <td key={field.id}>
                         <UserfieldValue
+                          nativeTable={Boolean(native)}
                           field={field}
                           value={row.userfields?.[field.name] ?? null}
+                          present={
+                            !native || nativeObjectUserfieldPresent(row.userfields, field.name)
+                          }
                         />
                       </td>
                     ))}
                     <td>
                       <div className="actions">
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          disabled={disabled}
-                          onClick={() => setAction({ entity: "product_barcodes", id: row.id })}
-                        >
-                          {t("Edit")}
-                          <span className="sr-only"> {row.barcode}</span>
-                        </button>
+                        {editorControl(
+                          { entity: "product_barcodes", id: row.id },
+                          <>
+                            {t("Edit")}
+                            <span className="sr-only"> {row.barcode}</span>
+                          </>,
+                        )}
                         <button
                           type="button"
                           className="btn btn-ghost"
@@ -208,32 +314,57 @@ export function ProductRelatedData({
           {!data.data.barcodes.length ? (
             <p className="empty-state">{t("No barcodes yet.")}</p>
           ) : null}
-          <div className="product-code-preview">
-            <CodePreview id={product.id} name={String(product.name ?? "")} />
-            <GrocycodeActions id={product.id} kind="product" name={String(product.name ?? "")} />
-          </div>
+          {!native ? (
+            <div className="product-code-preview">
+              <CodePreview id={product.id} name={String(product.name ?? "")} />
+              <GrocycodeActions id={product.id} kind="product" name={String(product.name ?? "")} />
+            </div>
+          ) : null}
         </section>
       ) : null}
+      {nativeCode}
       <section aria-label={t("Product specific QU conversions")}>
         <div className="section-heading">
           <h3>{t("Product specific QU conversions")}</h3>
           <div className="actions">
-            <button
-              type="button"
-              className="btn"
-              disabled={disabled}
-              onClick={() => setAction({ entity: "quantity_unit_conversions", id: null })}
-            >
-              {t("Add conversion")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              aria-haspopup="dialog"
-              onClick={() => setResolved(true)}
-            >
-              {t("Show resolved conversions")}
-            </button>
+            {editorControl({ entity: "quantity_unit_conversions", id: null }, t("Add conversion"))}
+            {native ? (
+              <a
+                className="btn btn-ghost show-as-dialog-link"
+                data-dialog-type="wider"
+                href={
+                  router.buildLocation({ to: "/quantityunitconversionsresolved", search: {} })
+                    .publicHref + `?embedded&product=${product.id}`
+                }
+                onClick={(event) => {
+                  if (
+                    event.button !== 0 ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.metaKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  setEmbedded({
+                    id: ++nextEmbedded.current,
+                    url: event.currentTarget.href,
+                    dialogType: "wider",
+                  });
+                }}
+              >
+                {t("Show resolved conversions")}
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                aria-haspopup="dialog"
+                onClick={() => setResolved(true)}
+              >
+                {t("Show resolved conversions")}
+              </button>
+            )}
           </div>
         </div>
         <div className="table-scroll" tabIndex={0}>
@@ -257,20 +388,16 @@ export function ProductRelatedData({
                   <td>{conversionDescription(row)}</td>
                   <td>
                     <div className="actions">
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        disabled={disabled}
-                        onClick={() =>
-                          setAction({ entity: "quantity_unit_conversions", id: row.id })
-                        }
-                      >
-                        {t("Edit")}
-                        <span className="sr-only">
-                          {" "}
-                          {unitName(row.from_qu_id)} → {unitName(row.to_qu_id)}
-                        </span>
-                      </button>
+                      {editorControl(
+                        { entity: "quantity_unit_conversions", id: row.id },
+                        <>
+                          {t("Edit")}
+                          <span className="sr-only">
+                            {" "}
+                            {unitName(row.from_qu_id)} → {unitName(row.to_qu_id)}
+                          </span>
+                        </>,
+                      )}
                       <button
                         type="button"
                         className="btn btn-ghost"
@@ -303,12 +430,19 @@ export function ProductRelatedData({
       {resolved ? (
         <ResolvedConversionsDialog product={product.id} onClose={() => setResolved(false)} />
       ) : null}
+      {embedded ? (
+        <EmbeddedPageDialog
+          key={embedded.id}
+          page={embedded}
+          onClose={() => setEmbedded(undefined)}
+        />
+      ) : null}
       {action ? (
         action.remove ? (
           <DeleteRelation
             key={action.entity + action.id}
             action={action}
-            onClose={() => setAction(undefined)}
+            onClose={close}
             onDeleted={deleted}
           />
         ) : (
@@ -316,7 +450,7 @@ export function ProductRelatedData({
             key={action.entity + action.id}
             action={action}
             product={product}
-            onClose={() => setAction(undefined)}
+            onClose={close}
             onSaved={changed}
           />
         )
@@ -339,7 +473,6 @@ function RelationEditor({
   const { t } = useI18n();
   const dialog = useModalDialog();
   const title = useId();
-  const [pending, setPending] = useState(false);
 
   const label =
     action.entity === "product_barcodes"
@@ -358,7 +491,7 @@ function RelationEditor({
       onCancel={(event) => {
         event.preventDefault();
 
-        if (!pending) onClose();
+        onClose();
       }}
     >
       <h2 id={title}>{t(label)}</h2>
@@ -366,7 +499,6 @@ function RelationEditor({
       <EntityManager
         entity={action.entity}
         fixed={{ product_id: product.id }}
-        onPendingChange={setPending}
         editor={{
           recordId: action.id,
           onCancel: onClose,
@@ -414,7 +546,7 @@ function DeleteRelation({
       onCancel={(event) => {
         event.preventDefault();
 
-        if (!remove.isPending) onClose();
+        onClose();
       }}
     >
       <h2 id={title}>
@@ -447,7 +579,7 @@ function DeleteRelation({
   );
 }
 
-function CodePreview({ id, name }: { id: number; name: string }) {
+function CodePreview({ id, name, native = false }: { id: number; name: string; native?: boolean }) {
   const { t } = useI18n();
 
   const [result, setResult] = useState<
@@ -457,7 +589,10 @@ function CodePreview({ id, name }: { id: number; name: string }) {
   useEffect(() => {
     const controller = new AbortController();
     let url: string | undefined;
-    void fetchApiDocument(`/api/v2/products/${id}/grocycode?size=60`, controller.signal)
+    void fetchApiDocument(
+      native ? `/product/${id}/grocycode?size=60` : `/api/v2/products/${id}/grocycode?size=60`,
+      controller.signal,
+    )
       .then((blob) => {
         if (controller.signal.aborted) return;
         url = URL.createObjectURL(blob);
@@ -472,13 +607,13 @@ function CodePreview({ id, name }: { id: number; name: string }) {
 
       if (url) URL.revokeObjectURL(url);
     };
-  }, [id]);
+  }, [id, native]);
 
   return result?.id !== id ? (
     <LoadingBlock label={t("Loading Grocycode…")} />
   ) : "error" in result ? (
     <ErrorBlock message={result.error.message} />
   ) : (
-    <img src={result.source} alt={t("%s Grocycode", name)} />
+    <img src={result.source} alt={t("%s Grocycode", name)} loading={native ? "lazy" : undefined} />
   );
 }

@@ -92,7 +92,7 @@ function app(path: string) {
     </QueryClientProvider>,
   );
 
-  return { products, preferenceWrites };
+  return { products, preferenceWrites, router };
 }
 
 async function createProduct() {
@@ -106,7 +106,7 @@ async function createProduct() {
 }
 
 test("saved product presets fill all new-product units and retain the never-due value", async () => {
-  const { products, preferenceWrites } = app("/settings?tab=products");
+  const { products, preferenceWrites, router } = app("/settings?tab=products");
   const user = userEvent.setup();
   await screen.findByRole("option", { name: "Fridge" });
   await user.selectOptions(await screen.findByLabelText("Location"), "2");
@@ -127,7 +127,9 @@ test("saved product presets fill all new-product units and retain the never-due 
       product_presets_default_stock_label_type: "2",
     }),
   );
+  await user.click(screen.getByRole("button", { name: "Manage master data" }));
   await user.click(screen.getByRole("link", { name: "Products" }));
+  await router.navigate({ to: "/catalog" });
   await createProduct();
 
   for (const label of ["Stock unit", "Purchase unit", "Consume unit", "Price unit"])
@@ -151,7 +153,7 @@ test("saved product presets fill all new-product units and retain the never-due 
 });
 
 test("choosing a stock unit fills empty defaults and retains a selected purchase unit", async () => {
-  const { products } = app("/products");
+  const { products } = app("/catalog");
   const user = await createProduct();
   await user.selectOptions(screen.getByLabelText("Purchase unit"), "4");
   await user.selectOptions(screen.getByLabelText("Stock unit"), "1");

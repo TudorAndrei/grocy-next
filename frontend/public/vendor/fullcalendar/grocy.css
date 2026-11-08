@@ -1,0 +1,51 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  overflow-x: auto;
+  background: var(--surface, #fff);
+  color: var(--ink, #212529);
+}
+.fc .table {
+  color: var(--ink, #212529);
+}
+.fc-bootstrap4 table,
+.fc-bootstrap4 td,
+.fc-bootstrap4 th {
+  border-color: var(--line, #dee2e6);
+}
+.fc .fc-toolbar .btn {
+  color: var(--ink, #212529);
+  background-color: var(--surface-sunk, #f8f9fa);
+  border-color: var(--line, #dee2e6);
+}
+.fc .fc-toolbar .btn:hover,
+.fc .fc-toolbar .btn.active {
+  color: var(--ink, #212529);
+  background-color: var(--surface, #fff);
+  border-color: var(--line, #dee2e6);
+}
+.fc-bootstrap4 .fc-divider,
+.fc-bootstrap4 .fc-list-item:hover td {
+  background: var(--surface-sunk, #f8f9fa);
+}
+.fc-toolbar {
+  padding-block: 0.25rem;
+}
+.fc-event {
+  cursor: pointer;
+}
+@media print {
+  body {
+    overflow: visible;
+  }
+  .calendar button.fc-prev-button,
+  .calendar button.fc-today-button,
+  .calendar button.fc-next-button,
+  .calendar button.fc-agendaWeek-button,
+  .calendar button.fc-agendaDay-button {
+    display: none;
+  }
+}

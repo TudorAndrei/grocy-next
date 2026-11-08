@@ -21,6 +21,7 @@
     "@tanstack/react-router": "^1.170.45",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
+    "dompurify": "3.4.17",
     "gettext-translator": "3.0.1",
     "moment": "2.31.0",
     "nosleep.js": "0.12.0",

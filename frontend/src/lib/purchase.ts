@@ -65,16 +65,10 @@ export async function getPurchaseDetails(product: string, signal?: AbortSignal) 
   return details.parse(await request(`/api/stock/products/${product}`, { signal }));
 }
 
-export async function getPurchaseSelection(product: string, signal: AbortSignal, code?: string) {
-  const selected = await getPurchaseDetails(product, signal);
+export async function getPurchaseBarcode(code: string, signal: AbortSignal) {
   const params = new URLSearchParams([["query[]", `barcode=${code}`]]);
 
-  const found =
-    code === undefined
-      ? undefined
-      : z
-          .array(barcode)
-          .parse(await request(`/api/objects/product_barcodes_view?${params}`, { signal }))[0];
-
-  return { details: selected, barcode: found };
+  return z
+    .array(barcode)
+    .parse(await request(`/api/objects/product_barcodes_view?${params}`, { signal }))[0];
 }

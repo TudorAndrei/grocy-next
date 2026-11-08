@@ -188,6 +188,13 @@ export function RecipeReader({
           <>
             <FullscreenToggle />
             <FullscreenPrint />
+            <Link
+              className="btn hide-when-embedded hide-on-fullscreen-card"
+              to="/recipe/$recipeId"
+              params={{ recipeId: String(card.id) }}
+            >
+              {t("Edit recipe")}
+            </Link>
             <RecipeMealPlanAction id={card.id} name={card.name} />
             <GrocycodeActions kind="recipe" id={card.id} name={card.name} />
             {card.id === view.recipe_id ? (

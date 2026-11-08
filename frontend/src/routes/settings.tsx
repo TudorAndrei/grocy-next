@@ -1,7 +1,13 @@
 import { z } from "zod";
 import type { JsonObject } from "@/lib/json";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  useMutation,
+  useMutationState,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBlock } from "@/components/ErrorBlock";
@@ -9,7 +15,7 @@ import { LoadingBlock } from "@/components/LoadingBlock";
 import { OwnProfile } from "@/components/OwnProfile";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
 import { currentUserQuery, systemInfoQuery, userSettingsQuery } from "@/hooks/queries";
-import { readApiConfig, writeApiConfig } from "@/lib/config";
+import { readApiConfig, writeApiConfig, type ApiConfig } from "@/lib/config";
 import { api } from "@/lib/api";
 import { preferenceEnabled } from "@/lib/preferences";
 import { useFeatures } from "@/lib/features";
@@ -19,6 +25,8 @@ import { isNightModeTime } from "@/lib/theme";
 type SettingsTab = "connection" | "profile" | "appearance" | "preferences" | "products" | "about";
 
 type SettingsSearch = { tab: SettingsTab };
+
+const connectionResultSchema = z.object({ baseUrl: z.string(), apiKey: z.string() });
 
 const settingsSearchSchema = z.object({
   tab: z
@@ -232,7 +240,38 @@ function SettingsPage() {
   const initial = readApiConfig();
   const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
   const [apiKey, setApiKey] = useState(initial.apiKey);
-  const [connectionSaved, setConnectionSaved] = useState(false);
+
+  const connectionStates = useMutationState({
+    filters: { mutationKey: ["save-api-connection"] },
+    select: (mutation) => ({ status: mutation.state.status, data: mutation.state.data }),
+  });
+
+  const connectionState = connectionStates.at(-1)?.status;
+  const savedConnection = connectionResultSchema.safeParse(connectionStates.at(-1)?.data);
+
+  const connectionSaved =
+    connectionState === "success" &&
+    savedConnection.success &&
+    savedConnection.data.baseUrl === baseUrl &&
+    savedConnection.data.apiKey === apiKey &&
+    savedConnection.data.baseUrl === initial.baseUrl &&
+    savedConnection.data.apiKey === initial.apiKey;
+
+  const connection = useMutation({
+    mutationKey: ["save-api-connection"],
+    mutationFn: async (config: ApiConfig) => {
+      await queryClient.cancelQueries();
+      writeApiConfig(config);
+
+      const saved = readApiConfig();
+
+      // Reset retains observers and refreshes the actor immediately. Clearing
+      // the cache leaves the old shell visible until a later navigation.
+      await queryClient.resetQueries();
+
+      return saved;
+    },
+  });
 
   const system = useQuery(systemInfoQuery());
   const user = useQuery(currentUserQuery());
@@ -251,12 +290,18 @@ function SettingsPage() {
 
   const [draft, setDraft] = useState<Record<string, string>>({});
 
-  const saveConnection = async (event: FormEvent) => {
+  const saveConnection = (event: FormEvent) => {
     event.preventDefault();
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    writeApiConfig({ baseUrl, apiKey });
-    setConnectionSaved(true);
+    queryClient.getMutationCache().clear();
+    connection.mutate({ baseUrl, apiKey });
+  };
+
+  const dismissConnectionNotice = () => {
+    const cache = queryClient.getMutationCache();
+
+    for (const mutation of cache.findAll({ mutationKey: ["save-api-connection"] })) {
+      if (mutation.state.status !== "pending") cache.remove(mutation);
+    }
   };
 
   const savePreferences = useMutation({
@@ -303,6 +348,22 @@ function SettingsPage() {
 
   const renderPreferences = (section: "appearance" | "preferences" | "products") => (
     <>
+      {section === "preferences" ? (
+        <div className="actions">
+          <Link to="/usersettings" search={{ returnto: "/settings?tab=preferences" }}>
+            {t("User settings")}
+          </Link>
+          {features.enabled("STOCK") ? (
+            <Link to="/stocksettings">{t("Stock settings")}</Link>
+          ) : null}
+          {features.enabled("SHOPPINGLIST") ? (
+            <Link to="/shoppinglistsettings">{t("Shopping list settings")}</Link>
+          ) : null}
+          {features.enabled("RECIPES") ? (
+            <Link to="/recipessettings">{t("Recipes settings")}</Link>
+          ) : null}
+        </div>
+      ) : null}
       {settings.isLoading ? <LoadingBlock label={t("Loading preferences…")} /> : null}
       {settings.isSuccess ? (
         <form
@@ -428,11 +489,12 @@ function SettingsPage() {
                 <label htmlFor="api-base">{t("API base URL")}</label>
                 <input
                   id="api-base"
+                  disabled={connectionState === "pending"}
                   type="text"
                   placeholder={t("Leave blank when UI and API share a host")}
                   value={baseUrl}
                   onChange={(e) => {
-                    setConnectionSaved(false);
+                    dismissConnectionNotice();
                     setBaseUrl(e.target.value);
                   }}
                 />
@@ -441,16 +503,21 @@ function SettingsPage() {
                 <label htmlFor="api-key">{t("API key")}</label>
                 <input
                   id="api-key"
+                  disabled={connectionState === "pending"}
                   type="password"
                   autoComplete="off"
                   value={apiKey}
                   onChange={(e) => {
-                    setConnectionSaved(false);
+                    dismissConnectionNotice();
                     setApiKey(e.target.value);
                   }}
                 />
               </div>
-              <button type="submit" className="btn btn-primary">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={connectionState === "pending"}
+              >
                 {t("Save connection")}
               </button>
               {connectionSaved ? (
@@ -458,11 +525,19 @@ function SettingsPage() {
                   {t("Connection saved.")}
                 </p>
               ) : null}
+              {connection.error ? <ErrorBlock message={connection.error.message} /> : null}
             </form>
           </div>
         </section>
       </TabPanel>
       <TabPanel id="settings-profile" labelledBy="tab-profile" hidden={tab !== "profile"}>
+        {tab === "profile" && user.data ? (
+          <p>
+            <Link to="/user/$userId" params={{ userId: String(user.data.id) }}>
+              {t("Edit user")}
+            </Link>
+          </p>
+        ) : null}
         {tab === "profile" ? <OwnProfile /> : null}
       </TabPanel>
       <TabPanel id="settings-appearance" labelledBy="tab-appearance" hidden={tab !== "appearance"}>

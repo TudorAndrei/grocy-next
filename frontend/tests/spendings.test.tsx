@@ -68,6 +68,8 @@ function mount(
 
       if (url.pathname === "/api/user") return Response.json([{ id: 1, username: "Tester" }]);
 
+      if (url.pathname === "/api/v2/user/permissions") return Response.json({});
+
       if (url.pathname === "/api/system/config")
         return Response.json({
           FEATURE_FLAG_STOCK: stock,
@@ -347,10 +349,11 @@ test("an empty spending report retains its table and zero total", async () => {
 });
 
 test.each([{ stock: false }, { price: false }])(
-  "the spending route follows feature settings: %j",
+  "native spendings remain readable independently of navigation settings: %j",
   async (settings) => {
-    const { reads } = mount("/stockreports/spendings", settings);
-    await screen.findByRole("heading", { name: "Feature disabled" });
-    expect(reads).toHaveLength(0);
+    const { reads, writes } = mount("/stockreports/spendings", settings);
+    await screen.findByRole("table", { name: "Spendings" });
+    expect(reads).toHaveLength(1);
+    expect(writes.filter((path) => !path.startsWith("/api/user/settings/"))).toEqual([]);
   },
 );

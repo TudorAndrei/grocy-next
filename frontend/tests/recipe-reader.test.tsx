@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { createAppRouter } from "@/router";
 import type { RecipeListItem, RecipeView } from "@/lib/recipe-view";
+import type { UserSettings } from "@/lib/types";
 import { writeApiConfig } from "@/lib/config";
 import { pictureBytes } from "./fixtures/picture";
 
@@ -144,6 +145,13 @@ function mount(
   let copiedView: RecipeView | undefined;
   let failMeal = options.failMealOnce;
 
+  const settings: UserSettings = {
+    night_mode: "off",
+    recipes_show_ingredient_checkbox: "on",
+    recipe_ingredients_group_by_product_group: "1",
+    recipes_show_list_side_by_side: options.sideBySide ?? true,
+  };
+
   const overview: RecipeListItem[] = [
     {
       id: 1,
@@ -181,6 +189,18 @@ function mount(
     "fetch",
     vi.fn<typeof fetch>(async (input, init) => {
       const path = String(input);
+
+      if (path.startsWith("/api/user/settings/datatables_") && init?.method === "PUT") {
+        settings[path.slice("/api/user/settings/".length)] = JSON.parse(String(init.body)).value;
+
+        return new Response(null, { status: 204 });
+      }
+
+      if (path.startsWith("/api/user/settings/datatables_") && init?.method === "DELETE") {
+        delete settings[path.slice("/api/user/settings/".length)];
+
+        return new Response(null, { status: 204 });
+      }
 
       if (init?.method === "PUT" || init?.method === "POST") {
         const body = String(init.body ?? "");
@@ -225,6 +245,16 @@ function mount(
 
       if (path === "/api/user") return Response.json([{ id: 1, username: "tester" }]);
 
+      if (path === "/api/v2/user/permissions") return Response.json({});
+
+      if (path === "/api/v2/localization")
+        return Response.json({
+          locale: "en",
+          direction: "ltr",
+          languages: ["en"],
+          catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+        });
+
       if (path === "/api/system/config")
         return Response.json(
           options.mealPlanEnabled === false ? { FEATURE_FLAG_RECIPES_MEALPLAN: false } : {},
@@ -236,13 +266,7 @@ function mount(
           { id: 1, name: "Dinner" },
         ]);
 
-      if (path === "/api/user/settings")
-        return Response.json({
-          night_mode: "off",
-          recipes_show_ingredient_checkbox: "on",
-          recipe_ingredients_group_by_product_group: "1",
-          recipes_show_list_side_by_side: options.sideBySide ?? true,
-        });
+      if (path === "/api/user/settings") return Response.json(settings);
 
       if (path === "/api/v2/recipes/overview")
         return Response.json(
@@ -340,8 +364,13 @@ test("recipe overview searches ingredient names, filters three stock states, and
 
   const names = () =>
     within(catalog)
-      .getAllByRole("link")
-      .map((link) => link.textContent);
+      .getAllByRole("row")
+      .slice(1)
+      .map(
+        (row) =>
+          within(row).getByRole("link", { name: /^(Main dish|Sauce|Zucchini 23 stew)$/ })
+            .textContent,
+      );
 
   expect(names()).toEqual(["Main dish", "Sauce", "Zucchini 23 stew"]);
   await user.selectOptions(
@@ -364,11 +393,31 @@ test("recipe overview searches ingredient names, filters three stock states, and
   await user.click(within(catalog).getByRole("link", { name: "Sauce" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Sauce" })).toBeTruthy();
   expect(new URLSearchParams(app.router.history.location.search).get("recipe")).toBe("2");
-  await user.click(within(catalog).getByRole("tab", { name: "Gallery" }));
-  expect(await within(catalog).findByRole("img", { name: "Main dish picture" })).toBeTruthy();
+  const selectedCatalog = screen.getByRole("region", { name: "Recipe list" });
+
+  await user.click(within(selectedCatalog).getByRole("tab", { name: "Gallery" }));
+  expect(
+    await within(selectedCatalog).findByRole("img", { name: "Main dish picture" }),
+  ).toBeTruthy();
   expect(localStorage.getItem("recipes_last_tab_id")).toBe("gallery-tab");
   app.unmount();
   app.client.clear();
+});
+
+test("native recipe creation and selected editing links retain their record identities", async () => {
+  mount(fixture(), [], false, { path: "/recipes" });
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { level: 1, name: "Main dish" });
+  expect(screen.getByRole("link", { name: "Add" }).getAttribute("href")).toBe("/recipe/new");
+  const catalog = within(screen.getByRole("region", { name: "Recipe list" }));
+  expect(catalog.getByRole("link", { name: "Edit Main dish" }).getAttribute("href")).toBe(
+    "/recipe/1",
+  );
+  expect(screen.getByRole("link", { name: "Edit recipe" }).getAttribute("href")).toBe("/recipe/1");
+  await user.click(screen.getByRole("tab", { name: "Sauce" }));
+  expect(screen.getByRole("link", { name: "Edit recipe" }).getAttribute("href")).toBe("/recipe/2");
+  await user.click(catalog.getByRole("tab", { name: "Gallery" }));
+  expect(catalog.getByRole("link", { name: "Edit Sauce" }).getAttribute("href")).toBe("/recipe/2");
 });
 
 test("the saved gallery opens a full-screen card when side-by-side display is disabled", async () => {
@@ -413,20 +462,19 @@ test("legacy recipe query parameters restore gallery, selected recipe, status, a
   });
 
   const catalog = await screen.findByRole("region", { name: "Recipe list" });
-  await within(catalog).findByRole("link", { name: "Sauce" });
-  expect(
+
+  const previews = () =>
     within(catalog)
-      .getAllByRole("link")
-      .map((link) => link.getAttribute("aria-label")),
-  ).toEqual(["Sauce"]);
+      .getAllByRole<HTMLAnchorElement>("link")
+      .flatMap((link) => (/\/recipes\/\d+$/.test(new URL(link.href).pathname) ? [link] : []));
+
+  await within(catalog).findByRole("link", { name: "Sauce" });
+  expect(previews().map((link) => link.getAttribute("aria-label"))).toEqual(["Sauce"]);
   expect(await screen.findByRole("heading", { level: 1, name: "Sauce" })).toBeTruthy();
+
   await act(async () => app.router.history.push("/recipes?search=23"));
   await waitFor(() =>
-    expect(
-      within(catalog)
-        .getAllByRole("link")
-        .map((link) => link.textContent),
-    ).toEqual(["Zucchini 23 stew"]),
+    expect(previews().map((link) => link.textContent)).toEqual(["Zucchini 23 stew"]),
   );
   expect(screen.getByRole<HTMLInputElement>("searchbox", { name: "Search recipes" }).value).toBe(
     "23",
@@ -453,7 +501,8 @@ test.each([true, false])(
 
     if (!sideBySide) await user.click(await screen.findByRole("link", { name: "Main dish" }));
     await user.click(await screen.findByRole("tab", { name: "Sauce" }));
-    await user.click(screen.getByRole("button", { name: "Copy recipe" }));
+    const card = screen.getByRole(sideBySide ? "region" : "dialog", { name: "Sauce" });
+    await user.click(within(card).getByRole("button", { name: "Copy recipe" }));
 
     if (sideBySide)
       expect(await screen.findByRole("heading", { level: 1, name: "Copy of Sauce" })).toBeTruthy();
@@ -640,14 +689,18 @@ test("recipe meal planning uses local today, retains choices, and saves changed 
   const writes: Array<{ path: string; body: string }> = [];
   const app = mount(fixture(), writes, false, { path: "/recipes" });
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Add Main dish to meal plan" }));
+  await user.click(
+    await screen.findByRole("button", { name: "More actions for recipe Main dish" }),
+  );
+  await user.click(screen.getByRole("menuitem", { name: "Add to meal plan" }));
   let dialog = await screen.findByRole("dialog", { name: "Add meal plan entry" });
   await waitFor(() =>
     expect(within(dialog).getByLabelText<HTMLSelectElement>("Section").value).toBe("2"),
   );
   const day = within(dialog).getByLabelText<HTMLInputElement>("Day");
   expect(day.value).toBe("2027-04-04");
-  expect(within(dialog).getByLabelText<HTMLSelectElement>("Recipe").value).toBe("1");
+  const recipe = within(dialog).getByRole<HTMLInputElement>("combobox", { name: "Recipe" });
+  expect(recipe.value).toBe("Main dish");
   const servings = within(dialog).getByLabelText<HTMLInputElement>("Servings");
   expect(servings.value).toBe("1");
   expect(document.activeElement).toBe(servings);
@@ -655,7 +708,9 @@ test("recipe meal planning uses local today, retains choices, and saves changed 
   await user.clear(servings);
   await user.type(servings, "0.5");
   await user.selectOptions(within(dialog).getByLabelText("Section"), "1");
-  await user.selectOptions(within(dialog).getByLabelText("Recipe"), "2");
+  await user.clear(recipe);
+  await user.type(recipe, "Sauce");
+  await user.click(within(dialog).getByRole("option", { name: "Sauce" }));
   fireEvent.change(day, { target: { value: "2027-04-07" } });
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(writes).toEqual([]);
@@ -735,12 +790,12 @@ test("recipe meal planning retains failed input and releases full-screen locks o
   expect(document.body.classList.contains("fullscreen-card")).toBe(false);
 });
 
-test("the meal-plan feature flag controls recipe planning actions", async () => {
+test("disabled meal planning hides reader actions and retains the native table menu", async () => {
   const app = mount(fixture(), [], false, { path: "/recipes", mealPlanEnabled: false });
   await screen.findByRole("heading", { level: 1, name: "Main dish" });
   expect(screen.queryByRole("button", { name: "Add to meal plan" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Add Main dish to meal plan" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Main dish Grocycode" })).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "More actions for recipe Main dish" }));
+  expect(screen.getByRole("menuitem", { name: "Download Recipe Grocycode" })).toBeTruthy();
   app.unmount();
   app.client.clear();
 });

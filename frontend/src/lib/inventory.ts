@@ -58,19 +58,13 @@ export async function getInventoryDetails(product: string, signal?: AbortSignal)
   );
 }
 
-export async function getInventorySelection(product: string, signal: AbortSignal, code?: string) {
-  const selected = await getInventoryDetails(product, signal);
+export async function getInventoryBarcode(code: string, signal: AbortSignal) {
   const query = new URLSearchParams([["query[]", `barcode=${code}`]]);
 
-  const found =
-    code === undefined
-      ? undefined
-      : z.array(barcode).parse(
-          await request(`/api/objects/product_barcodes_view?${query}`, {
-            signal,
-            cache: "default",
-          }),
-        )[0];
-
-  return { details: selected, barcode: found };
+  return z.array(barcode).parse(
+    await request(`/api/objects/product_barcodes_view?${query}`, {
+      signal,
+      cache: "default",
+    }),
+  )[0];
 }

@@ -27,6 +27,16 @@ function mount(path: string, { fail = false, stock = true, locations = true, pre
 
       if (url.pathname === "/api/user") return Response.json([{ id: 1, username: "Tester" }]);
 
+      if (url.pathname === "/api/v2/user/permissions") return Response.json({});
+
+      if (url.pathname === "/api/v2/localization")
+        return Response.json({
+          locale: "en",
+          direction: "ltr",
+          languages: ["en"],
+          catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+        });
+
       if (url.pathname === "/api/system/config")
         return Response.json({
           FEATURE_FLAG_STOCK: stock,
@@ -195,10 +205,11 @@ test.each(["", "0", "false"])(
 );
 
 test.each([{ stock: false }, { locations: false }])(
-  "location sheet access follows feature settings: %j",
+  "native location sheet reads remain available with hidden navigation: %j",
   async (settings) => {
-    const { reads } = mount("/locationcontentsheet", settings);
-    await screen.findByRole("heading", { name: "Feature disabled" });
-    expect(reads).toHaveLength(0);
+    const { reads, writes } = mount("/locationcontentsheet", settings);
+    await screen.findByRole("table", { name: "Shelf" });
+    expect(reads).toHaveLength(1);
+    expect(writes).toEqual([]);
   },
 );

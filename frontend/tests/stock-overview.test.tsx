@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { createAppRouter } from "@/router";
@@ -58,6 +58,16 @@ test("legacy overview links filter actual locations, groups, and separate due st
 
       if (path === "/api/user") return Response.json([{ id: 1, username: "test" }]);
 
+      if (path === "/api/v2/user/permissions") return Response.json({});
+
+      if (path === "/api/v2/localization")
+        return Response.json({
+          locale: "en",
+          direction: "ltr",
+          languages: ["en"],
+          catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+        });
+
       if (path === "/api/system/config" || path === "/api/user/settings") return Response.json({});
 
       if (path === "/api/v2/stock/overview")
@@ -99,8 +109,7 @@ test("legacy overview links filter actual locations, groups, and separate due st
   await screen.findByRole("link", { name: "Hard cheese" });
 
   const shown = () =>
-    within(screen.getByRole("table"))
-      .getAllByRole("link")
+    Array.from(screen.getByRole("table").querySelectorAll("td.stock-name a"))
       .map((link) => link.textContent)
       .sort();
 
@@ -184,7 +193,7 @@ test("overview table retains native column positions, grouping, search, and save
 
       if (path === "/api/v2/stock/overview") return Response.json(data);
 
-      if (path === "/api/objects/userfields")
+      if (path === "/api/objects/userfields" || path === "/api/v2/custom-data/fields")
         return Response.json([
           {
             id: 1,

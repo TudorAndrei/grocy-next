@@ -10,11 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as ApiRouteImport } from './routes/api'
 import { Route as BarcodeRouteImport } from './routes/barcode'
+import { Route as BarcodescannertestingRouteImport } from './routes/barcodescannertesting'
 import { Route as BatteriesRouteImport } from './routes/batteries'
+import { Route as BatteriesjournalRouteImport } from './routes/batteriesjournal'
+import { Route as BatteriesoverviewRouteImport } from './routes/batteriesoverview'
+import { Route as BatteriessettingsRouteImport } from './routes/batteriessettings'
+import { Route as BatterytrackingRouteImport } from './routes/batterytracking'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as CalendarAgendaRouteImport } from './routes/calendar-agenda'
+import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as ChoresRouteImport } from './routes/chores'
+import { Route as ChoresjournalRouteImport } from './routes/choresjournal'
+import { Route as ChoresoverviewRouteImport } from './routes/choresoverview'
+import { Route as ChoressettingsRouteImport } from './routes/choressettings'
+import { Route as ChoretrackingRouteImport } from './routes/choretracking'
 import { Route as ConsumeRouteImport } from './routes/consume'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EquipmentRouteImport } from './routes/equipment'
@@ -24,34 +37,89 @@ import { Route as JournalRouteImport } from './routes/journal'
 import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LocationcontentsheetRouteImport } from './routes/locationcontentsheet'
 import { Route as LocationsRouteImport } from './routes/locations'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as ManageRouteImport } from './routes/manage'
+import { Route as ManageapikeysRouteImport } from './routes/manageapikeys'
 import { Route as MealPlanRouteImport } from './routes/meal-plan'
+import { Route as MealplanRouteImport } from './routes/mealplan'
+import { Route as MealplansectionsRouteImport } from './routes/mealplansections'
+import { Route as ProductgroupsRouteImport } from './routes/productgroups'
 import { Route as PurchaseRouteImport } from './routes/purchase'
 import { Route as QuantityunitconversionsresolvedRouteImport } from './routes/quantityunitconversionsresolved'
+import { Route as QuantityunitpluraltestingRouteImport } from './routes/quantityunitpluraltesting'
+import { Route as QuantityunitsRouteImport } from './routes/quantityunits'
+import { Route as RecipeRouteImport } from './routes/recipe'
+import { Route as RecipessettingsRouteImport } from './routes/recipessettings'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as ShoppinglistRouteImport } from './routes/shoppinglist'
+import { Route as ShoppinglistsettingsRouteImport } from './routes/shoppinglistsettings'
+import { Route as ShoppinglocationsRouteImport } from './routes/shoppinglocations'
+import { Route as SigninRouteImport } from './routes/signin'
+import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as StockRouteImport } from './routes/stock'
+import { Route as StockbylocationRouteImport } from './routes/stockbylocation'
 import { Route as StockoverviewRouteImport } from './routes/stockoverview'
+import { Route as StocksettingsRouteImport } from './routes/stocksettings'
+import { Route as TaskcategoriesRouteImport } from './routes/taskcategories'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as TaskssettingsRouteImport } from './routes/taskssettings'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as TransferRouteImport } from './routes/transfer'
+import { Route as UserentitiesRouteImport } from './routes/userentities'
+import { Route as UserfieldsRouteImport } from './routes/userfields'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as UsersettingsRouteImport } from './routes/usersettings'
+import { Route as BatteryBatteryIdRouteImport } from './routes/battery/$batteryId'
+import { Route as ChoreChoreIdRouteImport } from './routes/chore/$choreId'
+import { Route as EquipmentIndexRouteImport } from './routes/equipment/index'
+import { Route as EquipmentEquipmentIdRouteImport } from './routes/equipment/$equipmentId'
+import { Route as LocationLocationIdRouteImport } from './routes/location/$locationId'
+import { Route as ManageapikeysIndexRouteImport } from './routes/manageapikeys/index'
+import { Route as ManageapikeysNewRouteImport } from './routes/manageapikeys/new'
+import { Route as MealplansectionIndexRouteImport } from './routes/mealplansection/index'
+import { Route as MealplansectionSectionIdRouteImport } from './routes/mealplansection/$sectionId'
 import { Route as ProductProductIdRouteImport } from './routes/product/$productId'
+import { Route as ProductbarcodesBarcodeIdRouteImport } from './routes/productbarcodes/$barcodeId'
+import { Route as ProductgroupGroupIdRouteImport } from './routes/productgroup/$groupId'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
+import { Route as QuantityunitUnitIdRouteImport } from './routes/quantityunit/$unitId'
+import { Route as QuantityunitconversionConversionIdRouteImport } from './routes/quantityunitconversion/$conversionId'
+import { Route as RecipeIndexRouteImport } from './routes/recipe/index'
+import { Route as RecipeRecipeIdRouteImport } from './routes/recipe/$recipeId'
 import { Route as RecipesIndexRouteImport } from './routes/recipes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes/$recipeId'
+import { Route as ShoppinglistIndexRouteImport } from './routes/shoppinglist/index'
+import { Route as ShoppinglistListIdRouteImport } from './routes/shoppinglist/$listId'
 import { Route as ShoppinglistitemItemIdRouteImport } from './routes/shoppinglistitem/$itemId'
+import { Route as ShoppinglocationStoreIdRouteImport } from './routes/shoppinglocation/$storeId'
 import { Route as StockentriesIndexRouteImport } from './routes/stockentries/index'
 import { Route as StockentryEntryIdRouteImport } from './routes/stockentry/$entryId'
 import { Route as StockjournalIndexRouteImport } from './routes/stockjournal/index'
 import { Route as StockjournalSummaryRouteImport } from './routes/stockjournal/summary'
 import { Route as StockreportsSpendingsRouteImport } from './routes/stockreports/spendings'
+import { Route as TaskTaskIdRouteImport } from './routes/task/$taskId'
+import { Route as TaskcategoryCategoryIdRouteImport } from './routes/taskcategory/$categoryId'
+import { Route as UserUserIdRouteImport } from './routes/user/$userId'
+import { Route as UserentityEntityIdRouteImport } from './routes/userentity/$entityId'
+import { Route as UserfieldFieldIdRouteImport } from './routes/userfield/$fieldId'
+import { Route as UserobjectsEntityNameRouteImport } from './routes/userobjects/$entityName'
+import { Route as UserUserIdIndexRouteImport } from './routes/user/$userId/index'
+import { Route as UserUserIdPermissionsRouteImport } from './routes/user/$userId/permissions'
+import { Route as UserobjectEntityNameObjectIdRouteImport } from './routes/userobject/$entityName/$objectId'
+import { Route as RecipeRecipeIdPosPositionIdRouteImport } from './routes/recipe/$recipeId/pos/$positionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ActivityRoute = ActivityRouteImport.update({
@@ -59,9 +127,19 @@ const ActivityRoute = ActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRoute = ApiRouteImport.update({
+  id: '/api',
+  path: '/api',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BarcodeRoute = BarcodeRouteImport.update({
   id: '/barcode',
   path: '/barcode',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BarcodescannertestingRoute = BarcodescannertestingRouteImport.update({
+  id: '/barcodescannertesting',
+  path: '/barcodescannertesting',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BatteriesRoute = BatteriesRouteImport.update({
@@ -69,14 +147,64 @@ const BatteriesRoute = BatteriesRouteImport.update({
   path: '/batteries',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BatteriesjournalRoute = BatteriesjournalRouteImport.update({
+  id: '/batteriesjournal',
+  path: '/batteriesjournal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BatteriesoverviewRoute = BatteriesoverviewRouteImport.update({
+  id: '/batteriesoverview',
+  path: '/batteriesoverview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BatteriessettingsRoute = BatteriessettingsRouteImport.update({
+  id: '/batteriessettings',
+  path: '/batteriessettings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BatterytrackingRoute = BatterytrackingRouteImport.update({
+  id: '/batterytracking',
+  path: '/batterytracking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalendarAgendaRoute = CalendarAgendaRouteImport.update({
+  id: '/calendar-agenda',
+  path: '/calendar-agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CatalogRoute = CatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChoresRoute = ChoresRouteImport.update({
   id: '/chores',
   path: '/chores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChoresjournalRoute = ChoresjournalRouteImport.update({
+  id: '/choresjournal',
+  path: '/choresjournal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChoresoverviewRoute = ChoresoverviewRouteImport.update({
+  id: '/choresoverview',
+  path: '/choresoverview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChoressettingsRoute = ChoressettingsRouteImport.update({
+  id: '/choressettings',
+  path: '/choressettings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChoretrackingRoute = ChoretrackingRouteImport.update({
+  id: '/choretracking',
+  path: '/choretracking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsumeRoute = ConsumeRouteImport.update({
@@ -124,14 +252,44 @@ const LocationsRoute = LocationsRouteImport.update({
   path: '/locations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManageRoute = ManageRouteImport.update({
   id: '/manage',
   path: '/manage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManageapikeysRoute = ManageapikeysRouteImport.update({
+  id: '/manageapikeys',
+  path: '/manageapikeys',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MealPlanRoute = MealPlanRouteImport.update({
   id: '/meal-plan',
   path: '/meal-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MealplanRoute = MealplanRouteImport.update({
+  id: '/mealplan',
+  path: '/mealplan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MealplansectionsRoute = MealplansectionsRouteImport.update({
+  id: '/mealplansections',
+  path: '/mealplansections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductgroupsRoute = ProductgroupsRouteImport.update({
+  id: '/productgroups',
+  path: '/productgroups',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PurchaseRoute = PurchaseRouteImport.update({
@@ -145,6 +303,27 @@ const QuantityunitconversionsresolvedRoute =
     path: '/quantityunitconversionsresolved',
     getParentRoute: () => rootRouteImport,
   } as any)
+const QuantityunitpluraltestingRoute =
+  QuantityunitpluraltestingRouteImport.update({
+    id: '/quantityunitpluraltesting',
+    path: '/quantityunitpluraltesting',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const QuantityunitsRoute = QuantityunitsRouteImport.update({
+  id: '/quantityunits',
+  path: '/quantityunits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecipeRoute = RecipeRouteImport.update({
+  id: '/recipe',
+  path: '/recipe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecipessettingsRoute = RecipessettingsRouteImport.update({
+  id: '/recipessettings',
+  path: '/recipessettings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReviewsRoute = ReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
@@ -165,9 +344,34 @@ const ShoppinglistRoute = ShoppinglistRouteImport.update({
   path: '/shoppinglist',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShoppinglistsettingsRoute = ShoppinglistsettingsRouteImport.update({
+  id: '/shoppinglistsettings',
+  path: '/shoppinglistsettings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShoppinglocationsRoute = ShoppinglocationsRouteImport.update({
+  id: '/shoppinglocations',
+  path: '/shoppinglocations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignoutRoute = SignoutRouteImport.update({
+  id: '/signout',
+  path: '/signout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockRoute = StockRouteImport.update({
   id: '/stock',
   path: '/stock',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockbylocationRoute = StockbylocationRouteImport.update({
+  id: '/stockbylocation',
+  path: '/stockbylocation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StockoverviewRoute = StockoverviewRouteImport.update({
@@ -175,9 +379,24 @@ const StockoverviewRoute = StockoverviewRouteImport.update({
   path: '/stockoverview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StocksettingsRoute = StocksettingsRouteImport.update({
+  id: '/stocksettings',
+  path: '/stocksettings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TaskcategoriesRoute = TaskcategoriesRouteImport.update({
+  id: '/taskcategories',
+  path: '/taskcategories',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TaskssettingsRoute = TaskssettingsRouteImport.update({
+  id: '/taskssettings',
+  path: '/taskssettings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TodayRoute = TodayRouteImport.update({
@@ -190,9 +409,86 @@ const TransferRoute = TransferRouteImport.update({
   path: '/transfer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UserentitiesRoute = UserentitiesRouteImport.update({
+  id: '/userentities',
+  path: '/userentities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserfieldsRoute = UserfieldsRouteImport.update({
+  id: '/userfields',
+  path: '/userfields',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersettingsRoute = UsersettingsRouteImport.update({
+  id: '/usersettings',
+  path: '/usersettings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BatteryBatteryIdRoute = BatteryBatteryIdRouteImport.update({
+  id: '/battery/$batteryId',
+  path: '/battery/$batteryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChoreChoreIdRoute = ChoreChoreIdRouteImport.update({
+  id: '/chore/$choreId',
+  path: '/chore/$choreId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipmentIndexRoute = EquipmentIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EquipmentRoute,
+} as any)
+const EquipmentEquipmentIdRoute = EquipmentEquipmentIdRouteImport.update({
+  id: '/$equipmentId',
+  path: '/$equipmentId',
+  getParentRoute: () => EquipmentRoute,
+} as any)
+const LocationLocationIdRoute = LocationLocationIdRouteImport.update({
+  id: '/location/$locationId',
+  path: '/location/$locationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageapikeysIndexRoute = ManageapikeysIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ManageapikeysRoute,
+} as any)
+const ManageapikeysNewRoute = ManageapikeysNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => ManageapikeysRoute,
+} as any)
+const MealplansectionIndexRoute = MealplansectionIndexRouteImport.update({
+  id: '/mealplansection/',
+  path: '/mealplansection/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MealplansectionSectionIdRoute =
+  MealplansectionSectionIdRouteImport.update({
+    id: '/mealplansection/$sectionId',
+    path: '/mealplansection/$sectionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProductProductIdRoute = ProductProductIdRouteImport.update({
   id: '/product/$productId',
   path: '/product/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductbarcodesBarcodeIdRoute =
+  ProductbarcodesBarcodeIdRouteImport.update({
+    id: '/productbarcodes/$barcodeId',
+    path: '/productbarcodes/$barcodeId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ProductgroupGroupIdRoute = ProductgroupGroupIdRouteImport.update({
+  id: '/productgroup/$groupId',
+  path: '/productgroup/$groupId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
@@ -205,6 +501,27 @@ const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
   path: '/products/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QuantityunitUnitIdRoute = QuantityunitUnitIdRouteImport.update({
+  id: '/quantityunit/$unitId',
+  path: '/quantityunit/$unitId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuantityunitconversionConversionIdRoute =
+  QuantityunitconversionConversionIdRouteImport.update({
+    id: '/quantityunitconversion/$conversionId',
+    path: '/quantityunitconversion/$conversionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RecipeIndexRoute = RecipeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RecipeRoute,
+} as any)
+const RecipeRecipeIdRoute = RecipeRecipeIdRouteImport.update({
+  id: '/$recipeId',
+  path: '/$recipeId',
+  getParentRoute: () => RecipeRoute,
+} as any)
 const RecipesIndexRoute = RecipesIndexRouteImport.update({
   id: '/recipes/',
   path: '/recipes/',
@@ -215,9 +532,24 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
   path: '/recipes/$recipeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShoppinglistIndexRoute = ShoppinglistIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShoppinglistRoute,
+} as any)
+const ShoppinglistListIdRoute = ShoppinglistListIdRouteImport.update({
+  id: '/$listId',
+  path: '/$listId',
+  getParentRoute: () => ShoppinglistRoute,
+} as any)
 const ShoppinglistitemItemIdRoute = ShoppinglistitemItemIdRouteImport.update({
   id: '/shoppinglistitem/$itemId',
   path: '/shoppinglistitem/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShoppinglocationStoreIdRoute = ShoppinglocationStoreIdRouteImport.update({
+  id: '/shoppinglocation/$storeId',
+  path: '/shoppinglocation/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StockentriesIndexRoute = StockentriesIndexRouteImport.update({
@@ -245,140 +577,389 @@ const StockreportsSpendingsRoute = StockreportsSpendingsRouteImport.update({
   path: '/stockreports/spendings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TaskTaskIdRoute = TaskTaskIdRouteImport.update({
+  id: '/task/$taskId',
+  path: '/task/$taskId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TaskcategoryCategoryIdRoute = TaskcategoryCategoryIdRouteImport.update({
+  id: '/taskcategory/$categoryId',
+  path: '/taskcategory/$categoryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserUserIdRoute = UserUserIdRouteImport.update({
+  id: '/user/$userId',
+  path: '/user/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserentityEntityIdRoute = UserentityEntityIdRouteImport.update({
+  id: '/userentity/$entityId',
+  path: '/userentity/$entityId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserfieldFieldIdRoute = UserfieldFieldIdRouteImport.update({
+  id: '/userfield/$fieldId',
+  path: '/userfield/$fieldId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserobjectsEntityNameRoute = UserobjectsEntityNameRouteImport.update({
+  id: '/userobjects/$entityName',
+  path: '/userobjects/$entityName',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserUserIdIndexRoute = UserUserIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => UserUserIdRoute,
+} as any)
+const UserUserIdPermissionsRoute = UserUserIdPermissionsRouteImport.update({
+  id: '/permissions',
+  path: '/permissions',
+  getParentRoute: () => UserUserIdRoute,
+} as any)
+const UserobjectEntityNameObjectIdRoute =
+  UserobjectEntityNameObjectIdRouteImport.update({
+    id: '/userobject/$entityName/$objectId',
+    path: '/userobject/$entityName/$objectId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RecipeRecipeIdPosPositionIdRoute =
+  RecipeRecipeIdPosPositionIdRouteImport.update({
+    id: '/pos/$positionId',
+    path: '/pos/$positionId',
+    getParentRoute: () => RecipeRecipeIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
+  '/api': typeof ApiRoute
   '/barcode': typeof BarcodeRoute
+  '/barcodescannertesting': typeof BarcodescannertestingRoute
   '/batteries': typeof BatteriesRoute
+  '/batteriesjournal': typeof BatteriesjournalRoute
+  '/batteriesoverview': typeof BatteriesoverviewRoute
+  '/batteriessettings': typeof BatteriessettingsRoute
+  '/batterytracking': typeof BatterytrackingRoute
   '/calendar': typeof CalendarRoute
+  '/calendar-agenda': typeof CalendarAgendaRoute
+  '/catalog': typeof CatalogRoute
   '/chores': typeof ChoresRoute
+  '/choresjournal': typeof ChoresjournalRoute
+  '/choresoverview': typeof ChoresoverviewRoute
+  '/choressettings': typeof ChoressettingsRoute
+  '/choretracking': typeof ChoretrackingRoute
   '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
-  '/equipment': typeof EquipmentRoute
+  '/equipment': typeof EquipmentRouteWithChildren
   '/household': typeof HouseholdRoute
   '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
   '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
+  '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/manage': typeof ManageRoute
+  '/manageapikeys': typeof ManageapikeysRouteWithChildren
   '/meal-plan': typeof MealPlanRoute
+  '/mealplan': typeof MealplanRoute
+  '/mealplansections': typeof MealplansectionsRoute
+  '/productgroups': typeof ProductgroupsRoute
   '/purchase': typeof PurchaseRoute
   '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
+  '/quantityunitpluraltesting': typeof QuantityunitpluraltestingRoute
+  '/quantityunits': typeof QuantityunitsRoute
+  '/recipe': typeof RecipeRouteWithChildren
+  '/recipessettings': typeof RecipessettingsRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
-  '/shoppinglist': typeof ShoppinglistRoute
+  '/shoppinglist': typeof ShoppinglistRouteWithChildren
+  '/shoppinglistsettings': typeof ShoppinglistsettingsRoute
+  '/shoppinglocations': typeof ShoppinglocationsRoute
+  '/signin': typeof SigninRoute
+  '/signout': typeof SignoutRoute
   '/stock': typeof StockRoute
+  '/stockbylocation': typeof StockbylocationRoute
   '/stockoverview': typeof StockoverviewRoute
+  '/stocksettings': typeof StocksettingsRoute
+  '/taskcategories': typeof TaskcategoriesRoute
   '/tasks': typeof TasksRoute
+  '/taskssettings': typeof TaskssettingsRoute
   '/today': typeof TodayRoute
   '/transfer': typeof TransferRoute
+  '/userentities': typeof UserentitiesRoute
+  '/userfields': typeof UserfieldsRoute
+  '/users': typeof UsersRoute
+  '/usersettings': typeof UsersettingsRoute
+  '/battery/$batteryId': typeof BatteryBatteryIdRoute
+  '/chore/$choreId': typeof ChoreChoreIdRoute
+  '/equipment/$equipmentId': typeof EquipmentEquipmentIdRoute
+  '/location/$locationId': typeof LocationLocationIdRoute
+  '/manageapikeys/new': typeof ManageapikeysNewRoute
+  '/mealplansection/$sectionId': typeof MealplansectionSectionIdRoute
   '/product/$productId': typeof ProductProductIdRoute
+  '/productbarcodes/$barcodeId': typeof ProductbarcodesBarcodeIdRoute
+  '/productgroup/$groupId': typeof ProductgroupGroupIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
+  '/quantityunit/$unitId': typeof QuantityunitUnitIdRoute
+  '/quantityunitconversion/$conversionId': typeof QuantityunitconversionConversionIdRoute
+  '/recipe/$recipeId': typeof RecipeRecipeIdRouteWithChildren
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/shoppinglist/$listId': typeof ShoppinglistListIdRoute
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/shoppinglocation/$storeId': typeof ShoppinglocationStoreIdRoute
   '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/stockjournal/summary': typeof StockjournalSummaryRoute
   '/stockreports/spendings': typeof StockreportsSpendingsRoute
+  '/task/$taskId': typeof TaskTaskIdRoute
+  '/taskcategory/$categoryId': typeof TaskcategoryCategoryIdRoute
+  '/user/$userId': typeof UserUserIdRouteWithChildren
+  '/userentity/$entityId': typeof UserentityEntityIdRoute
+  '/userfield/$fieldId': typeof UserfieldFieldIdRoute
+  '/userobjects/$entityName': typeof UserobjectsEntityNameRoute
+  '/equipment/': typeof EquipmentIndexRoute
+  '/manageapikeys/': typeof ManageapikeysIndexRoute
+  '/mealplansection/': typeof MealplansectionIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/recipe/': typeof RecipeIndexRoute
   '/recipes/': typeof RecipesIndexRoute
+  '/shoppinglist/': typeof ShoppinglistIndexRoute
   '/stockentries/': typeof StockentriesIndexRoute
   '/stockjournal/': typeof StockjournalIndexRoute
+  '/user/$userId/permissions': typeof UserUserIdPermissionsRoute
+  '/userobject/$entityName/$objectId': typeof UserobjectEntityNameObjectIdRoute
+  '/user/$userId/': typeof UserUserIdIndexRoute
+  '/recipe/$recipeId/pos/$positionId': typeof RecipeRecipeIdPosPositionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
+  '/api': typeof ApiRoute
   '/barcode': typeof BarcodeRoute
+  '/barcodescannertesting': typeof BarcodescannertestingRoute
   '/batteries': typeof BatteriesRoute
+  '/batteriesjournal': typeof BatteriesjournalRoute
+  '/batteriesoverview': typeof BatteriesoverviewRoute
+  '/batteriessettings': typeof BatteriessettingsRoute
+  '/batterytracking': typeof BatterytrackingRoute
   '/calendar': typeof CalendarRoute
+  '/calendar-agenda': typeof CalendarAgendaRoute
+  '/catalog': typeof CatalogRoute
   '/chores': typeof ChoresRoute
+  '/choresjournal': typeof ChoresjournalRoute
+  '/choresoverview': typeof ChoresoverviewRoute
+  '/choressettings': typeof ChoressettingsRoute
+  '/choretracking': typeof ChoretrackingRoute
   '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
-  '/equipment': typeof EquipmentRoute
   '/household': typeof HouseholdRoute
   '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
   '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
+  '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/manage': typeof ManageRoute
   '/meal-plan': typeof MealPlanRoute
+  '/mealplan': typeof MealplanRoute
+  '/mealplansections': typeof MealplansectionsRoute
+  '/productgroups': typeof ProductgroupsRoute
   '/purchase': typeof PurchaseRoute
   '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
+  '/quantityunitpluraltesting': typeof QuantityunitpluraltestingRoute
+  '/quantityunits': typeof QuantityunitsRoute
+  '/recipessettings': typeof RecipessettingsRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
-  '/shoppinglist': typeof ShoppinglistRoute
+  '/shoppinglistsettings': typeof ShoppinglistsettingsRoute
+  '/shoppinglocations': typeof ShoppinglocationsRoute
+  '/signin': typeof SigninRoute
+  '/signout': typeof SignoutRoute
   '/stock': typeof StockRoute
+  '/stockbylocation': typeof StockbylocationRoute
   '/stockoverview': typeof StockoverviewRoute
+  '/stocksettings': typeof StocksettingsRoute
+  '/taskcategories': typeof TaskcategoriesRoute
   '/tasks': typeof TasksRoute
+  '/taskssettings': typeof TaskssettingsRoute
   '/today': typeof TodayRoute
   '/transfer': typeof TransferRoute
+  '/userentities': typeof UserentitiesRoute
+  '/userfields': typeof UserfieldsRoute
+  '/users': typeof UsersRoute
+  '/usersettings': typeof UsersettingsRoute
+  '/battery/$batteryId': typeof BatteryBatteryIdRoute
+  '/chore/$choreId': typeof ChoreChoreIdRoute
+  '/equipment/$equipmentId': typeof EquipmentEquipmentIdRoute
+  '/location/$locationId': typeof LocationLocationIdRoute
+  '/manageapikeys/new': typeof ManageapikeysNewRoute
+  '/mealplansection/$sectionId': typeof MealplansectionSectionIdRoute
   '/product/$productId': typeof ProductProductIdRoute
+  '/productbarcodes/$barcodeId': typeof ProductbarcodesBarcodeIdRoute
+  '/productgroup/$groupId': typeof ProductgroupGroupIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
+  '/quantityunit/$unitId': typeof QuantityunitUnitIdRoute
+  '/quantityunitconversion/$conversionId': typeof QuantityunitconversionConversionIdRoute
+  '/recipe/$recipeId': typeof RecipeRecipeIdRouteWithChildren
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/shoppinglist/$listId': typeof ShoppinglistListIdRoute
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/shoppinglocation/$storeId': typeof ShoppinglocationStoreIdRoute
   '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/stockjournal/summary': typeof StockjournalSummaryRoute
   '/stockreports/spendings': typeof StockreportsSpendingsRoute
+  '/task/$taskId': typeof TaskTaskIdRoute
+  '/taskcategory/$categoryId': typeof TaskcategoryCategoryIdRoute
+  '/userentity/$entityId': typeof UserentityEntityIdRoute
+  '/userfield/$fieldId': typeof UserfieldFieldIdRoute
+  '/userobjects/$entityName': typeof UserobjectsEntityNameRoute
+  '/equipment': typeof EquipmentIndexRoute
+  '/manageapikeys': typeof ManageapikeysIndexRoute
+  '/mealplansection': typeof MealplansectionIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/recipe': typeof RecipeIndexRoute
   '/recipes': typeof RecipesIndexRoute
+  '/shoppinglist': typeof ShoppinglistIndexRoute
   '/stockentries': typeof StockentriesIndexRoute
   '/stockjournal': typeof StockjournalIndexRoute
+  '/user/$userId/permissions': typeof UserUserIdPermissionsRoute
+  '/userobject/$entityName/$objectId': typeof UserobjectEntityNameObjectIdRoute
+  '/user/$userId': typeof UserUserIdIndexRoute
+  '/recipe/$recipeId/pos/$positionId': typeof RecipeRecipeIdPosPositionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
+  '/api': typeof ApiRoute
   '/barcode': typeof BarcodeRoute
+  '/barcodescannertesting': typeof BarcodescannertestingRoute
   '/batteries': typeof BatteriesRoute
+  '/batteriesjournal': typeof BatteriesjournalRoute
+  '/batteriesoverview': typeof BatteriesoverviewRoute
+  '/batteriessettings': typeof BatteriessettingsRoute
+  '/batterytracking': typeof BatterytrackingRoute
   '/calendar': typeof CalendarRoute
+  '/calendar-agenda': typeof CalendarAgendaRoute
+  '/catalog': typeof CatalogRoute
   '/chores': typeof ChoresRoute
+  '/choresjournal': typeof ChoresjournalRoute
+  '/choresoverview': typeof ChoresoverviewRoute
+  '/choressettings': typeof ChoressettingsRoute
+  '/choretracking': typeof ChoretrackingRoute
   '/consume': typeof ConsumeRoute
   '/dashboard': typeof DashboardRoute
-  '/equipment': typeof EquipmentRoute
+  '/equipment': typeof EquipmentRouteWithChildren
   '/household': typeof HouseholdRoute
   '/inventory': typeof InventoryRoute
   '/journal': typeof JournalRoute
   '/labels': typeof LabelsRoute
   '/locationcontentsheet': typeof LocationcontentsheetRoute
   '/locations': typeof LocationsRoute
+  '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/manage': typeof ManageRoute
+  '/manageapikeys': typeof ManageapikeysRouteWithChildren
   '/meal-plan': typeof MealPlanRoute
+  '/mealplan': typeof MealplanRoute
+  '/mealplansections': typeof MealplansectionsRoute
+  '/productgroups': typeof ProductgroupsRoute
   '/purchase': typeof PurchaseRoute
   '/quantityunitconversionsresolved': typeof QuantityunitconversionsresolvedRoute
+  '/quantityunitpluraltesting': typeof QuantityunitpluraltestingRoute
+  '/quantityunits': typeof QuantityunitsRoute
+  '/recipe': typeof RecipeRouteWithChildren
+  '/recipessettings': typeof RecipessettingsRoute
   '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
-  '/shoppinglist': typeof ShoppinglistRoute
+  '/shoppinglist': typeof ShoppinglistRouteWithChildren
+  '/shoppinglistsettings': typeof ShoppinglistsettingsRoute
+  '/shoppinglocations': typeof ShoppinglocationsRoute
+  '/signin': typeof SigninRoute
+  '/signout': typeof SignoutRoute
   '/stock': typeof StockRoute
+  '/stockbylocation': typeof StockbylocationRoute
   '/stockoverview': typeof StockoverviewRoute
+  '/stocksettings': typeof StocksettingsRoute
+  '/taskcategories': typeof TaskcategoriesRoute
   '/tasks': typeof TasksRoute
+  '/taskssettings': typeof TaskssettingsRoute
   '/today': typeof TodayRoute
   '/transfer': typeof TransferRoute
+  '/userentities': typeof UserentitiesRoute
+  '/userfields': typeof UserfieldsRoute
+  '/users': typeof UsersRoute
+  '/usersettings': typeof UsersettingsRoute
+  '/battery/$batteryId': typeof BatteryBatteryIdRoute
+  '/chore/$choreId': typeof ChoreChoreIdRoute
+  '/equipment/$equipmentId': typeof EquipmentEquipmentIdRoute
+  '/location/$locationId': typeof LocationLocationIdRoute
+  '/manageapikeys/new': typeof ManageapikeysNewRoute
+  '/mealplansection/$sectionId': typeof MealplansectionSectionIdRoute
   '/product/$productId': typeof ProductProductIdRoute
+  '/productbarcodes/$barcodeId': typeof ProductbarcodesBarcodeIdRoute
+  '/productgroup/$groupId': typeof ProductgroupGroupIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
+  '/quantityunit/$unitId': typeof QuantityunitUnitIdRoute
+  '/quantityunitconversion/$conversionId': typeof QuantityunitconversionConversionIdRoute
+  '/recipe/$recipeId': typeof RecipeRecipeIdRouteWithChildren
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/shoppinglist/$listId': typeof ShoppinglistListIdRoute
   '/shoppinglistitem/$itemId': typeof ShoppinglistitemItemIdRoute
+  '/shoppinglocation/$storeId': typeof ShoppinglocationStoreIdRoute
   '/stockentry/$entryId': typeof StockentryEntryIdRoute
   '/stockjournal/summary': typeof StockjournalSummaryRoute
   '/stockreports/spendings': typeof StockreportsSpendingsRoute
+  '/task/$taskId': typeof TaskTaskIdRoute
+  '/taskcategory/$categoryId': typeof TaskcategoryCategoryIdRoute
+  '/user/$userId': typeof UserUserIdRouteWithChildren
+  '/userentity/$entityId': typeof UserentityEntityIdRoute
+  '/userfield/$fieldId': typeof UserfieldFieldIdRoute
+  '/userobjects/$entityName': typeof UserobjectsEntityNameRoute
+  '/equipment/': typeof EquipmentIndexRoute
+  '/manageapikeys/': typeof ManageapikeysIndexRoute
+  '/mealplansection/': typeof MealplansectionIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/recipe/': typeof RecipeIndexRoute
   '/recipes/': typeof RecipesIndexRoute
+  '/shoppinglist/': typeof ShoppinglistIndexRoute
   '/stockentries/': typeof StockentriesIndexRoute
   '/stockjournal/': typeof StockjournalIndexRoute
+  '/user/$userId/permissions': typeof UserUserIdPermissionsRoute
+  '/userobject/$entityName/$objectId': typeof UserobjectEntityNameObjectIdRoute
+  '/user/$userId/': typeof UserUserIdIndexRoute
+  '/recipe/$recipeId/pos/$positionId': typeof RecipeRecipeIdPosPositionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/activity'
+    | '/api'
     | '/barcode'
+    | '/barcodescannertesting'
     | '/batteries'
+    | '/batteriesjournal'
+    | '/batteriesoverview'
+    | '/batteriessettings'
+    | '/batterytracking'
     | '/calendar'
+    | '/calendar-agenda'
+    | '/catalog'
     | '/chores'
+    | '/choresjournal'
+    | '/choresoverview'
+    | '/choressettings'
+    | '/choretracking'
     | '/consume'
     | '/dashboard'
     | '/equipment'
@@ -388,79 +969,200 @@ export interface FileRouteTypes {
     | '/labels'
     | '/locationcontentsheet'
     | '/locations'
+    | '/login'
+    | '/logout'
     | '/manage'
+    | '/manageapikeys'
     | '/meal-plan'
+    | '/mealplan'
+    | '/mealplansections'
+    | '/productgroups'
     | '/purchase'
     | '/quantityunitconversionsresolved'
+    | '/quantityunitpluraltesting'
+    | '/quantityunits'
+    | '/recipe'
+    | '/recipessettings'
     | '/reviews'
     | '/settings'
     | '/shopping'
     | '/shoppinglist'
+    | '/shoppinglistsettings'
+    | '/shoppinglocations'
+    | '/signin'
+    | '/signout'
     | '/stock'
+    | '/stockbylocation'
     | '/stockoverview'
+    | '/stocksettings'
+    | '/taskcategories'
     | '/tasks'
+    | '/taskssettings'
     | '/today'
     | '/transfer'
+    | '/userentities'
+    | '/userfields'
+    | '/users'
+    | '/usersettings'
+    | '/battery/$batteryId'
+    | '/chore/$choreId'
+    | '/equipment/$equipmentId'
+    | '/location/$locationId'
+    | '/manageapikeys/new'
+    | '/mealplansection/$sectionId'
     | '/product/$productId'
+    | '/productbarcodes/$barcodeId'
+    | '/productgroup/$groupId'
     | '/products/$productId'
+    | '/quantityunit/$unitId'
+    | '/quantityunitconversion/$conversionId'
+    | '/recipe/$recipeId'
     | '/recipes/$recipeId'
+    | '/shoppinglist/$listId'
     | '/shoppinglistitem/$itemId'
+    | '/shoppinglocation/$storeId'
     | '/stockentry/$entryId'
     | '/stockjournal/summary'
     | '/stockreports/spendings'
+    | '/task/$taskId'
+    | '/taskcategory/$categoryId'
+    | '/user/$userId'
+    | '/userentity/$entityId'
+    | '/userfield/$fieldId'
+    | '/userobjects/$entityName'
+    | '/equipment/'
+    | '/manageapikeys/'
+    | '/mealplansection/'
     | '/products/'
+    | '/recipe/'
     | '/recipes/'
+    | '/shoppinglist/'
     | '/stockentries/'
     | '/stockjournal/'
+    | '/user/$userId/permissions'
+    | '/userobject/$entityName/$objectId'
+    | '/user/$userId/'
+    | '/recipe/$recipeId/pos/$positionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/activity'
+    | '/api'
     | '/barcode'
+    | '/barcodescannertesting'
     | '/batteries'
+    | '/batteriesjournal'
+    | '/batteriesoverview'
+    | '/batteriessettings'
+    | '/batterytracking'
     | '/calendar'
+    | '/calendar-agenda'
+    | '/catalog'
     | '/chores'
+    | '/choresjournal'
+    | '/choresoverview'
+    | '/choressettings'
+    | '/choretracking'
     | '/consume'
     | '/dashboard'
-    | '/equipment'
     | '/household'
     | '/inventory'
     | '/journal'
     | '/labels'
     | '/locationcontentsheet'
     | '/locations'
+    | '/login'
+    | '/logout'
     | '/manage'
     | '/meal-plan'
+    | '/mealplan'
+    | '/mealplansections'
+    | '/productgroups'
     | '/purchase'
     | '/quantityunitconversionsresolved'
+    | '/quantityunitpluraltesting'
+    | '/quantityunits'
+    | '/recipessettings'
     | '/reviews'
     | '/settings'
     | '/shopping'
-    | '/shoppinglist'
+    | '/shoppinglistsettings'
+    | '/shoppinglocations'
+    | '/signin'
+    | '/signout'
     | '/stock'
+    | '/stockbylocation'
     | '/stockoverview'
+    | '/stocksettings'
+    | '/taskcategories'
     | '/tasks'
+    | '/taskssettings'
     | '/today'
     | '/transfer'
+    | '/userentities'
+    | '/userfields'
+    | '/users'
+    | '/usersettings'
+    | '/battery/$batteryId'
+    | '/chore/$choreId'
+    | '/equipment/$equipmentId'
+    | '/location/$locationId'
+    | '/manageapikeys/new'
+    | '/mealplansection/$sectionId'
     | '/product/$productId'
+    | '/productbarcodes/$barcodeId'
+    | '/productgroup/$groupId'
     | '/products/$productId'
+    | '/quantityunit/$unitId'
+    | '/quantityunitconversion/$conversionId'
+    | '/recipe/$recipeId'
     | '/recipes/$recipeId'
+    | '/shoppinglist/$listId'
     | '/shoppinglistitem/$itemId'
+    | '/shoppinglocation/$storeId'
     | '/stockentry/$entryId'
     | '/stockjournal/summary'
     | '/stockreports/spendings'
+    | '/task/$taskId'
+    | '/taskcategory/$categoryId'
+    | '/userentity/$entityId'
+    | '/userfield/$fieldId'
+    | '/userobjects/$entityName'
+    | '/equipment'
+    | '/manageapikeys'
+    | '/mealplansection'
     | '/products'
+    | '/recipe'
     | '/recipes'
+    | '/shoppinglist'
     | '/stockentries'
     | '/stockjournal'
+    | '/user/$userId/permissions'
+    | '/userobject/$entityName/$objectId'
+    | '/user/$userId'
+    | '/recipe/$recipeId/pos/$positionId'
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/activity'
+    | '/api'
     | '/barcode'
+    | '/barcodescannertesting'
     | '/batteries'
+    | '/batteriesjournal'
+    | '/batteriesoverview'
+    | '/batteriessettings'
+    | '/batterytracking'
     | '/calendar'
+    | '/calendar-agenda'
+    | '/catalog'
     | '/chores'
+    | '/choresjournal'
+    | '/choresoverview'
+    | '/choressettings'
+    | '/choretracking'
     | '/consume'
     | '/dashboard'
     | '/equipment'
@@ -470,72 +1172,174 @@ export interface FileRouteTypes {
     | '/labels'
     | '/locationcontentsheet'
     | '/locations'
+    | '/login'
+    | '/logout'
     | '/manage'
+    | '/manageapikeys'
     | '/meal-plan'
+    | '/mealplan'
+    | '/mealplansections'
+    | '/productgroups'
     | '/purchase'
     | '/quantityunitconversionsresolved'
+    | '/quantityunitpluraltesting'
+    | '/quantityunits'
+    | '/recipe'
+    | '/recipessettings'
     | '/reviews'
     | '/settings'
     | '/shopping'
     | '/shoppinglist'
+    | '/shoppinglistsettings'
+    | '/shoppinglocations'
+    | '/signin'
+    | '/signout'
     | '/stock'
+    | '/stockbylocation'
     | '/stockoverview'
+    | '/stocksettings'
+    | '/taskcategories'
     | '/tasks'
+    | '/taskssettings'
     | '/today'
     | '/transfer'
+    | '/userentities'
+    | '/userfields'
+    | '/users'
+    | '/usersettings'
+    | '/battery/$batteryId'
+    | '/chore/$choreId'
+    | '/equipment/$equipmentId'
+    | '/location/$locationId'
+    | '/manageapikeys/new'
+    | '/mealplansection/$sectionId'
     | '/product/$productId'
+    | '/productbarcodes/$barcodeId'
+    | '/productgroup/$groupId'
     | '/products/$productId'
+    | '/quantityunit/$unitId'
+    | '/quantityunitconversion/$conversionId'
+    | '/recipe/$recipeId'
     | '/recipes/$recipeId'
+    | '/shoppinglist/$listId'
     | '/shoppinglistitem/$itemId'
+    | '/shoppinglocation/$storeId'
     | '/stockentry/$entryId'
     | '/stockjournal/summary'
     | '/stockreports/spendings'
+    | '/task/$taskId'
+    | '/taskcategory/$categoryId'
+    | '/user/$userId'
+    | '/userentity/$entityId'
+    | '/userfield/$fieldId'
+    | '/userobjects/$entityName'
+    | '/equipment/'
+    | '/manageapikeys/'
+    | '/mealplansection/'
     | '/products/'
+    | '/recipe/'
     | '/recipes/'
+    | '/shoppinglist/'
     | '/stockentries/'
     | '/stockjournal/'
+    | '/user/$userId/permissions'
+    | '/userobject/$entityName/$objectId'
+    | '/user/$userId/'
+    | '/recipe/$recipeId/pos/$positionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   ActivityRoute: typeof ActivityRoute
+  ApiRoute: typeof ApiRoute
   BarcodeRoute: typeof BarcodeRoute
+  BarcodescannertestingRoute: typeof BarcodescannertestingRoute
   BatteriesRoute: typeof BatteriesRoute
+  BatteriesjournalRoute: typeof BatteriesjournalRoute
+  BatteriesoverviewRoute: typeof BatteriesoverviewRoute
+  BatteriessettingsRoute: typeof BatteriessettingsRoute
+  BatterytrackingRoute: typeof BatterytrackingRoute
   CalendarRoute: typeof CalendarRoute
+  CalendarAgendaRoute: typeof CalendarAgendaRoute
+  CatalogRoute: typeof CatalogRoute
   ChoresRoute: typeof ChoresRoute
+  ChoresjournalRoute: typeof ChoresjournalRoute
+  ChoresoverviewRoute: typeof ChoresoverviewRoute
+  ChoressettingsRoute: typeof ChoressettingsRoute
+  ChoretrackingRoute: typeof ChoretrackingRoute
   ConsumeRoute: typeof ConsumeRoute
   DashboardRoute: typeof DashboardRoute
-  EquipmentRoute: typeof EquipmentRoute
+  EquipmentRoute: typeof EquipmentRouteWithChildren
   HouseholdRoute: typeof HouseholdRoute
   InventoryRoute: typeof InventoryRoute
   JournalRoute: typeof JournalRoute
   LabelsRoute: typeof LabelsRoute
   LocationcontentsheetRoute: typeof LocationcontentsheetRoute
   LocationsRoute: typeof LocationsRoute
+  LoginRoute: typeof LoginRoute
+  LogoutRoute: typeof LogoutRoute
   ManageRoute: typeof ManageRoute
+  ManageapikeysRoute: typeof ManageapikeysRouteWithChildren
   MealPlanRoute: typeof MealPlanRoute
+  MealplanRoute: typeof MealplanRoute
+  MealplansectionsRoute: typeof MealplansectionsRoute
+  ProductgroupsRoute: typeof ProductgroupsRoute
   PurchaseRoute: typeof PurchaseRoute
   QuantityunitconversionsresolvedRoute: typeof QuantityunitconversionsresolvedRoute
+  QuantityunitpluraltestingRoute: typeof QuantityunitpluraltestingRoute
+  QuantityunitsRoute: typeof QuantityunitsRoute
+  RecipeRoute: typeof RecipeRouteWithChildren
+  RecipessettingsRoute: typeof RecipessettingsRoute
   ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
-  ShoppinglistRoute: typeof ShoppinglistRoute
+  ShoppinglistRoute: typeof ShoppinglistRouteWithChildren
+  ShoppinglistsettingsRoute: typeof ShoppinglistsettingsRoute
+  ShoppinglocationsRoute: typeof ShoppinglocationsRoute
+  SigninRoute: typeof SigninRoute
+  SignoutRoute: typeof SignoutRoute
   StockRoute: typeof StockRoute
+  StockbylocationRoute: typeof StockbylocationRoute
   StockoverviewRoute: typeof StockoverviewRoute
+  StocksettingsRoute: typeof StocksettingsRoute
+  TaskcategoriesRoute: typeof TaskcategoriesRoute
   TasksRoute: typeof TasksRoute
+  TaskssettingsRoute: typeof TaskssettingsRoute
   TodayRoute: typeof TodayRoute
   TransferRoute: typeof TransferRoute
+  UserentitiesRoute: typeof UserentitiesRoute
+  UserfieldsRoute: typeof UserfieldsRoute
+  UsersRoute: typeof UsersRoute
+  UsersettingsRoute: typeof UsersettingsRoute
+  BatteryBatteryIdRoute: typeof BatteryBatteryIdRoute
+  ChoreChoreIdRoute: typeof ChoreChoreIdRoute
+  LocationLocationIdRoute: typeof LocationLocationIdRoute
+  MealplansectionSectionIdRoute: typeof MealplansectionSectionIdRoute
   ProductProductIdRoute: typeof ProductProductIdRoute
+  ProductbarcodesBarcodeIdRoute: typeof ProductbarcodesBarcodeIdRoute
+  ProductgroupGroupIdRoute: typeof ProductgroupGroupIdRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
+  QuantityunitUnitIdRoute: typeof QuantityunitUnitIdRoute
+  QuantityunitconversionConversionIdRoute: typeof QuantityunitconversionConversionIdRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
   ShoppinglistitemItemIdRoute: typeof ShoppinglistitemItemIdRoute
+  ShoppinglocationStoreIdRoute: typeof ShoppinglocationStoreIdRoute
   StockentryEntryIdRoute: typeof StockentryEntryIdRoute
   StockjournalSummaryRoute: typeof StockjournalSummaryRoute
   StockreportsSpendingsRoute: typeof StockreportsSpendingsRoute
+  TaskTaskIdRoute: typeof TaskTaskIdRoute
+  TaskcategoryCategoryIdRoute: typeof TaskcategoryCategoryIdRoute
+  UserUserIdRoute: typeof UserUserIdRouteWithChildren
+  UserentityEntityIdRoute: typeof UserentityEntityIdRoute
+  UserfieldFieldIdRoute: typeof UserfieldFieldIdRoute
+  UserobjectsEntityNameRoute: typeof UserobjectsEntityNameRoute
+  MealplansectionIndexRoute: typeof MealplansectionIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   RecipesIndexRoute: typeof RecipesIndexRoute
   StockentriesIndexRoute: typeof StockentriesIndexRoute
   StockjournalIndexRoute: typeof StockjournalIndexRoute
+  UserobjectEntityNameObjectIdRoute: typeof UserobjectEntityNameObjectIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -547,11 +1351,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/activity': {
       id: '/activity'
       path: '/activity'
       fullPath: '/activity'
       preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api': {
+      id: '/api'
+      path: '/api'
+      fullPath: '/api'
+      preLoaderRoute: typeof ApiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/barcode': {
@@ -561,11 +1379,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BarcodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/barcodescannertesting': {
+      id: '/barcodescannertesting'
+      path: '/barcodescannertesting'
+      fullPath: '/barcodescannertesting'
+      preLoaderRoute: typeof BarcodescannertestingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/batteries': {
       id: '/batteries'
       path: '/batteries'
       fullPath: '/batteries'
       preLoaderRoute: typeof BatteriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/batteriesjournal': {
+      id: '/batteriesjournal'
+      path: '/batteriesjournal'
+      fullPath: '/batteriesjournal'
+      preLoaderRoute: typeof BatteriesjournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/batteriesoverview': {
+      id: '/batteriesoverview'
+      path: '/batteriesoverview'
+      fullPath: '/batteriesoverview'
+      preLoaderRoute: typeof BatteriesoverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/batteriessettings': {
+      id: '/batteriessettings'
+      path: '/batteriessettings'
+      fullPath: '/batteriessettings'
+      preLoaderRoute: typeof BatteriessettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/batterytracking': {
+      id: '/batterytracking'
+      path: '/batterytracking'
+      fullPath: '/batterytracking'
+      preLoaderRoute: typeof BatterytrackingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar': {
@@ -575,11 +1428,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calendar-agenda': {
+      id: '/calendar-agenda'
+      path: '/calendar-agenda'
+      fullPath: '/calendar-agenda'
+      preLoaderRoute: typeof CalendarAgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/catalog': {
+      id: '/catalog'
+      path: '/catalog'
+      fullPath: '/catalog'
+      preLoaderRoute: typeof CatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chores': {
       id: '/chores'
       path: '/chores'
       fullPath: '/chores'
       preLoaderRoute: typeof ChoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choresjournal': {
+      id: '/choresjournal'
+      path: '/choresjournal'
+      fullPath: '/choresjournal'
+      preLoaderRoute: typeof ChoresjournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choresoverview': {
+      id: '/choresoverview'
+      path: '/choresoverview'
+      fullPath: '/choresoverview'
+      preLoaderRoute: typeof ChoresoverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choressettings': {
+      id: '/choressettings'
+      path: '/choressettings'
+      fullPath: '/choressettings'
+      preLoaderRoute: typeof ChoressettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choretracking': {
+      id: '/choretracking'
+      path: '/choretracking'
+      fullPath: '/choretracking'
+      preLoaderRoute: typeof ChoretrackingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/consume': {
@@ -645,6 +1540,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LocationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manage': {
       id: '/manage'
       path: '/manage'
@@ -652,11 +1561,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manageapikeys': {
+      id: '/manageapikeys'
+      path: '/manageapikeys'
+      fullPath: '/manageapikeys'
+      preLoaderRoute: typeof ManageapikeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/meal-plan': {
       id: '/meal-plan'
       path: '/meal-plan'
       fullPath: '/meal-plan'
       preLoaderRoute: typeof MealPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mealplan': {
+      id: '/mealplan'
+      path: '/mealplan'
+      fullPath: '/mealplan'
+      preLoaderRoute: typeof MealplanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mealplansections': {
+      id: '/mealplansections'
+      path: '/mealplansections'
+      fullPath: '/mealplansections'
+      preLoaderRoute: typeof MealplansectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/productgroups': {
+      id: '/productgroups'
+      path: '/productgroups'
+      fullPath: '/productgroups'
+      preLoaderRoute: typeof ProductgroupsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/purchase': {
@@ -671,6 +1608,34 @@ declare module '@tanstack/react-router' {
       path: '/quantityunitconversionsresolved'
       fullPath: '/quantityunitconversionsresolved'
       preLoaderRoute: typeof QuantityunitconversionsresolvedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quantityunitpluraltesting': {
+      id: '/quantityunitpluraltesting'
+      path: '/quantityunitpluraltesting'
+      fullPath: '/quantityunitpluraltesting'
+      preLoaderRoute: typeof QuantityunitpluraltestingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quantityunits': {
+      id: '/quantityunits'
+      path: '/quantityunits'
+      fullPath: '/quantityunits'
+      preLoaderRoute: typeof QuantityunitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recipe': {
+      id: '/recipe'
+      path: '/recipe'
+      fullPath: '/recipe'
+      preLoaderRoute: typeof RecipeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recipessettings': {
+      id: '/recipessettings'
+      path: '/recipessettings'
+      fullPath: '/recipessettings'
+      preLoaderRoute: typeof RecipessettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reviews': {
@@ -701,11 +1666,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShoppinglistRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shoppinglistsettings': {
+      id: '/shoppinglistsettings'
+      path: '/shoppinglistsettings'
+      fullPath: '/shoppinglistsettings'
+      preLoaderRoute: typeof ShoppinglistsettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shoppinglocations': {
+      id: '/shoppinglocations'
+      path: '/shoppinglocations'
+      fullPath: '/shoppinglocations'
+      preLoaderRoute: typeof ShoppinglocationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signout': {
+      id: '/signout'
+      path: '/signout'
+      fullPath: '/signout'
+      preLoaderRoute: typeof SignoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stock': {
       id: '/stock'
       path: '/stock'
       fullPath: '/stock'
       preLoaderRoute: typeof StockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stockbylocation': {
+      id: '/stockbylocation'
+      path: '/stockbylocation'
+      fullPath: '/stockbylocation'
+      preLoaderRoute: typeof StockbylocationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stockoverview': {
@@ -715,11 +1715,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockoverviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stocksettings': {
+      id: '/stocksettings'
+      path: '/stocksettings'
+      fullPath: '/stocksettings'
+      preLoaderRoute: typeof StocksettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taskcategories': {
+      id: '/taskcategories'
+      path: '/taskcategories'
+      fullPath: '/taskcategories'
+      preLoaderRoute: typeof TaskcategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taskssettings': {
+      id: '/taskssettings'
+      path: '/taskssettings'
+      fullPath: '/taskssettings'
+      preLoaderRoute: typeof TaskssettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/today': {
@@ -736,11 +1757,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransferRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/userentities': {
+      id: '/userentities'
+      path: '/userentities'
+      fullPath: '/userentities'
+      preLoaderRoute: typeof UserentitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/userfields': {
+      id: '/userfields'
+      path: '/userfields'
+      fullPath: '/userfields'
+      preLoaderRoute: typeof UserfieldsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/usersettings': {
+      id: '/usersettings'
+      path: '/usersettings'
+      fullPath: '/usersettings'
+      preLoaderRoute: typeof UsersettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/battery/$batteryId': {
+      id: '/battery/$batteryId'
+      path: '/battery/$batteryId'
+      fullPath: '/battery/$batteryId'
+      preLoaderRoute: typeof BatteryBatteryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chore/$choreId': {
+      id: '/chore/$choreId'
+      path: '/chore/$choreId'
+      fullPath: '/chore/$choreId'
+      preLoaderRoute: typeof ChoreChoreIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipment/': {
+      id: '/equipment/'
+      path: '/'
+      fullPath: '/equipment/'
+      preLoaderRoute: typeof EquipmentIndexRouteImport
+      parentRoute: typeof EquipmentRoute
+    }
+    '/equipment/$equipmentId': {
+      id: '/equipment/$equipmentId'
+      path: '/$equipmentId'
+      fullPath: '/equipment/$equipmentId'
+      preLoaderRoute: typeof EquipmentEquipmentIdRouteImport
+      parentRoute: typeof EquipmentRoute
+    }
+    '/location/$locationId': {
+      id: '/location/$locationId'
+      path: '/location/$locationId'
+      fullPath: '/location/$locationId'
+      preLoaderRoute: typeof LocationLocationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manageapikeys/': {
+      id: '/manageapikeys/'
+      path: '/'
+      fullPath: '/manageapikeys/'
+      preLoaderRoute: typeof ManageapikeysIndexRouteImport
+      parentRoute: typeof ManageapikeysRoute
+    }
+    '/manageapikeys/new': {
+      id: '/manageapikeys/new'
+      path: '/new'
+      fullPath: '/manageapikeys/new'
+      preLoaderRoute: typeof ManageapikeysNewRouteImport
+      parentRoute: typeof ManageapikeysRoute
+    }
+    '/mealplansection/': {
+      id: '/mealplansection/'
+      path: '/mealplansection'
+      fullPath: '/mealplansection/'
+      preLoaderRoute: typeof MealplansectionIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mealplansection/$sectionId': {
+      id: '/mealplansection/$sectionId'
+      path: '/mealplansection/$sectionId'
+      fullPath: '/mealplansection/$sectionId'
+      preLoaderRoute: typeof MealplansectionSectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product/$productId': {
       id: '/product/$productId'
       path: '/product/$productId'
       fullPath: '/product/$productId'
       preLoaderRoute: typeof ProductProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/productbarcodes/$barcodeId': {
+      id: '/productbarcodes/$barcodeId'
+      path: '/productbarcodes/$barcodeId'
+      fullPath: '/productbarcodes/$barcodeId'
+      preLoaderRoute: typeof ProductbarcodesBarcodeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/productgroup/$groupId': {
+      id: '/productgroup/$groupId'
+      path: '/productgroup/$groupId'
+      fullPath: '/productgroup/$groupId'
+      preLoaderRoute: typeof ProductgroupGroupIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/': {
@@ -757,6 +1883,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/quantityunit/$unitId': {
+      id: '/quantityunit/$unitId'
+      path: '/quantityunit/$unitId'
+      fullPath: '/quantityunit/$unitId'
+      preLoaderRoute: typeof QuantityunitUnitIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quantityunitconversion/$conversionId': {
+      id: '/quantityunitconversion/$conversionId'
+      path: '/quantityunitconversion/$conversionId'
+      fullPath: '/quantityunitconversion/$conversionId'
+      preLoaderRoute: typeof QuantityunitconversionConversionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recipe/': {
+      id: '/recipe/'
+      path: '/'
+      fullPath: '/recipe/'
+      preLoaderRoute: typeof RecipeIndexRouteImport
+      parentRoute: typeof RecipeRoute
+    }
+    '/recipe/$recipeId': {
+      id: '/recipe/$recipeId'
+      path: '/$recipeId'
+      fullPath: '/recipe/$recipeId'
+      preLoaderRoute: typeof RecipeRecipeIdRouteImport
+      parentRoute: typeof RecipeRoute
+    }
     '/recipes/': {
       id: '/recipes/'
       path: '/recipes'
@@ -771,11 +1925,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecipesRecipeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shoppinglist/': {
+      id: '/shoppinglist/'
+      path: '/'
+      fullPath: '/shoppinglist/'
+      preLoaderRoute: typeof ShoppinglistIndexRouteImport
+      parentRoute: typeof ShoppinglistRoute
+    }
+    '/shoppinglist/$listId': {
+      id: '/shoppinglist/$listId'
+      path: '/$listId'
+      fullPath: '/shoppinglist/$listId'
+      preLoaderRoute: typeof ShoppinglistListIdRouteImport
+      parentRoute: typeof ShoppinglistRoute
+    }
     '/shoppinglistitem/$itemId': {
       id: '/shoppinglistitem/$itemId'
       path: '/shoppinglistitem/$itemId'
       fullPath: '/shoppinglistitem/$itemId'
       preLoaderRoute: typeof ShoppinglistitemItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shoppinglocation/$storeId': {
+      id: '/shoppinglocation/$storeId'
+      path: '/shoppinglocation/$storeId'
+      fullPath: '/shoppinglocation/$storeId'
+      preLoaderRoute: typeof ShoppinglocationStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stockentries/': {
@@ -813,49 +1988,253 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockreportsSpendingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/task/$taskId': {
+      id: '/task/$taskId'
+      path: '/task/$taskId'
+      fullPath: '/task/$taskId'
+      preLoaderRoute: typeof TaskTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taskcategory/$categoryId': {
+      id: '/taskcategory/$categoryId'
+      path: '/taskcategory/$categoryId'
+      fullPath: '/taskcategory/$categoryId'
+      preLoaderRoute: typeof TaskcategoryCategoryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/$userId': {
+      id: '/user/$userId'
+      path: '/user/$userId'
+      fullPath: '/user/$userId'
+      preLoaderRoute: typeof UserUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/userentity/$entityId': {
+      id: '/userentity/$entityId'
+      path: '/userentity/$entityId'
+      fullPath: '/userentity/$entityId'
+      preLoaderRoute: typeof UserentityEntityIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/userfield/$fieldId': {
+      id: '/userfield/$fieldId'
+      path: '/userfield/$fieldId'
+      fullPath: '/userfield/$fieldId'
+      preLoaderRoute: typeof UserfieldFieldIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/userobjects/$entityName': {
+      id: '/userobjects/$entityName'
+      path: '/userobjects/$entityName'
+      fullPath: '/userobjects/$entityName'
+      preLoaderRoute: typeof UserobjectsEntityNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/$userId/': {
+      id: '/user/$userId/'
+      path: '/'
+      fullPath: '/user/$userId/'
+      preLoaderRoute: typeof UserUserIdIndexRouteImport
+      parentRoute: typeof UserUserIdRoute
+    }
+    '/user/$userId/permissions': {
+      id: '/user/$userId/permissions'
+      path: '/permissions'
+      fullPath: '/user/$userId/permissions'
+      preLoaderRoute: typeof UserUserIdPermissionsRouteImport
+      parentRoute: typeof UserUserIdRoute
+    }
+    '/userobject/$entityName/$objectId': {
+      id: '/userobject/$entityName/$objectId'
+      path: '/userobject/$entityName/$objectId'
+      fullPath: '/userobject/$entityName/$objectId'
+      preLoaderRoute: typeof UserobjectEntityNameObjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recipe/$recipeId/pos/$positionId': {
+      id: '/recipe/$recipeId/pos/$positionId'
+      path: '/pos/$positionId'
+      fullPath: '/recipe/$recipeId/pos/$positionId'
+      preLoaderRoute: typeof RecipeRecipeIdPosPositionIdRouteImport
+      parentRoute: typeof RecipeRecipeIdRoute
+    }
   }
 }
 
+interface EquipmentRouteChildren {
+  EquipmentEquipmentIdRoute: typeof EquipmentEquipmentIdRoute
+  EquipmentIndexRoute: typeof EquipmentIndexRoute
+}
+
+const EquipmentRouteChildren: EquipmentRouteChildren = {
+  EquipmentEquipmentIdRoute: EquipmentEquipmentIdRoute,
+  EquipmentIndexRoute: EquipmentIndexRoute,
+}
+
+const EquipmentRouteWithChildren = EquipmentRoute._addFileChildren(
+  EquipmentRouteChildren,
+)
+
+interface ManageapikeysRouteChildren {
+  ManageapikeysNewRoute: typeof ManageapikeysNewRoute
+  ManageapikeysIndexRoute: typeof ManageapikeysIndexRoute
+}
+
+const ManageapikeysRouteChildren: ManageapikeysRouteChildren = {
+  ManageapikeysNewRoute: ManageapikeysNewRoute,
+  ManageapikeysIndexRoute: ManageapikeysIndexRoute,
+}
+
+const ManageapikeysRouteWithChildren = ManageapikeysRoute._addFileChildren(
+  ManageapikeysRouteChildren,
+)
+
+interface RecipeRecipeIdRouteChildren {
+  RecipeRecipeIdPosPositionIdRoute: typeof RecipeRecipeIdPosPositionIdRoute
+}
+
+const RecipeRecipeIdRouteChildren: RecipeRecipeIdRouteChildren = {
+  RecipeRecipeIdPosPositionIdRoute: RecipeRecipeIdPosPositionIdRoute,
+}
+
+const RecipeRecipeIdRouteWithChildren = RecipeRecipeIdRoute._addFileChildren(
+  RecipeRecipeIdRouteChildren,
+)
+
+interface RecipeRouteChildren {
+  RecipeRecipeIdRoute: typeof RecipeRecipeIdRouteWithChildren
+  RecipeIndexRoute: typeof RecipeIndexRoute
+}
+
+const RecipeRouteChildren: RecipeRouteChildren = {
+  RecipeRecipeIdRoute: RecipeRecipeIdRouteWithChildren,
+  RecipeIndexRoute: RecipeIndexRoute,
+}
+
+const RecipeRouteWithChildren =
+  RecipeRoute._addFileChildren(RecipeRouteChildren)
+
+interface ShoppinglistRouteChildren {
+  ShoppinglistListIdRoute: typeof ShoppinglistListIdRoute
+  ShoppinglistIndexRoute: typeof ShoppinglistIndexRoute
+}
+
+const ShoppinglistRouteChildren: ShoppinglistRouteChildren = {
+  ShoppinglistListIdRoute: ShoppinglistListIdRoute,
+  ShoppinglistIndexRoute: ShoppinglistIndexRoute,
+}
+
+const ShoppinglistRouteWithChildren = ShoppinglistRoute._addFileChildren(
+  ShoppinglistRouteChildren,
+)
+
+interface UserUserIdRouteChildren {
+  UserUserIdPermissionsRoute: typeof UserUserIdPermissionsRoute
+  UserUserIdIndexRoute: typeof UserUserIdIndexRoute
+}
+
+const UserUserIdRouteChildren: UserUserIdRouteChildren = {
+  UserUserIdPermissionsRoute: UserUserIdPermissionsRoute,
+  UserUserIdIndexRoute: UserUserIdIndexRoute,
+}
+
+const UserUserIdRouteWithChildren = UserUserIdRoute._addFileChildren(
+  UserUserIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   ActivityRoute: ActivityRoute,
+  ApiRoute: ApiRoute,
   BarcodeRoute: BarcodeRoute,
+  BarcodescannertestingRoute: BarcodescannertestingRoute,
   BatteriesRoute: BatteriesRoute,
+  BatteriesjournalRoute: BatteriesjournalRoute,
+  BatteriesoverviewRoute: BatteriesoverviewRoute,
+  BatteriessettingsRoute: BatteriessettingsRoute,
+  BatterytrackingRoute: BatterytrackingRoute,
   CalendarRoute: CalendarRoute,
+  CalendarAgendaRoute: CalendarAgendaRoute,
+  CatalogRoute: CatalogRoute,
   ChoresRoute: ChoresRoute,
+  ChoresjournalRoute: ChoresjournalRoute,
+  ChoresoverviewRoute: ChoresoverviewRoute,
+  ChoressettingsRoute: ChoressettingsRoute,
+  ChoretrackingRoute: ChoretrackingRoute,
   ConsumeRoute: ConsumeRoute,
   DashboardRoute: DashboardRoute,
-  EquipmentRoute: EquipmentRoute,
+  EquipmentRoute: EquipmentRouteWithChildren,
   HouseholdRoute: HouseholdRoute,
   InventoryRoute: InventoryRoute,
   JournalRoute: JournalRoute,
   LabelsRoute: LabelsRoute,
   LocationcontentsheetRoute: LocationcontentsheetRoute,
   LocationsRoute: LocationsRoute,
+  LoginRoute: LoginRoute,
+  LogoutRoute: LogoutRoute,
   ManageRoute: ManageRoute,
+  ManageapikeysRoute: ManageapikeysRouteWithChildren,
   MealPlanRoute: MealPlanRoute,
+  MealplanRoute: MealplanRoute,
+  MealplansectionsRoute: MealplansectionsRoute,
+  ProductgroupsRoute: ProductgroupsRoute,
   PurchaseRoute: PurchaseRoute,
   QuantityunitconversionsresolvedRoute: QuantityunitconversionsresolvedRoute,
+  QuantityunitpluraltestingRoute: QuantityunitpluraltestingRoute,
+  QuantityunitsRoute: QuantityunitsRoute,
+  RecipeRoute: RecipeRouteWithChildren,
+  RecipessettingsRoute: RecipessettingsRoute,
   ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
-  ShoppinglistRoute: ShoppinglistRoute,
+  ShoppinglistRoute: ShoppinglistRouteWithChildren,
+  ShoppinglistsettingsRoute: ShoppinglistsettingsRoute,
+  ShoppinglocationsRoute: ShoppinglocationsRoute,
+  SigninRoute: SigninRoute,
+  SignoutRoute: SignoutRoute,
   StockRoute: StockRoute,
+  StockbylocationRoute: StockbylocationRoute,
   StockoverviewRoute: StockoverviewRoute,
+  StocksettingsRoute: StocksettingsRoute,
+  TaskcategoriesRoute: TaskcategoriesRoute,
   TasksRoute: TasksRoute,
+  TaskssettingsRoute: TaskssettingsRoute,
   TodayRoute: TodayRoute,
   TransferRoute: TransferRoute,
+  UserentitiesRoute: UserentitiesRoute,
+  UserfieldsRoute: UserfieldsRoute,
+  UsersRoute: UsersRoute,
+  UsersettingsRoute: UsersettingsRoute,
+  BatteryBatteryIdRoute: BatteryBatteryIdRoute,
+  ChoreChoreIdRoute: ChoreChoreIdRoute,
+  LocationLocationIdRoute: LocationLocationIdRoute,
+  MealplansectionSectionIdRoute: MealplansectionSectionIdRoute,
   ProductProductIdRoute: ProductProductIdRoute,
+  ProductbarcodesBarcodeIdRoute: ProductbarcodesBarcodeIdRoute,
+  ProductgroupGroupIdRoute: ProductgroupGroupIdRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
+  QuantityunitUnitIdRoute: QuantityunitUnitIdRoute,
+  QuantityunitconversionConversionIdRoute:
+    QuantityunitconversionConversionIdRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
   ShoppinglistitemItemIdRoute: ShoppinglistitemItemIdRoute,
+  ShoppinglocationStoreIdRoute: ShoppinglocationStoreIdRoute,
   StockentryEntryIdRoute: StockentryEntryIdRoute,
   StockjournalSummaryRoute: StockjournalSummaryRoute,
   StockreportsSpendingsRoute: StockreportsSpendingsRoute,
+  TaskTaskIdRoute: TaskTaskIdRoute,
+  TaskcategoryCategoryIdRoute: TaskcategoryCategoryIdRoute,
+  UserUserIdRoute: UserUserIdRouteWithChildren,
+  UserentityEntityIdRoute: UserentityEntityIdRoute,
+  UserfieldFieldIdRoute: UserfieldFieldIdRoute,
+  UserobjectsEntityNameRoute: UserobjectsEntityNameRoute,
+  MealplansectionIndexRoute: MealplansectionIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   RecipesIndexRoute: RecipesIndexRoute,
   StockentriesIndexRoute: StockentriesIndexRoute,
   StockjournalIndexRoute: StockjournalIndexRoute,
+  UserobjectEntityNameObjectIdRoute: UserobjectEntityNameObjectIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

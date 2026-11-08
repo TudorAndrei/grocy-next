@@ -7,7 +7,7 @@ import {
 } from "./stock-journal";
 import { stockEntriesSchema } from "./stock-entries";
 import { parseJson, type JsonValue, type JsonObject } from "./json";
-import { readApiConfig } from "./config";
+import { automaticApiIdentity, readApiConfig } from "./config";
 import { localizationSchema } from "./localization";
 import { recipeOverviewSchema, recipeViewSchema } from "./recipe-view";
 import type {
@@ -75,11 +75,21 @@ function post<T>(path: string, body?: JsonValue): Promise<T> {
 export class ApiError extends Error {
   status: number;
   body: JsonValue;
+  responseText: string | undefined;
+  statusText: string | undefined;
 
-  constructor(status: number, message: string, body: JsonValue) {
+  constructor(
+    status: number,
+    message: string,
+    body: JsonValue,
+    responseText?: string,
+    statusText?: string,
+  ) {
     super(message);
     this.status = status;
     this.body = body;
+    this.responseText = responseText;
+    this.statusText = statusText;
   }
 }
 
@@ -100,6 +110,8 @@ const errorBodySchema = z.object({
 });
 
 const configuredLocaleSchema = z.string().optional().catch(undefined);
+const currentUsersSchema = z.array(z.object({ id: z.number(), username: z.string() })).min(1);
+const browserSessionContextSchema = z.object({ browser_session_supplied: z.boolean() });
 const contentSchema = z.object({ html: z.string() });
 const createdObjectSchema = z.object({ created_object_id: z.coerce.number().int() });
 
@@ -119,7 +131,105 @@ function errorMessage(body: JsonValue, fallback: string): string {
   return result.success ? (result.data.error_message ?? result.data.detail ?? fallback) : fallback;
 }
 
-export async function request<T = void>(path: string, init: RequestInit = {}): Promise<T> {
+async function getCurrentUser(signal?: AbortSignal): Promise<CurrentUser> {
+  const identity = automaticApiIdentity();
+
+  const ownerSignal = identity
+    ? signal
+      ? AbortSignal.any([signal, identity.signal])
+      : identity.signal
+    : signal;
+
+  const read = async () => {
+    const mode = identity?.mode;
+    const rows = await request<CurrentUser[]>("/api/user", { signal: ownerSignal });
+
+    ownerSignal?.throwIfAborted();
+    identity?.assertCurrent();
+
+    if ((identity?.mode === "key") !== (mode === "key"))
+      throw new DOMException("The identity was already selected", "AbortError");
+
+    if (!currentUsersSchema.safeParse(rows).success)
+      throw new ApiError(502, "Invalid user response", null);
+
+    return rows[0];
+  };
+
+  try {
+    const mode = identity?.mode;
+    const user = await read();
+
+    ownerSignal?.throwIfAborted();
+    identity?.assertCurrent();
+
+    if ((identity?.mode === "key") !== (mode === "key"))
+      throw new DOMException("The identity was already selected", "AbortError");
+
+    if (identity?.mode === "pending") identity.select("browser");
+
+    return user;
+  } catch (error) {
+    ownerSignal?.throwIfAborted();
+    identity?.assertCurrent();
+
+    // Only initial identity discovery may fall back to the implicit key. A
+    // later expired browser session must never silently become another actor.
+    if (identity?.mode !== "pending" || !(error instanceof ApiError) || error.status !== 401)
+      throw error;
+
+    let browserSessionSupplied: boolean;
+
+    try {
+      // Native redirects can be opaque to fetch. This public same-origin
+      // context observes the actual cookie (including HttpOnly) without its value.
+      const raw = await request("/api/v2/system/login-context", { signal: ownerSignal });
+
+      browserSessionSupplied = browserSessionContextSchema.parse(raw).browser_session_supplied;
+    } catch {
+      ownerSignal?.throwIfAborted();
+      identity.assertCurrent();
+
+      // An unreadable or older context cannot prove that key fallback is safe.
+      throw error;
+    }
+
+    ownerSignal?.throwIfAborted();
+    identity.assertCurrent();
+
+    if (identity.mode !== "pending") throw error;
+
+    if (browserSessionSupplied) {
+      identity.select("browser");
+
+      // A removed/expired native session is an authentication failure, never
+      // permission to become the owner of the implicit development key.
+      throw error;
+    }
+
+    identity.select("key");
+
+    // A deliberately empty build-time key also suppresses the default fallback.
+    if (!readApiConfig().apiKey) throw error;
+
+    return read();
+  }
+}
+
+export function request<T = void>(path: string, init: RequestInit = {}): Promise<T> {
+  return requestWithPolicy<T>(path, init, false);
+}
+
+/** Native XHR accepts 200/204 and parses every 200 body before its callback. */
+export function requestNativeJson<T = void>(path: string, init: RequestInit = {}): Promise<T> {
+  return requestWithPolicy<T>(path, init, true);
+}
+
+async function requestWithPolicy<T>(
+  path: string,
+  init: RequestInit,
+  nativeJson: boolean,
+): Promise<T> {
   const { apiKey } = readApiConfig();
   const headers = new Headers(init.headers);
 
@@ -137,36 +247,54 @@ export async function request<T = void>(path: string, init: RequestInit = {}): P
   const response = await fetch(resolveUrl(path), {
     ...init,
     headers,
+    // Native prefixed identity failures redirect to Login. Keep that auth result
+    // observable instead of following it into the SPA HTML (or a CORS failure).
+    redirect: path === "/api/user" ? "manual" : init.redirect,
     cache: init.cache ?? "no-store",
   });
+
+  if (
+    path === "/api/user" &&
+    (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400))
+  )
+    throw new ApiError(401, "Authentication required", null);
 
   const text = await response.text();
   let body: JsonValue = null;
 
-  if (text) {
+  if (text || (nativeJson && response.status === 200)) {
     try {
       body = parseJson(text);
     } catch {
+      if (nativeJson && response.status === 200)
+        throw new ApiError(response.status, "API returned invalid JSON.", text, text);
       body = text;
     }
   }
 
-  if (!response.ok) {
+  if (!response.ok || (nativeJson && response.status !== 200 && response.status !== 204)) {
     const fallback =
       response.status === 401
         ? "Unauthorized — set GROCY-API-KEY to dev-key under Settings."
         : response.statusText || "Request failed";
 
-    throw new ApiError(response.status, errorMessage(body, fallback), body);
+    throw new ApiError(
+      response.status,
+      errorMessage(body, fallback),
+      body,
+      text,
+      response.statusText,
+    );
   }
 
   const contentType = response.headers.get("content-type") ?? "";
 
-  if (text && !contentType.includes("json") && z.string().safeParse(body).success) {
+  if (!nativeJson && text && !contentType.includes("json") && z.string().safeParse(body).success) {
     throw new ApiError(
       response.status,
       "API returned non-JSON (stale cache or wrong server on this port).",
       body,
+      text,
     );
   }
 
@@ -413,7 +541,7 @@ export const api = {
     }),
   logout: () => request<void>("/api/v2/logout", { method: "POST" }),
 
-  getCurrentUser: () => request<CurrentUser[]>("/api/user").then((rows) => rows[0]),
+  getCurrentUser,
 
   getUserSettings: () => request<UserSettings>("/api/user/settings"),
 
@@ -518,7 +646,9 @@ export async function downloadFile(
   legacyGroup?: string,
 ): Promise<void> {
   const { apiKey } = readApiConfig();
-  const headers = { "GROCY-API-KEY": apiKey };
+  const headers = new Headers();
+
+  if (apiKey) headers.set("GROCY-API-KEY", apiKey);
   let response = await fetch(resolveUrl(filePath(group, name)), { headers });
 
   if (response.status === 404 && legacyGroup)

@@ -16,10 +16,14 @@ export function ShoppingPrintAction({
   listId,
   paper = false,
   notes,
+  nativePage = false,
+  nativeSearch,
 }: {
   listId: number;
   paper?: boolean;
   notes?: { html: string; visible: boolean };
+  nativePage?: boolean;
+  nativeSearch?: string;
 }) {
   const { t, pluralIndex } = useI18n();
   const preferences = usePreferences();
@@ -46,7 +50,7 @@ export function ShoppingPrintAction({
 
       return paper
         ? printShoppingDocument(
-            `/api/v2/shopping-lists/${list}/print?header=${header}&grouped=${grouped}&layout=${layout}`,
+            `${nativeSearch === undefined ? `/api/v2/shopping-lists/${list}/print?` : `/api/v2/shopping-lists/native-print${nativeSearch ? `${nativeSearch}&` : "?"}`}header=${header}&grouped=${grouped}&layout=${layout}`,
             {
               locale: t("moment_locale"),
               pluralIndex,
@@ -70,7 +74,10 @@ export function ShoppingPrintAction({
     },
   });
 
-  if ((!paper && !features.enabled("THERMAL_PRINTER")) || !features.routeEnabled("/shopping"))
+  if (
+    (!paper && !features.enabled("THERMAL_PRINTER")) ||
+    (!nativePage && !features.routeEnabled("/shopping"))
+  )
     return null;
 
   return (

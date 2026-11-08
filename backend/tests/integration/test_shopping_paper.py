@@ -145,7 +145,9 @@ def test_shopping_paper_contains_all_items_notes_and_custom_fields(
     assert unescape(plain.text).count("Apple <red>") == 2
 
 
-def test_shopping_paper_requires_shopping_permission(client, api_headers, monkeypatch):
+def test_shopping_paper_requires_authentication_not_shopping_permission(
+    client, api_headers, monkeypatch
+):
     path = "/api/v2/shopping-lists/1/print"
     editor = "/api/v2/shopping-lists/1/notes/editor"
     assert client.get(path).status_code == 401
@@ -175,17 +177,17 @@ def test_shopping_paper_requires_shopping_permission(client, api_headers, monkey
         "api_key"
     ]
     headers = {"GROCY-API-KEY": key}
-    assert client.get(path, headers=headers).status_code == 403
-    assert client.get(editor, headers=headers).status_code == 403
+    assert client.get(path, headers=headers).status_code == 200
+    assert client.get(editor, headers=headers).status_code == 200
+    # The selected-list form is an authenticated presentation read, covered in test_shopping_lists.
     for read_path in (
         "/api/v2/shopping-lists",
-        "/api/v2/shopping-lists/editor",
         "/api/v2/shopping-lists/items/editor",
     ):
-        assert client.get(read_path, headers=headers).status_code == 403
+        assert client.get(read_path, headers=headers).status_code == 200
     assert (
         client.post(path, headers=headers, json={"html": "Notes", "visible": True}).status_code
-        == 403
+        == 200
     )
     assert (
         client.put(

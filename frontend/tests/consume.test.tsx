@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { notifyManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import {
   act,
@@ -16,7 +16,10 @@ import type { JsonObject } from "@/lib/json";
 import { productOverview } from "./fixtures/product-overview";
 import { supportDialogs } from "./fixtures/dialogs";
 
-beforeEach(supportDialogs);
+beforeEach(() => {
+  supportDialogs();
+  vi.stubGlobal("scrollTo", () => {});
+});
 
 function mount(
   path: string,
@@ -37,6 +40,13 @@ function mount(
     delayBooking = false,
     recipes = [{ id: 4, name: "Coffee cake" }],
     camera = false,
+    barcodeResponse,
+    firstEntriesResponse,
+    defaultAmount = 0.5,
+    quickAmount = 4,
+    barcodeAmount = 0.25,
+    barcodeUnit = 3,
+    barcodeRead,
   }: {
     scan?: boolean;
     quick?: boolean;
@@ -54,6 +64,13 @@ function mount(
     delayBooking?: boolean;
     recipes?: { id: number; name: string }[];
     camera?: boolean;
+    barcodeResponse?: Promise<Response>;
+    firstEntriesResponse?: Promise<Response>;
+    defaultAmount?: number;
+    quickAmount?: number;
+    barcodeAmount?: number;
+    barcodeUnit?: number;
+    barcodeRead?: Promise<Response>;
   } = {},
 ) {
   const writes: { path: string; body: JsonObject }[] = [];
@@ -69,6 +86,13 @@ function mount(
   let detailReads = 0;
   let entryReads = 0;
   let bookings = 0;
+  let committed = 0;
+  let pendingDetails: Promise<Response> | undefined;
+  let pendingBooking: Promise<Response> | undefined;
+  let refreshDetails: Promise<Response> | undefined;
+  let refreshReads = 0;
+  const detailSignals: (AbortSignal | null | undefined)[] = [];
+  const bookingSignals: (AbortSignal | null | undefined)[] = [];
   let scanEnabled = scan;
   let stock = { amount: 10, opened: 2 };
   let previousStock = { ...stock };
@@ -123,6 +147,41 @@ function mount(
   if (stockLocations?.includes(3))
     rows.push({ ...rows[0]!, id: 105, stock_id: "back-stock", location_id: 3, amount: 5 });
 
+  function detailsResponse(id = 7) {
+    const tare = id === 8;
+    const parent = id === 9;
+
+    return Response.json({
+      ...productOverview,
+      product: {
+        ...productOverview.product,
+        id: tare ? 8 : parent ? 9 : 7,
+        name: tare ? "Tare coffee" : parent ? "Coffee group" : "Coffee",
+        description: null,
+        enable_tare_weight_handling: tare ? 1 : 0,
+        tare_weight: 3,
+        default_consume_location_id: stockLocations?.at(-1) ?? 2,
+        quick_consume_amount: quickAmount,
+        disable_open: 0,
+        move_on_open: 1,
+      },
+      stock_amount: parent ? 0 : tare ? 10 : stock.amount,
+      stock_amount_opened: parent ? 0 : tare ? 2 : stock.opened,
+      stock_amount_aggregated: parent ? 12.5 : tare ? 10 : stock.amount,
+      stock_amount_opened_aggregated: parent ? 2 : tare ? 2 : stock.opened,
+      is_aggregated_amount: parent ? 1 : 0,
+      has_childs: parent,
+      quantity_unit_stock: { ...productOverview.quantity_unit_stock, id: 1 },
+      default_quantity_unit_consume: {
+        id: tare || singleUnit ? 1 : 3,
+        name: "Box",
+        name_plural: "Boxes",
+      },
+      location: { id: 1, name: "Shelf", is_freezer: 0 },
+      default_consume_location: { id: 2, name: "Pantry" },
+    });
+  }
+
   const fetchData = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://localhost");
     const path = url.pathname;
@@ -137,10 +196,15 @@ function mount(
         scanEnabled = body.value;
       }
 
+      if (path.endsWith("/objects/product_barcodes") && barcodeResponse)
+        return await barcodeResponse;
+
       if (path.endsWith("/objects/product_barcodes") && failBarcode)
         return Response.json({ error_message: "Barcode unavailable" }, { status: 400 });
 
       if (path.endsWith("/consume") || path.endsWith("/open")) {
+        bookingSignals.push(init.signal);
+
         if (failSave && ++bookings === 1)
           return Response.json({ error_message: "Booking unavailable" }, { status: 503 });
 
@@ -150,6 +214,13 @@ function mount(
           if (path.endsWith("/consume")) stock.amount -= Number(body.amount);
           else stock.opened += Number(body.amount);
         }
+
+        committed++;
+
+        const held = pendingBooking;
+        pendingBooking = undefined;
+
+        if (held) await held;
 
         if (delayBooking) await bookingReply;
 
@@ -175,13 +246,21 @@ function mount(
 
     if (path.endsWith("/api/user")) return Response.json([{ id: 1, username: "Owner" }]);
 
+    if (path.endsWith("/api/v2/localization"))
+      return Response.json({
+        locale: "en",
+        direction: "ltr",
+        languages: ["en"],
+        catalog: { domain: "grocy/strings", "plural-forms": null, messages: { "": {} } },
+      });
+
     if (path.endsWith("/api/v2/user/permissions"))
       return Response.json({ STOCK_OPEN: openPermission });
 
     if (path.endsWith("/api/user/settings"))
       return Response.json({
         stock_decimal_places_amounts: 2,
-        stock_default_consume_amount: 0.5,
+        stock_default_consume_amount: defaultAmount,
         stock_default_consume_amount_use_quick_consume_amount: quick,
         scan_mode_consume_enabled: scanEnabled,
       });
@@ -235,38 +314,19 @@ function mount(
     if (/\/api\/stock\/products\/[789]$/.test(path)) {
       if (failRead && ++detailReads === 1)
         return Response.json({ error_message: "Details unavailable" }, { status: 503 });
-      const tare = path.endsWith("/8");
-      const parent = path.endsWith("/9");
+      detailSignals.push(init?.signal);
+      const pending = pendingDetails;
+      pendingDetails = undefined;
 
-      return Response.json({
-        ...productOverview,
-        product: {
-          ...productOverview.product,
-          id: tare ? 8 : parent ? 9 : 7,
-          name: tare ? "Tare coffee" : parent ? "Coffee group" : "Coffee",
-          description: null,
-          enable_tare_weight_handling: tare ? 1 : 0,
-          tare_weight: 3,
-          default_consume_location_id: stockLocations?.at(-1) ?? 2,
-          quick_consume_amount: 4,
-          disable_open: 0,
-          move_on_open: 1,
-        },
-        stock_amount: parent ? 0 : tare ? 10 : stock.amount,
-        stock_amount_opened: parent ? 0 : tare ? 2 : stock.opened,
-        stock_amount_aggregated: parent ? 12.5 : tare ? 10 : stock.amount,
-        stock_amount_opened_aggregated: parent ? 2 : tare ? 2 : stock.opened,
-        is_aggregated_amount: parent ? 1 : 0,
-        has_childs: parent,
-        quantity_unit_stock: { ...productOverview.quantity_unit_stock, id: 1 },
-        default_quantity_unit_consume: {
-          id: tare || singleUnit ? 1 : 3,
-          name: "Box",
-          name_plural: "Boxes",
-        },
-        location: { id: 1, name: "Shelf", is_freezer: 0 },
-        default_consume_location: { id: 2, name: "Pantry" },
-      });
+      if (pending) return await pending;
+
+      if (refreshDetails && committed > 0) {
+        refreshReads++;
+
+        return await refreshDetails;
+      }
+
+      return detailsResponse(path.endsWith("/8") ? 8 : path.endsWith("/9") ? 9 : 7);
     }
 
     if (path.endsWith("/locations"))
@@ -285,7 +345,11 @@ function mount(
       );
 
     if (path.endsWith("/entries")) {
-      if (failEntries && ++entryReads === 1)
+      entryReads++;
+
+      if (firstEntriesResponse && entryReads === 1) return await firstEntriesResponse;
+
+      if (failEntries && entryReads === 1)
         return Response.json({ error_message: "Entries unavailable" }, { status: 503 });
 
       if (url.searchParams.has("query[]")) {
@@ -300,8 +364,13 @@ function mount(
     if (
       path.endsWith("/api/objects/product_barcodes") ||
       path.endsWith("/api/objects/product_barcodes_view")
-    )
-      return Response.json(url.search.includes("COFFEE-2") ? [{ amount: 0.25, qu_id: 3 }] : []);
+    ) {
+      if (barcodeRead && url.search.includes("COFFEE-2")) return barcodeRead;
+
+      return Response.json(
+        url.search.includes("COFFEE-2") ? [{ amount: barcodeAmount, qu_id: barcodeUnit }] : [],
+      );
+    }
 
     if (path.includes("/shopping-lists/")) return Response.json({ items: [] });
 
@@ -335,13 +404,34 @@ function mount(
     entries: rows,
     releaseThirdStockLookup,
     releaseBooking,
+    client,
+    view,
+    stock: () => ({ ...stock }),
+    detailSignals,
+    bookingSignals,
+    detailsResponse,
+    entryReads: () => entryReads,
+    holdBooking: (reply: Promise<Response>) => {
+      pendingBooking = reply;
+    },
+    holdDetails: (reply: Promise<Response>) => {
+      pendingDetails = reply;
+    },
+    holdRefresh: (reply: Promise<Response>) => {
+      refreshDetails = reply;
+    },
+    refreshReads: () => refreshReads,
   };
 }
 
 async function choose(name = "Coffee") {
-  const picker = await screen.findByLabelText("Product");
+  const picker = await screen.findByLabelText<HTMLInputElement>("Product");
+
+  if (picker.value === name) fireEvent.change(picker, { target: { value: "" } });
   fireEvent.change(picker, { target: { value: name } });
-  fireEvent.keyDown(picker, { key: "Enter" });
+
+  if (name.startsWith("grcy:") || name.startsWith("COFFEE-"))
+    fireEvent.keyDown(picker, { key: "Enter" });
   const amount = screen.getByLabelText<HTMLInputElement>("Amount");
   await waitFor(() => expect(amount.disabled).toBe(false));
 
@@ -518,8 +608,10 @@ test("specific stock limits use raw entry amounts and persist after switching th
   const { writes } = mount("/consume?embedded&product=7&locationId=1&stockId=pantry-stock");
   const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
   await waitFor(() => expect(amount.disabled).toBe(false));
-  expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2");
-  expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(true);
+  await waitFor(() => expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2"));
+  await waitFor(() =>
+    expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(true),
+  );
   const stock = screen.getByLabelText<HTMLSelectElement>("Specific stock item");
   expect(stock.value).toBe("pantry-stock");
   expect(
@@ -571,7 +663,9 @@ test("a repeated stock code retains both choices and the native unchecked prefil
   const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
   await waitFor(() => expect(amount.disabled).toBe(false));
   const entry = screen.getByLabelText<HTMLSelectElement>("Specific stock item");
-  expect([...entry.options].filter((row) => row.value === "pantry-stock")).toHaveLength(2);
+  await waitFor(() =>
+    expect([...entry.options].filter((row) => row.value === "pantry-stock")).toHaveLength(2),
+  );
   expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(false);
   expect(entry.disabled).toBe(true);
   expect(entry.value).toBe("pantry-stock");
@@ -638,6 +732,8 @@ test.each([
 test("opening retains recipe, unit, and location and does not close an embedded form", async () => {
   const { writes } = mount("/consume?embedded&product=7");
   const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
+  await screen.findByRole("option", { name: /Amount: 6; Due on 2026-11-03/ });
+  await waitFor(() => expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2"));
   await waitFor(() => expect(amount.disabled).toBe(false));
   fireEvent.change(screen.getByLabelText("Recipe"), { target: { value: "grcy:r:4" } });
   fireEvent.blur(screen.getByLabelText("Recipe"));
@@ -654,10 +750,13 @@ test("opening retains recipe, unit, and location and does not close an embedded 
   expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2");
   expect(amount.disabled).toBe(false);
   expect(screen.getByLabelText<HTMLSelectElement>("Specific stock item").disabled).toBe(false);
-  expect(screen.getByText("Moved to Pantry")).toBeTruthy();
+  expect(screen.getByText("Moved to Pantry").closest(".toast")?.getAttribute("data-tone")).toBe(
+    "info",
+  );
 });
 
 test("a failed booking enables native input controls until their own handlers change them", async () => {
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
   const { writes } = mount("/consume", { singleUnit: true, failSave: true });
   await choose();
   const unit = screen.getByLabelText<HTMLSelectElement>("Quantity unit");
@@ -665,7 +764,13 @@ test("a failed booking enables native input controls until their own handlers ch
   expect(unit.disabled).toBe(true);
   expect(stockItem.disabled).toBe(true);
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
-  await screen.findByText("Booking unavailable");
+  await screen.findByRole("button", {
+    name: /Error while saving, probably this item already exists/,
+  });
+  await waitFor(() => expect(logged).toHaveBeenCalledOnce());
+  expect(
+    within(screen.getByRole("form", { name: "Consume" })).queryByText("Booking unavailable"),
+  ).toBeNull();
   expect(unit.disabled).toBe(false);
   expect(stockItem.disabled).toBe(false);
   fireEvent.change(stockItem, { target: { value: "pantry-stock" } });
@@ -698,35 +803,65 @@ test("parent stock has no amount ceiling and its own-stock opening guard remains
   );
 });
 
-test("read and booking failures keep the draft and permit retry without an extra booking", async () => {
-  const { writes } = mount("/consume", { failRead: true, failSave: true });
-  fireEvent.change(await screen.findByLabelText("Product"), { target: { value: "Coffee" } });
-  await screen.findByText("Details unavailable");
-  await userEvent.click(
-    within(screen.getByRole("form", { name: "Consume" })).getByRole("button", { name: "Retry" }),
-  );
+test("selection and booking failures log, preserve the draft and permit new attempts without an extra booking", async () => {
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  const app = mount("/consume", { failRead: true, failSave: true });
+  const picker = await screen.findByLabelText<HTMLInputElement>("Product");
+  fireEvent.change(picker, { target: { value: "Coffee" } });
+  await waitFor(() => expect(logged).toHaveBeenCalledOnce());
+  expect(screen.queryByText("Details unavailable")).toBeNull();
+  expect(picker.value).toBe("Coffee");
+  expect(
+    within(screen.getByRole("form", { name: "Consume" })).queryByRole("button", { name: "Retry" }),
+  ).toBeNull();
+  await userEvent.clear(picker);
+  await userEvent.type(picker, "Coffee");
+  fireEvent.keyDown(picker, { key: "Enter" });
+  await screen.findByRole("option", { name: /Amount: 6; Due on 2026-11-03/ });
   const amount = screen.getByLabelText<HTMLInputElement>("Amount");
   await waitFor(() =>
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "OK" }).disabled).toBe(false),
   );
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
-  await screen.findByText("Booking unavailable");
+  await screen.findByRole("button", {
+    name: /Error while saving, probably this item already exists/,
+  });
+  await waitFor(() => expect(logged).toHaveBeenCalledTimes(2));
+  expect(
+    within(screen.getByRole("form", { name: "Consume" })).queryByText("Booking unavailable"),
+  ).toBeNull();
   expect(amount.value).toBe("0.5");
   expect(amount.disabled).toBe(false);
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
   await screen.findByText("Removed 4 Pieces of Coffee from stock");
-  expect(writes.filter((row) => row.path.endsWith("/consume"))).toHaveLength(2);
+  expect(app.writes.filter((row) => row.path.endsWith("/consume"))).toHaveLength(2);
 });
 
-test("an entry read failure has a separate retry and hidden tracking controls do not change the body", async () => {
-  const { writes } = mount("/consume?embedded&product=7", {
+test("an entry read failure only logs and a new selection retries while hidden tracking controls leave the booking body unchanged", async () => {
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  const app = mount("/consume?embedded&product=7", {
     tracking: false,
     failEntries: true,
     openPermission: false,
   });
 
-  await screen.findByText("Entries unavailable");
-  await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(logged).toHaveBeenCalledOnce());
+  expect(screen.queryByText("Entries unavailable")).toBeNull();
+  expect(
+    within(screen.getByRole("form", { name: "Consume" })).queryByRole("button", { name: "Retry" }),
+  ).toBeNull();
+  const picker = screen.getByLabelText<HTMLInputElement>("Product");
+  expect(picker.value).toBe("Coffee");
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Amount")));
+  // Finish the initial selection's queued focus work before starting the retry.
+  await act(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  });
+  await userEvent.clear(picker);
+  await userEvent.type(picker, "Coffee");
+  fireEvent.keyDown(picker, { key: "Enter" });
+  await screen.findByRole("option", { name: /Amount: 6; Due on 2026-11-03/ });
   await waitFor(() =>
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "OK" }).disabled).toBe(false),
   );
@@ -735,7 +870,7 @@ test("an entry read failure has a separate retry and hidden tracking controls do
   );
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
   await screen.findByText("Removed 4 Pieces of Coffee from stock");
-  expect(writes[0]?.body).toEqual({
+  expect(app.writes[0]?.body).toEqual({
     amount: "4.",
     exact_amount: false,
     spoiled: false,
@@ -1017,19 +1152,595 @@ test.each(["location", "amount"] as const)(
 );
 
 test("barcode assignment uses only its native values and a failed assignment still completes consumption", async () => {
-  const { writes, router } = mount(
+  const refresh = heldConsumeResponse();
+
+  const app = mount(
     "/consume?flow=InplaceAddBarcodeToExistingProduct&barcode=NEW-CODE&product-name=Coffee&locationId=2",
     { failBarcode: true },
   );
 
   await choose();
+  app.holdRefresh(refresh.promise);
   await userEvent.click(screen.getByRole("button", { name: "OK" }));
   await screen.findByText("Removed 4 Pieces of Coffee from stock");
-  await screen.findByText("Barcode unavailable");
-  expect(writes[1]).toEqual({
+  await screen.findByRole("button", {
+    name: /Error while saving, probably this item already exists/,
+  });
+  await waitFor(() => expect(app.refreshReads()).toBeGreaterThan(0));
+  expect(app.writes[1]).toEqual({
     path: "/api/objects/product_barcodes",
     body: { barcode: "NEW-CODE", product_id: "7" },
   });
-  await waitFor(() => expect(router.state.location.search).toEqual({ locationId: "2" }));
-  expect(screen.getByLabelText<HTMLInputElement>("Product").value).toBe("");
+  await waitFor(() => expect(app.router.state.location.search).toEqual({ locationId: "2" }));
+  const product = screen.getByLabelText<HTMLInputElement>("Product");
+  expect(product.value).toBe("");
+  expect(product.matches(":disabled")).toBe(false);
+  await userEvent.type(product, "Next draft");
+  await releaseConsume(refresh, app.detailsResponse());
+  expect(product.value).toBe("Next draft");
 });
+
+function heldConsumeResponse() {
+  let resolve = (_response: Response) => {};
+
+  const promise = new Promise<Response>((done) => {
+    resolve = done;
+  });
+
+  return { promise, resolve };
+}
+
+async function releaseConsume(gate: ReturnType<typeof heldConsumeResponse>, response: Response) {
+  await act(async () => {
+    gate.resolve(response);
+    await new Promise<void>((resolve) => notifyManager.schedule(resolve));
+  });
+}
+
+async function readyConsume() {
+  const amount = await choose();
+  await waitFor(() => expect(document.activeElement).toBe(amount));
+
+  return amount;
+}
+
+test.each(["consume", "open"] as const)(
+  "a fresh %s details failure only logs and unlocks the preserved draft",
+  async (action) => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const app = mount("/consume");
+    const amount = await readyConsume();
+    app.holdDetails(
+      Promise.resolve(Response.json({ error_message: "Save details rejected" }, { status: 503 })),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: action === "open" ? "Mark as opened" : "OK" }),
+    );
+    await waitFor(() => expect(logged).toHaveBeenCalledOnce());
+    expect(screen.queryByText("Save details rejected")).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: /Error while saving, probably this item already exists/,
+      }),
+    ).toBeNull();
+    expect(amount.matches(":disabled")).toBe(false);
+    expect(amount.value).toBe("0.5");
+    expect(app.writes).toEqual([]);
+    await userEvent.click(
+      screen.getByRole("button", { name: action === "open" ? "Mark as opened" : "OK" }),
+    );
+    await screen.findByText(
+      action === "open"
+        ? "Marked 4 Pieces of Coffee as opened"
+        : "Removed 4 Pieces of Coffee from stock",
+    );
+    expect(app.writes.filter((row) => row.path.endsWith(`/${action}`))).toHaveLength(1);
+  },
+);
+
+test("an Open POST failure only logs, restores native controls and permits retry without losing recipe or location", async () => {
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  const app = mount("/consume?embedded&product=7", { failSave: true });
+  const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
+  await waitFor(() => expect(document.activeElement).toBe(amount));
+  fireEvent.change(screen.getByLabelText("Recipe"), { target: { value: "grcy:r:4" } });
+  fireEvent.blur(screen.getByLabelText("Recipe"));
+  await userEvent.click(screen.getByRole("button", { name: "Mark as opened" }));
+  await waitFor(() => expect(logged).toHaveBeenCalledOnce());
+  expect(screen.queryByText("Booking unavailable")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Error while saving, probably this item already exists/ }),
+  ).toBeNull();
+  expect(amount.matches(":disabled")).toBe(false);
+  expect(screen.getByLabelText<HTMLInputElement>("Recipe").value).toBe("Coffee cake");
+  expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2");
+  await userEvent.click(screen.getByRole("button", { name: "Mark as opened" }));
+  await screen.findByText("Marked 4 Pieces of Coffee as opened");
+  expect(app.writes.filter((row) => row.path.endsWith("/open"))).toHaveLength(2);
+  expect(screen.getByLabelText<HTMLInputElement>("Recipe").value).toBe("Coffee cake");
+  expect(screen.getByLabelText<HTMLSelectElement>("Quantity unit").value).toBe("3");
+  expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2");
+  expect(screen.queryByRole("heading", { name: "About" })).toBeNull();
+});
+
+test.each([
+  { action: "consume", retirement: "departure" },
+  { action: "open", retirement: "unmount" },
+] as const)(
+  "a held $action save-details read cannot dispatch a stock write after $retirement",
+  async ({ action, retirement }) => {
+    const details = heldConsumeResponse();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const app = mount("/consume");
+    await readyConsume();
+    const initialReads = app.detailSignals.length;
+    app.holdDetails(details.promise);
+    await userEvent.click(
+      screen.getByRole("button", { name: action === "open" ? "Mark as opened" : "OK" }),
+    );
+    await waitFor(() => expect(app.detailSignals).toHaveLength(initialReads + 1));
+    const signal = app.detailSignals.at(-1);
+
+    if (retirement === "unmount") app.view.unmount();
+    else
+      await act(async () => {
+        await app.router.navigate({ to: "/about" });
+      });
+    await releaseConsume(details, app.detailsResponse());
+    expect(app.writes).toEqual([]);
+    expect(logged).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Removed .* from stock|Marked .* as opened/)).toBeNull();
+    expect(signal?.aborted).toBe(true);
+  },
+);
+
+test.each(["consume", "open"] as const)(
+  "a committed held %s POST only invalidates caches after document retirement",
+  async (action) => {
+    const parent = vi.fn();
+    vi.stubGlobal("parent", { postMessage: parent });
+    vi.spyOn(window, "postMessage").mockImplementation(() => {});
+    const app = mount("/consume?embedded&product=7", { delayBooking: true });
+    const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
+    await waitFor(() => expect(document.activeElement).toBe(amount));
+    await userEvent.click(
+      screen.getByRole("button", { name: action === "open" ? "Mark as opened" : "OK" }),
+    );
+    await waitFor(() =>
+      expect(app.writes.filter((row) => row.path.endsWith(`/${action}`))).toHaveLength(1),
+    );
+    expect(app.stock()).toEqual(
+      action === "consume" ? { amount: 6, opened: 2 } : { amount: 10, opened: 6 },
+    );
+    await act(async () => {
+      await app.router.navigate({ to: "/about" });
+    });
+
+    const keys = [
+      ["stock", "new-document"],
+      ["products"],
+      ["recipe-fulfillment"],
+      ["shopping", 50],
+      ["mealplan-calendar"],
+      ["product-overview", 7],
+    ];
+
+    for (const key of keys) app.client.setQueryData(key, { fresh: true });
+    const readsAfterDeparture = app.reads.length;
+    await act(async () => {
+      app.releaseBooking();
+      await new Promise<void>((resolve) => notifyManager.schedule(resolve));
+    });
+    expect(
+      parent.mock.calls.filter(([bag]) =>
+        ["BroadcastMessage", "ShowSuccessMessage", "CloseLastModal"].includes(bag.Message),
+      ),
+    ).toEqual([]);
+    expect(screen.queryByText(/Removed .* from stock|Marked .* as opened/)).toBeNull();
+    expect(app.reads.length).toBe(readsAfterDeparture);
+
+    for (const key of keys) {
+      const state = app.client.getQueryState(key);
+      expect(!state || state.isInvalidated).toBe(true);
+    }
+
+    expect(app.bookingSignals[0]?.aborted).toBe(true);
+  },
+);
+
+test("an older barcode failure can unlock a pending Open whose wire body follows the latest Open click while its receipt retains the earlier amount", async () => {
+  const barcode = heldConsumeResponse();
+  const earlierOpen = heldConsumeResponse();
+
+  const app = mount(
+    "/consume?flow=InplaceAddBarcodeToExistingProduct&barcode=NEW-CODE&product-name=Coffee",
+    { barcodeResponse: barcode.promise },
+  );
+
+  await readyConsume();
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  const amount = await readyConsume();
+  await userEvent.selectOptions(screen.getByLabelText("Quantity unit"), "1");
+  await userEvent.clear(amount);
+  await userEvent.type(amount, "1");
+  const details = app.detailsResponse();
+  const reads = app.detailSignals.length;
+  app.holdDetails(earlierOpen.promise);
+  await userEvent.click(screen.getByRole("button", { name: "Mark as opened" }));
+  await waitFor(() => expect(app.detailSignals).toHaveLength(reads + 1));
+  expect(amount.matches(":disabled")).toBe(true);
+  await releaseConsume(
+    barcode,
+    Response.json({ error_message: "Older barcode failed" }, { status: 409 }),
+  );
+  await screen.findByRole("button", {
+    name: /Error while saving, probably this item already exists/,
+  });
+  await waitFor(() => expect(amount.matches(":disabled")).toBe(false));
+  await userEvent.clear(amount);
+  await userEvent.type(amount, "2");
+  await userEvent.click(screen.getByRole("button", { name: "Mark as opened" }));
+  await screen.findByText("Marked 2 Pieces of Coffee as opened");
+  await releaseConsume(earlierOpen, details);
+  await screen.findByText("Marked 1 Piece of Coffee as opened");
+  expect(app.writes.filter((row) => row.path.endsWith("/open")).map((row) => row.body)).toEqual([
+    { amount: "2.", allow_subproduct_substitution: true },
+    { amount: "2.", allow_subproduct_substitution: true },
+  ]);
+  expect(app.stock()).toEqual({ amount: 6, opened: 6 });
+});
+
+test("a delayed initial embedded location read appends its options and sum after the product default location, then applies the forced stock checkbox", async () => {
+  const initialEntries = heldConsumeResponse();
+
+  const app = mount("/consume?embedded&product=7&locationId=1&stockId=shelf-stock", {
+    firstEntriesResponse: initialEntries.promise,
+  });
+
+  const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
+  await waitFor(() => expect(app.entryReads()).toBeGreaterThanOrEqual(2));
+  const location = screen.getByLabelText<HTMLSelectElement>("Location");
+  const entry = screen.getByLabelText<HTMLSelectElement>("Specific stock item");
+  await waitFor(() =>
+    expect([...entry.options].map((option) => option.value)).toEqual([
+      "",
+      "pantry-stock",
+      "opened-stock",
+    ]),
+  );
+  expect(location.value).toBe("2");
+  expect(amount.max).toBe("1.00");
+  expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(false);
+  await releaseConsume(initialEntries, Response.json(app.entries));
+  await waitFor(() =>
+    expect([...entry.options].map((option) => option.value)).toEqual([
+      "",
+      "pantry-stock",
+      "opened-stock",
+      "shelf-stock",
+    ]),
+  );
+  await waitFor(() => expect(amount.max).toBe("1.50"));
+  expect(location.value).toBe("2");
+  expect(screen.getByLabelText<HTMLInputElement>("Use a specific stock item").checked).toBe(true);
+  expect(entry.disabled).toBe(false);
+  expect(entry.value).toBe("shelf-stock");
+  expect(app.writes).toEqual([]);
+});
+
+test("Consume sends its captured stock body even when live controls change during the fresh details request", async () => {
+  const details = heldConsumeResponse();
+  const app = mount("/consume");
+  const amount = await readyConsume();
+  fireEvent.change(screen.getByLabelText("Recipe"), { target: { value: "grcy:r:4" } });
+  fireEvent.blur(screen.getByLabelText("Recipe"));
+  await userEvent.click(screen.getByLabelText("Use a specific stock item"));
+  await userEvent.selectOptions(screen.getByLabelText("Specific stock item"), "pantry-stock");
+  app.holdDetails(details.promise);
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  expect(amount.matches(":disabled")).toBe(true);
+  // External changes do not alter the native JSON captured when Save was clicked.
+  fireEvent.change(amount, { target: { value: "1" } });
+  fireEvent.change(screen.getByLabelText("Quantity unit"), { target: { value: "1" } });
+  fireEvent.click(screen.getByLabelText("Spoiled"));
+  fireEvent.change(screen.getByLabelText("Recipe"), { target: { value: "" } });
+  fireEvent.blur(screen.getByLabelText("Recipe"));
+  fireEvent.change(screen.getByLabelText("Location"), { target: { value: "1" } });
+  await releaseConsume(details, app.detailsResponse());
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  expect(app.writes.find((row) => row.path.endsWith("/consume"))?.body).toEqual({
+    amount: "4.",
+    allow_subproduct_substitution: true,
+    exact_amount: false,
+    spoiled: false,
+    recipe_id: "4",
+    location_id: "2",
+    stock_entry_id: "pantry-stock",
+  });
+});
+
+test.each([
+  {
+    description: "first literal flow and bare barcode",
+    query: "?flow=InplaceAddBarcodeToExistingProduct&flow=wrong&barcode&barcode=SECOND&embedded",
+    barcode: true,
+    embedded: true,
+  },
+  {
+    description: "literal plus and ignored raw extra equals",
+    query: "?flow=InplaceAddBarcodeToExistingProduct=ignored&barcode=FIRST+RAW=ignored&embedded",
+    barcode: "FIRST+RAW",
+    embedded: true,
+  },
+  {
+    description: "decoded equals inside the first barcode",
+    query: "?flow=InplaceAddBarcodeToExistingProduct&barcode=FIRST%3Dkept&embedded",
+    barcode: "FIRST=kept",
+    embedded: true,
+  },
+  {
+    description: "encoded parameter names are not literal JavaScript flags",
+    query: "?%66low=InplaceAddBarcodeToExistingProduct&barcode=IGNORED&%65mbedded",
+    barcode: undefined,
+    embedded: false,
+  },
+])(
+  "Consume POST completion reads $description from the live raw URI",
+  async ({ query, barcode: expectedBarcode, embedded }) => {
+    const barcode = heldConsumeResponse();
+
+    const host = {
+      IsGrocy: true,
+      postMessage: vi.fn(),
+      get parent() {
+        return this;
+      },
+    };
+
+    vi.stubGlobal("parent", host);
+    const app = mount("/consume", { delayBooking: true, barcodeResponse: barcode.promise });
+    const amount = await readyConsume();
+    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    await waitFor(() => expect(app.writes.some((row) => row.path.endsWith("/consume"))).toBe(true));
+    await act(async () => {
+      app.router.history.replace(`/consume${query}`);
+    });
+    await act(async () => {
+      app.releaseBooking();
+      await new Promise<void>((resolve) => notifyManager.schedule(resolve));
+    });
+
+    if (embedded) {
+      await waitFor(() =>
+        expect(host.postMessage.mock.calls.some(([bag]) => bag.Message === "CloseLastModal")).toBe(
+          true,
+        ),
+      );
+      expect(screen.queryByText("Removed 4 Pieces of Coffee from stock")).toBeNull();
+    } else {
+      await screen.findByText("Removed 4 Pieces of Coffee from stock");
+      expect(host.postMessage.mock.calls.some(([bag]) => bag.Message === "CloseLastModal")).toBe(
+        false,
+      );
+    }
+
+    const assignments = app.writes.filter((row) => row.path.endsWith("/objects/product_barcodes"));
+
+    if (expectedBarcode === undefined) expect(assignments).toEqual([]);
+    else {
+      expect(assignments).toEqual([
+        {
+          path: "/api/objects/product_barcodes",
+          body: { barcode: expectedBarcode, product_id: "7" },
+        },
+      ]);
+      await releaseConsume(barcode, Response.json({}));
+      await waitFor(() => expect(app.router.history.location.search).toBe(""));
+      expect(app.router.history.location.pathname).toBe("/consume");
+      expect(screen.getByLabelText("Amount")).toBe(amount);
+    }
+  },
+);
+
+test("an older barcode success replaces the URI while a later Consume POST is pending and changes that completion's live embedded branch", async () => {
+  const barcode = heldConsumeResponse();
+  const laterBooking = heldConsumeResponse();
+
+  const host = {
+    IsGrocy: true,
+    postMessage: vi.fn(),
+    get parent() {
+      return this;
+    },
+  };
+
+  vi.stubGlobal("parent", host);
+
+  const app = mount("/consume?flow=InplaceAddBarcodeToExistingProduct&barcode=OLD-CODE", {
+    barcodeResponse: barcode.promise,
+  });
+
+  await readyConsume();
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await screen.findByText("Removed 4 Pieces of Coffee from stock");
+  const amount = await readyConsume();
+  app.holdBooking(laterBooking.promise);
+  await act(async () => {
+    app.router.history.replace("/consume?embedded&keep=later");
+  });
+  await userEvent.click(screen.getByRole("button", { name: "OK" }));
+  await waitFor(() =>
+    expect(app.writes.filter((row) => row.path.endsWith("/consume"))).toHaveLength(2),
+  );
+  await releaseConsume(barcode, Response.json({}));
+  await waitFor(() => expect(app.router.history.location.search).toBe(""));
+  expect(screen.getByLabelText("Amount")).toBe(amount);
+  await releaseConsume(laterBooking, Response.json({}));
+  await waitFor(() =>
+    expect(screen.getAllByText("Removed 4 Pieces of Coffee from stock")).toHaveLength(2),
+  );
+  expect(host.postMessage.mock.calls.some(([bag]) => bag.Message === "CloseLastModal")).toBe(false);
+  expect(screen.getByLabelText<HTMLInputElement>("Product").value).toBe("");
+  expect(app.writes.filter((row) => row.path.endsWith("/objects/product_barcodes"))).toHaveLength(
+    1,
+  );
+  expect(app.router.history.location.pathname).toBe("/consume");
+});
+
+test("an older different-product response publishes its units and captured locations while those location callbacks read the current picker product", async () => {
+  const earlier = heldConsumeResponse();
+  const app = mount("/consume");
+  const picker = await screen.findByLabelText<HTMLInputElement>("Product");
+  const reads = app.detailSignals.length;
+  app.holdDetails(earlier.promise);
+  fireEvent.change(picker, { target: { value: "Coffee" } });
+  await waitFor(() => expect(app.detailSignals.length).toBeGreaterThan(reads));
+  const earlierSignal = app.detailSignals[reads];
+  fireEvent.change(picker, { target: { value: "Tare coffee" } });
+  const amount = screen.getByLabelText<HTMLInputElement>("Amount");
+  const unit = screen.getByLabelText<HTMLSelectElement>("Quantity unit");
+  await waitFor(() => expect(unit.value).toBe("1"));
+  await screen.findByRole("option", { name: /Amount: 6; Due on 2026-11-03/ });
+  await waitFor(() => expect(amount.min).toBe("3"));
+  const beforeLateReply = app.reads.length;
+  await releaseConsume(earlier, app.detailsResponse(7));
+  await waitFor(() => expect(unit.value).toBe("3"));
+  await waitFor(() =>
+    expect(app.reads.slice(beforeLateReply)).toContain(
+      "/api/stock/products/8/entries?include_sub_products=true",
+    ),
+  );
+  await waitFor(() => expect(amount.min).toBe("3"));
+  const laterReads = app.reads.slice(beforeLateReply);
+  expect(laterReads).toContain("/api/stock/products/7/locations?include_sub_products=true");
+  expect(laterReads).toContain("/api/stock/products/8");
+  expect(laterReads).not.toContain("/api/stock/products/7/entries?include_sub_products=true");
+  expect(picker.value).toBe("Tare coffee");
+  expect(unit.selectedOptions[0]?.textContent).toBe("Saved box");
+  expect(earlierSignal?.aborted).toBe(false);
+  expect(app.writes).toEqual([]);
+});
+
+test.each(["consume", "open"] as const)(
+  "%s normalizes a saved default at selection and reset, while initial markup and typed amounts stay raw",
+  async (operation) => {
+    const app = mount("/consume", { defaultAmount: 0.5555 });
+    const amount = await screen.findByLabelText<HTMLInputElement>("Amount");
+    expect(amount.value).toBe("0.5555");
+    expect(amount.validity.stepMismatch).toBe(true);
+    await readyConsume();
+    await waitFor(() => expect(amount.value).toBe("0.56"));
+    expect(amount.validity.stepMismatch).toBe(false);
+    expect(
+      amount.closest("form")?.querySelector<HTMLInputElement>('input[name="amount"]')?.value,
+    ).toBe("4.48");
+    fireEvent.change(amount, { target: { value: "0.5555" } });
+    expect(amount.value).toBe("0.5555");
+    expect(amount.validity.stepMismatch).toBe(true);
+    fireEvent.change(amount, { target: { value: "0.56" } });
+    await userEvent.click(
+      screen.getByRole("button", { name: operation === "open" ? "Mark as opened" : "OK" }),
+    );
+    await waitFor(() =>
+      expect(app.writes.filter((row) => row.path.endsWith(`/${operation}`))).toHaveLength(1),
+    );
+    expect(app.writes.find((row) => row.path.endsWith(`/${operation}`))?.body.amount).toBe("4.48");
+    await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("Product").value).toBe(""));
+    expect(amount.value).toBe("0.56");
+  },
+);
+
+test("quick consume normalizes the product amount multiplied by its unit factor before conversion and Open reset", async () => {
+  const app = mount("/consume", { quick: true, quickAmount: 4.4444 });
+  const amount = await readyConsume();
+  await waitFor(() => expect(amount.value).toBe("0.56"));
+  expect(screen.getByLabelText<HTMLSelectElement>("Quantity unit").value).toBe("3");
+  expect(amount.validity.stepMismatch).toBe(false);
+  expect(
+    amount.closest("form")?.querySelector<HTMLInputElement>('input[name="amount"]')?.value,
+  ).toBe("4.48");
+  await userEvent.click(screen.getByRole("button", { name: "Mark as opened" }));
+  await screen.findByText("Marked 4.48 Pieces of Coffee as opened");
+  expect(app.writes.find((row) => row.path.endsWith("/open"))?.body.amount).toBe("4.48");
+  expect(amount.value).toBe("0.56");
+});
+
+test.each([false, true])(
+  "barcode locale refresh preserves the earlier converted wire amount (scan=%s)",
+  async (scan) => {
+    const lookup = heldConsumeResponse();
+
+    const app = mount("/consume", {
+      scan,
+      barcodeAmount: scan ? 2.675 : 0.5555,
+      barcodeUnit: scan ? 1 : 3,
+      barcodeRead: scan ? undefined : lookup.promise,
+    });
+
+    const amount = await choose("COFFEE-2");
+
+    if (!scan) {
+      await waitFor(() => expect(document.activeElement).toBe(amount));
+      await releaseConsume(lookup, Response.json([{ amount: 0.5555, qu_id: 3 }]));
+      await waitFor(() => expect(amount.value).toBe("0.56"));
+      await waitFor(() =>
+        expect(screen.getByLabelText<HTMLSelectElement>("Location").value).toBe("2"),
+      );
+      expect(amount.validity.stepMismatch).toBe(false);
+      expect(
+        amount.closest("form")?.querySelector<HTMLInputElement>('input[name="amount"]')?.value,
+      ).toBe("4.44");
+      await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    }
+
+    const expected = scan ? "2.67" : "4.44";
+    await screen.findByText(`Removed ${expected} Pieces of Coffee from stock`);
+    expect(app.writes.filter((row) => row.path.endsWith("/consume"))).toHaveLength(1);
+    expect(app.writes.find((row) => row.path.endsWith("/consume"))?.body.amount).toBe(expected);
+  },
+);
+
+test.each(["new product", "held barcode", "open retains flow"] as const)(
+  "unknown product actions follow live flow after %s",
+  async (mode) => {
+    const barcode = heldConsumeResponse();
+
+    const flow =
+      mode === "held barcode" ? "InplaceAddBarcodeToExistingProduct" : "InplaceNewProductWithName";
+
+    const app = mount(`/consume?flow=${flow}&barcode=FIRST&product-name=Coffee`, {
+      barcodeResponse: mode === "held barcode" ? barcode.promise : undefined,
+    });
+
+    await readyConsume();
+    await userEvent.click(
+      screen.getByRole("button", { name: mode === "open retains flow" ? "Mark as opened" : "OK" }),
+    );
+    await screen.findByText(
+      mode === "open retains flow"
+        ? "Marked 4 Pieces of Coffee as opened"
+        : "Removed 4 Pieces of Coffee from stock",
+    );
+    const product = screen.getByLabelText<HTMLInputElement>("Product");
+    await waitFor(() => expect(product.value).toBe(""));
+    expect(app.router.history.location.search.includes("flow=")).toBe(mode === "open retains flow");
+    fireEvent.change(product, { target: { value: "NEXT-UNKNOWN" } });
+    fireEvent.keyDown(product, { key: "Enter" });
+
+    if (mode === "open retains flow") {
+      await act(async () => {
+        await new Promise<void>((resolve) => notifyManager.schedule(resolve));
+      });
+      expect(
+        screen.queryByRole("button", { name: /Add as barcode to existing product/ }),
+      ).toBeNull();
+      expect(app.reads.some((path) => path.includes("name%3DNEXT-UNKNOWN"))).toBe(false);
+    } else await screen.findByRole("button", { name: /Add as barcode to existing product/ });
+    expect(
+      app.writes.filter((row) => row.path.endsWith("/consume") || row.path.endsWith("/open")),
+    ).toHaveLength(1);
+
+    if (mode === "held barcode") await releaseConsume(barcode, Response.json({}));
+  },
+);

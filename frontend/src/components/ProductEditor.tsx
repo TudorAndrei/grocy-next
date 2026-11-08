@@ -1,5 +1,7 @@
 import type { ComponentProps } from "react";
 import { Link } from "@tanstack/react-router";
+import type { NativeProductContext } from "@/lib/native-product-context";
+import { NativeProductDocumentProvider } from "@/lib/native-product-document";
 import { useI18n } from "@/lib/i18n";
 import { EntityManager } from "./EntityManager";
 import { ProductRelatedData } from "./ProductRelatedData";
@@ -7,12 +9,16 @@ import { ProductJournal } from "./StockJournal";
 import { ProductEntries } from "./StockEntries";
 
 export function ProductEditor(
-  props: Omit<ComponentProps<typeof EntityManager>, "entity" | "related">,
+  props: Omit<ComponentProps<typeof EntityManager>, "entity" | "related" | "nativeProduct"> & {
+    nativeSelected?: boolean;
+    nativeProductContext?: NativeProductContext;
+  },
 ) {
-  return (
+  const editor = (
     <EntityManager
       {...props}
       entity="products"
+      nativeProduct={props.nativeSelected}
       related={ProductRelatedData}
       editorActions={(row, pending) => (
         <>
@@ -28,6 +34,14 @@ export function ProductEditor(
         </>
       )}
     />
+  );
+
+  return props.nativeSelected && props.nativeProductContext ? (
+    <NativeProductDocumentProvider context={props.nativeProductContext}>
+      {editor}
+    </NativeProductDocumentProvider>
+  ) : (
+    editor
   );
 }
 

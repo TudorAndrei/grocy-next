@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import String, delete, insert, select, type_coerce, update
 from sqlalchemy.engine import Connection, CursorResult
@@ -18,6 +18,7 @@ from grocy.compatibility.php import (
     coerced_float,
     coerced_int,
     empty,
+    filter_int,
     find,
     identical,
     loose_equals,
@@ -87,6 +88,71 @@ class HouseholdService:
 
     async def users(self) -> list[dict[str, Any]]:
         return await self._rows("SELECT * FROM `users_dto`")
+
+    async def tracking_users(self) -> list[dict[str, Any]]:
+        return await self._rows(
+            "SELECT id, username, display_name FROM users_dto ORDER BY username"
+        )
+
+    async def journal(
+        self, kind: Literal["chore", "battery"], parameters: dict[Any, Any]
+    ) -> dict[str, Any]:
+        await configure_compatibility_queries(self.session)
+        chore = kind == "chore"
+        months = parameters.get("months")
+        if not isinstance(months, str) or filter_int(months) is None:
+            months = "12" if chore else "24"
+        raw_identity = parameters.get(kind)
+        identity = filter_int(raw_identity) if isinstance(raw_identity, str) else None
+        if chore:
+            statement = (
+                "SELECT l.*,l.chore_id AS record_id,c.name AS record_name,"
+                "COALESCE(c.track_date_only,0) AS track_date_only FROM chores_log l "
+                "LEFT JOIN chores c ON c.id=l.chore_id AND c.active=1 "
+                "WHERE l.tracked_time > DATE(DATE('now','localtime'),?)"
+            )
+            record_statement = (
+                "SELECT id,name,track_date_only FROM chores "
+                "WHERE active=1 ORDER BY name COLLATE NOCASE"
+            )
+            identity_clause = " AND l.chore_id=?"
+            log_entity = "chores_log"
+        else:
+            statement = (
+                "SELECT l.*,l.battery_id AS record_id,b.name AS record_name,"
+                "0 AS track_date_only,NULL AS scheduled_execution_time,"
+                "NULL AS done_by_user_id,0 AS skipped FROM battery_charge_cycles l "
+                "LEFT JOIN batteries b ON b.id=l.battery_id AND b.active=1 "
+                "WHERE l.tracked_time > DATE(DATE('now','localtime'),?)"
+            )
+            record_statement = (
+                "SELECT id,name,0 AS track_date_only FROM batteries "
+                "WHERE active=1 ORDER BY name COLLATE NOCASE"
+            )
+            identity_clause = " AND l.battery_id=?"
+            log_entity = "battery_charge_cycles"
+        arguments: list[Any] = [f"-{months} months"]
+        if identity is not None:
+            statement += identity_clause
+            arguments.append(identity)
+        rows = await self._rows(statement + " ORDER BY l.tracked_time DESC", *arguments)
+        values = await self._rows(
+            "SELECT object_id,name,value FROM userfield_values_resolved WHERE entity=?",
+            log_entity,
+        )
+        for row in rows:
+            row["custom_values"] = {
+                value["name"]: value["value"]
+                for value in values
+                if loose_equals(value["object_id"], row["id"])
+            }
+        return {
+            "rows": rows,
+            "records": await self._rows(record_statement),
+            "users": await self.tracking_users() if chore else [],
+            "months": months,
+            "selected_id": identity,
+        }
 
     async def _exists(self, model: type[Chore] | type[Battery], identifier: Any) -> bool:
         connection = await self.session.connection()

@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
-import { getPriceHistory } from "@/lib/product-overview";
+import type { CardHistory } from "@/lib/product-card-memory";
 import { createPriceChart } from "@/lib/price-chart";
 import { ErrorBlock } from "./ErrorBlock";
 import { LoadingBlock } from "./LoadingBlock";
 
 export function ProductPriceHistory({
-  productId,
-  factor,
+  state,
+  onRetry,
   currency,
 }: {
-  productId: number;
-  factor: number;
+  state: CardHistory;
+  onRetry: () => void;
   currency: string;
 }) {
   const { t } = useI18n();
@@ -22,16 +21,7 @@ export function ProductPriceHistory({
   const [error, setError] = useState<Error>();
   const [attempt, setAttempt] = useState(0);
 
-  const data = useQuery({
-    queryKey: ["product-price-history", productId],
-    queryFn: ({ signal }) => getPriceHistory(productId, signal),
-    staleTime: 0,
-    refetchOnMount: "always",
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-
-  const rows = !data.isFetching ? data.data : undefined;
+  const { rows, factor } = state;
   const unknownStore = t("Unknown store");
 
   useEffect(() => {
@@ -68,10 +58,10 @@ export function ProductPriceHistory({
   return (
     <section className="product-price-history" aria-label={t("Price history")}>
       <h3>{t("Price history")}</h3>
-      {data.isPending || data.isFetching ? <LoadingBlock /> : null}
-      {data.error || error ? (
+      {state.pending > 0 ? <LoadingBlock /> : null}
+      {state.error || error ? (
         <>
-          <ErrorBlock message={(data.error ?? error)!.message} />
+          <ErrorBlock message={(state.error ?? error)!.message} />
           <button
             type="button"
             className="btn"
@@ -79,7 +69,7 @@ export function ProductPriceHistory({
               setError(undefined);
               setAttempt(attempt + 1);
 
-              if (data.error) void data.refetch();
+              if (state.error) onRetry();
             }}
           >
             {t("Retry")}

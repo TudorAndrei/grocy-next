@@ -52,7 +52,7 @@ export const userSettingsQuery = () =>
 export const currentUserQuery = () =>
   queryOptions({
     queryKey: queryKeys.currentUser,
-    queryFn: () => api.getCurrentUser(),
+    queryFn: ({ signal }) => api.getCurrentUser(signal),
   });
 
 export const objectsQuery = (entity: string) =>

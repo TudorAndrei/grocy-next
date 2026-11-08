@@ -43,9 +43,49 @@ function formData(payload: JsonObject): string {
   return values.join("&");
 }
 
-export async function printLabel(path: string, config: JsonObject): Promise<void> {
-  const payload = objectSchema.parse(await request<JsonValue>(path));
+export async function printLabel(
+  path: string,
+  config: JsonObject,
+  signal?: AbortSignal,
+): Promise<void> {
+  signal?.throwIfAborted();
+  const payload = objectSchema.parse(await request<JsonValue>(path, { signal }));
+  signal?.throwIfAborted();
 
+  await postLabelWebhook(payload, config, signal);
+}
+
+/** Native print actions supply no error callback for their label GET. */
+export async function printNativeLabel(
+  path: string,
+  config: JsonObject,
+  onWebhookError: (error: Error) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (signal?.aborted) return;
+  let payload: JsonObject;
+
+  try {
+    payload = objectSchema.parse(await request<JsonValue>(path, { signal }));
+  } catch {
+    return;
+  }
+
+  if (signal?.aborted) return;
+
+  try {
+    await postLabelWebhook(payload, config, signal);
+  } catch (error) {
+    if (!signal?.aborted && error instanceof Error) onWebhookError(error);
+  }
+}
+
+/** Send an existing snapshot without reading mutable label data from the API. */
+export async function postLabelWebhook(
+  payload: JsonObject,
+  config: JsonObject,
+  signal?: AbortSignal,
+): Promise<void> {
   if (config.LABEL_PRINTER_RUN_SERVER === undefined || enabled(config.LABEL_PRINTER_RUN_SERVER))
     return;
 
@@ -64,6 +104,7 @@ export async function printLabel(path: string, config: JsonObject): Promise<void
         : "application/x-www-form-urlencoded; charset=UTF-8",
     },
     body: json ? JSON.stringify(data) : formData(data),
+    signal,
   });
 
   if (!response.ok) throw new Error("Error while executing WebHook");
