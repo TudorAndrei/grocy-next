@@ -24,7 +24,7 @@ The Python API provides the 86 contract operations and reads for the 33 listable
 Python 3.13 and the backend dependencies are sufficient to run the API. PHP is required only for legacy comparison tests. See [the backend setup](backend/README.md).
 
 ```bash
-mise run setup   # first time (or after dependency changes)
+mise run setup   # Python API dependencies and frontend dev tools
 mise run dev
 ```
 
@@ -72,7 +72,7 @@ uv run ruff format --config pyproject.toml --check . ../scripts
 uv run ty check . ../scripts --error-on-warning
 ```
 
-Run `mise run check` from the repository root for lint, format, and type checks.
+Run `mise run check` from the repository root for Python and frontend lint, format, and type checks.
 Run `mise run fix` to apply safe lint fixes and format the files. Run tests separately.
 
 GitHub Actions CI has been removed. Verification commands and Python tests remain available locally; the NSH client has local `web:check`, `web:test`, and `web:build` tasks.
@@ -82,7 +82,7 @@ The PHP reference tests are skipped unless a reference server is configured. See
 ## Git hooks
 
 Run `mise install` to install the hook tools and repository hooks. Run
-`mise run setup` to install the Python API dependencies.
+`mise run setup` to install the Python API dependencies and pinned frontend development tools.
 
 ```bash
 mise x -- hk check --all
@@ -91,7 +91,7 @@ mise x -- hk fix --all
 
 The pre-commit hook applies safe fixes and stages the changed files. The
 commit-msg hook checks Conventional Commit messages. The checks cover Python,
-Markdown, TOML, secrets, and file whitespace.
+TypeScript/TSX (Oxlint), frontend formatting (Oxfmt), Markdown, TOML, secrets, and file whitespace.
 Copied source and agent assets are excluded from format changes. Gitleaks also
 scans copied source, with a narrow exception for SHA-256 manifest checksums.
 There is no spelling check.

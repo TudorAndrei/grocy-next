@@ -1,6 +1,7 @@
 min_version = "2024.11.1"
 
 [tools]
+node = "24.22.2"
 hk = "2.9.0"
 gitleaks = "8.30.1"
 rumdl = "0.3.0"
@@ -17,8 +18,8 @@ GROCY_USE_NATIVE_PHP = "false"
 postinstall = "hk install --mise"
 
 [tasks.setup]
-description = "Install Python API dependencies"
-run = "cd backend && uv sync --frozen"
+description = "Install Python API dependencies and frontend development tools"
+run = ["cd backend && uv sync --frozen", "npm ci"]
 
 [tasks.dev]
 description = "Start the Python API"
@@ -45,18 +46,21 @@ description = "Apply safe lint fixes and format all source files"
 run = [
   "cd backend && uv run ruff check --config pyproject.toml --fix . ../scripts",
   "cd backend && uv run ruff format --config pyproject.toml . ../scripts",
+  "npm run lint:fix",
+  "npm run format",
 ]
 
 [tasks.check]
 description = "Run lint, format, and type checks"
-depends = ["lint", "format:check", "typecheck"]
+depends = ["lint", "format:check", "typecheck", "web:check"]
 
 [tasks."web:dev"]
 description = "Run the Native Shell web client (start the API separately)"
 run = "nsh run frontend --target web --port 5173"
 
 [tasks."web:check"]
-description = "Type-check the Native Shell client"
+description = "Lint, check formatting, and type-check the Native Shell client"
+depends = ["web:lint", "web:format:check"]
 run = "nsh check frontend"
 
 [tasks."web:test"]
@@ -65,7 +69,8 @@ run = "nsh test frontend"
 
 [tasks."web:build"]
 description = "Package the Native Shell static web client"
-run = "nsh check frontend && nsh package frontend --target web -o frontend/dist"
+depends = ["web:check"]
+run = "nsh package frontend --target web -o frontend/dist"
 
 [tasks."web:types"]
 description = "Generate NSH-compatible TypeScript declarations from the Python API (requires Node/npm)"
@@ -74,3 +79,19 @@ run = "./scripts/generate-client-types.sh"
 [tasks."web:types:check"]
 description = "Check generated API declarations for drift"
 run = "./scripts/generate-client-types.sh --check"
+
+[tasks."web:lint"]
+description = "Lint the Native Shell frontend with Oxlint"
+run = "npm run lint"
+
+[tasks."web:lint:fix"]
+description = "Apply safe Oxlint fixes to the frontend"
+run = "npm run lint:fix"
+
+[tasks."web:format"]
+description = "Format the frontend and its tooling configuration with Oxfmt"
+run = "npm run format"
+
+[tasks."web:format:check"]
+description = "Check frontend formatting with Oxfmt"
+run = "npm run format:check"

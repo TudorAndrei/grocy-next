@@ -35,12 +35,7 @@ export function Meals(p: { api: Api }) {
     meal = signal<Row | null>(null);
   const state = remote(async (s) => {
     const [calendar, recipes] = await Promise.all([
-      p.api.request<Row>(
-        `/api/v2/meal-plan/calendar?start=${start()}`,
-        "GET",
-        undefined,
-        s,
-      ),
+      p.api.request<Row>(`/api/v2/meal-plan/calendar?start=${start()}`, "GET", undefined, s),
       p.api.request<Row[]>("/api/v2/recipes/overview", "GET", undefined, s),
     ]);
     return { calendar, recipes };
@@ -59,11 +54,7 @@ export function Meals(p: { api: Api }) {
         detail.set(value);
         meal.set(entry);
         cookServings.set(
-          String(
-            entry?.entry?.recipe_servings ??
-              value.cards?.[0]?.desired_servings ??
-              1,
-          ),
+          String(entry?.entry?.recipe_servings ?? value.cards?.[0]?.desired_servings ?? 1),
         );
         confirm.set(false);
         detailOpen.set(true);
@@ -73,11 +64,9 @@ export function Meals(p: { api: Api }) {
   const recipes = () =>
     state
       .data()
-      ?.recipes.filter((r) =>
-        r.name.toLowerCase().includes(query().toLowerCase()),
-      )
+      ?.recipes.filter((r) => r.name.toLowerCase().includes(query().toLowerCase()))
       .slice()
-      .sort(
+      .toSorted(
         (a, b) =>
           Number(a.missing_products_count) - Number(b.missing_products_count) ||
           a.name.localeCompare(b.name),
@@ -90,16 +79,8 @@ export function Meals(p: { api: Api }) {
         <Heading title="Meals" />
         <Action label="Plan a meal" primary onPress={() => add(dateISO())} />
       </View>
-      <Tabs
-        items={["This week", "Recipes"]}
-        value={tab()}
-        onChange={(v) => tab.set(v)}
-      />
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <Tabs items={["This week", "Recipes"]} value={tab()} onChange={(v) => tab.set(v)} />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       <Feedback error={op.error()} success={op.success()} />
       {tab() === "This week" ? (
         <View class="gap-3">
@@ -129,10 +110,11 @@ export function Meals(p: { api: Api }) {
               <View class="border-b border-[#e4e4e0] py-2 gap-1">
                 <View class="flex-row justify-between items-center">
                   <Text class="text-sm font-semibold text-[#1b1d1c]">
-                    {new Date(value() + "T12:00:00").toLocaleDateString(
-                      undefined,
-                      { weekday: "short", day: "numeric", month: "short" },
-                    )}
+                    {new Date(value() + "T12:00:00").toLocaleDateString(undefined, {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
                     {value() === dateISO() ? " · Today" : ""}
                   </Text>
                   <Action
@@ -142,9 +124,7 @@ export function Meals(p: { api: Api }) {
                     onPress={() => add(value())}
                   />
                 </View>
-                {events(value()).length === 0 ? (
-                  <Note>No meal planned</Note>
-                ) : null}
+                {events(value()).length === 0 ? <Note>No meal planned</Note> : null}
                 <Each of={events(value())}>
                   {(entry) => (
                     <View class="flex-row justify-between gap-2 items-center py-1">
@@ -169,11 +149,7 @@ export function Meals(p: { api: Api }) {
                         disabled={op.busy()}
                         onPress={() =>
                           void op.run(
-                            () =>
-                              p.api.request(
-                                `/api/objects/meal_plan/${entry().id}`,
-                                "DELETE",
-                              ),
+                            () => p.api.request(`/api/objects/meal_plan/${entry().id}`, "DELETE"),
                             "Meal removed.",
                           )
                         }
@@ -187,11 +163,7 @@ export function Meals(p: { api: Api }) {
         </View>
       ) : (
         <View class="gap-3">
-          <Field
-            label="Search recipes"
-            value={query()}
-            onChange={(v) => query.set(v)}
-          />
+          <Field label="Search recipes" value={query()} onChange={(v) => query.set(v)} />
           {recipes().length === 0 && !state.loading() ? (
             <Note>No recipes match. Add a recipe in Settings.</Note>
           ) : null}
@@ -202,9 +174,7 @@ export function Meals(p: { api: Api }) {
                 class="flex-row items-center gap-3 min-h-16 py-2 border-b border-[#e4e4e0] focus:outline-2 focus:outline-[#22603f]"
               >
                 <View class="flex-1 min-w-0 gap-1">
-                  <Text class="text-base font-medium text-[#1b1d1c]">
-                    {r().name}
-                  </Text>
+                  <Text class="text-base font-medium text-[#1b1d1c]">{r().name}</Text>
                   <Note>{r().desired_servings} servings</Note>
                 </View>
                 <Text class="text-sm text-[#5e625f]">
@@ -249,11 +219,7 @@ export function Meals(p: { api: Api }) {
           </View>
         }
       >
-        <DateField
-          label="Meal date"
-          value={day()}
-          onChange={(v) => day.set(v)}
-        />
+        <DateField label="Meal date" value={day()} onChange={(v) => day.set(v)} />
         <Choice
           label="Recipe"
           value={recipe()}
@@ -264,19 +230,11 @@ export function Meals(p: { api: Api }) {
           onChange={(v) => {
             recipe.set(v);
             servings.set(
-              String(
-                state.data()?.recipes.find((r) => String(r.id) === v)
-                  ?.desired_servings ?? 1,
-              ),
+              String(state.data()?.recipes.find((r) => String(r.id) === v)?.desired_servings ?? 1),
             );
           }}
         />
-        <Field
-          label="Servings"
-          numeric
-          value={servings()}
-          onChange={(v) => servings.set(v)}
-        />
+        <Field label="Servings" numeric value={servings()} onChange={(v) => servings.set(v)} />
       </Panel>
       <Panel
         open={detailOpen()}
@@ -302,9 +260,7 @@ export function Meals(p: { api: Api }) {
                     .run(
                       () =>
                         meal()
-                          ? p.api.post(
-                              `/api/v2/meal-plan/${meal()!.id}/consume`,
-                            )
+                          ? p.api.post(`/api/v2/meal-plan/${meal()!.id}/consume`)
                           : p.api.post(
                               `/api/v2/recipes/${detail()!.recipe_id}/consume?servings=${positive(cookServings())}`,
                             ),
@@ -334,8 +290,7 @@ export function Meals(p: { api: Api }) {
       >
         {confirm() ? (
           <Note>
-            Cooking will deduct these ingredients from stock. Check the amounts,
-            then confirm.
+            Cooking will deduct these ingredients from stock. Check the amounts, then confirm.
           </Note>
         ) : null}
         {!meal() ? (
@@ -356,30 +311,21 @@ export function Meals(p: { api: Api }) {
                 {(i) => (
                   <Line>
                     <View class="flex-row justify-between gap-2">
-                      <Text class="flex-1 text-sm text-[#1b1d1c]">
-                        {i().product_name}
-                      </Text>
+                      <Text class="flex-1 text-sm text-[#1b1d1c]">{i().product_name}</Text>
                       <Text class="text-sm text-[#1b1d1c]">
                         {Number(
                           (
-                            (Number(i().amount) *
-                              (Number(cookServings()) || 1)) /
+                            (Number(i().amount) * (Number(cookServings()) || 1)) /
                             (Number(card().desired_servings) || 1)
                           ).toFixed(3),
                         )}
                       </Text>
                     </View>
-                    <Note>
-                      {i().fulfilled
-                        ? "In stock"
-                        : "Check stock for this ingredient"}
-                    </Note>
+                    <Note>{i().fulfilled ? "In stock" : "Check stock for this ingredient"}</Note>
                   </Line>
                 )}
               </Each>
-              <Text class="text-base text-[#1b1d1c]">
-                {plain(card().preparation_html)}
-              </Text>
+              <Text class="text-base text-[#1b1d1c]">{plain(card().preparation_html)}</Text>
             </View>
           )}
         </Each>

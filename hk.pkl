@@ -22,6 +22,17 @@ steps = new Mapping<String, Step | Group> {
     check_after_diff = false
     fix = "uv run --frozen --project backend ruff check --config backend/pyproject.toml --force-exclude --fix {{files}}"
   }
+  ["oxlint"] = new Step {
+    glob = List("frontend/**/*.ts", "frontend/**/*.tsx")
+    check = "./node_modules/.bin/oxlint --deny-warnings {{files}}"
+    fix = "./node_modules/.bin/oxlint --deny-warnings --fix {{files}}"
+  }
+  ["oxfmt"] = new Step {
+    glob = List("frontend/**/*.ts", "frontend/**/*.tsx", "frontend/**/*.json", "frontend/**/*.md", "package.json", ".oxlintrc.json", ".oxfmtrc.json")
+    depends = List("oxlint")
+    check = "./node_modules/.bin/oxfmt --check {{files}}"
+    fix = "./node_modules/.bin/oxfmt {{files}}"
+  }
   ["rumdl"] = Builtins.rumdl
 
   ["ruff-format"] = (Builtins.ruff_format) {

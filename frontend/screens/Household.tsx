@@ -14,6 +14,19 @@ import {
   dateISO,
   dueDays,
 } from "../ui";
+const group = (r: Row) =>
+  Number(r.done)
+    ? "Completed"
+    : (dueDays(r.date) ?? 999) < 0
+      ? "Overdue"
+      : dueDays(r.date) === 0
+        ? "Today"
+        : (dueDays(r.date) ?? 999) <= 7
+          ? "This week"
+          : dueDays(r.date) == null
+            ? "No date"
+            : "Later";
+
 export function Household(p: { api: Api }) {
   const completed = signal(false),
     adding = signal(false),
@@ -49,33 +62,18 @@ export function Household(p: { api: Api }) {
         ...r,
         kind: "batteries",
         label: "Battery",
-        date:
-          Number(r.charge_interval_days) > 0
-            ? r.next_estimated_charge_time
-            : null,
+        date: Number(r.charge_interval_days) > 0 ? r.next_estimated_charge_time : null,
       })),
     ] as Row[];
   });
   const op = operations(state.refresh);
-  const group = (r: Row) =>
-    Number(r.done)
-      ? "Completed"
-      : (dueDays(r.date) ?? 999) < 0
-        ? "Overdue"
-        : dueDays(r.date) === 0
-          ? "Today"
-          : (dueDays(r.date) ?? 999) <= 7
-            ? "This week"
-            : dueDays(r.date) == null
-              ? "No date"
-              : "Later";
+
   const rows = (g: string) =>
     (state.data() ?? [])
       .filter((r) => group(r) === g)
-      .sort(
+      .toSorted(
         (a, b) =>
-          (dueDays(a.date) ?? 999) - (dueDays(b.date) ?? 999) ||
-          a.name.localeCompare(b.name),
+          (dueDays(a.date) ?? 999) - (dueDays(b.date) ?? 999) || a.name.localeCompare(b.name),
       );
   return (
     <View class="gap-4">
@@ -91,11 +89,7 @@ export function Household(p: { api: Api }) {
           }}
         />
       </View>
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       <Feedback error={op.error()} success={op.success()} />
       {undo() ? (
         <Action
@@ -124,9 +118,7 @@ export function Household(p: { api: Api }) {
           <View>
             {rows(g()).length ? (
               <View class="gap-1">
-                <Text class="text-sm font-semibold text-[#5e625f] mt-3">
-                  {g()}
-                </Text>
+                <Text class="text-sm font-semibold text-[#5e625f] mt-3">{g()}</Text>
                 <Each of={rows(g())}>
                   {(r) => (
                     <View class="min-h-16 flex-row items-center justify-between gap-3 border-b border-[#e4e4e0] py-2">
@@ -155,9 +147,7 @@ export function Household(p: { api: Api }) {
                                 : r().kind === "chores"
                                   ? "execute"
                                   : "charge";
-                            const result = await p.api.post(
-                              `/api/${r().kind}/${r().id}/${action}`,
-                            );
+                            const result = await p.api.post(`/api/${r().kind}/${r().id}/${action}`);
                             if (op.alive())
                               undo.set(
                                 r().kind === "tasks"
@@ -218,25 +208,11 @@ export function Household(p: { api: Api }) {
           </View>
         }
       >
-        <Field
-          label="Task name"
-          value={name()}
-          onChange={(v) => name.set(v)}
-          autoFocus
-        />
-        <DateField
-          label="Due date"
-          optional
-          value={date()}
-          onChange={(v) => date.set(v)}
-        />
+        <Field label="Task name" value={name()} onChange={(v) => name.set(v)} autoFocus />
+        <DateField label="Due date" optional value={date()} onChange={(v) => date.set(v)} />
         <View class="flex-row gap-2">
           <Action label="Today" quiet onPress={() => date.set(dateISO())} />
-          <Action
-            label="Tomorrow"
-            quiet
-            onPress={() => date.set(addDays(dateISO(), 1))}
-          />
+          <Action label="Tomorrow" quiet onPress={() => date.set(addDays(dateISO(), 1))} />
           <Action label="No date" quiet onPress={() => date.set("")} />
         </View>
       </Panel>
