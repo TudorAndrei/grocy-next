@@ -2103,7 +2103,14 @@ def test_reference_native_thermal_connector_errors(
         response = app.get("/api/print/shoppinglist/thermal", params={"list": shopping})
         assert response.status_code == (500 if failure == "empty-path" else 400), response.text
         results.append(response.json()["error_message"])
-    assert results[0] == results[1]
+    if failure == "empty-path":
+        # Python retains PHP 8.4 diagnostics; PHP 8.3 uses different interpreter wording.
+        php_version = reference.get("/api/system/info").json()["php_version"]
+        version = tuple(map(int, php_version.split(".")[:2]))
+        description = "must not" if version >= (8, 4) else "cannot"
+        assert results == [f"Path {description} be empty", "Path must not be empty"]
+    else:
+        assert results[0] == results[1]
 
 
 def test_reference_native_thermal_network_output(client, api_headers, reference, thermal_printer):

@@ -10918,5 +10918,6 @@
     "change": "Remove the standalone React frontend, GitHub Actions CI workflow and UI-only tooling at the user request. Local Python verification remains available.",
     "apiImplementationAndTestsChanged": false,
     "historicalEvidencePolicy": "Recorded run counts, source manifests and hashes describe their original certified candidate; removed tooling is not represented as currently present. No new full-suite run is claimed."
-  }
+  },
+  "ciFailureInvestigationRef": "contracts/ci-failure-investigation.json"
 }

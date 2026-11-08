@@ -31,6 +31,8 @@ Case groups reuse full-suite evidence rather than running the same tests again f
 
 The recorded certification predates removal of the standalone frontend, CI workflow and UI-only scripts. That cleanup does not change the Python API implementation or tests. Its historical source/evidence hashes remain attributed to the certified candidate; current local verification uses the API-only commands in the README.
 
+A later [investigation of the retired CI run](ci-failure-investigation.md) repaired one differential test's PHP-version-dependent diagnostic assertion. API production code remains unchanged. All 23 thermal-printer cases passed with PHP 8.3 and 8.4 in both required time zones; seven existing login-context cases also passed. These selected follow-up results supplement the historical certification rather than replacing its full-suite counts or frozen test hashes.
+
 The final collection contains **2,559 Python test cases**. All certification runs below finished successfully with `GROCY_USE_NATIVE_PHP=false`:
 
 | Profile | Passed | Skipped | Deselected |
