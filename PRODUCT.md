@@ -2,12 +2,12 @@
 
 ## Platform
 
-Python HTTP API and MCP server. Independent clients provide the user interface.
+Python HTTP API and MCP server, with a Native Shell TSX web client. Independent clients can also use the API.
 
 ## Users
 
 - **The owner.** A self-hoster managing household stock, shopping, recipes and recurring work through a client of their choice.
-- **Client developers.** Build interfaces against the Grocy-compatible API and its documented extensions. Future cross-platform client work will use [Native Shell](https://nsh.dev/).
+- **Client developers.** Build interfaces against the Grocy-compatible API and its documented extensions. The primary web client uses [Native Shell](https://nsh.dev/).
 - **External assistants.** Connect through FastMCP to read state and propose or perform changes under the API's authentication and validation rules.
 
 ## Product Purpose
@@ -28,13 +28,13 @@ Intelligence lives outside the server. There is no embedded agent, OCR or vision
 
 - The Python API implements the pinned 86 Grocy operations and 33 listable entities, including stock, recipes, shopping, meal plans, chores, tasks, batteries, equipment, calendars, files and access management.
 - Additional API and MCP capabilities support nutrition proposals, review, commit and revision history.
-- The previous React/TanStack frontend and GitHub Actions CI have been removed. Python tests and local verification tools remain available.
+- The React/TanStack frontend has been replaced by a Native Shell web client covering core household workflows. Python tests and NSH local verification tools remain available; GitHub Actions CI is absent.
 - The finite API acceptance scope and certification results are recorded in [API parity status](docs/api-parity-status.md).
 - Terminology follows Grocy: product, stock, best-before date, quantity unit, location, chore, battery, recipe.
 
 ## Brand Commitments
 
-- Name: "Grocy Next". Client branding and visual design will be decided with the new client.
+- Name: "Grocy Next". The client uses neutral surfaces, a restrained green accent, compact lists, and contextual sheets. Stock, Shopping, Meals and Chores are primary; setup lives in Settings.
 
 ## Evidence on Hand
 

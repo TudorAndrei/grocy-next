@@ -35,3 +35,7 @@ data/
 .vscode/
 *.swp
 *.swo
+
+# Native Shell generated output
+.nsh/
+node_modules/
