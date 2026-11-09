@@ -1,94 +1,49 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T19:12:44+00:00",
+  "generatedAt": "2026-11-09T06:18:34+00:00",
   "title": "Design System: Grocy Next",
   "extensions": {
     "colorMeta": {
-      "cobalt": {
-        "role": "primary",
-        "displayName": "Cobalt Rim",
-        "canonical": "#1d3a8a",
-        "oklch": "oklch(37.9% 0.138 265.2)",
-        "tonalRamp": [
-          "#010039",
-          "#041665",
-          "#1b3787",
-          "#3758ab",
-          "#5579cf",
-          "#749bf4",
-          "#abc4fa",
-          "#e7efff"
-        ]
-      },
-      "cobalt-deep": {
-        "role": "primary",
-        "displayName": "Deep Cobalt",
-        "canonical": "#142b6b",
-        "oklch": "oklch(31.5% 0.116 265.2)",
-        "tonalRamp": [
-          "#010036",
-          "#081c5b",
-          "#213b7c",
-          "#3d5a9e",
-          "#5c7bc2",
-          "#7b9ce7",
-          "#aac4fc",
-          "#e8effd"
-        ]
-      },
-      "cobalt-soft": {
-        "role": "primary",
-        "displayName": "Cobalt Wash",
-        "canonical": "#e7ebf7",
-        "oklch": "oklch(94.1% 0.017 271.2)",
-        "tonalRamp": [
-          "#090b12",
-          "#21242c",
-          "#3c3f49",
-          "#5a5d67",
-          "#797d88",
-          "#9a9ea9",
-          "#c0c4cf",
-          "#eaeefa"
-        ]
-      },
-      "cobalt-line": {
-        "role": "primary",
-        "displayName": "Cobalt Hairline",
-        "canonical": "#c4cde9",
-        "oklch": "oklch(85.0% 0.040 271.4)",
-        "tonalRamp": [
-          "#06091c",
-          "#1d2338",
-          "#383f55",
-          "#555d75",
-          "#747c96",
-          "#959eb8",
-          "#bac3df",
-          "#e8eeff"
-        ]
-      },
-      "enamel": {
+      "background": {
         "role": "neutral",
-        "displayName": "White Enamel",
-        "canonical": "#f3f4ef",
-        "oklch": "oklch(96.5% 0.007 115.7)",
+        "displayName": "Paper Ground",
+        "canonical": "#fafaf9",
+        "dark": "#0e0f10",
+        "oklch": "oklch(98.5% 0.001 106)",
         "tonalRamp": [
-          "#0b0c08",
-          "#242421",
-          "#3f403c",
-          "#5d5e5a",
-          "#7d7e79",
-          "#9e9f9a",
-          "#c4c5c0",
-          "#eeefea"
+          "#0b0b0b",
+          "#242423",
+          "#40403f",
+          "#5e5e5d",
+          "#7d7d7c",
+          "#9e9e9d",
+          "#c4c4c3",
+          "#eeeeed"
         ]
       },
-      "surface": {
+      "foreground": {
         "role": "neutral",
-        "displayName": "Plate White",
+        "displayName": "Ink",
+        "canonical": "#0c0d0e",
+        "dark": "#ecedec",
+        "oklch": "oklch(15.8% 0.003 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232425",
+          "#3f4041",
+          "#5c5e5f",
+          "#7c7d7f",
+          "#9d9ea0",
+          "#c3c4c6",
+          "#edeff0"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "White Surface",
         "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 89.9)",
+        "dark": "#161719",
+        "oklch": "oklch(100.0% 0.000 90)",
         "tonalRamp": [
           "#0b0b0b",
           "#242424",
@@ -100,632 +55,562 @@
           "#eeeeee"
         ]
       },
-      "surface-sunk": {
+      "popover": {
         "role": "neutral",
-        "displayName": "Sunk Enamel",
-        "canonical": "#f7f8f4",
-        "oklch": "oklch(97.7% 0.005 117.9)",
+        "displayName": "White Surface (popover)",
+        "canonical": "#ffffff",
+        "dark": "#1b1c1f",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Rail Grey",
+        "canonical": "#f6f6f4",
+        "dark": "#121315",
+        "oklch": "oklch(97.3% 0.003 106)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242423",
+          "#40403e",
+          "#5e5e5c",
+          "#7d7d7b",
+          "#9e9e9d",
+          "#c4c4c2",
+          "#eeeeec"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Track Grey",
+        "canonical": "#f1f1ef",
+        "dark": "#202225",
+        "oklch": "oklch(95.8% 0.003 106)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242423",
+          "#40403e",
+          "#5e5e5c",
+          "#7d7d7b",
+          "#9e9e9d",
+          "#c4c4c2",
+          "#eeeeec"
+        ]
+      },
+      "accent": {
+        "role": "neutral",
+        "displayName": "Track Grey (hover)",
+        "canonical": "#f1f1ef",
+        "dark": "#222428",
+        "oklch": "oklch(95.8% 0.003 106)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242423",
+          "#40403e",
+          "#5e5e5c",
+          "#7d7d7b",
+          "#9e9e9d",
+          "#c4c4c2",
+          "#eeeeec"
+        ]
+      },
+      "selected": {
+        "role": "neutral",
+        "displayName": "Track Grey (selected)",
+        "canonical": "#f1f1ef",
+        "dark": "#222428",
+        "oklch": "oklch(95.8% 0.003 106)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242423",
+          "#40403e",
+          "#5e5e5c",
+          "#7d7d7b",
+          "#9e9e9d",
+          "#c4c4c2",
+          "#eeeeec"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e6e6e3",
+        "dark": "#26282b",
+        "oklch": "oklch(92.4% 0.004 106)",
+        "tonalRamp": [
+          "#0b0b09",
+          "#242422",
+          "#40403d",
+          "#5e5e5b",
+          "#7d7d7b",
+          "#9e9e9c",
+          "#c4c4c1",
+          "#efefec"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Control Line",
+        "canonical": "#d6d6d2",
+        "dark": "#35373b",
+        "oklch": "oklch(87.5% 0.005 107)",
         "tonalRamp": [
           "#0b0b09",
           "#242421",
-          "#3f403d",
-          "#5d5e5b",
-          "#7d7e7a",
-          "#9e9f9b",
-          "#c4c4c1",
-          "#eeefeb"
+          "#40403d",
+          "#5e5e5a",
+          "#7d7d7a",
+          "#9f9f9b",
+          "#c4c4c0",
+          "#efefeb"
         ]
       },
-      "ink": {
+      "ink-soft": {
         "role": "neutral",
-        "displayName": "Black Lettering",
-        "canonical": "#101318",
-        "oklch": "oklch(18.6% 0.011 260.6)",
+        "displayName": "Soft Ink",
+        "canonical": "#3b3e42",
+        "dark": "#c9cbcc",
+        "oklch": "oklch(36.2% 0.008 256)",
         "tonalRamp": [
-          "#080b10",
-          "#21242a",
-          "#3c4046",
-          "#5a5e64",
-          "#797d84",
-          "#9a9fa6",
-          "#c0c4cc",
-          "#eaeff6"
+          "#090b0f",
+          "#212428",
+          "#3d4044",
+          "#5b5e62",
+          "#7a7e82",
+          "#9b9fa3",
+          "#c1c4c9",
+          "#ebeff4"
         ]
       },
-      "ink-2": {
+      "muted-foreground": {
         "role": "neutral",
-        "displayName": "Label Grey",
-        "canonical": "#4a5061",
-        "oklch": "oklch(43.2% 0.029 269.9)",
+        "displayName": "Muted",
+        "canonical": "#62666a",
+        "dark": "#9b9ea2",
+        "oklch": "oklch(50.8% 0.008 248)",
         "tonalRamp": [
-          "#070a17",
-          "#1e2332",
-          "#3a3f50",
-          "#575d6f",
-          "#767d8f",
-          "#979eb1",
-          "#bcc4d8",
-          "#e8eeff"
+          "#090b0e",
+          "#212428",
+          "#3c4044",
+          "#5a5e62",
+          "#7a7e82",
+          "#9b9fa3",
+          "#c0c5c9",
+          "#eaeff4"
         ]
       },
-      "ink-3": {
+      "faint": {
         "role": "neutral",
-        "displayName": "Faint Grey",
-        "canonical": "#676d7d",
-        "oklch": "oklch(53.5% 0.026 269.2)",
+        "displayName": "Faint",
+        "canonical": "#a3a6a9",
+        "dark": "#5d6064",
+        "oklch": "oklch(72.4% 0.006 248)",
         "tonalRamp": [
-          "#070b16",
-          "#1f2431",
-          "#3a3f4e",
-          "#575d6d",
-          "#777d8d",
-          "#989eaf",
-          "#bdc4d6",
-          "#e8eeff"
+          "#090b0d",
+          "#222427",
+          "#3d4043",
+          "#5b5e61",
+          "#7b7e80",
+          "#9c9fa2",
+          "#c1c4c7",
+          "#eceff2"
         ]
       },
-      "line": {
-        "role": "neutral",
-        "displayName": "Plate Line",
-        "canonical": "#dadee7",
-        "oklch": "oklch(90.0% 0.013 266.7)",
+      "primary": {
+        "role": "primary",
+        "displayName": "Saffron",
+        "canonical": "#e8a100",
+        "dark": "#f0b43a",
+        "oklch": "oklch(75.9% 0.159 77)",
         "tonalRamp": [
-          "#090b11",
-          "#21242b",
-          "#3d4047",
-          "#5a5e65",
-          "#7a7d85",
-          "#9b9ea7",
-          "#c0c4cd",
-          "#eaeef8"
+          "#130900",
+          "#322001",
+          "#563a04",
+          "#7c550b",
+          "#a3731c",
+          "#d09002",
+          "#fdb530",
+          "#ffecd0"
         ]
       },
-      "line-soft": {
-        "role": "neutral",
-        "displayName": "Soft Line",
-        "canonical": "#eceef3",
-        "oklch": "oklch(94.9% 0.007 268.5)",
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "Saffron Ink",
+        "canonical": "#1a1300",
+        "dark": "#1a1300",
+        "oklch": "oklch(19.0% 0.039 92)",
         "tonalRamp": [
-          "#0a0b0e",
-          "#222428",
-          "#3e4044",
-          "#5c5d62",
-          "#7b7d82",
-          "#9c9ea3",
-          "#c2c4c9",
-          "#eceef3"
+          "#100b00",
+          "#2b230c",
+          "#473f27",
+          "#655d44",
+          "#857d63",
+          "#a79e83",
+          "#cdc4a8",
+          "#f8eed2"
         ]
       },
-      "tomato": {
-        "role": "secondary",
-        "displayName": "Tomato Ink",
-        "canonical": "#b8321b",
-        "oklch": "oklch(52.1% 0.174 32.2)",
+      "ring": {
+        "role": "primary",
+        "displayName": "Saffron (focus ring)",
+        "canonical": "#e8a100",
+        "dark": "#f0b43a",
+        "oklch": "oklch(75.9% 0.159 77)",
         "tonalRamp": [
-          "#220000",
-          "#4a0300",
-          "#790f00",
-          "#aa2209",
-          "#d04a32",
-          "#f76e54",
-          "#faae9e",
+          "#130900",
+          "#322001",
+          "#563a04",
+          "#7c550b",
+          "#a3731c",
+          "#d09002",
+          "#fdb530",
+          "#ffecd0"
+        ]
+      },
+      "saffron-soft": {
+        "role": "primary",
+        "displayName": "Saffron Wash",
+        "canonical": "#fdf3d6",
+        "dark": "#33280c",
+        "oklch": "oklch(96.4% 0.039 91)",
+        "tonalRamp": [
+          "#100a00",
+          "#2b230c",
+          "#473f27",
+          "#665d44",
+          "#867d63",
+          "#a79e83",
+          "#cdc4a8",
+          "#f8eed1"
+        ]
+      },
+      "due": {
+        "role": "state",
+        "displayName": "Due Amber",
+        "canonical": "#9a5800",
+        "dark": "#f0b43a",
+        "oklch": "oklch(52.5% 0.120 63)",
+        "tonalRamp": [
+          "#150700",
+          "#371d02",
+          "#5d3508",
+          "#854f11",
+          "#af6b22",
+          "#d38d48",
+          "#fbb26e",
+          "#ffead9"
+        ]
+      },
+      "due-mark": {
+        "role": "state",
+        "displayName": "Due Mark",
+        "canonical": "#e8a100",
+        "dark": "#f0b43a",
+        "oklch": "oklch(75.9% 0.159 77)",
+        "tonalRamp": [
+          "#130900",
+          "#322001",
+          "#563a04",
+          "#7c550b",
+          "#a3731c",
+          "#d09002",
+          "#fdb530",
+          "#ffecd0"
+        ]
+      },
+      "destructive": {
+        "role": "state",
+        "displayName": "Overdue Red",
+        "canonical": "#c8321f",
+        "dark": "#ff6a58",
+        "oklch": "oklch(54.9% 0.189 31)",
+        "tonalRamp": [
+          "#1e0100",
+          "#480602",
+          "#771307",
+          "#aa2211",
+          "#d6412d",
+          "#fe6650",
+          "#fdad9e",
           "#fee9e5"
         ]
       },
-      "tomato-fill": {
-        "role": "secondary",
-        "displayName": "Tomato Fill",
-        "canonical": "#c8371e",
-        "oklch": "oklch(55.4% 0.186 32.2)",
+      "danger-soft": {
+        "role": "state",
+        "displayName": "Red Wash",
+        "canonical": "#fcebe8",
+        "dark": "#331713",
+        "oklch": "oklch(95.3% 0.019 30)",
         "tonalRamp": [
-          "#220000",
-          "#490600",
-          "#771403",
-          "#a72811",
-          "#d5442b",
-          "#fc694e",
-          "#fdad9c",
-          "#ffe9e4"
-        ]
-      },
-      "tomato-soft": {
-        "role": "secondary",
-        "displayName": "Tomato Ground",
-        "canonical": "#fbe8e3",
-        "oklch": "oklch(94.5% 0.022 35.1)",
-        "tonalRamp": [
-          "#130806",
-          "#2e201d",
-          "#4b3c38",
-          "#695955",
-          "#8a7975",
-          "#ab9a95",
-          "#d2bfbb",
-          "#fdeae5"
-        ]
-      },
-      "mustard": {
-        "role": "secondary",
-        "displayName": "Mustard Ink",
-        "canonical": "#865b00",
-        "oklch": "oklch(50.5% 0.106 76.8)",
-        "tonalRamp": [
-          "#150800",
-          "#332000",
-          "#563901",
-          "#7b550e",
-          "#a07429",
-          "#c3954d",
-          "#ebbb73",
-          "#feecd1"
-        ]
-      },
-      "mustard-fill": {
-        "role": "secondary",
-        "displayName": "Mustard Fill",
-        "canonical": "#d9961a",
-        "oklch": "oklch(72.1% 0.146 75.5)",
-        "tonalRamp": [
-          "#160700",
-          "#331f00",
-          "#573900",
-          "#7c550d",
-          "#a57214",
-          "#d28f07",
-          "#fab547",
-          "#ffebd1"
-        ]
-      },
-      "mustard-soft": {
-        "role": "secondary",
-        "displayName": "Mustard Ground",
-        "canonical": "#fbf0d8",
-        "oklch": "oklch(95.7% 0.034 86.3)",
-        "tonalRamp": [
-          "#110a00",
-          "#2b2310",
-          "#483f2b",
-          "#665d48",
-          "#867c67",
-          "#a89d87",
-          "#cec3ac",
-          "#f8eed6"
-        ]
-      },
-      "green": {
-        "role": "secondary",
-        "displayName": "Green Ink",
-        "canonical": "#276b44",
-        "oklch": "oklch(47.4% 0.094 155.1)",
-        "tonalRamp": [
-          "#001004",
-          "#022c16",
-          "#0c4c2b",
-          "#296d46",
-          "#4b8e65",
-          "#6db085",
-          "#92d7aa",
-          "#c7fed9"
-        ]
-      },
-      "green-fill": {
-        "role": "secondary",
-        "displayName": "Green Fill",
-        "canonical": "#2e7d4f",
-        "oklch": "oklch(52.9% 0.106 154.6)",
-        "tonalRamp": [
-          "#001004",
-          "#022c16",
-          "#0b4d2a",
-          "#1c6f42",
-          "#429060",
-          "#65b281",
-          "#8bd9a5",
-          "#c6ffd8"
-        ]
-      },
-      "green-soft": {
-        "role": "secondary",
-        "displayName": "Green Ground",
-        "canonical": "#e2f0e7",
-        "oklch": "oklch(94.2% 0.019 157.9)",
-        "tonalRamp": [
-          "#050e08",
-          "#1c2720",
-          "#38433c",
-          "#556159",
-          "#748179",
-          "#95a29a",
-          "#bac8bf",
-          "#e5f3ea"
-        ]
-      },
-      "violet": {
-        "role": "secondary",
-        "displayName": "Agent Violet",
-        "canonical": "#5a32a3",
-        "oklch": "oklch(43.3% 0.172 294.3)",
-        "tonalRamp": [
-          "#10002c",
-          "#2c035e",
-          "#4a1c8f",
-          "#6741b2",
-          "#8663d7",
-          "#a685fd",
-          "#c7b9fa",
-          "#efecff"
-        ]
-      },
-      "violet-soft": {
-        "role": "secondary",
-        "displayName": "Agent Violet Ground",
-        "canonical": "#efe8fb",
-        "oklch": "oklch(94.2% 0.026 302.6)",
-        "tonalRamp": [
-          "#0d0814",
-          "#26212f",
-          "#423d4c",
-          "#605a6a",
-          "#807a8b",
-          "#a19bac",
-          "#c7c0d3",
-          "#f2ebfe"
-        ]
-      },
-      "mark-stock": {
-        "role": "tertiary",
-        "displayName": "Stock Marker",
-        "canonical": "#9db8ff",
-        "oklch": "oklch(78.9% 0.106 268.0)",
-        "tonalRamp": [
-          "#020037",
-          "#0f1c56",
-          "#283b77",
-          "#445a99",
-          "#627abc",
-          "#829ce1",
-          "#acc3fd",
-          "#e8eefe"
-        ]
-      },
-      "mark-shopping": {
-        "role": "tertiary",
-        "displayName": "Shopping Marker",
-        "canonical": "#f2b844",
-        "oklch": "oklch(81.6% 0.144 81.1)",
-        "tonalRamp": [
-          "#150800",
-          "#322100",
-          "#543b00",
-          "#79570c",
-          "#a07512",
-          "#cc9301",
-          "#f3b946",
-          "#feeccd"
-        ]
-      },
-      "mark-home": {
-        "role": "tertiary",
-        "displayName": "Home Marker",
-        "canonical": "#86d6a6",
-        "oklch": "oklch(81.1% 0.105 156.8)",
-        "tonalRamp": [
-          "#001004",
-          "#002d17",
-          "#074d2d",
-          "#186f45",
-          "#409063",
-          "#63b284",
-          "#89d9a9",
-          "#c5ffda"
-        ]
-      },
-      "mark-agent": {
-        "role": "tertiary",
-        "displayName": "Agent Marker",
-        "canonical": "#cbb0ff",
-        "oklch": "oklch(80.9% 0.113 299.6)",
-        "tonalRamp": [
-          "#12002b",
-          "#2e0e51",
-          "#492e72",
-          "#674d93",
-          "#876db6",
-          "#a98eda",
-          "#cdb6fd",
-          "#f1ebfe"
-        ]
-      },
-      "mark-system": {
-        "role": "tertiary",
-        "displayName": "System Marker",
-        "canonical": "#b9c4e6",
-        "oklch": "oklch(82.3% 0.049 271.2)",
-        "tonalRamp": [
-          "#050820",
-          "#1b223c",
-          "#363e5a",
-          "#535c7a",
-          "#727c9b",
-          "#939dbe",
-          "#b8c3e5",
-          "#e8eeff"
+          "#120807",
+          "#2d211f",
+          "#493c3a",
+          "#685a57",
+          "#887977",
+          "#aa9a98",
+          "#d0c0bd",
+          "#fbeae7"
         ]
       }
     },
     "typographyMeta": {
-      "display": {
-        "displayName": "Display",
-        "purpose": "Page titles only, over a 3px cobalt rule."
-      },
-      "numeral": {
-        "displayName": "Numeral",
-        "purpose": "On-hand amount on the product page beside the large gauge."
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "The in-stock amount at the top of a product sheet."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Panel heads in cobalt expanded caps."
+        "purpose": "One screen title per view on desktop, with a quiet muted count beside it."
+      },
+      "headline-phone": {
+        "displayName": "Headline (phone)",
+        "purpose": "The same screen title below the md breakpoint."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Row names: products, due items, shopping items."
+        "purpose": "Sheet titles; 15px 600 for review cards and the wordmark."
+      },
+      "row": {
+        "displayName": "Row",
+        "purpose": "Product, item and chore names in list rows."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Working text and input values; tabular numerals."
-      },
-      "meta": {
-        "displayName": "Meta",
-        "purpose": "Second line under a row name, in ink-2."
-      },
-      "control": {
-        "displayName": "Control",
-        "purpose": "Button text; 13px on small buttons, segments, chips."
+        "purpose": "Notes, control labels (500), segment labels, feedback text."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Table column heads, panel sub-sections, rail group labels."
+        "purpose": "Field labels, column headers, group subheads."
       },
-      "tag": {
-        "displayName": "Tag",
-        "purpose": "Actor and status tags (YOU, AGENT, User #n)."
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Location, due text, dates and relative days, tabular."
+      },
+      "ruler-label": {
+        "displayName": "Ruler label",
+        "purpose": "Product names hanging from the freshness ruler."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Count badges and phone tab labels."
       }
+    },
+    "themes": {
+      "source": "frontend/theme.json",
+      "note": "NSH exposes each token as a class (bg-card, text-due, border-input) and via token(\"x\"); light values are normative in the frontmatter, dark values live in colorMeta.<token>.dark.",
+      "radius": "8px",
+      "fontSans": "Geist, ui-sans-serif, system-ui, sans-serif"
     },
     "shadows": [
       {
-        "name": "command-lift",
-        "value": "0 24px 60px rgb(16 37 94 / 0.32), 0 2px 6px rgb(16 37 94 / 0.12)",
-        "purpose": "The ⌘K dialog, over a 42% cobalt backdrop with 2px blur."
+        "name": "shadow-xs",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Selected segment and selected rail item only (NSH utility; value is the Tailwind-equivalent default)."
       },
       {
-        "name": "basket-lift",
-        "value": "0 10px 28px rgb(16 37 94 / 0.28)",
-        "purpose": "Sticky shopping basket bar."
+        "name": "shadow-lg",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Select and date-picker popups (NSH utility; Tailwind-equivalent default)."
       },
       {
-        "name": "toast-lift",
-        "value": "0 12px 30px rgb(16 19 24 / 0.28)",
-        "purpose": "Toasts."
-      },
-      {
-        "name": "drawer-edge",
-        "value": "12px 0 40px rgb(16 37 94 / 0.3)",
-        "purpose": "Open mobile rail drawer."
-      },
-      {
-        "name": "focus-halo",
-        "value": "0 0 0 3px #e7ebf7",
-        "purpose": "Input focus halo with a cobalt border."
+        "name": "shadow-xl",
+        "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "purpose": "The right-hand sheet, over a 20% black backdrop (NSH utility; Tailwind-equivalent default)."
       }
     ],
     "motion": [
       {
-        "name": "ease",
-        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "The only easing; all transitions and entrances."
-      },
-      {
-        "name": "duration-state",
-        "value": "160ms",
-        "purpose": "Hover, colour, and border transitions."
-      },
-      {
-        "name": "duration-press",
-        "value": "120ms",
-        "purpose": "1px button press."
-      },
-      {
-        "name": "duration-check",
-        "value": "180ms",
-        "purpose": "Shopping check box fill and scale."
-      },
-      {
-        "name": "duration-command",
-        "value": "220ms",
-        "purpose": "⌘K dialog rise and scale in."
-      },
-      {
-        "name": "duration-drawer",
-        "value": "280ms",
-        "purpose": "Mobile rail slide; toast rise."
-      },
-      {
-        "name": "duration-basket",
-        "value": "320ms",
-        "purpose": "Basket bar rise."
-      },
-      {
-        "name": "duration-gauge",
-        "value": "600ms",
-        "purpose": "Gauge fill width change."
+        "name": "state-transition",
+        "value": "NSH default transition-colors / transition-opacity",
+        "purpose": "The only motion: colour and opacity changes on the chore check. No custom easing or duration tokens; no decorative animation."
       }
     ],
     "breakpoints": [
       {
-        "name": "stack",
-        "value": "1180px"
-      },
-      {
-        "name": "drawer",
-        "value": "900px"
-      },
-      {
-        "name": "compact",
-        "value": "720px"
+        "name": "md",
+        "value": "768px",
+        "purpose": "NSH md prefix (framework default, not set in theme.json): rail appears, targets shrink from 44px to 36px, ruler widens from 14 to 30 days."
       }
-    ]
+    ],
+    "icons": {
+      "set": "Lucide (lucide-static 0.460.0)",
+      "strokeWidth": 1.5,
+      "sizes": "15px in buttons and fields, 16px in the rail, 20px in phone bars",
+      "source": "frontend/assets/icons"
+    },
+    "fonts": {
+      "family": "Geist",
+      "weights": [
+        400,
+        500,
+        600
+      ],
+      "source": "frontend/assets/fonts"
+    },
+    "layout": {
+      "rail": "232px",
+      "content-max": "1120px",
+      "sheet": "440px",
+      "review-column": "720px",
+      "connect-column": "400px",
+      "row-desktop": "52px",
+      "row-phone": "60-64px",
+      "top-bar-phone": "56px",
+      "tab-bar-phone": "56px"
+    }
   },
   "components": [
     {
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Cobalt pill for the one main action of a page or panel (Purchase, Review, Go shopping).",
-      "html": "<button class=\"ds-btn-primary\">Purchase</button>",
-      "css": ".ds-btn-primary { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 7px 16px; border-radius: 999px; border: 1.5px solid var(--cobalt, #1d3a8a); font-weight: 700; font-size: 14px; line-height: 1.1; cursor: pointer; transition: background 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)), transform 120ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); background: var(--cobalt, #1d3a8a); color: #fff; } .ds-btn-primary:hover { background: var(--cobalt-deep, #142b6b); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2.5px solid var(--cobalt, #1d3a8a); outline-offset: 2px; }"
+      "description": "Saffron fill with Saffron Ink text; at most one per view.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"M12 5v14\"/></svg>Add purchase</button>",
+      "css": ".ds-btn-primary { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; background: var(--primary, #e8a100); color: var(--primary-foreground, #1a1300); border: none; } .ds-btn-primary:hover { background: color-mix(in srgb, var(--primary, #e8a100) 90%, transparent); } .ds-btn-primary:active { background: color-mix(in srgb, var(--primary, #e8a100) 80%, transparent); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ring, #e8a100); outline-offset: 2px; }"
     },
     {
-      "name": "Outline Button",
+      "name": "Secondary Button",
       "kind": "button",
-      "refersTo": "button-outline",
-      "description": "Default pill: white plate, cobalt text and 1.5px cobalt rim; small variant for row actions.",
-      "html": "<div style=\"display:flex;gap:8px;align-items:center\"><button class=\"ds-btn-outline\">Add missing to list</button><button class=\"ds-btn-outline ds-btn-sm\">+1</button><button class=\"ds-btn-outline ds-btn-sm\">Consume</button></div>",
-      "css": ".ds-btn-outline { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 7px 16px; border-radius: 999px; border: 1.5px solid var(--cobalt, #1d3a8a); font-weight: 700; font-size: 14px; line-height: 1.1; cursor: pointer; transition: background 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)), transform 120ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); background: var(--surface, #fff); color: var(--cobalt, #1d3a8a); } .ds-btn-outline:hover { background: var(--cobalt-soft, #e7ebf7); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: 2.5px solid var(--cobalt, #1d3a8a); outline-offset: 2px; } .ds-btn-sm { min-height: 30px; padding: 4px 11px; font-size: 13px; border-color: var(--cobalt-line, #c4cde9); }"
+      "refersTo": "button-secondary",
+      "description": "White fill, control-line border, ink text; the default action.",
+      "html": "<button class=\"ds-btn-secondary\">Try again</button>",
+      "css": ".ds-btn-secondary { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; background: var(--card, #ffffff); color: var(--foreground, #0c0d0e); border: 1px solid var(--input, #d6d6d2); } .ds-btn-secondary:hover, .ds-btn-secondary:active { background: var(--accent, #f1f1ef); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--ring, #e8a100); outline-offset: 2px; } .ds-btn-secondary:disabled { opacity: 0.4; }"
     },
     {
-      "name": "Segmented Control",
-      "kind": "chip",
-      "refersTo": "chip-selected",
-      "description": "Cobalt-rimmed pill track for move type and list/shop mode.",
-      "html": "<div class=\"ds-seg-group\" role=\"group\"><button class=\"ds-seg\" aria-pressed=\"true\">Purchase</button><button class=\"ds-seg\" aria-pressed=\"false\">Consume</button><button class=\"ds-seg\" aria-pressed=\"false\">Open</button></div>",
-      "css": ".ds-seg-group { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; border: 1.5px solid var(--cobalt, #1d3a8a); background: #fff; } .ds-seg { font: inherit; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--cobalt, #1d3a8a); font-weight: 700; font-size: 13px; cursor: pointer; transition: background 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-seg:hover { background: var(--cobalt-soft, #e7ebf7); } .ds-seg[aria-pressed=\"true\"] { background: var(--cobalt, #1d3a8a); color: #fff; } .ds-seg:focus-visible { outline: 2.5px solid var(--cobalt, #1d3a8a); outline-offset: 2px; }"
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "No fill or border until hover; low-stakes actions in rows and footers.",
+      "html": "<button class=\"ds-btn-quiet\">Use development API key</button>",
+      "css": ".ds-btn-quiet { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0 10px; background: transparent; color: var(--foreground, #0c0d0e); border: none; } .ds-btn-quiet:hover, .ds-btn-quiet:active { background: var(--accent, #f1f1ef); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--ring, #e8a100); outline-offset: 2px; }"
     },
     {
-      "name": "Amount Field",
+      "name": "Field",
       "kind": "input",
-      "refersTo": "input",
-      "description": "Plate-white field with right-aligned bold value and the unit printed inside.",
-      "html": "<label class=\"ds-field\">Amount<span class=\"ds-amount\"><input class=\"ds-input\" inputmode=\"decimal\" value=\"500\"><span class=\"ds-unit\">g</span></span></label>",
-      "css": ".ds-field { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2, #4a5061); max-width: 200px; } .ds-amount { position: relative; display: flex; align-items: center; } .ds-input { font: inherit; width: 100%; min-height: 40px; padding: 8px 44px 8px 12px; border-radius: 8px; border: 1.5px solid var(--line, #dadee7); background: #fff; color: var(--ink, #101318); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; transition: border-color 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)), box-shadow 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-input:hover:not(:focus) { border-color: var(--cobalt-line, #c4cde9); } .ds-input:focus { outline: none; border-color: var(--cobalt, #1d3a8a); box-shadow: 0 0 0 3px var(--cobalt-soft, #e7ebf7); } .ds-unit { position: absolute; right: 12px; font-size: 13px; font-weight: 500; color: var(--ink-2, #4a5061); pointer-events: none; }"
+      "refersTo": "field",
+      "description": "Muted 13px label over a white field; saffron border and soft outline on focus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Server URL</span><input class=\"ds-field-input\" placeholder=\"https://grocy.example.com\"></label>",
+      "css": ".ds-field { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 6px; } .ds-field-label { font-size: 13px; font-weight: 500; color: var(--muted-foreground, #62666a); } .ds-field-input { font: inherit; min-height: 40px; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--input, #d6d6d2); background: var(--card, #ffffff); color: var(--foreground, #0c0d0e); font-size: 15px; } .ds-field-input::placeholder { color: var(--muted-foreground, #62666a); } .ds-field-input:focus { border-color: var(--ring, #e8a100); outline: 2px solid color-mix(in srgb, var(--ring, #e8a100) 30%, transparent); }"
+    },
+    {
+      "name": "Search",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "The field shape with an inset 15px search icon; 288px on desktop.",
+      "html": "<div class=\"ds-search\"><span class=\"ds-search-icon\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg></span><input class=\"ds-search-input\" placeholder=\"Search products\" aria-label=\"Search products\"></div>",
+      "css": ".ds-search { font-family: Geist, ui-sans-serif, system-ui, sans-serif; position: relative; width: 288px; display: flex; align-items: center; } .ds-search-icon { position: absolute; left: 12px; display: flex; color: var(--muted-foreground, #62666a); } .ds-search-input { font: inherit; width: 100%; min-height: 36px; box-sizing: border-box; padding: 6px 12px 6px 36px; border-radius: 8px; border: 1px solid var(--input, #d6d6d2); background: var(--card, #ffffff); color: var(--foreground, #0c0d0e); font-size: 14px; } .ds-search-input::placeholder { color: var(--muted-foreground, #62666a); } .ds-search-input:focus { border-color: var(--ring, #e8a100); outline: 2px solid color-mix(in srgb, var(--ring, #e8a100) 30%, transparent); }"
+    },
+    {
+      "name": "Segmented Filter",
+      "kind": "chip",
+      "refersTo": "segments-track",
+      "description": "A grey track; the chosen segment is white with an extra-small shadow and each segment carries a tabular count.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Filter\"><button class=\"ds-seg-item\" aria-pressed=\"true\">All <span class=\"ds-seg-count\">11</span></button><button class=\"ds-seg-item\" aria-pressed=\"false\">Needs attention <span class=\"ds-seg-count\">6</span></button><button class=\"ds-seg-item\" aria-pressed=\"false\">Expired <span class=\"ds-seg-count\">1</span></button></div>",
+      "css": ".ds-seg { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--secondary, #f1f1ef); } .ds-seg-item { font: inherit; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: none; border-radius: 6px; background: transparent; color: var(--muted-foreground, #62666a); font-size: 14px; cursor: pointer; } .ds-seg-item:hover { background: color-mix(in srgb, var(--card, #ffffff) 60%, transparent); } .ds-seg-item[aria-pressed=true] { background: var(--card, #ffffff); color: var(--foreground, #0c0d0e); font-weight: 500; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); } .ds-seg-count { font-size: 12px; font-weight: 400; color: var(--muted-foreground, #62666a); font-variant-numeric: tabular-nums; } .ds-seg-item:focus-visible { outline: 2px solid var(--ring, #e8a100); outline-offset: 2px; }"
     },
     {
       "name": "Rail Navigation",
       "kind": "nav",
-      "refersTo": "nav-item",
-      "description": "Cobalt rail with domain-coloured icons, enamel active plate, and marker-coloured counts.",
-      "html": "<nav class=\"ds-rail\"><div class=\"ds-rail-label\">Kitchen</div><a class=\"ds-nav-item\" aria-current=\"page\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.85\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 5h16v15H4z\"/><path d=\"M4 9h16\"/><path d=\"M8 3v4M16 3v4\"/><path d=\"M8 13h3v3H8z\"/></svg>Today</a><a class=\"ds-nav-item\" href=\"#\" style=\"--mark:#9db8ff\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.85\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 8h12v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z\"/><path d=\"M5 5h14v3H5z\"/><path d=\"M10 12h4\"/></svg>Stock</a><a class=\"ds-nav-item\" href=\"#\" style=\"--mark:#f2b844\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.85\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 7h15l-1.4 8.2a2 2 0 0 1-2 1.6H9a2 2 0 0 1-2-1.5L5 3H2\"/><path d=\"M10 20h.01M17 20h.01\"/></svg>Shopping<em class=\"ds-count\">3</em></a></nav>",
-      "css": ".ds-rail { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: flex; flex-direction: column; gap: 2px; width: 236px; padding: 14px; background: var(--cobalt, #1d3a8a); color: #dfe5f6; } .ds-rail-label { padding: 4px 10px 6px; font-stretch: 125%; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #a9b7e2; } .ds-nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #dfe5f6; font-weight: 500; font-size: 15px; text-decoration: none; transition: background 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-nav-item svg { color: var(--mark, #9db8ff); } .ds-nav-item:hover { background: #ffffff14; } .ds-nav-item:focus-visible { outline: 2.5px solid #fff; outline-offset: 2px; } .ds-nav-item[aria-current=\"page\"] { background: var(--enamel, #f3f4ef); color: var(--cobalt, #1d3a8a); font-weight: 700; } .ds-nav-item[aria-current=\"page\"] svg { color: var(--cobalt, #1d3a8a); } .ds-count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--mark, #f2b844); color: var(--ink, #101318); font-style: normal; font-size: 12px; font-weight: 700; text-align: center; }"
+      "refersTo": "nav-item-selected",
+      "description": "232px rail on rail grey; the selected item is a white bordered tile with a saffron dot.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-rail-brand\"><span class=\"ds-mark\"><span class=\"ds-mark-dot\"></span></span>Grocy Next</div><button class=\"ds-nav ds-nav-on\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\"/><path d=\"M12 22V12\"/><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\"/><path d=\"m7.5 4.27 9 5.15\"/></svg><span class=\"ds-nav-label\">Stock</span><span class=\"ds-nav-dot\"></span></button><button class=\"ds-nav\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/></svg><span class=\"ds-nav-label\">Shopping</span></button></nav>",
+      "css": ".ds-rail { font-family: Geist, ui-sans-serif, system-ui, sans-serif; width: 232px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 20px 12px 16px; background: var(--rail, #f6f6f4); border-right: 1px solid var(--border, #e6e6e3); } .ds-rail-brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 22px; font-size: 15px; font-weight: 600; letter-spacing: -0.025em; color: var(--foreground, #0c0d0e); } .ds-mark { position: relative; width: 22px; height: 22px; border-radius: 6px; background: var(--foreground, #0c0d0e); } .ds-mark-dot { position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary, #e8a100); } .ds-nav { font: inherit; display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted-foreground, #62666a); cursor: pointer; text-align: left; } .ds-nav:hover { background: var(--accent, #f1f1ef); } .ds-nav-label { flex: 1; font-size: 14px; color: var(--ink-soft, #3b3e42); } .ds-nav-on { background: var(--card, #ffffff); border-color: var(--border, #e6e6e3); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); color: var(--foreground, #0c0d0e); } .ds-nav-on .ds-nav-label { color: var(--foreground, #0c0d0e); font-weight: 500; } .ds-nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary, #e8a100); } .ds-nav:focus-visible { outline: 2px solid var(--ring, #e8a100); outline-offset: 2px; }"
     },
     {
-      "name": "Panel",
+      "name": "Stock Row",
+      "kind": "custom",
+      "description": "A hairline row: name and meta, right-aligned tabular amount, date coloured by meaning, one small outlined action.",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-main\"><span class=\"ds-row-name\">Greek Yogurt</span><span class=\"ds-row-meta\">Fridge</span></div><span class=\"ds-row-amt\">1 Piece</span><span class=\"ds-row-date\">Nov 11</span><span class=\"ds-row-due\">in 2 days</span><button class=\"ds-row-use\">Use 1</button></div>",
+      "css": ".ds-row { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: flex; align-items: center; gap: 16px; min-height: 52px; padding-left: 12px; border-bottom: 1px solid var(--border, #e6e6e3); font-variant-numeric: tabular-nums; } .ds-row:hover { background: var(--card, #ffffff); } .ds-row-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; } .ds-row-name { font-size: 15px; font-weight: 500; color: var(--foreground, #0c0d0e); } .ds-row-meta { font-size: 13px; color: var(--muted-foreground, #62666a); } .ds-row-amt { width: 108px; text-align: right; font-size: 15px; font-weight: 500; color: var(--foreground, #0c0d0e); } .ds-row-date { width: 80px; font-size: 14px; color: var(--ink-soft, #3b3e42); } .ds-row-due { width: 80px; font-size: 13px; color: var(--due, #9a5800); } .ds-row-use { font: inherit; min-height: 32px; min-width: 52px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--input, #d6d6d2); background: var(--card, #ffffff); color: var(--foreground, #0c0d0e); font-size: 13px; font-weight: 500; cursor: pointer; } .ds-row-use:hover { border-color: var(--foreground, #0c0d0e); } .ds-row-use:active { background: var(--accent, #f1f1ef); } .ds-row-use:focus-visible { outline: 2px solid var(--ring, #e8a100); outline-offset: 2px; }"
+    },
+    {
+      "name": "Freshness Ruler",
+      "kind": "custom",
+      "refersTo": "surface",
+      "description": "The signature element: a hairline axis of best-before days with products hanging on stems, an overdue zone left of today and a later margin.",
+      "html": "<div class=\"ds-ruler\" aria-label=\"Best-before dates over the next 30 days\"><div class=\"ds-ruler-head\"><b>Best before</b><span> · next 30 days</span></div><div class=\"ds-ruler-track\"><div class=\"ds-ruler-past\"><button class=\"ds-mk ds-mk-red\" style=\"left:8px;top:0\">Spinach</button><i class=\"ds-stem ds-stem-red\" style=\"left:8px;top:18px\"></i><i class=\"ds-dot ds-dot-red\" style=\"left:8px\"></i></div><div class=\"ds-ruler-win\"><i class=\"ds-today\"></i><button class=\"ds-mk ds-mk-due\" style=\"left:13%;top:0\">Greek Yogurt</button><i class=\"ds-stem ds-stem-due\" style=\"left:13%;top:18px\"></i><i class=\"ds-dot ds-dot-due\" style=\"left:13%\"></i><button class=\"ds-mk\" style=\"left:46%;top:22px\">Eggs</button><i class=\"ds-stem\" style=\"left:46%;top:40px\"></i><i class=\"ds-dot\" style=\"left:46%\"></i><span class=\"ds-axis-date\" style=\"left:0\"><b>Today</b></span><span class=\"ds-axis-date\" style=\"left:23%\">Nov 16</span><span class=\"ds-axis-date\" style=\"left:46%\">Nov 23</span></div><div class=\"ds-ruler-later\"><b>4 later</b><span>Coffee beans, Canned tomatoes, Oats</span></div></div></div>",
+      "css": ".ds-ruler { font-family: Geist, ui-sans-serif, system-ui, sans-serif; border: 1px solid var(--border, #e6e6e3); border-radius: 12px; background: var(--card, #ffffff); padding: 12px 20px 10px; display: flex; flex-direction: column; gap: 8px; } .ds-ruler-head { font-size: 13px; } .ds-ruler-head b { font-weight: 500; color: var(--ink-soft, #3b3e42); } .ds-ruler-head span { color: var(--muted-foreground, #62666a); } .ds-ruler-track { position: relative; display: flex; height: 88px; } .ds-ruler-track::after { content: ''; position: absolute; left: 0; right: 0; bottom: 22px; height: 1px; background: var(--input, #d6d6d2); } .ds-ruler-past { position: relative; width: 96px; } .ds-ruler-past::before { content: ''; position: absolute; inset: 0 0 22px 0; border-radius: 6px 0 0 6px; background: var(--danger-soft, #fcebe8); } .ds-ruler-win { position: relative; flex: 1; } .ds-today { position: absolute; left: 0; top: 0; bottom: 22px; width: 1px; background: var(--foreground, #0c0d0e); } .ds-mk { position: absolute; height: 18px; padding: 0 2px 0 0; display: flex; align-items: center; gap: 6px; border: none; border-radius: 3px; background: transparent; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--foreground, #0c0d0e); white-space: nowrap; cursor: pointer; } .ds-mk::before { content: ''; width: 1px; height: 10px; background: color-mix(in srgb, var(--foreground, #0c0d0e) 30%, transparent); } .ds-mk:hover { background: var(--accent, #f1f1ef); } .ds-mk:focus-visible { outline: 2px solid var(--ring, #e8a100); } .ds-mk-due { color: var(--due, #9a5800); } .ds-mk-due::before { background: color-mix(in srgb, var(--due, #9a5800) 50%, transparent); } .ds-mk-red { color: var(--destructive, #c8321f); } .ds-mk-red::before { background: color-mix(in srgb, var(--destructive, #c8321f) 50%, transparent); } .ds-stem { position: absolute; bottom: 22px; width: 1px; background: var(--input, #d6d6d2); } .ds-stem-due { background: color-mix(in srgb, var(--due-mark, #e8a100) 50%, transparent); } .ds-stem-red { background: color-mix(in srgb, var(--destructive, #c8321f) 40%, transparent); } .ds-dot { position: absolute; bottom: 19px; width: 7px; height: 7px; margin-left: -3px; border-radius: 50%; background: var(--foreground, #0c0d0e); box-shadow: 0 0 0 2px var(--card, #ffffff); z-index: 1; } .ds-dot-due { background: var(--due-mark, #e8a100); } .ds-dot-red { background: var(--destructive, #c8321f); } .ds-axis-date { position: absolute; bottom: 0; transform: translateX(-50%); font-size: 12px; color: var(--muted-foreground, #62666a); font-variant-numeric: tabular-nums; } .ds-axis-date b { font-weight: 600; color: var(--foreground, #0c0d0e); } .ds-ruler-later { width: 144px; margin: 0 0 22px 12px; padding: 0 0 6px 14px; border-left: 1px dashed var(--input, #d6d6d2); display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 12.5px; line-height: 16px; color: var(--muted-foreground, #62666a); } .ds-ruler-later b { font-weight: 500; color: var(--ink-soft, #3b3e42); }"
+    },
+    {
+      "name": "Feedback Strip",
       "kind": "card",
-      "refersTo": "panel",
-      "description": "Flat 14px plate with a cobalt expanded-caps head, count on the right, and soft row dividers.",
-      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel-head\">Shopping list <span>3 to buy</span></h2><ul class=\"ds-pills\"><li><b>1000 ml</b> Whole Milk</li><li><b>6 pcs</b> Eggs</li></ul><a class=\"ds-panel-more\" href=\"#\">All activity</a></section>",
-      "css": ".ds-panel { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); background: #fff; border: 1.5px solid var(--line, #dadee7); border-radius: 14px; overflow: hidden; max-width: 460px; color: var(--ink, #101318); } .ds-panel-head { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 18px 12px; border-bottom: 1.5px solid var(--line-soft, #eceef3); font-stretch: 125%; font-weight: 800; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cobalt, #1d3a8a); } .ds-panel-head span { font-stretch: 100%; font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--ink-2, #4a5061); } .ds-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 14px 18px; list-style: none; } .ds-pills li { padding: 4px 10px; border-radius: 999px; background: var(--mustard-soft, #fbf0d8); font-size: 13px; font-weight: 600; } .ds-pills b { font-weight: 800; } .ds-panel-more { display: block; padding: 11px 18px 13px; border-top: 1px solid var(--line-soft, #eceef3); font-weight: 700; font-size: 13px; color: var(--cobalt, #1d3a8a); text-decoration: none; } .ds-panel-more:hover { background: var(--cobalt-soft, #e7ebf7); } .ds-panel-more:focus-visible { outline: 2.5px solid var(--cobalt, #1d3a8a); outline-offset: 2px; }"
-    },
-    {
-      "name": "Actor Tags and Badges",
-      "kind": "chip",
-      "refersTo": "tag-agent",
-      "description": "Uppercase actor tags (YOU, AGENT, User #n) and state badges in soft grounds.",
-      "html": "<div style=\"display:flex;gap:6px;align-items:center\"><span class=\"ds-tag\">You</span><span class=\"ds-tag ds-tag-agent\">Agent</span><span class=\"ds-badge\" data-tone=\"ok\">Fresh</span><span class=\"ds-badge\" data-tone=\"warn\">Due soon</span><span class=\"ds-badge\" data-tone=\"danger\">Expired</span></div>",
-      "css": ".ds-tag { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: inline-block; padding: 2px 7px; border-radius: 5px; background: var(--line-soft, #eceef3); color: var(--ink-2, #4a5061); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-tag-agent { background: var(--violet-soft, #efe8fb); color: var(--violet, #5a32a3); } .ds-badge { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; } .ds-badge[data-tone=\"ok\"] { background: var(--green-soft, #e2f0e7); color: var(--green, #276b44); } .ds-badge[data-tone=\"warn\"] { background: var(--mustard-soft, #fbf0d8); color: var(--mustard, #865b00); } .ds-badge[data-tone=\"danger\"] { background: var(--tomato-soft, #fbe8e3); color: var(--tomato, #b8321b); }"
-    },
-    {
-      "name": "Canister Gauge",
-      "kind": "custom",
-      "refersTo": "gauge",
-      "description": "Amount on a scale of twice the minimum with a tick at the minimum; tomato below minimum; dashed rim when no minimum.",
-      "html": "<div style=\"display:grid;gap:10px;max-width:220px\"><span class=\"ds-gauge\" role=\"img\" aria-label=\"Rolled Oats, 144% of minimum\"><span class=\"ds-gauge-fill\" style=\"width:72%\"></span><span class=\"ds-gauge-min\" style=\"background:#fff\"></span></span><span class=\"ds-gauge ds-gauge-low\" role=\"img\" aria-label=\"Basmati rice, 40% of minimum\"><span class=\"ds-gauge-fill\" style=\"width:20%\"></span><span class=\"ds-gauge-min\"></span></span><span class=\"ds-gauge ds-gauge-none\" role=\"img\" aria-label=\"No minimum set\">no min</span></div>",
-      "css": ".ds-gauge { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); position: relative; display: block; width: 100%; min-width: 96px; height: 14px; border-radius: 7px; border: 1.5px solid var(--cobalt, #1d3a8a); background: var(--enamel, #f3f4ef); overflow: hidden; } .ds-gauge-fill { position: absolute; inset: 0 auto 0 0; background: var(--cobalt, #1d3a8a); transition: width 600ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-gauge-min { position: absolute; top: 0; bottom: 0; left: calc(50% - 1px); width: 2px; background: var(--ink, #101318); } .ds-gauge-low { border-color: var(--tomato-fill, #c8371e); } .ds-gauge-low .ds-gauge-fill { background: var(--tomato-fill, #c8371e); } .ds-gauge-none { display: flex; align-items: center; justify-content: center; border-style: dashed; border-color: var(--cobalt-line, #c4cde9); background: transparent; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3, #676d7d); line-height: 1; }"
-    },
-    {
-      "name": "Due Bar",
-      "kind": "custom",
-      "refersTo": "badge-warn",
-      "description": "Days left on one 14-day scale, with a right-aligned day count; green, mustard at 5 days or less, tomato when expired.",
-      "html": "<div style=\"display:grid;gap:10px;max-width:320px\"><span class=\"ds-due\" data-tone=\"danger\"><span class=\"ds-due-track\"><span class=\"ds-due-fill\" style=\"width:3%\"></span></span><span class=\"ds-due-days\">Yesterday</span></span><span class=\"ds-due\" data-tone=\"warn\"><span class=\"ds-due-track\"><span class=\"ds-due-fill\" style=\"width:14.3%\"></span></span><span class=\"ds-due-days\">2 d</span></span><span class=\"ds-due\"><span class=\"ds-due-track\"><span class=\"ds-due-fill\" style=\"width:64.3%\"></span></span><span class=\"ds-due-days\">9 d</span></span></div>",
-      "css": ".ds-due { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); --due: var(--green-fill, #2e7d4f); display: grid; grid-template-columns: 1fr 72px; align-items: center; gap: 10px; width: 100%; font-variant-numeric: tabular-nums; color: var(--ink, #101318); } .ds-due[data-tone=\"warn\"] { --due: var(--mustard-fill, #d9961a); } .ds-due[data-tone=\"danger\"] { --due: var(--tomato-fill, #c8371e); } .ds-due-track { position: relative; height: 10px; border-radius: 3px; background: var(--line-soft, #eceef3); overflow: hidden; } .ds-due-fill { position: absolute; inset: 0 auto 0 0; background: var(--due); border-radius: 3px; } .ds-due-days { text-align: right; font-weight: 700; font-size: 14px; } .ds-due[data-tone=\"danger\"] .ds-due-days { color: var(--tomato, #b8321b); }"
-    },
-    {
-      "name": "Toast with Undo",
-      "kind": "custom",
-      "refersTo": "toast",
-      "description": "Ink toast that confirms a booking and offers an outlined Undo pill.",
-      "html": "<div class=\"ds-toast\" role=\"status\">Bought 1 pcs Eggs<button class=\"ds-toast-undo\">Undo</button></div>",
-      "css": ".ds-toast { font-family: var(--font, \"Archivo Variable\", \"Archivo\", system-ui, sans-serif); display: inline-flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; border-radius: 12px; background: var(--ink, #101318); color: #fff; font-size: 14px; box-shadow: 0 12px 30px rgb(16 19 24 / 0.28); } .ds-toast-undo { font: inherit; padding: 5px 12px; border-radius: 999px; border: 1.5px solid #ffffff66; background: none; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; } .ds-toast-undo:hover { background: #ffffff1f; } .ds-toast-undo:focus-visible { outline: 2.5px solid #fff; outline-offset: 2px; }"
+      "refersTo": "feedback-error",
+      "description": "Inline result of an action: grey with an ink check for success, red wash with a red alert for errors.",
+      "html": "<div class=\"ds-fb ds-fb-err\" role=\"alert\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\"/><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\"/></svg>Could not reach the server.</div><div class=\"ds-fb ds-fb-ok\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Saved.</div>",
+      "css": ".ds-fb { font-family: Geist, ui-sans-serif, system-ui, sans-serif; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; font-size: 14px; line-height: 20px; margin-bottom: 8px; } .ds-fb-err { background: var(--danger-soft, #fcebe8); color: var(--destructive, #c8321f); } .ds-fb-ok { background: var(--secondary, #f1f1ef); color: var(--foreground, #0c0d0e); }"
     }
   ],
   "narrative": {
-    "northStar": "The Enamel Canister Shelf",
-    "overview": "The app is a kitchen shelf of white enamel canisters with cobalt rims and black stencilled labels. Each product shows how full it is against its minimum, and each due item shows how many real days it has left. The cobalt rim is the shell of the whole app: the rail, the rule under each page title, the outline of every pill button, and the fill of every gauge. Inside that rim the ground is a warm off-white enamel and the data is black at full contrast.\n\nDensity is that of a working ledger, not a dashboard. Rows hold fixed furniture (name with meta, gauge or due bar, right-aligned amount, actions) so the eye can run down a column. Labels are stencilled: expanded, heavy, uppercase Archivo, used only to name things. Working text stays at normal width. State is carried by four fixed inks (tomato, mustard, green, violet) and never by decoration.\n\nThe build refuses the grey admin template: there are no stat tiles, no teal accent, and no card grids of repeated numbers. Depth is flat; only things that float above the page carry a shadow.",
+    "northStar": "The Freshness Ruler",
+    "overview": "Grocy Next is a precise, near-monochrome household tool. Its one picture is a hairline timeline: the next weeks of best-before dates on a single axis, today marked in ink, each product hanging on a thin stem from its day, the overdue ones gathered in a pale red zone to the left and the distant ones folded into a dashed margin on the right. Everything else in the app is held quiet so that line can carry the week's pressure at a glance.\n\nThe world is near-white ground, white surfaces, near-black ink and one fine neutral scale, separated by 1px hairlines rather than boxes. A single saffron accent marks what is selected, what is primary and where focus sits; it never decorates. Red appears only for expired, overdue or failed things, and amber text only for things due within five days. Type is Geist in sentence case with tabular figures, so amounts and dates line up and read as exact. Icons are Lucide line icons at a 1.5px stroke, tinted from the text tokens.\n\nDensity is that of a working list, not a dashboard. Lists sit directly on the page as hairline rows with right-aligned amounts and one quiet action; only a grouped object (the ruler, a review diff) earns a bordered surface. The system refuses both the Bootstrap admin table and the playful food app: no themed metaphors, no heavy condensed capitals, no retro print, no saturated colour spread across the screen.",
     "keyCharacteristics": [
-      "Cobalt rail and cobalt rules on an enamel ground; black lettering for data.",
-      "Expanded 800-weight caps for labels only; normal-width Archivo for UI.",
-      "Pill controls with a 1.5px cobalt outline; 14px plates for containers.",
-      "Canister gauge and 14-day due bar as the two signature measures.",
-      "Tabular numerals everywhere; amounts right-aligned with the unit beside.",
-      "One fixed marker colour per domain on the rail and on row dots."
+      "Near-white ground (#fafaf9), white surfaces, ink type, 1px hairlines.",
+      "One saffron accent, used for selection, the primary fill and the focus ring only.",
+      "Red for expired, overdue and errors; amber text for due within five days.",
+      "Geist 400/500/600, sentence case, tabular numerals for every amount, date and count.",
+      "Lucide line icons at 1.5px stroke, 15-20px, tinted from text tokens.",
+      "The freshness ruler as the signature element; lists as hairline rows, never cards.",
+      "A 232px desktop rail; a phone top bar and four bottom tabs."
     ],
     "rules": [
       {
-        "name": "The Cobalt Rim Rule",
-        "body": "Cobalt is structure, not decoration: rail, rules, outlines, primary fill, gauge. It never fills a panel or a large area on the enamel ground.",
+        "name": "The One Saffron Rule",
+        "body": "Saffron marks selection, the single primary action and focus. It never fills a panel, tints a row or colours body text; on light ground it is a fill, never a text colour.",
         "section": "colors"
       },
       {
-        "name": "The State Ink Rule",
-        "body": "Tomato, mustard, green, and violet only carry meaning (expired or low, due, fresh, agent). Text uses the ink token; bars use the fill token; grounds use the soft token. Never use a state colour as a brand accent.",
+        "name": "The Meaning-Only Rule",
+        "body": "Red means expired, overdue or failed; amber means due within five days. A colour that does not carry one of those meanings stays neutral.",
         "section": "colors"
       },
       {
-        "name": "The Transit Marker Rule",
-        "body": "Each domain has one fixed marker: stock cobalt, shopping mustard, home green, agent violet. The same domain keeps the same colour on the rail, in tab-bar counts, and in row dots.",
+        "name": "The Hairline Rule",
+        "body": "Structure is drawn with 1px lines in `border` or `input`, not with fills or shadows. A row ends in a hairline; a group starts with one.",
         "section": "colors"
       },
       {
-        "name": "The Datamatics Rule",
-        "body": "Data is `ink` at full contrast. Grey (`ink-2`, `ink-3`) is for labels, meta, and inactive states only.",
-        "section": "colors"
-      },
-      {
-        "name": "The Canister Label Rule",
-        "body": "Expanded (wdth 125) 800-weight type is only for names of things: the wordmark, page titles, panel heads, column heads, the stock numeral. Never set sentences, buttons, or values in the expanded cut.",
+        "name": "The Sentence Case Rule",
+        "body": "Every label, heading and button is sentence case. No uppercase, no letter-spaced small caps, no labels stacked above titles.",
         "section": "typography"
       },
       {
-        "name": "The Ledger Rule",
-        "body": "Every number is tabular. Amounts are right-aligned and bold, with the unit in the same line beside the number (for example \"400 g\", \"4 pcs\"). Never round or invent a value to fill a column.",
+        "name": "The Exact Figures Rule",
+        "body": "Every amount, date, count and percentage uses tabular numerals, and a quantity always carries its unit (\"200 Grams\", \"min 6 Pieces\"). In stock rows the figure is medium ink and the unit word follows in regular muted, so the numbers lead the column.",
         "section": "typography"
       },
       {
-        "name": "The Say-It-Once Rule",
-        "body": "A thing is labelled once. A panel head names the panel; rows do not repeat it, and a count goes in the head, not in a separate tile.",
-        "section": "typography"
-      },
-      {
-        "name": "The Flat Enamel Rule",
-        "body": "Anything that lives in the page flow is flat. A shadow means \"this floats and will go away\": a dialog, a toast, a sticky bar, a drawer.",
+        "name": "The Flat Page Rule",
+        "body": "Nothing resting on the page carries a shadow except a selected segment or nav item. Cards, rows and the ruler are bordered, not lifted.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** put a 3px cobalt rule under every page title and keep the title in expanded 800 caps.",
-      "**Do** show every stocked product with the canister gauge on the 2× minimum scale, tick at the minimum; show \"no min\" with a dashed rim when there is no minimum.",
-      "**Do** draw every best-before or due item on the same 14-day due bar, with the day count beside it.",
-      "**Do** keep fixed row furniture: name with meta line, measure, right-aligned bold amount with unit, then actions.",
-      "**Do** mark agent work with the violet tag and give every booking an Undo path.",
-      "**Do** use pills (1.5px cobalt rim) for controls and 14px plates with 1.5px `line` borders for containers.",
-      "**Do** keep data in `ink`; use `ink-2` and `ink-3` only for labels, meta, and inactive states."
+      "Do take every colour from the theme tokens (`bg-card`, `text-due`, `token(\"x\")`) so light and dark stay paired.",
+      "Do keep saffron to selection, the one primary action per view and the focus ring.",
+      "Do colour a date by its meaning: `destructive` when overdue, `due` within five days, muted or Soft Ink after.",
+      "Do use tabular numerals for every amount, date and count, and keep the unit beside the quantity.",
+      "Do keep 44px minimum targets on phones and a visible 2px saffron focus outline on every pressable element.",
+      "Do put lists directly on the page as hairline rows; reserve the 12px-cornered surface for a single grouped object.",
+      "Do use Lucide line icons at 1.5px stroke, tinted from a text token and hidden from assistive technology when a label is present.",
+      "Do show \"Never\" or \"No date\" instead of sentinel dates, and use date pickers and shortcuts instead of typed ISO dates."
     ],
     "donts": [
-      "**Don't** build stat tiles or rows of repeated big-number cards; put a count in the panel head instead.",
-      "**Don't** introduce a teal or second brand accent; cobalt is the only shell colour.",
-      "**Don't** use a state ink (tomato, mustard, green, violet) for decoration or emphasis without a state behind it.",
-      "**Don't** set sentences, buttons, or values in the expanded width.",
-      "**Don't** add shadows to panels or rows; shadows belong only to dialogs, toasts, the basket bar, and the mobile drawer.",
-      "**Don't** guess an actor, an amount, or a date; show \"—\" or nothing rather than a made-up value."
+      "Don't use saffron as a text colour, a panel fill or a row tint.",
+      "Don't use red or amber for anything but expired, overdue, failed or due-soon meaning.",
+      "Don't use uppercase labels, letter-spaced small caps or a second typeface.",
+      "Don't wrap lists in cards or add shadows to things resting on the page.",
+      "Don't use `faint` for text a person needs to read.",
+      "Don't add themed metaphors, decorative illustration, gauges or charts beyond the ruler.",
+      "Don't add decorative animation; state changes are colour and opacity transitions only."
     ]
   }
 }

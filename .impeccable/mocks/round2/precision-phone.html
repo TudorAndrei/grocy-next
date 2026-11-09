@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, viewport-fit=cover">
+<title>Grocy Next · Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#fafaf9; --surface:#ffffff; --ink:#0c0d0e; --ink-2:#3d3f42; --ink-3:#6c6e72; --ink-4:#9a9b9e;
+  --line:#ebeae7; --line-2:#dedcd8; --wash:#f2f1ee;
+  --accent:#e8a100; --accent-ink:#3a2800;
+  --expired:#d93a2b; --expired-wash:#fcefed; --due:#a86400;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:390px;height:844px;overflow:hidden}
+body{background:var(--ground);color:var(--ink);font:400 14px/1.4 "Geist",system-ui,sans-serif;font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased;position:relative}
+::selection{background:#fbe3a8}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button{font:inherit;color:inherit;background:none;border:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:center;height:56px;padding:8px 8px 0 16px}
+h1{font-size:24px;font-weight:600;letter-spacing:-.02em;flex:1}
+.iconbtn{width:44px;height:44px;display:grid;place-items:center;color:var(--ink-2);position:relative;border-radius:10px}
+.iconbtn b{position:absolute;top:7px;right:6px;font-size:10.5px;font-weight:600;min-width:16px;height:16px;line-height:16px;border-radius:8px;background:var(--accent);color:var(--accent-ink);text-align:center;padding:0 4px}
+
+.search{margin:8px 16px 0;display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--ink-4);font-size:15px}
+.search .ico{width:18px;height:18px}
+
+.ruler{margin:14px 16px 0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px 8px}
+.ruler-top{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3)}
+.ruler-top b{font-weight:500;color:var(--ink-2)}
+.track{position:relative;height:96px;margin-top:4px;--x0:56px;--d:17px}
+.past{position:absolute;left:0;top:0;width:var(--x0);bottom:20px;background:var(--expired-wash);border-radius:5px 0 0 5px}
+.axis{position:absolute;left:0;right:0;bottom:20px;height:1px;background:var(--line-2)}
+.ticks{position:absolute;left:var(--x0);width:calc(var(--d)*14);bottom:20px;height:4px;background:repeating-linear-gradient(90deg,var(--line-2) 0 1px,transparent 1px var(--d))}
+.today{position:absolute;left:var(--x0);top:0;bottom:20px;width:1px;background:var(--ink)}
+.wk{position:absolute;bottom:0;transform:translateX(-50%);font-size:11px;color:var(--ink-4);white-space:nowrap}
+.wk::before{content:"";position:absolute;left:50%;bottom:19px;width:1px;height:8px;background:var(--ink-4)}
+.wk.t{color:var(--ink);font-weight:600}.wk.t::before{display:none}
+.m{position:absolute;left:calc(var(--x0) + var(--d) * var(--day));bottom:20px;top:calc(var(--lane) * 17px)}
+.m::before{content:"";position:absolute;left:0;top:15px;bottom:0;width:1px;background:var(--line-2)}
+.m::after{content:"";position:absolute;left:-3px;bottom:-3px;width:7px;height:7px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 2px var(--surface)}
+.m span{position:absolute;left:-1px;top:0;white-space:nowrap;font-size:11.5px;font-weight:500;padding-left:6px;line-height:15px}
+.m span::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:1px;background:currentColor;opacity:.5}
+.m.due span{color:var(--due)}.m.due::after{background:var(--accent)}
+.m.exp span{color:var(--expired)}.m.exp::after{background:var(--expired)}
+.later{position:absolute;right:0;bottom:20px;top:0;width:36px;border-left:1px dashed var(--line-2);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding-bottom:6px;font-size:11.5px;color:var(--ink-3);line-height:1.25;text-align:right}
+.later b{color:var(--ink-2);font-weight:500}
+
+.chips{display:flex;gap:8px;margin-top:14px;padding:0 16px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+.chip{flex:none;height:36px;padding:0 13px;border-radius:18px;border:1px solid var(--line-2);background:var(--surface);font-weight:500;color:var(--ink-2);display:flex;align-items:center;gap:7px;font-size:14px}
+.chip i{font-style:normal;color:var(--ink-4);font-size:13px}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.on i{color:rgba(255,255,255,.6)}
+
+.list{margin-top:10px;background:var(--surface);border-top:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:12px;min-height:64px;padding:0 8px 0 16px;border-bottom:1px solid var(--line)}
+.main{flex:1;min-width:0}
+.name{font-size:16px;font-weight:500;letter-spacing:-.01em}
+.meta{font-size:13px;color:var(--ink-3);margin-top:2px}
+.meta .due{color:var(--due);font-weight:500}
+.meta .exp{color:var(--expired);font-weight:500}
+.amt{font-size:15px;font-weight:500;text-align:right;min-width:64px}
+.amt small{display:block;font-size:12px;color:var(--ink-3);font-weight:400;margin-top:1px}
+.use{height:44px;padding:0 12px;font-weight:500;font-size:14px;color:var(--ink-2);border-radius:10px;position:relative}
+.use::before{content:"";position:absolute;inset:7px 0;border:1px solid var(--line-2);border-radius:8px}
+
+.buy{height:36px;padding:0 13px 0 10px;margin-right:4px;border-radius:18px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(120,80,0,.25)}
+.buy .ico{width:16px;height:16px;stroke-width:2}
+.fab{position:absolute;right:16px;bottom:106px;height:48px;padding:0 18px 0 14px;border-radius:24px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 16px rgba(120,80,0,.22),0 1px 2px rgba(120,80,0,.25)}
+.fab .ico{width:18px;height:18px;stroke-width:2}
+
+.tabs{position:absolute;left:0;right:0;bottom:0;height:90px;padding:6px 8px 34px;background:rgba(250,250,249,.94);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);backdrop-filter:saturate(1.4) blur(12px)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:500;color:var(--ink-3);position:relative}
+.tab .ico{width:22px;height:22px}
+.tab.on{color:var(--ink)}
+.tab.on::before{content:"";position:absolute;top:-6px;width:20px;height:2px;border-radius:2px;background:var(--accent)}
+.tab b{position:absolute;top:-1px;left:calc(50% + 9px);font-size:10.5px;font-weight:600;min-width:16px;height:16px;line-height:16px;border-radius:8px;background:var(--ink);color:#fff;text-align:center;padding:0 4px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+  <symbol id="i-meal" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4-4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+</svg>
+
+<header class="top">
+  <h1>Stock</h1>
+  <button class="buy"><svg class="ico"><use href="#i-plus"/></svg>Purchase</button>
+  <button class="iconbtn" aria-label="Review, 2 proposals"><svg class="ico"><use href="#i-inbox"/></svg><b>2</b></button>
+  <button class="iconbtn" aria-label="Settings"><svg class="ico"><use href="#i-gear"/></svg></button>
+</header>
+
+<label class="search"><svg class="ico"><use href="#i-search"/></svg>Search products</label>
+
+<section class="ruler" aria-label="Best-before dates over the next 14 days">
+  <div class="ruler-top"><span><b>Best before</b> · next 14 days</span><span>All locations</span></div>
+  <div class="track">
+    <div class="past"></div><div class="axis"></div><div class="ticks"></div><div class="today"></div>
+    <span class="wk t" style="left:var(--x0)">Today</span>
+    <span class="wk" style="left:calc(var(--x0) + var(--d)*7)">15 Nov</span>
+    <span class="wk" style="left:calc(var(--x0) + var(--d)*14)">22 Nov</span>
+    <div class="m exp" style="left:6px;--lane:0"><span>Spinach</span></div>
+    <div class="m due" style="--day:2;--lane:0"><span>Greek yogurt</span></div>
+    <div class="m due" style="--day:3;--lane:1"><span>Whole milk</span></div>
+    <div class="m due" style="--day:4;--lane:2"><span>Chicken thighs</span></div>
+    <div class="m" style="--day:6;--lane:3"><span>Cheddar</span></div>
+    <div class="m" style="--day:11;--lane:1"><span>Eggs</span></div>
+    <div class="later"><b>+4</b>later</div>
+  </div>
+</section>
+
+<nav class="chips" aria-label="Filter">
+  <button class="chip on">All <i>11</i></button>
+  <button class="chip">Due soon <i>3</i></button>
+  <button class="chip">Expired <i>1</i></button>
+  <button class="chip">Below min <i>2</i></button>
+</nav>
+
+<div class="list">
+  <div class="row"><div class="main"><div class="name">Spinach</div><div class="meta">Fridge · <span class="exp">expired 2 days ago</span></div></div><div class="amt">200 g</div><button class="use">Use</button></div>
+  <div class="row"><div class="main"><div class="name">Greek yogurt</div><div class="meta">Fridge · <span class="due">in 2 days</span></div></div><div class="amt">1 pc</div><button class="use">Use</button></div>
+  <div class="row"><div class="main"><div class="name">Whole milk</div><div class="meta">Fridge · <span class="due">in 3 days</span></div></div><div class="amt">1000 ml</div><button class="use">Use</button></div>
+  <div class="row"><div class="main"><div class="name">Chicken thighs</div><div class="meta">Freezer · <span class="due">in 4 days</span></div></div><div class="amt">600 g</div><button class="use">Use</button></div>
+  <div class="row"><div class="main"><div class="name">Cheddar</div><div class="meta">Fridge · 14 Nov</div></div><div class="amt">250 g</div><button class="use">Use</button></div>
+  <div class="row"><div class="main"><div class="name">Eggs</div><div class="meta">Fridge · 19 Nov</div></div><div class="amt">4 pcs<small>min 6</small></div><button class="use">Use</button></div>
+  <div class="row"><div class="main"><div class="name">Basmati rice</div><div class="meta">Pantry · no date</div></div><div class="amt">400 g<small>min 1000 g</small></div><button class="use">Use</button></div>
+</div>
+
+
+<nav class="tabs" aria-label="Main">
+  <a class="tab on" aria-current="page"><svg class="ico"><use href="#i-box"/></svg>Stock</a>
+  <a class="tab"><svg class="ico"><use href="#i-cart"/></svg>Shopping<b>3</b></a>
+  <a class="tab"><svg class="ico"><use href="#i-meal"/></svg>Meals</a>
+  <a class="tab"><svg class="ico"><use href="#i-check"/></svg>Chores</a>
+</nav>
+</body>
+</html>

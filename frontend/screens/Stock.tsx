@@ -1,23 +1,53 @@
-import { signal, Text, View } from "nsh";
+import { signal, Text, View, windowSize } from "nsh";
 import { Button } from "nsh/base";
 import { Api, positive, type Row } from "../api";
 import { remote, operations, Feedback, LoadState } from "../data";
 import {
   Action,
   Choice,
+  Count,
   DateField,
   Due,
+  Empty,
   Field,
   Heading,
+  Icon,
   Note,
   Panel,
-  Tabs,
+  Search,
+  Segments,
+  Subheading,
   Toggle,
   addDays,
   dateISO,
   dueDays,
 } from "../ui";
 import { Nutrition, NutritionHistory } from "./Nutrition";
+import { Ruler, relativeDays, type RulerItem } from "./Ruler";
+
+const focusRing = "focus:outline-2 focus:outline-offset-2 focus:outline-ring";
+
+/** "6 Nov" this year, "12 Jan 2027" otherwise. */
+function calendarDate(value: string): string {
+  const date = new Date(value.slice(0, 10) + "T12:00:00");
+  return date.toLocaleDateString(
+    undefined,
+    date.getFullYear() === new Date().getFullYear()
+      ? { day: "numeric", month: "short" }
+      : { day: "numeric", month: "short", year: "numeric" },
+  );
+}
+
+const inStock = (r: Row) => Number(r.amount) > 0;
+const belowMin = (r: Row) =>
+  Number(r.min_stock_amount) > 0 &&
+  Number(r.amount) < Number(r.min_stock_amount);
+/** Days to best before for products in stock; null when undated or never due. */
+const daysLeft = (r: Row) => (inStock(r) ? dueDays(r.best_before_date) : null);
+const urgency = (a: Row, b: Row) =>
+  (daysLeft(a) ?? 999) - (daysLeft(b) ?? 999) ||
+  String(a.product_name).localeCompare(String(b.product_name));
+
 export function Stock(p: { api: Api }) {
   const state = remote(async (s) => {
     const [overview, products, locations, units] = await Promise.all([
@@ -32,7 +62,7 @@ export function Stock(p: { api: Api }) {
     p.api.request<Row[]>("/api/v2/nutrition/proposals", "GET", undefined, s),
   );
   const query = signal(""),
-    filter = signal("Everything"),
+    filter = signal("all"),
     mode = signal(""),
     product = signal(""),
     amount = signal("1"),
@@ -59,11 +89,13 @@ export function Stock(p: { api: Api }) {
   const undo = signal(""),
     notice = signal(""),
     op = operations(state.refresh);
+  const wide = () => windowSize().width >= 768;
   const selected = () =>
     state.data()?.products.find((r) => String(r.id) === product());
   const unit = (id: unknown) =>
     state.data()?.units.find((r) => String(r.id) === String(id))?.name ?? "";
-  const rows = (): Row[] => {
+  /** Every product joined with its stock row, by name. */
+  const allRows = (): Row[] => {
     const data = state.data();
     if (!data) return [];
     return data.products
@@ -86,22 +118,57 @@ export function Stock(p: { api: Api }) {
             "",
         };
       })
-      .filter((r) =>
-        String(r.product_name).toLowerCase().includes(query().toLowerCase()),
-      )
       .sort((a, b) => a.product_name.localeCompare(b.product_name));
   };
+  const rows = (): Row[] =>
+    allRows().filter((r) =>
+      String(r.product_name).toLowerCase().includes(query().toLowerCase()),
+    );
   const attention = (r: Row) =>
     Number(r.amount) < Number(r.min_stock_amount) ||
     (Number(r.amount) > 0 && (dueDays(r.best_before_date) ?? 99) <= 5);
-  const attentionRows = () =>
-    rows()
-      .filter(attention)
-      .sort(
-        (a, b) =>
-          (dueDays(a.best_before_date) ?? 999) -
-          (dueDays(b.best_before_date) ?? 999),
-      );
+  const attentionRows = () => rows().filter(attention).sort(urgency);
+  const expiredRows = () => rows().filter((r) => (daysLeft(r) ?? 0) < 0);
+  const dueRows = () =>
+    rows().filter((r) => {
+      const d = daysLeft(r);
+      return d != null && d >= 0 && d <= 5;
+    });
+  const lowRows = () => rows().filter(belowMin);
+  const filters = () =>
+    [
+      { value: "all", label: "All", count: rows().length },
+      {
+        value: "attention",
+        label: "Needs attention",
+        count: attentionRows().length,
+      },
+      { value: "expired", label: "Expired", count: expiredRows().length },
+      { value: "due", label: "Due soon", count: dueRows().length },
+      { value: "low", label: "Below min", count: lowRows().length },
+    ].filter((f) => f.value === "all" || f.count > 0);
+  /** The chosen filter, or All once nothing is left in it. */
+  const view = () =>
+    filters().some((f) => f.value === filter()) ? filter() : "all";
+  const filtered = (): Row[] =>
+    view() === "attention"
+      ? attentionRows()
+      : view() === "expired"
+        ? expiredRows().sort(urgency)
+        : view() === "due"
+          ? dueRows().sort(urgency)
+          : view() === "low"
+            ? lowRows()
+            : [];
+  const rulerItems = (): RulerItem[] =>
+    allRows()
+      .filter((r) => daysLeft(r) != null)
+      .map((r) => ({
+        id: String(r.product_id),
+        name: String(r.product_name),
+        days: daysLeft(r)!,
+        row: r,
+      }));
   const choose = (id: string) => {
     product.set(id);
     const item = state.data()?.products.find((r) => String(r.id) === id);
@@ -190,83 +257,251 @@ export function Stock(p: { api: Api }) {
       notice.set(`Used ${count} ${r.unit_label} of ${r.product_name}.`);
     }
   }
-  const row = (r: Row) => (
-    <View class="flex-row gap-2 items-center border-b border-[#e4e4e0] min-h-16 md:min-h-[52px] py-1">
-      <Button
-        accessibilityLabel={`View ${r.product_name}`}
-        onPress={() => details(r)}
-        class="flex-1 min-w-0 min-h-11 flex-row items-center gap-3 hover:bg-[#f0f0ec] focus:outline-2 focus:outline-[#22603f] rounded-lg px-1"
-      >
-        <View class="flex-1 min-w-0 gap-1">
-          <Text
-            style={{ numberOfLines: 2 }}
-            class="text-base font-medium text-[#1b1d1c]"
-          >
-            {r.product_name}
-          </Text>
-          <View class="flex-row flex-wrap gap-2 md:hidden">
-            <Text class="text-[13px] text-[#5e625f]">{r.locationLabel}</Text>
-            <Due value={Number(r.amount) > 0 ? r.best_before_date : null} />
-          </View>
-        </View>
-        <View class="hidden md:flex w-24">
-          <Text style={{ numberOfLines: 1 }} class="text-[13px] text-[#5e625f]">
-            {r.locationLabel}
-          </Text>
-        </View>
-        <View class="hidden md:flex w-32">
-          <Due value={Number(r.amount) > 0 ? r.best_before_date : null} />
-        </View>
-        <Text class="shrink-0 text-sm font-semibold text-[#1b1d1c]">
-          {Number(r.amount) > 0
-            ? `${r.amount} ${r.unit_label}`
-            : "Not in stock"}
-        </Text>
-      </Button>
-      <View class="w-16 items-end">
-        {Number(r.amount) >= (Number(r.quick_consume_amount) || 1) &&
-        !Number(r.enable_tare_weight_handling) ? (
-          <Action
-            label={`Use ${Number(r.quick_consume_amount) || 1}`}
-            accessibilityLabel={`Use ${Number(r.quick_consume_amount) || 1} ${r.product_name}`}
-            quiet
-            disabled={op.busy()}
-            onPress={() => void quick(r)}
-          />
-        ) : null}
+  const current = () => rows().find((r) => String(r.product_id) === product());
+  const locationName = (id: unknown) =>
+    state.data()?.locations.find((l) => Number(l.id) === Number(id))?.name ??
+    "Unknown location";
+
+  /** Best-before date cell: red when overdue, "Never" for never-due dates. */
+  const dateText = (r: Row) => {
+    if (!inStock(r)) return "";
+    const value = r.best_before_date as string | undefined;
+    if (!value) return "No date";
+    if (value.slice(0, 4) >= "2888") return "Never";
+    return calendarDate(value);
+  };
+  const relTone = (d: number | null) =>
+    d == null
+      ? "text-muted-foreground"
+      : d < 0
+        ? "text-destructive font-medium"
+        : d <= 5
+          ? "text-due font-medium"
+          : "text-muted-foreground";
+  /** Phone meta: urgent dates as relative words, others as the date. */
+  const phoneDue = (r: Row) => {
+    const d = daysLeft(r);
+    if (!inStock(r)) return "";
+    if (d == null) return dateText(r) === "Never" ? "" : "no date";
+    if (d < 0) return `expired ${relativeDays(d)}`;
+    if (d <= 5) return relativeDays(d);
+    return calendarDate(r.best_before_date);
+  };
+
+  const MinNote = (q: { r: Row }) => (
+    <View class="flex-row items-center gap-1.5">
+      <Text class="text-xs text-muted-foreground tabular-nums">
+        {`min ${Number(q.r.min_stock_amount)} ${q.r.unit_label}`.trim()}
+      </Text>
+      <View class="hidden md:flex w-11 h-[3px] rounded-full bg-border overflow-hidden">
+        <View
+          class="h-full rounded-full bg-ink-soft"
+          style={{
+            width: `${Math.max(0, Math.min(100, (Number(q.r.amount) / Number(q.r.min_stock_amount)) * 100))}%`,
+          }}
+        />
       </View>
     </View>
   );
+
+  const row = (r: Row) => {
+    const d = daysLeft(r);
+    const use = Number(r.quick_consume_amount) || 1;
+    return (
+      <View class="flex-row items-center gap-3 md:gap-2 border-b border-border min-h-16 md:min-h-[52px] hover:bg-card">
+        <Button
+          accessibilityLabel={`View ${r.product_name}`}
+          onPress={() => details(r)}
+          class={`flex-1 min-w-0 self-stretch flex-row items-center gap-3 md:gap-4 md:pl-3 py-2 rounded-md ${focusRing}`}
+        >
+          <View class="flex-1 md:flex-[2] min-w-0 gap-0.5">
+            <Text
+              style={{ numberOfLines: 2 }}
+              class="text-[15px] font-medium text-foreground"
+            >
+              {r.product_name}
+            </Text>
+            <View class="flex-row flex-wrap items-baseline md:hidden">
+              <Text class="text-[13px] text-muted-foreground">
+                {r.locationLabel}
+              </Text>
+              {phoneDue(r) ? (
+                <Text
+                  class={`text-[13px] tabular-nums ${relTone(d).replace(" font-medium", "")}`}
+                >
+                  {`${r.locationLabel ? " · " : ""}${phoneDue(r)}`}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+          <View class="hidden md:flex flex-1 min-w-0">
+            <Text
+              style={{ numberOfLines: 1 }}
+              class="text-[13px] text-muted-foreground"
+            >
+              {r.locationLabel}
+            </Text>
+          </View>
+          <View class="shrink-0 md:w-[176px] items-end gap-1 md:pr-6">
+            {inStock(r) ? (
+              <View>
+                {/* Phone: one quantity, read as written ("2 packs"). */}
+                <Text class="md:hidden text-[15px] tabular-nums font-medium text-foreground">
+                  {String(r.amount)}
+                  <Text class="font-normal text-muted-foreground">
+                    {r.unit_label ? ` ${r.unit_label}` : ""}
+                  </Text>
+                </Text>
+                {/* Desktop: figure in a fixed right-aligned slot, unit after it, so numerals form a true column. */}
+                <View class="hidden md:flex flex-row items-baseline gap-1.5">
+                  <Text class="w-14 text-right text-[15px] tabular-nums font-medium text-foreground">
+                    {String(r.amount)}
+                  </Text>
+                  <Text
+                    style={{ numberOfLines: 1 }}
+                    class="w-[90px] text-[15px] text-muted-foreground"
+                  >
+                    {r.unit_label ?? ""}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Text class="text-[15px] text-muted-foreground">Not in stock</Text>
+            )}
+            {belowMin(r) ? <MinNote r={r} /> : null}
+          </View>
+          <View class="hidden md:flex w-[112px]">
+            <Text
+              class={`text-sm tabular-nums ${d != null && d < 0 ? "text-destructive" : dateText(r) === "No date" || dateText(r) === "Never" ? "text-muted-foreground" : "text-ink-soft"}`}
+            >
+              {dateText(r)}
+            </Text>
+          </View>
+          <View class="hidden md:flex w-[112px]">
+            <Text class={`text-[13px] tabular-nums ${relTone(d)}`}>
+              {d == null ? "" : relativeDays(d)}
+            </Text>
+          </View>
+        </Button>
+        <View class="w-16 md:w-[68px] shrink-0 items-end md:pr-1">
+          {Number(r.amount) >= use && !Number(r.enable_tare_weight_handling) ? (
+            <Button
+              accessibilityLabel={`Use ${use} ${r.product_name}`}
+              disabled={op.busy()}
+              onPress={() => void quick(r)}
+              class={`shrink-0 min-h-11 md:min-h-8 min-w-[52px] px-2.5 rounded-lg border border-input bg-card items-center justify-center hover:border-foreground active:bg-accent ${focusRing} disabled:opacity-40`}
+            >
+              <Text
+                style={{ numberOfLines: 1 }}
+                class="text-[13px] font-medium text-foreground tabular-nums"
+              >
+                {`Use ${use}`}
+              </Text>
+            </Button>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
+  const columns = () => (
+    <View class="hidden md:flex flex-row items-center gap-2 h-[34px] border-b border-input">
+      <View class="flex-1 min-w-0 flex-row items-center gap-4 pl-3">
+        <Text class="flex-[2] min-w-0 text-[13px] font-medium text-muted-foreground">
+          Product
+        </Text>
+        <Text class="flex-1 min-w-0 text-[13px] font-medium text-muted-foreground">
+          Location
+        </Text>
+        <Text class="w-[176px] pr-[120px] text-right text-[13px] font-medium text-muted-foreground">
+          Amount
+        </Text>
+        <Text class="w-[112px] text-[13px] font-medium text-muted-foreground">
+          Best before
+        </Text>
+        <View class="w-[112px]" />
+      </View>
+      <View class="w-[68px]" />
+    </View>
+  );
+  const group = (title: string, count: number) => (
+    <View class="flex-row items-center gap-2 pt-5 pb-2 md:pl-3 border-b border-border">
+      <Text role="header" class="text-[13px] font-medium text-foreground">
+        {title}
+      </Text>
+      <Text class="text-[13px] text-muted-foreground tabular-nums">
+        {String(count)}
+      </Text>
+    </View>
+  );
+  const purchaseAction = () => (
+    <Action
+      label="Add purchase"
+      icon="plus"
+      primary
+      onPress={() => purchase()}
+    />
+  );
+  const searchField = () => (
+    <Search
+      label="Search products"
+      placeholder="Search products"
+      value={query()}
+      onChange={(v) => query.set(v)}
+    />
+  );
+  const count = () => state.data()?.products.length ?? 0;
+
   return (
-    <View class="gap-4">
-      <View class="flex-row justify-between items-center gap-3">
-        <Heading title="Stock" />
-        <Action label="Add purchase" primary onPress={() => purchase()} />
+    <View class="gap-5 md:gap-6">
+      <View class="gap-3">
+        <View class="flex-row items-center gap-3 min-h-11">
+          <View class="flex-1 min-w-0">
+            <Heading
+              title="Stock"
+              detail={
+                count() ? `${count()} ${count() === 1 ? "product" : "products"}` : undefined
+              }
+            />
+          </View>
+          {wide() && count() ? searchField() : null}
+          {purchaseAction()}
+        </View>
+        {!wide() && count() ? (
+          <View class="flex-row">{searchField()}</View>
+        ) : null}
       </View>
       {proposals.data()?.length ? (
-        <Action
-          label={`${proposals.data()!.length} nutrition changes to review`}
-          quiet
-          onPress={() => review.set(true)}
-        />
+        <View class="flex-row items-center gap-2.5 min-h-11 px-3 rounded-lg border border-border bg-card">
+          <Icon name="inbox" size={15} />
+          <Count value={proposals.data()!.length} />
+          <Text
+            style={{ numberOfLines: 1 }}
+            class="flex-1 min-w-0 text-sm text-ink-soft"
+          >
+            {proposals.data()!.length === 1
+              ? "Nutrition change to review"
+              : "Nutrition changes to review"}
+          </Text>
+          <Button
+            accessibilityLabel={`Review ${proposals.data()!.length} nutrition changes`}
+            onPress={() => review.set(true)}
+            class={`min-h-11 md:min-h-8 px-1 justify-center rounded-md ${focusRing}`}
+          >
+            <Text class="text-sm font-medium text-foreground underline decoration-input underline-offset-4 hover:decoration-foreground">
+              Review
+            </Text>
+          </Button>
+        </View>
       ) : null}
-      {state.data()?.products.length ? (
-        <Field
-          label="Search products"
-          placeholder="Find anything in your household"
-          value={query()}
-          onChange={(v) => query.set(v)}
-        />
-      ) : null}
-      {state.data()?.products.length ? (
-        <Tabs
-          items={[
-            "Everything",
-            ...(attentionRows().length ? ["Needs attention"] : []),
-          ]}
-          value={filter()}
-          onChange={(v) => filter.set(v)}
-        />
+      {rulerItems().length ? (
+        <View>
+          <View class="hidden md:flex md:flex-col">
+            <Ruler items={rulerItems()} span={30} onSelect={details} />
+          </View>
+          <View class="md:hidden">
+            <Ruler items={rulerItems()} span={14} compact onSelect={details} />
+          </View>
+        </View>
       ) : null}
       <LoadState
         loading={state.loading()}
@@ -275,12 +510,17 @@ export function Stock(p: { api: Api }) {
       />
       <Feedback error={op.error()} success={op.success()} />
       {notice() ? (
-        <View class="flex-row flex-wrap items-center justify-between gap-2 bg-[#edf2ee] rounded-lg px-3 py-2">
-          <Note>{notice()}</Note>
+        <View class="flex-row flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-secondary pl-3 pr-1.5 min-h-11 py-1">
+          <Icon name="check" size={15} tint="foreground" />
+          <View class="flex-1 min-w-0">
+            <Text class="text-sm text-foreground">{notice()}</Text>
+          </View>
           {undo() ? (
             <Action
               label="Undo stock change"
+              icon="undo"
               quiet
+              compact
               disabled={op.busy()}
               onPress={() =>
                 void op.run(async () => {
@@ -295,50 +535,70 @@ export function Stock(p: { api: Api }) {
           ) : null}
         </View>
       ) : null}
-      {!state.loading() && !state.error() && !state.data()?.products.length ? (
-        <Note>Your stock starts with your first purchase.</Note>
+      {!state.loading() && !state.error() && !count() ? (
+        <Empty
+          title="No products yet"
+          detail="Your stock starts with your first purchase."
+        />
       ) : null}
-      {!state.loading() &&
-      state.data()?.products.length &&
-      rows().length === 0 ? (
+      {!state.loading() && count() && rows().length === 0 ? (
+        <Empty
+          title={`No products match “${query()}”`}
+          detail="Check the spelling, or create it as a new product with a purchase."
+        >
+          <View class="pt-2">
+            <Action
+              label={`Create ${query()}`}
+              icon="plus"
+              onPress={() => {
+                purchase();
+                newName.set(query());
+              }}
+            />
+          </View>
+        </Empty>
+      ) : null}
+      {count() && rows().length ? (
         <View class="gap-3">
-          <Note>No products match “{query()}”.</Note>
-          <Action
-            label={`Create ${query()}`}
-            onPress={() => {
-              purchase();
-              newName.set(query());
-            }}
-          />
+          <View class="flex-row items-center justify-between gap-3">
+            <Segments
+              label="Filter products"
+              items={filters()}
+              value={view()}
+              onChange={(v) => filter.set(v)}
+            />
+            {view() === "all" && attentionRows().length ? (
+              <Text class="hidden md:flex text-[13px] text-muted-foreground">
+                Sorted by urgency
+              </Text>
+            ) : null}
+          </View>
+          <View>
+            {columns()}
+            {view() === "all" ? (
+              <View>
+                {attentionRows().length
+                  ? group("Needs attention", attentionRows().length)
+                  : null}
+                <Each of={attentionRows()}>{(r) => row(r())}</Each>
+                {attentionRows().length && rows().some((r) => !attention(r))
+                  ? group(
+                      "Everything else",
+                      rows().filter((r) => !attention(r)).length,
+                    )
+                  : null}
+                <Each of={rows().filter((r) => !attention(r)).sort(urgency)}>
+                  {(r) => row(r())}
+                </Each>
+              </View>
+            ) : (
+              <View>
+                <Each of={filtered()}>{(r) => row(r())}</Each>
+              </View>
+            )}
+          </View>
         </View>
       ) : null}
-      {filter() === "Needs attention" ? (
-        <View>
-          {attentionRows().length === 0 ? (
-            <Note>Nothing needs attention.</Note>
-          ) : null}
-          <Each of={attentionRows()}>{(r) => row(r())}</Each>
-        </View>
-      ) : (
-        <View>
-          {attentionRows().length ? (
-            <View class="gap-1 mb-5">
-              <Text class="text-sm font-semibold text-[#5e625f]">
-                Needs attention
-              </Text>
-              <Each of={attentionRows()}>{(r) => row(r())}</Each>
-            </View>
-          ) : null}
-          {attentionRows().length && rows().some((r) => !attention(r)) ? (
-            <Text class="text-sm font-semibold text-[#5e625f]">
-              Everything else
-            </Text>
-          ) : null}
-          <Each of={rows().filter((r) => !attention(r))}>
-            {(r) => row(r())}
-          </Each>
-        </View>
-      )}
       <Panel
         open={Boolean(mode())}
         title={
@@ -398,83 +658,54 @@ export function Stock(p: { api: Api }) {
         }
       >
         {mode() === "details" ? (
-          <View class="gap-5">
-            <View class="gap-2">
-              <Text class="text-2xl font-semibold text-[#1b1d1c]">
-                {rows().find((r) => String(r.product_id) === product())
-                  ?.amount ?? 0}{" "}
-                {unit(selected()?.qu_id_stock)}
+          <View class="gap-6">
+            <View class="gap-1">
+              <Text class="text-[28px] leading-9 font-semibold tracking-tight tabular-nums text-foreground">
+                {`${current()?.amount ?? 0} ${unit(selected()?.qu_id_stock)}`.trim()}
               </Text>
-              <Note>
-                {state
-                  .data()
-                  ?.locations.find((l) => String(l.id) === location())?.name ??
-                  ""}
-              </Note>
+              <View class="flex-row flex-wrap items-baseline gap-x-2">
+                <Text class="text-sm text-muted-foreground">
+                  {state
+                    .data()
+                    ?.locations.find((l) => String(l.id) === location())
+                    ?.name ?? ""}
+                </Text>
+                {current() && belowMin(current()!) ? (
+                  <Text class="text-sm text-muted-foreground tabular-nums">
+                    {`· below minimum of ${Number(current()!.min_stock_amount)} ${unit(selected()?.qu_id_stock)}`.trim()}
+                  </Text>
+                ) : null}
+              </View>
             </View>
-            <LoadState
-              loading={entries.loading()}
-              error={entries.error()}
-              retry={entries.refresh}
-            />
-            <Each of={entries.data() ?? []}>
-              {(entry) => (
-                <View class="flex-row flex-wrap gap-2">
-                  <Note>
-                    {entry().amount} {unit(selected()?.qu_id_stock)} ·{" "}
-                    {state
-                      .data()
-                      ?.locations.find(
-                        (l) => Number(l.id) === Number(entry().location_id),
-                      )?.name ?? "Unknown location"}
-                  </Note>
-                  <Due value={entry().best_before_date} />
-                </View>
-              )}
-            </Each>
-            <Action
-              label="Add purchase"
-              primary
-              onPress={() => purchase(product())}
-            />
             <View class="flex-row flex-wrap gap-2">
-              {Number(
-                rows().find((r) => String(r.product_id) === product())?.amount,
-              ) > 0 ? (
-                <View class="flex-row gap-2">
-                  <Action
-                    label="Use amount"
-                    onPress={() => {
-                      amount.set("1");
-                      mode.set("consume");
-                    }}
-                  />
-                  {!Number(selected()?.disable_open) ? (
-                    <Action
-                      label="Open"
-                      onPress={() => {
-                        amount.set("1");
-                        mode.set("open");
-                      }}
-                    />
-                  ) : null}
-                </View>
+              {Number(current()?.amount) > 0 ? (
+                <Action
+                  label="Use amount"
+                  onPress={() => {
+                    amount.set("1");
+                    mode.set("consume");
+                  }}
+                />
+              ) : null}
+              {Number(current()?.amount) > 0 &&
+              !Number(selected()?.disable_open) ? (
+                <Action
+                  label="Open"
+                  onPress={() => {
+                    amount.set("1");
+                    mode.set("open");
+                  }}
+                />
               ) : null}
               <Action
                 label="Count"
                 onPress={() => {
-                  amount.set(
-                    String(
-                      rows().find((r) => String(r.product_id) === product())
-                        ?.amount ?? 0,
-                    ),
-                  );
+                  amount.set(String(current()?.amount ?? 0));
                   mode.set("inventory");
                 }}
               />
-              {Number(
-                rows().find((r) => String(r.product_id) === product())?.amount,
-              ) > 0 && (state.data()?.locations.length ?? 0) > 1 ? (
+              {Number(current()?.amount) > 0 &&
+              (state.data()?.locations.length ?? 0) > 1 ? (
                 <Action
                   label="Move"
                   onPress={() => {
@@ -486,30 +717,82 @@ export function Stock(p: { api: Api }) {
                 />
               ) : null}
             </View>
-            <Action
-              label="Add to shopping list"
-              onPress={() =>
-                void op.run(
-                  () =>
-                    p.api.post("/api/stock/shoppinglist/add-product", {
-                      product_id: Number(product()),
-                      product_amount: 1,
-                    }),
-                  "Added to the default shopping list.",
-                )
-              }
-            />
-            <Feedback error={op.error()} success={op.success()} />
-            <Action
-              label="Edit product details"
-              quiet
-              onPress={() => {
-                editName.set(selected()?.name ?? "");
-                minimum.set(String(selected()?.min_stock_amount ?? 0));
-                days.set(String(selected()?.default_best_before_days ?? 0));
-                mode.set("edit");
-              }}
-            />
+            <View class="gap-1">
+              <Subheading
+                title="In stock"
+                detail={
+                  entries.data()?.length
+                    ? `${entries.data()!.length} ${entries.data()!.length === 1 ? "entry" : "entries"}`
+                    : undefined
+                }
+              />
+              <LoadState
+                loading={entries.loading()}
+                error={entries.error()}
+                retry={entries.refresh}
+              />
+              {!entries.loading() &&
+              !entries.error() &&
+              !entries.data()?.length ? (
+                <View class="py-3 border-b border-border">
+                  <Note>Nothing in stock right now.</Note>
+                </View>
+              ) : null}
+              <View>
+                <Each of={entries.data() ?? []}>
+                  {(entry) => (
+                    <View class="flex-row items-center justify-between gap-3 min-h-11 py-2 border-b border-border">
+                      <View class="flex-1 min-w-0 flex-row items-baseline gap-2">
+                        <Text class="text-sm font-medium text-foreground tabular-nums">
+                          {`${entry().amount} ${unit(selected()?.qu_id_stock)}`.trim()}
+                        </Text>
+                        <Text
+                          style={{ numberOfLines: 1 }}
+                          class="shrink min-w-0 text-[13px] text-muted-foreground"
+                        >
+                          {locationName(entry().location_id)}
+                        </Text>
+                      </View>
+                      <Due value={entry().best_before_date} />
+                    </View>
+                  )}
+                </Each>
+              </View>
+            </View>
+            <View class="gap-2">
+              <Action
+                label="Add purchase"
+                icon="plus"
+                primary
+                onPress={() => purchase(product())}
+              />
+              <Action
+                label="Add to shopping list"
+                icon="cart"
+                onPress={() =>
+                  void op.run(
+                    () =>
+                      p.api.post("/api/stock/shoppinglist/add-product", {
+                        product_id: Number(product()),
+                        product_amount: 1,
+                      }),
+                    "Added to the default shopping list.",
+                  )
+                }
+              />
+              <Feedback error={op.error()} success={op.success()} />
+              <Action
+                label="Edit product details"
+                icon="pencil"
+                quiet
+                onPress={() => {
+                  editName.set(selected()?.name ?? "");
+                  minimum.set(String(selected()?.min_stock_amount ?? 0));
+                  days.set(String(selected()?.default_best_before_days ?? 0));
+                  mode.set("edit");
+                }}
+              />
+            </View>
             <NutritionHistory api={p.api} productId={Number(product())} />
           </View>
         ) : null}
@@ -550,39 +833,47 @@ export function Stock(p: { api: Api }) {
               onChange={(v) => amount.set(v)}
               onSubmit={() => void book()}
             />
-            <DateField
-              label="Best before"
-              emptyLabel="Use product default"
-              value={date()}
-              optional
-              onChange={(v) => date.set(v)}
-            />
-            <View class="flex-row flex-wrap gap-1">
-              <Each
-                of={[
-                  ["Default", ""],
-                  ["Today", dateISO()],
-                  ["+3 days", addDays(dateISO(), 3)],
-                  ["+1 week", addDays(dateISO(), 7)],
-                  ["Never", "2999-12-31"],
-                ]}
-              >
-                {(d) => (
-                  <Action
-                    label={d()[0]}
-                    quiet
-                    onPress={() => date.set(d()[1])}
-                  />
-                )}
-              </Each>
+            <View class="gap-2">
+              <DateField
+                label="Best before"
+                emptyLabel="Use product default"
+                value={date()}
+                optional
+                onChange={(v) => date.set(v)}
+              />
+              <View class="flex-row flex-wrap gap-1.5">
+                <Each
+                  of={[
+                    ["Default", ""],
+                    ["Today", dateISO()],
+                    ["+3 days", addDays(dateISO(), 3)],
+                    ["+1 week", addDays(dateISO(), 7)],
+                    ["Never", "2999-12-31"],
+                  ]}
+                >
+                  {(d) => (
+                    <Button
+                      selected={date() === d()[1]}
+                      onPress={() => date.set(d()[1])}
+                      class={`min-h-11 md:min-h-8 px-2 md:px-2.5 rounded-md border items-center justify-center ${date() === d()[1] ? "border-foreground bg-selected" : "border-input bg-card hover:bg-accent"} ${focusRing}`}
+                    >
+                      <Text
+                        class={`text-[13px] tabular-nums ${date() === d()[1] ? "font-medium text-foreground" : "text-ink-soft"}`}
+                      >
+                        {d()[0]}
+                      </Text>
+                    </Button>
+                  )}
+                </Each>
+              </View>
+              <Note>
+                {date()
+                  ? date() === "2999-12-31"
+                    ? "No due date."
+                    : "Best-before date selected."
+                  : `Uses the product default${selected() ? `: ${selected()?.default_best_before_days ?? 0} days` : "."}`}
+              </Note>
             </View>
-            <Note>
-              {date()
-                ? date() === "2999-12-31"
-                  ? "No due date."
-                  : "Best-before date selected."
-                : `Uses the product default${selected() ? `: ${selected()?.default_best_before_days ?? 0} days` : "."}`}
-            </Note>
             <Toggle
               label="Add another after saving"
               checked={keepOpen()}

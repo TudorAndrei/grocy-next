@@ -34,7 +34,7 @@ Intelligence lives outside the server. There is no embedded agent, OCR or vision
 
 ## Brand Commitments
 
-- Name: "Grocy Next". The client uses neutral surfaces, a restrained green accent, compact lists, and contextual sheets. Stock, Shopping, Meals and Chores are primary; setup lives in Settings.
+- Name: "Grocy Next". The client uses near-white surfaces with ink type, 1px hairlines, a single saffron accent used sparingly, compact aligned lists, and contextual sheets ("Quiet Precision"). Stock, Shopping, Meals and Chores are primary; setup lives in Settings.
 
 ## Evidence on Hand
 
