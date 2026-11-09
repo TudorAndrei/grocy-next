@@ -1,0 +1,124 @@
+{
+  "title": "Choose the visual world for Grocy Next",
+  "question": "The roll assigned Seed Packet. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "seed-packet",
+      "kind": "assigned",
+      "label": "Seed Packet",
+      "kicker": "THE ROLL",
+      "lineage": "European vegetable seed packets: flat colour fronts, sowing calendars on the back",
+      "thesis": "Every product, meal and chore reads like a packet back: bold name, then a calendar strip showing when it is good, due or gone.",
+      "palette": ["#f7f6f0", "#1c1f1a", "#2f6b34", "#e9a21b", "#5b2c5e", "#2a6db0", "#c8371e"],
+      "materials": ["flat offset colour fields, one per domain", "condensed black caps for names", "day-cell calendar strips with a today mark"],
+      "viewport": "Leaf-green rail; Stock opens on a green packet-front band, then rows of name, amount and a 28-day strip filled to the best-before day.",
+      "risk": "Four domain colours can turn into a toy box; colour stays on bands, nav and strips, never on every row.",
+      "raised": [
+        {"from": "notation-diagram-systems-labanotation", "raise": "Length is exact time: every strip cell is one day on one scale shared by all rows."},
+        {"from": "pop-culture-shelf-character-goods-catalog", "raise": "Fixed furniture: name, amount, strip, date and action always sit in the same slots."},
+        {"from": "aww2-zoo-gardens-guide-map", "raise": "Flat unmodulated colour owns whole regions: each screen's band is a packet front, no gradients or tints of tints."},
+        {"from": "design-annual-s-plate-section", "raise": "One 1px hairline weight for every rule; rows separate by rules, never by cards."},
+        {"from": "rw-centre-rail-reference-setting", "raise": "States are printed marks: bought items struck through, done chores filled, skipped ones hatched."}
+      ],
+      "html": ".impeccable/mocks/decision/seed-packet.html",
+      "comp": ".impeccable/mocks/decision/seed-packet.png"
+    },
+    {
+      "id": "shelf-ticket",
+      "kind": "pick",
+      "label": "Shelf-Edge Ticket",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "supermarket shelf-edge price tickets and yellow offer labels",
+      "thesis": "Every product is a shelf ticket: the amount huge, the name small, the date in the corner, readable from a metre away.",
+      "palette": ["#ffffff", "#111111", "#ffd400", "#e30613"],
+      "materials": ["black condensed numerals", "yellow offer tickets for low and due", "ticket rules and corner dates"],
+      "viewport": "Black top bar; stock as a ruled list of tickets with oversized amounts; low and due items printed on yellow.",
+      "risk": "Familiar retail look; too much yellow reads as a discount aisle.",
+      "html": ".impeccable/mocks/decision/shelf-ticket.html",
+      "comp": ".impeccable/mocks/decision/shelf-ticket.png"
+    },
+    {
+      "id": "split-flap",
+      "kind": "challenger",
+      "catalogId": "signals-instruments-split-flap-concourse",
+      "label": "Split-Flap Concourse",
+      "verdict": "competitive",
+      "lineage": "rail concourse departure boards",
+      "thesis": "What is due next, as a departure board: rows ranked by time, columns that never move.",
+      "palette": ["#141414", "#f2f2ee", "#f2a900", "#d0442f"],
+      "materials": ["matte black flap cells", "white condensed caps", "amber row lamps for due soon"],
+      "viewport": "Black board of due stock and chores ranked by days left; amber for due soon, red for expired.",
+      "case": "Fuses cleanly for time-ranked Stock and Chores; loses on audience, since a station is not the kitchen's world.",
+      "risk": "A dark board fights bright shop light, and shopping lists are not time-ranked.",
+      "html": ".impeccable/mocks/decision/split-flap.html",
+      "comp": ".impeccable/mocks/decision/split-flap.png",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse.webp"
+    },
+    {
+      "id": "ch-laban", "kind": "challenger", "catalogId": "notation-diagram-systems-labanotation",
+      "label": "Labanotation Score", "verdict": "declined", "lineage": "dance notation",
+      "thesis": "Time flows upward; block length is exact duration.",
+      "palette": ["#ffffff", "#111111", "#d8d8d8"], "materials": ["shaded symbol blocks"],
+      "viewport": "Due items as a vertical score.", "risk": "Needs a legend to read.",
+      "case": "Fuses poorly: notation is foreign to a household audience.",
+      "kept": "Strip length is exact days.",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-labanotation-hero.webp"
+    },
+    {
+      "id": "ch-goods", "kind": "challenger", "catalogId": "pop-culture-shelf-character-goods-catalog",
+      "label": "Character Goods Catalog", "verdict": "declined", "lineage": "mascot merchandise catalogs",
+      "thesis": "Products as a ranked mascot roster.",
+      "palette": ["#fde7ef", "#e6f4ff", "#ff5a8a"], "materials": ["pastel flat fills"],
+      "viewport": "Pastel product grid with name plates.", "risk": "Playful to the point of slowing lookups.",
+      "case": "Fuses poorly: mascots hide amounts and dates.",
+      "kept": "Fixed furniture per item.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-character-goods-catalog-hero.webp"
+    },
+    {
+      "id": "ch-zoo", "kind": "challenger", "catalogId": "aww2-zoo-gardens-guide-map",
+      "label": "Zoo Guide Map", "verdict": "declined", "lineage": "illustrated zoo and garden maps",
+      "thesis": "Each domain as a swelling lobe of flat colour.",
+      "palette": ["#f5f1e4", "#8ed462", "#2c2e2a", "#f5e211"], "materials": ["flat colour lobes", "capsule controls"],
+      "viewport": "Kitchen areas as a coloured map.", "risk": "Lobes eat the list space a phone needs.",
+      "case": "Fuses poorly: a pantry is a list, not a territory.",
+      "kept": "Flat colour that owns whole regions.",
+      "hero": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map-hero.webp"
+    },
+    {
+      "id": "ch-annual", "kind": "challenger", "catalogId": "design-annual-s-plate-section",
+      "label": "Design Annual Plates", "verdict": "declined", "lineage": "design annual plate sections",
+      "thesis": "Each screen as a registered plate on uncoated stock.",
+      "palette": ["#f5f4f6", "#16181a", "#dcddf3"], "materials": ["hairlines", "registration crosses"],
+      "viewport": "Stock as a quiet plate with crosshair corners.", "risk": "Too quiet; repeats the plainness being replaced.",
+      "case": "Fuses poorly: editorial calm is the problem, not the fix.",
+      "kept": "One hairline weight for every rule.",
+      "hero": "https://impeccable.style/worlds/cards/design-annual-s-plate-section-hero.webp"
+    },
+    {
+      "id": "ch-rail", "kind": "challenger", "catalogId": "rw-centre-rail-reference-setting",
+      "label": "Centre-Rail Reference", "verdict": "declined", "lineage": "wide-margin reference editions",
+      "thesis": "Two columns around a rail of keys, apparatus in the margin.",
+      "palette": ["#efe8da", "#151311", "#c2381f"], "materials": ["ruling-engine hairlines", "small caps"],
+      "viewport": "Stock as a two-column reference page.", "risk": "Book setting on a phone in a shop.",
+      "case": "Fuses poorly: scholarly apparatus slows a glance.",
+      "kept": "States as printed marks: struck, filled, hatched.",
+      "hero": "https://impeccable.style/worlds/cards/rw-centre-rail-reference-setting-hero.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": true},
+  "canon": true,
+  "canonCard": {
+    "kind": "canon",
+    "label": "The category standard (Grocy-style)",
+    "thesis": "Grocy's own layout, executed impeccably: dark sidebar, dense tables, blue primary.",
+    "palette": ["#ffffff", "#212529", "#0d6efd"],
+    "materials": ["admin grid", "dense data tables", "due badges"],
+    "viewport": "Dark left sidebar, stock overview table with due badges, toolbar on top.",
+    "risk": "Indistinguishable from every self-hosted admin panel by design.",
+    "html": ".impeccable/mocks/decision/canon-standard.html",
+    "comp": ".impeccable/mocks/decision/canon-standard.png"
+  },
+  "steer": true
+}

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Grocy Next · Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#241a26; --ink-2:#3a2e3c; --paper:#fbfaf7; --line:#ebe6df; --muted:#6b6270;
+  --sage:#b9cdb0; --sage-soft:#e2ebdc; --sage-text:#3e4b38;
+  --butter:#f6d77a; --powder:#bcd3ee; --lilac:#d4c6ea;
+  --cherry:#d8412f; --ochre:#8a5a00; --ochre-soft:#f6e6b4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font-family:Figtree,system-ui,sans-serif;color:var(--ink);background:var(--sage);display:flex;-webkit-font-smoothing:antialiased}
+::selection{background:var(--butter);color:var(--ink)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+svg{flex:none}
+.ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* rail */
+.rail{width:232px;background:var(--ink);color:#f3eef3;padding:28px 16px 24px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:0 12px 32px;font-weight:600;font-size:17px;letter-spacing:-.01em}
+.mark{width:26px;height:26px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr;gap:2px;overflow:hidden}
+.mark i{display:block}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#cfc4d0;text-decoration:none;font-size:15px;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav a.on{background:rgba(255,255,255,.1);color:#fff}
+.dot{width:10px;height:10px;border-radius:50%}
+.nav .badge{margin-left:auto;min-width:22px;height:22px;padding:0 7px;border-radius:11px;font-size:12px;font-weight:600;display:grid;place-items:center;color:var(--ink);font-variant-numeric:tabular-nums}
+.nav .sub{color:#a99eaa}
+.nav .sub svg{width:18px;height:18px}
+.spacer{flex:1}
+.who{display:flex;align-items:center;gap:10px;margin-top:16px;padding:14px 12px 0;border-top:1px solid rgba(255,255,255,.1);font-size:13px;color:#a99eaa}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--powder);color:var(--ink);display:grid;place-items:center;font-weight:600;font-size:12px}
+
+/* main */
+main{flex:1;padding:36px 40px 0;display:flex;flex-direction:column;min-width:0}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+h1{font-family:Unbounded,sans-serif;font-weight:600;font-size:40px;line-height:1;letter-spacing:-.02em}
+.sub-h{margin-top:12px;font-size:15px;color:var(--sage-text)}
+.tools{display:flex;gap:12px;align-items:center}
+.search{width:340px;height:48px;border-radius:16px;background:var(--paper);display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--muted);font-size:15px}
+.search kbd{margin-left:auto;font:500 12px Figtree,sans-serif;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.primary{height:48px;padding:0 22px 0 18px;border:0;border-radius:16px;background:var(--ink);color:#fff;font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.filters{display:flex;gap:8px;margin:28px 0 24px}
+.chip-f{height:38px;padding:0 14px;border-radius:19px;border:0;background:rgba(251,250,247,.55);font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer}
+.chip-f b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--sage-text)}
+.chip-f.on{background:var(--ink);color:#fff}
+.chip-f.on b{color:var(--sage)}
+
+/* shelves */
+.shelves{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px}
+.shelf{background:var(--paper);border-radius:20px;padding:8px 22px 10px}
+.shelf-h{display:flex;align-items:center;gap:12px;padding:14px 0 16px}
+.shelf-ic{width:36px;height:36px;border-radius:11px;background:var(--sage-soft);display:grid;place-items:center;color:var(--sage-text)}
+.shelf-h h2{font-size:17px;font-weight:600;letter-spacing:-.005em}
+.shelf-h .cnt{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.item{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;min-height:80px;border-top:1px solid var(--line);padding:12px 0}
+.item.gap{border-top:6px solid var(--sage-soft);margin:0 -22px;padding-left:22px;padding-right:22px}
+.name{font-size:16px;font-weight:500;line-height:1.25}
+.meta{margin-top:5px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.tag{height:22px;padding:0 8px;border-radius:7px;font-size:12px;font-weight:600;display:inline-flex;align-items:center}
+.tag.exp{background:var(--cherry);color:#fff}
+.tag.due{background:var(--ochre-soft);color:var(--ochre)}
+.tag.min{box-shadow:inset 0 0 0 1.25px var(--ink);color:var(--ink)}
+.amt{font-family:Unbounded,sans-serif;font-weight:500;font-size:19px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.amt small{font-family:Figtree,sans-serif;font-size:13px;font-weight:500;color:var(--muted);margin-left:3px;letter-spacing:0}
+.use{height:34px;padding:0 13px;border-radius:11px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:600;cursor:pointer}
+.use:hover,.item.hover .use{background:var(--ink);border-color:var(--ink);color:#fff}
+.item.hover{background:#f5f2ec;margin:0 -22px;padding-left:22px;padding-right:22px}
+
+/* review */
+.review{background:var(--ink);color:#f3eef3;border-radius:20px;padding:20px}
+.review-h{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px}
+.review-h .n{margin-left:auto;background:var(--lilac);color:var(--ink);border-radius:11px;height:22px;min-width:22px;display:grid;place-items:center;font-size:12px}
+.review p{font-size:13px;color:#b5aab6;margin-top:6px;line-height:1.45}
+.prop{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
+.prop .t{font-size:14.5px;font-weight:500;line-height:1.35}
+.prop .s{font-size:12.5px;color:#a99eaa;margin-top:4px}
+.prop .acts{display:flex;gap:8px;margin-top:10px}
+.prop button{height:32px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#fff;font-size:13px;font-weight:600}
+.prop button.ok{background:var(--lilac);border-color:var(--lilac);color:var(--ink)}
+</style>
+</head>
+<body>
+<nav class="rail" aria-label="Main">
+  <div class="brand"><span class="mark"><i style="background:var(--sage)"></i><i style="background:var(--butter)"></i><i style="background:var(--powder)"></i><i style="background:var(--lilac)"></i></span>Grocy Next</div>
+  <div class="nav">
+    <a class="on" href="#" aria-current="page"><span class="dot" style="background:var(--sage)"></span>Stock</a>
+    <a href="#"><span class="dot" style="background:var(--butter)"></span>Shopping<span class="badge" style="background:var(--butter)">3</span></a>
+    <a href="#"><span class="dot" style="background:var(--powder)"></span>Meals</a>
+    <a href="#"><span class="dot" style="background:var(--lilac)"></span>Chores</a>
+  </div>
+  <div class="spacer"></div>
+  <div class="nav">
+    <a class="sub" href="#"><svg class="ico" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>Review<span class="badge" style="background:var(--lilac)">2</span></a>
+    <a class="sub" href="#"><svg class="ico" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Settings</a>
+  </div>
+  <div class="who"><span class="avatar">H</span>Household</div>
+</nav>
+
+<main>
+  <div class="head">
+    <div>
+      <h1>Stock</h1>
+      <p class="sub-h">Sunday 8 November · 11 products in 3 places</p>
+    </div>
+    <div class="tools">
+      <label class="search"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>Search products<kbd>/</kbd></label>
+      <button class="primary"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Purchase</button>
+    </div>
+  </div>
+
+  <div class="filters" role="tablist">
+    <button class="chip-f on" role="tab" aria-selected="true">All <b>11</b></button>
+    <button class="chip-f" role="tab">Due soon <b>3</b></button>
+    <button class="chip-f" role="tab">Expired <b>1</b></button>
+    <button class="chip-f" role="tab">Below min <b>2</b></button>
+  </div>
+
+  <div class="shelves">
+    <section class="shelf">
+      <div class="shelf-h"><span class="shelf-ic"><svg class="ico" viewBox="0 0 24 24"><path d="M5 6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z"/><path d="M5 10h14M15 6v1.5M15 13v3"/></svg></span><h2>Fridge</h2><span class="cnt">5 items</span></div>
+      <div class="item"><div><div class="name">Spinach</div><div class="meta"><span class="tag exp">Expired 6 Nov</span></div></div><div class="amt">200<small>g</small></div><button class="use">Use</button></div>
+      <div class="item hover"><div><div class="name">Greek yogurt</div><div class="meta"><span class="tag due">In 2 days</span>10 Nov</div></div><div class="amt">1<small>pc</small></div><button class="use">Use</button></div>
+      <div class="item"><div><div class="name">Whole milk</div><div class="meta"><span class="tag due">In 3 days</span>11 Nov</div></div><div class="amt">1000<small>ml</small></div><button class="use">Use</button></div>
+      <div class="item"><div><div class="name">Eggs</div><div class="meta"><span class="tag min">Below min 6</span>19 Nov</div></div><div class="amt">4<small>pcs</small></div><button class="use">Use</button></div>
+      <div class="item gap"><div><div class="name">Cheddar</div><div class="meta">14 Nov · in 6 days</div></div><div class="amt">250<small>g</small></div><button class="use">Use</button></div>
+    </section>
+
+    <section class="shelf">
+      <div class="shelf-h"><span class="shelf-ic"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="5" rx="1.5"/><path d="M4.5 8v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8M10 12h4"/></svg></span><h2>Pantry</h2><span class="cnt">5 items</span></div>
+      <div class="item"><div><div class="name">Basmati rice</div><div class="meta"><span class="tag min">Below min 1000 g</span></div></div><div class="amt">400<small>g</small></div><button class="use">Use</button></div>
+      <div class="item gap"><div><div class="name">Coffee beans</div><div class="meta">12 Jan 2027</div></div><div class="amt">800<small>g</small></div><button class="use">Use</button></div>
+      <div class="item"><div><div class="name">Canned tomatoes</div><div class="meta">13 Mar 2027</div></div><div class="amt">4<small>pcs</small></div><button class="use">Use</button></div>
+      <div class="item"><div><div class="name">Rolled oats</div><div class="meta">20 Apr 2027</div></div><div class="amt">721<small>g</small></div><button class="use">Use</button></div>
+      <div class="item"><div><div class="name">Olive oil</div><div class="meta">2 Jun 2027</div></div><div class="amt">750<small>ml</small></div><button class="use">Use</button></div>
+    </section>
+
+    <div class="col">
+      <section class="shelf">
+        <div class="shelf-h"><span class="shelf-ic"><svg class="ico" viewBox="0 0 24 24"><path d="M2 12h20M12 2v20m8-6-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/></svg></span><h2>Freezer</h2><span class="cnt">1 item</span></div>
+        <div class="item"><div><div class="name">Chicken thighs</div><div class="meta"><span class="tag due">In 4 days</span>12 Nov</div></div><div class="amt">600<small>g</small></div><button class="use">Use</button></div>
+      </section>
+
+      <section class="review" aria-label="Waiting for review">
+        <div class="review-h"><svg class="ico" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>Waiting for review<span class="n">2</span></div>
+        <p>Your assistant proposed these changes. Nothing is applied until you approve.</p>
+        <div class="prop">
+          <div class="t">Add Eggs, 6 pcs, to Shopping</div>
+          <div class="s">Stock is 2 below the minimum · 18 min ago</div>
+          <div class="acts"><button class="ok">Approve</button><button>Reject</button></div>
+        </div>
+        <div class="prop">
+          <div class="t">Nutrition facts for Rolled oats</div>
+          <div class="s">From a label photo · 1 h ago</div>
+          <div class="acts"><button class="ok">Review</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

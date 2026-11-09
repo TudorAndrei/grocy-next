@@ -1,0 +1,36 @@
+{
+  "cssVars": {
+    "theme": {
+      "radius": "8px",
+      "font-sans": "Geist, ui-sans-serif, system-ui, sans-serif"
+    },
+    "light": {
+      "background": "#fafaf9",
+      "foreground": "#0c0d0e",
+      "card": "#ffffff",
+      "card-foreground": "#0c0d0e",
+      "popover": "#ffffff",
+      "popover-foreground": "#0c0d0e",
+      "primary": "#e8a100",
+      "primary-foreground": "#1a1300",
+      "secondary": "#f1f1ef",
+      "secondary-foreground": "#0c0d0e",
+      "muted": "#f1f1ef",
+      "muted-foreground": "#62666a",
+      "accent": "#f1f1ef",
+      "accent-foreground": "#0c0d0e",
+      "destructive": "#c8321f",
+      "border": "#e6e6e3",
+      "input": "#d6d6d2",
+      "ring": "#e8a100",
+      "ink-soft": "#3b3e42",
+      "faint": "#a3a6a9",
+      "due": "#9a5800",
+      "due-mark": "#e8a100",
+      "danger-soft": "#fcebe8",
+      "saffron-soft": "#fdf3d6",
+      "selected": "#f1f1ef",
+      "rail": "#f6f6f4"
+    }
+  }
+}

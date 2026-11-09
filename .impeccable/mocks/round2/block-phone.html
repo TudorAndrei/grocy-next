@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<title>Grocy Next · Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#241a26; --paper:#fbfaf7; --line:#ebe6df; --muted:#6b6270;
+  --sage:#b9cdb0; --sage-soft:#e2ebdc; --sage-text:#3e4b38;
+  --butter:#f6d77a; --powder:#bcd3ee; --lilac:#d4c6ea;
+  --cherry:#d8412f; --ochre:#8a5a00; --ochre-soft:#f6e6b4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:390px;height:844px;overflow:hidden}
+body{font-family:Figtree,system-ui,sans-serif;color:var(--ink);background:var(--sage);position:relative;-webkit-font-smoothing:antialiased}
+::selection{background:var(--butter)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.top{display:flex;align-items:center;gap:8px;padding:20px 16px 0}
+h1{font-family:Unbounded,sans-serif;font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1}
+.top .r{margin-left:auto;display:flex;gap:8px}
+.ibtn{width:44px;height:44px;border-radius:14px;border:0;background:rgba(251,250,247,.6);display:grid;place-items:center}
+.add{height:44px;padding:0 16px 0 12px;border:0;border-radius:14px;background:var(--ink);color:#fff;font-weight:600;font-size:15px;display:flex;align-items:center;gap:6px}
+.date{padding:8px 16px 0;font-size:14px;color:var(--sage-text)}
+.search{margin:16px 16px 0;height:48px;border-radius:16px;background:var(--paper);display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--muted);font-size:15px}
+.chips{display:flex;gap:8px;padding:12px 16px 0;overflow:hidden;white-space:nowrap}
+.chip{height:36px;padding:0 13px;border-radius:18px;border:0;background:rgba(251,250,247,.55);font-size:14px;font-weight:500;display:flex;align-items:center;gap:7px;flex:none}
+.chip b{font-weight:600;color:var(--sage-text);font-variant-numeric:tabular-nums}
+.chip.on{background:var(--ink);color:#fff}.chip.on b{color:var(--sage)}
+
+.seg{margin:16px 16px 0;padding:4px;border-radius:16px;background:rgba(36,26,38,.08);display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.seg button{height:40px;border:0;border-radius:12px;background:transparent;font-size:14px;font-weight:600;color:var(--sage-text);display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button span{font-weight:500;font-variant-numeric:tabular-nums;opacity:.8}
+.seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(36,26,38,.1),0 4px 12px -4px rgba(36,26,38,.12)}
+
+.shelf{margin:12px 16px 0;background:var(--paper);border-radius:20px;padding:2px 16px}
+.item{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;min-height:70px;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item.gap{border-top:6px solid var(--sage-soft);margin:0 -16px;padding-left:16px;padding-right:16px}
+.name{font-size:16px;font-weight:500}
+.meta{margin-top:5px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px;white-space:nowrap}
+.tag{height:22px;padding:0 7px;border-radius:7px;font-size:12px;font-weight:600;display:inline-flex;align-items:center}
+.tag.exp{background:var(--cherry);color:#fff}
+.tag.due{background:var(--ochre-soft);color:var(--ochre)}
+.tag.min{box-shadow:inset 0 0 0 1.25px var(--ink)}
+.amt{font-family:Unbounded,sans-serif;font-weight:500;font-size:17px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.amt small{font-family:Figtree,sans-serif;font-size:13px;font-weight:500;color:var(--muted);margin-left:2px;letter-spacing:0}
+.use{height:36px;padding:0 12px;border-radius:11px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:600}
+
+.review{margin:12px 16px 0;background:var(--ink);color:#f3eef3;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.review .t{font-size:15px;font-weight:600}
+.review .s{font-size:12.5px;color:#b5aab6;margin-top:2px}
+.review .n{margin-left:auto;height:36px;padding:0 12px;border-radius:11px;background:var(--lilac);color:var(--ink);font-size:13px;font-weight:600;display:flex;align-items:center;border:0}
+
+.tabs{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--ink);display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 24px}
+.tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#b5aab6;text-decoration:none;font-size:12px;font-weight:500;position:relative}
+.tabs a.on{color:#fff}
+.pill{width:44px;height:26px;border-radius:13px;display:grid;place-items:center}
+.tabs a.on .pill{background:var(--sage);color:var(--ink)}
+.tabs .b{position:absolute;top:0;left:calc(50% + 10px);min-width:18px;height:18px;border-radius:9px;background:var(--butter);color:var(--ink);font-size:11px;font-weight:600;display:grid;place-items:center;padding:0 5px}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Stock</h1>
+  <div class="r">
+    <button class="add"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Purchase</button>
+    <button class="ibtn" aria-label="Settings"><svg class="ico" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></button>
+  </div>
+</header>
+<p class="date">Sunday 8 November · 11 products</p>
+<div class="search"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>Search products</div>
+<div class="chips" role="tablist">
+  <button class="chip on" role="tab" aria-selected="true">All <b>11</b></button>
+  <button class="chip" role="tab">Due soon <b>3</b></button>
+  <button class="chip" role="tab">Expired <b>1</b></button>
+  <button class="chip" role="tab">Below min <b>2</b></button>
+</div>
+<div class="seg" role="tablist" aria-label="Location">
+  <button class="on" role="tab" aria-selected="true">Fridge <span>5</span></button>
+  <button role="tab">Freezer <span>1</span></button>
+  <button role="tab">Pantry <span>5</span></button>
+</div>
+<section class="shelf" aria-label="Fridge">
+  <div class="item"><div><div class="name">Spinach</div><div class="meta"><span class="tag exp">Expired 6 Nov</span></div></div><div class="amt">200<small>g</small></div><button class="use">Use</button></div>
+  <div class="item"><div><div class="name">Greek yogurt</div><div class="meta"><span class="tag due">In 2 days</span>10 Nov</div></div><div class="amt">1<small>pc</small></div><button class="use">Use</button></div>
+  <div class="item"><div><div class="name">Whole milk</div><div class="meta"><span class="tag due">In 3 days</span>11 Nov</div></div><div class="amt">1000<small>ml</small></div><button class="use">Use</button></div>
+  <div class="item"><div><div class="name">Eggs</div><div class="meta"><span class="tag min">Below min 6</span>19 Nov</div></div><div class="amt">4<small>pcs</small></div><button class="use">Use</button></div>
+  <div class="item gap"><div><div class="name">Cheddar</div><div class="meta">14 Nov · in 6 days</div></div><div class="amt">250<small>g</small></div><button class="use">Use</button></div>
+</section>
+<div class="review">
+  <div><div class="t">2 changes to review</div><div class="s">Proposed by your assistant</div></div>
+  <button class="n">Review</button>
+</div>
+<nav class="tabs" aria-label="Main">
+  <a class="on" href="#" aria-current="page"><span class="pill"><svg class="ico" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12M3.29 7 12 12l8.71-5"/></svg></span>Stock</a>
+  <a href="#"><span class="pill"><svg class="ico" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>Shopping<span class="b">3</span></a>
+  <a href="#"><span class="pill"><svg class="ico" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>Meals</a>
+  <a href="#"><span class="pill"><svg class="ico" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/></svg></span>Chores</a>
+</nav>
+</body>
+</html>

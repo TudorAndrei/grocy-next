@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Grocy Next · Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#eef1ee; --surface:#ffffff; --ink:#1c2321; --ink-2:#56605c; --ink-3:#7c8682;
+  --hair:#e3e8e4; --control:#cfd7d2;
+  --shell:#1f4a3f; --shell-2:#2a5a4d; --porcelain:#eef4f0; --porcelain-2:#b6cbc2;
+  --celadon:#6fa392; --honey:#c98a2e; --cobalt:#2f53a3; --iron:#6b4532; --copper:#b5432b;
+  --nodate:#b9c0bc;
+  --honey-ink:#87570f; --copper-ink:#a23a24;
+  --shadow:0 1px 2px rgba(28,35,33,.05),0 8px 24px -8px rgba(28,35,33,.12);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --ui:"Onest",ui-sans-serif,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{background:var(--ground);color:var(--ink);font:400 14px/1.4 var(--ui);display:flex;-webkit-font-smoothing:antialiased}
+::selection{background:#cfe3da;color:var(--ink)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--celadon);outline-offset:2px}
+svg{flex:none}
+
+/* rail */
+.rail{width:248px;background:var(--shell);color:var(--porcelain);padding:28px 16px 24px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:0 10px 30px}
+.mark{width:26px;height:26px;position:relative}
+.mark i{position:absolute;width:17px;height:17px;border-radius:6px}
+.mark i:first-child{left:0;top:0;background:var(--celadon)}
+.mark i:last-child{right:0;bottom:0;background:var(--honey);mix-blend-mode:screen;opacity:.9}
+.brand b{font:600 19px/1 var(--display);letter-spacing:-.02em}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:12px;height:42px;padding:0 12px;border-radius:10px;color:var(--porcelain-2);text-decoration:none;font-weight:500;font-size:15px}
+.nav a:hover{background:rgba(238,244,240,.06);color:var(--porcelain)}
+.nav a.on{background:rgba(111,163,146,.24);color:#fff}
+.sw{width:12px;height:12px;border-radius:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.badge{margin-left:auto;min-width:22px;height:20px;padding:0 7px;border-radius:10px;background:rgba(238,244,240,.14);color:#fff;font-size:12px;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.badge.honey{background:var(--honey);color:#1c1406}
+.rail .lower{margin-top:auto;border-top:1px solid rgba(238,244,240,.12);padding-top:14px}
+.nav a small{display:block;font-size:12px;font-weight:400;color:#8fb0a3;margin-top:1px}
+.nav a .two{line-height:1.2}
+
+/* main */
+main{flex:1;padding:34px 48px 0;display:flex;flex-direction:column;min-width:0}
+.head{display:flex;align-items:flex-end;gap:24px}
+.head h1{font:600 40px/1 var(--display);letter-spacing:-.03em}
+.head .date{color:var(--ink-3);font-size:14px;margin-top:8px}
+.btn{height:42px;padding:0 18px;border-radius:10px;border:0;display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;cursor:pointer}
+.btn.primary{background:var(--shell);color:#fff;box-shadow:0 1px 2px rgba(31,74,63,.3),0 6px 16px -6px rgba(31,74,63,.5)}
+.btn.primary:hover{background:var(--shell-2)}
+.head .btn{margin-left:auto}
+
+/* pour */
+.pour{margin-top:24px;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:20px 24px 18px}
+.bar{display:flex;gap:4px;height:14px}
+.bar span{border-radius:7px;box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
+.legend{display:flex;gap:4px;margin-top:12px}
+.legend div{display:flex;align-items:baseline;gap:8px}
+.legend b{font:600 22px/1 var(--display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.legend span{color:var(--ink-2);font-size:13px}
+.legend .x b{color:var(--copper-ink)}
+
+/* toolbar */
+.tools{display:flex;gap:12px;align-items:center;margin-top:24px}
+.search{flex:0 0 340px;height:42px;border-radius:10px;background:var(--surface);border:1px solid var(--control);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--ink-3)}
+.chips{display:flex;gap:4px;padding:4px;background:#e2e7e3;border-radius:12px}
+.chip{height:34px;padding:0 12px;border-radius:9px;border:0;background:transparent;display:inline-flex;align-items:center;gap:8px;font-weight:500;color:var(--ink-2);cursor:pointer}
+.chip em{font-style:normal;font-size:12px;color:var(--ink-3)}
+.chip.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(28,35,33,.1)}
+.chip.on em{color:var(--ink-2)}
+.select{margin-left:auto;height:42px;min-width:180px;border-radius:10px;border:1px solid var(--control);background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 14px;font-weight:500}
+
+/* list */
+.list{margin-top:16px;background:var(--surface);border-radius:14px 14px 0 0;box-shadow:var(--shadow);flex:1;overflow:hidden}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) 140px 230px 110px 84px;align-items:center;height:56px;padding:0 20px 0 22px;border-top:1px solid var(--hair)}
+.row.th{height:40px;border-top:0;color:var(--ink-3);font-size:12px;font-weight:500;letter-spacing:.01em}
+.row.th .r{text-align:right}
+.swatch{width:28px;height:28px;border-radius:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.08)}
+.name{font-weight:500;font-size:15px;display:flex;align-items:center;gap:10px;min-width:0}
+.tag{font-size:12px;font-weight:500;padding:2px 8px;border-radius:6px;background:#f6ecd9;color:var(--honey-ink);white-space:nowrap}
+.loc{color:var(--ink-2)}
+.due{display:flex;gap:10px;align-items:baseline}
+.due b{font-weight:500}
+.due span{color:var(--ink-3);font-size:13px}
+.due.soon span{color:var(--honey-ink);font-weight:500}
+.due.gone b,.due.gone span{color:var(--copper-ink)}
+.due.gone span{font-weight:500}
+.amt{text-align:right;font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
+.amt small{font-weight:400;color:var(--ink-2);font-size:14px;margin-left:3px}
+.use{justify-self:end;height:34px;padding:0 14px;border-radius:9px;border:0;background:transparent;color:var(--shell);font-weight:600;cursor:pointer}
+.use:hover{background:#e7efea}
+.row:hover{background:#f8faf8}
+.muted{color:var(--ink-3)}
+</style>
+</head>
+<body>
+<nav class="rail" aria-label="Main">
+  <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i></div><b>Grocy Next</b></div>
+  <div class="nav">
+    <a href="#" class="on" aria-current="page"><i class="sw" style="background:var(--celadon)"></i>Stock</a>
+    <a href="#"><i class="sw" style="background:var(--honey)"></i>Shopping<span class="badge honey">3</span></a>
+    <a href="#"><i class="sw" style="background:#5b7fd0"></i>Meals</a>
+    <a href="#"><i class="sw" style="background:#a0715a"></i>Chores</a>
+  </div>
+  <div class="nav lower">
+    <a href="#">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5L16 13h4"/><path d="M5.5 5h13L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5z"/></svg>
+      <span class="two">Review<small>Assistant proposals</small></span><span class="badge">2</span></a>
+    <a href="#">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Settings</a>
+  </div>
+</nav>
+
+<main>
+  <header class="head">
+    <div><h1>Stock</h1><p class="date">Sunday 8 November · 11 products</p></div>
+    <button class="btn primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Purchase</button>
+  </header>
+
+  <section class="pour" aria-label="Freshness of everything in stock">
+    <div class="bar" aria-hidden="true">
+      <span style="flex:1;background:var(--copper)"></span>
+      <span style="flex:3;background:var(--honey)"></span>
+      <span style="flex:2;background:#a39a4c"></span>
+      <span style="flex:4;background:var(--celadon)"></span>
+      <span style="flex:1;background:var(--nodate)"></span>
+    </div>
+    <div class="legend">
+      <div class="x" style="flex:1"><b>1</b><span>Expired</span></div>
+      <div style="flex:3"><b>3</b><span>Due in 5 days</span></div>
+      <div style="flex:2"><b>2</b><span>This month</span></div>
+      <div style="flex:4"><b>4</b><span>Later</span></div>
+      <div style="flex:1"><b>1</b><span>No date</span></div>
+    </div>
+  </section>
+
+  <div class="tools">
+    <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>Search products</label>
+    <div class="chips" role="tablist">
+      <button class="chip on" role="tab" aria-selected="true">All <em>11</em></button>
+      <button class="chip" role="tab">Due soon <em>3</em></button>
+      <button class="chip" role="tab">Expired <em>1</em></button>
+      <button class="chip" role="tab">Below min <em>2</em></button>
+    </div>
+    <div class="select">All locations <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+  </div>
+
+  <section class="list" aria-label="Products in stock">
+    <div class="row th"><span></span><span>Product</span><span>Location</span><span>Best before</span><span class="r">Amount</span><span></span></div>
+    <div class="row"><i class="swatch" style="background:#b5432b"></i><span class="name">Spinach</span><span class="loc">Fridge</span><span class="due gone"><b>6 Nov</b><span>2 days ago</span></span><span class="amt">200<small>g</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#c2612c"></i><span class="name">Greek yogurt</span><span class="loc">Fridge</span><span class="due soon"><b>10 Nov</b><span>in 2 days</span></span><span class="amt">1<small>pc</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#c6752d"></i><span class="name">Whole milk</span><span class="loc">Fridge</span><span class="due soon"><b>11 Nov</b><span>in 3 days</span></span><span class="amt">1000<small>ml</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#c98a2e"></i><span class="name">Chicken thighs</span><span class="loc">Freezer</span><span class="due soon"><b>12 Nov</b><span>in 4 days</span></span><span class="amt">600<small>g</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#b59a3c"></i><span class="name">Cheddar</span><span class="loc">Fridge</span><span class="due"><b>14 Nov</b><span>in 6 days</span></span><span class="amt">250<small>g</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#93a05a"></i><span class="name">Eggs <span class="tag">Below min · 6 pcs</span></span><span class="loc">Fridge</span><span class="due"><b>19 Nov</b><span>in 11 days</span></span><span class="amt">4<small>pcs</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:var(--nodate)"></i><span class="name">Basmati rice <span class="tag">Below min · 1000 g</span></span><span class="loc">Pantry</span><span class="due"><span>No date</span></span><span class="amt">400<small>g</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#6fa392"></i><span class="name">Coffee beans</span><span class="loc">Pantry</span><span class="due"><b>12 Jan 2027</b><span>in 9 weeks</span></span><span class="amt">800<small>g</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#689e8d"></i><span class="name">Canned tomatoes</span><span class="loc">Pantry</span><span class="due"><b>13 Mar 2027</b><span>in 4 months</span></span><span class="amt">4<small>pcs</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#629a89"></i><span class="name">Rolled oats</span><span class="loc">Pantry</span><span class="due"><b>20 Apr 2027</b><span>in 5 months</span></span><span class="amt">721<small>g</small></span><button class="use">Use</button></div>
+    <div class="row"><i class="swatch" style="background:#5d9584"></i><span class="name">Olive oil</span><span class="loc">Pantry</span><span class="due"><b>2 Jun 2027</b><span>in 7 months</span></span><span class="amt">750<small>ml</small></span><button class="use">Use</button></div>
+  </section>
+</main>
+</body>
+</html>

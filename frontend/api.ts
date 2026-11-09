@@ -27,17 +27,33 @@ export class Api {
     body?: unknown,
     signal?: AbortSignal,
   ): Promise<T> {
-    const response = await fetch(`${this.base}${path}`, {
-      method,
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(20000)])
-        : AbortSignal.timeout(20000),
-      headers: {
-        "GROCY-API-KEY": this.key.trim(),
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.base}${path}`, {
+        method,
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(20000)])
+          : AbortSignal.timeout(20000),
+        headers: {
+          "GROCY-API-KEY": this.key.trim(),
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    } catch (e) {
+      // The caller cancelled: pass the abort through untouched.
+      if (signal?.aborted) throw e;
+      if ((e as Error)?.name === "TimeoutError")
+        throw new Error(
+          `${this.base} didn't respond within 20 seconds. Check the server and try again.`,
+          { cause: e },
+        );
+      // Browsers report a stopped server and a blocked origin (CORS) the same way.
+      throw new Error(
+        `Can't reach ${this.base}. Check that the server is running at this address and allows requests from this page.`,
+        { cause: e },
+      );
+    }
     const text = await response.text();
     let data: any;
     try {

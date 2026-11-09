@@ -1,12 +1,24 @@
 import { signal, Text, View } from "nsh";
 import { Api, positive, type Row } from "../api";
 import { remote, operations, Feedback, LoadState } from "../data";
-import { Action, Choice, DateField, Field, Heading, Note, Toggle } from "../ui";
+import {
+  Action,
+  Choice,
+  DateField,
+  Field,
+  Heading,
+  Note,
+  Segments,
+  Subheading,
+  Surface,
+  Toggle,
+} from "../ui";
 
 type Booking = {
   id: number;
   name: string;
   amount: number;
+  unit: string;
   operation: string;
   transaction: string;
 };
@@ -37,6 +49,9 @@ export function Batch(p: { api: Api; initialMode?: string }) {
   });
   const op = operations(async () => {});
   const selected = () => state.data()?.products.find((r) => String(r.id) === product());
+  const unit = (item: Row) =>
+    state.data()?.units.find((r) => String(r.id) === String(item.qu_id_stock))?.name ??
+    "stock units";
   function choose(id: string) {
     product.set(id);
     location.set(String(selected()?.location_id ?? ""));
@@ -80,6 +95,7 @@ export function Batch(p: { api: Api; initialMode?: string }) {
           id: Date.now(),
           name: item.name,
           amount: quantity,
+          unit: unit(item),
           operation,
           transaction: result?.[0]?.transaction_id ?? "",
         },
@@ -92,136 +108,170 @@ export function Batch(p: { api: Api; initialMode?: string }) {
   }
   return (
     <View class="gap-5">
-      <Heading title="Batch processing" />
-      <Note>
-        Work through your groceries one product at a time. Each booking saves immediately and
-        appears below.
-      </Note>
-      <View class="flex-row flex-wrap gap-2">
-        <Each of={Object.keys(modes)}>
-          {(name) => (
-            <Action
-              label={name()}
-              primary={mode() === name()}
-              disabled={op.busy()}
-              onPress={() => {
-                mode.set(name());
-                amount.set("1");
-              }}
-            />
-          )}
-        </Each>
-      </View>
-      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
-      <View class="bg-white rounded-xl border border-[#e4e4e0] p-4 md:p-6 gap-5">
-        <View class="gap-3">
-          <Field
-            label="Scan or enter barcode"
-            value={barcode()}
-            onChange={(v) => barcode.set(v)}
-            onSubmit={() => void findBarcode()}
-            placeholder="Scan with a connected barcode reader"
-          />
-          <Action
-            label={lookup() ? "Looking up…" : "Look up barcode"}
-            disabled={op.busy() || !barcode().trim() || state.loading()}
-            onPress={() => void findBarcode()}
+      <View class="gap-1">
+        <View class="flex-row items-center min-h-11">
+          <Heading
+            title="Batch processing"
+            detail={history().length ? `${history().length} booked` : undefined}
           />
         </View>
-        <Choice
-          label="Batch product"
-          value={product()}
-          items={(state.data()?.products ?? []).map((r) => ({
-            value: String(r.id),
-            title: r.name,
-          }))}
-          onChange={choose}
-        />
-        {selected() ? (
-          <Note>
-            {selected()!.name} ·{" "}
-            {state.data()?.units.find((r) => String(r.id) === String(selected()!.qu_id_stock))
-              ?.name ?? "stock units"}
-          </Note>
-        ) : null}
-        <Field
-          label={mode() === "Inventory" ? "Counted quantity" : "Booking quantity"}
-          numeric
-          value={amount()}
-          onChange={(v) => amount.set(v)}
-        />
-        {mode() === "Purchase" ? (
-          <View class="gap-5">
-            <DateField
-              label="Best-before date"
-              value={date()}
-              onChange={(v) => date.set(v)}
-              optional
-              emptyLabel="Product default"
-            />
-            <Choice
-              label="Purchase location"
-              value={location()}
-              items={(state.data()?.locations ?? []).map((r) => ({
-                value: String(r.id),
-                title: r.name,
-              }))}
-              onChange={(v) => location.set(v)}
-            />
-          </View>
-        ) : null}
-        {mode() === "Consume" ? (
-          <Toggle label="Spoiled / wasted" checked={spoiled()} onChange={(v) => spoiled.set(v)} />
-        ) : null}
-        {mode() === "Inventory" ? (
-          <Note>
-            This replaces the total stock quantity. Enter zero to record an empty product.
-          </Note>
-        ) : null}
-        <Feedback error={op.error()} success={op.success()} />
-        <Action
-          label={
-            op.busy() && !lookup()
-              ? "Booking…"
-              : mode() === "Inventory"
-                ? "Save count and continue"
-                : `${mode()} and continue`
-          }
-          primary
-          disabled={op.busy() || !product()}
-          onPress={() => void book()}
-        />
+        <Note>
+          Work through your groceries one product at a time. Each booking saves immediately and
+          appears below.
+        </Note>
       </View>
-      <View class="gap-2">
-        <Heading title="This session" />
-        {!history().length ? (
-          <Note>Your bookings will appear here, with undo when the server provides it.</Note>
-        ) : null}
-        <Each of={history()}>
-          {(entry) => (
-            <View class="flex-row items-center gap-3 py-3 border-b border-[#e4e4e0]">
-              <View class="flex-1 min-w-0 gap-1">
-                <Text class="text-base font-medium text-[#1b1d1c]">{entry().name}</Text>
-                <Note>
-                  {entry().operation} · {entry().amount}
-                </Note>
-              </View>
-              {entry().transaction ? (
-                <Action
-                  label={`Undo ${entry().name}`}
-                  quiet
-                  disabled={op.busy()}
-                  onPress={() =>
-                    void op.run(async () => {
-                      await p.api.post(`/api/stock/transactions/${entry().transaction}/undo`);
-                      if (op.alive()) history.set(history().filter((r) => r.id !== entry().id));
-                    }, "Booking undone.")
-                  }
+      <Segments
+        label="Booking type"
+        items={Object.keys(modes).map((name) => ({ value: name, label: name }))}
+        value={mode()}
+        onChange={(name) => {
+          if (op.busy()) return;
+          mode.set(name);
+          amount.set("1");
+        }}
+      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
+      <View class="gap-8 md:flex-row md:items-start md:gap-10">
+        <View class="md:w-[480px] md:shrink-0">
+          <Surface class="p-4 md:p-5 gap-5">
+            <View class="flex-row items-end gap-2">
+              <View class="flex-1 min-w-0">
+                <Field
+                  label="Scan or enter barcode"
+                  value={barcode()}
+                  onChange={(v) => barcode.set(v)}
+                  onSubmit={() => void findBarcode()}
+                  placeholder="Scan with a connected barcode reader"
+                  autoFocus
                 />
+              </View>
+              <Action
+                label={lookup() ? "Looking up…" : "Look up barcode"}
+                icon="scan"
+                disabled={op.busy() || !barcode().trim() || state.loading()}
+                onPress={() => void findBarcode()}
+              />
+            </View>
+            <View class="gap-1.5">
+              <Choice
+                label="Batch product"
+                value={product()}
+                items={(state.data()?.products ?? []).map((r) => ({
+                  value: String(r.id),
+                  title: r.name,
+                }))}
+                onChange={choose}
+              />
+              {selected() ? (
+                <Text class="text-[13px] text-muted-foreground">
+                  {`${selected()!.name} · ${unit(selected()!)}`}
+                </Text>
               ) : null}
             </View>
-          )}
-        </Each>
+            <Field
+              label={mode() === "Inventory" ? "Counted quantity" : "Booking quantity"}
+              numeric
+              value={amount()}
+              onChange={(v) => amount.set(v)}
+            />
+            {mode() === "Purchase" ? (
+              <View class="gap-5 md:flex-row md:gap-3">
+                <View class="md:flex-1 min-w-0">
+                  <DateField
+                    label="Best-before date"
+                    value={date()}
+                    onChange={(v) => date.set(v)}
+                    optional
+                    emptyLabel="Product default"
+                  />
+                </View>
+                <View class="md:flex-1 min-w-0">
+                  <Choice
+                    label="Purchase location"
+                    value={location()}
+                    items={(state.data()?.locations ?? []).map((r) => ({
+                      value: String(r.id),
+                      title: r.name,
+                    }))}
+                    onChange={(v) => location.set(v)}
+                  />
+                </View>
+              </View>
+            ) : null}
+            {mode() === "Consume" ? (
+              <Toggle
+                label="Spoiled / wasted"
+                checked={spoiled()}
+                onChange={(v) => spoiled.set(v)}
+              />
+            ) : null}
+            {mode() === "Inventory" ? (
+              <Note>
+                This replaces the total stock quantity. Enter zero to record an empty product.
+              </Note>
+            ) : null}
+            <Feedback error={op.error()} success={op.success()} />
+            <View class="md:items-start">
+              <Action
+                label={
+                  op.busy() && !lookup()
+                    ? "Booking…"
+                    : mode() === "Inventory"
+                      ? "Save count and continue"
+                      : `${mode()} and continue`
+                }
+                primary
+                disabled={op.busy() || !product()}
+                onPress={() => void book()}
+              />
+            </View>
+          </Surface>
+        </View>
+        <View class="flex-1 min-w-0 gap-2">
+          <Subheading
+            title="This session"
+            detail={history().length ? String(history().length) : undefined}
+          />
+          {!history().length ? (
+            <View class="py-3 border-t border-border">
+              <Note>Your bookings will appear here, with undo when the server provides it.</Note>
+            </View>
+          ) : null}
+          <View class={history().length ? "border-t border-border" : ""}>
+            <Each of={history()}>
+              {(entry) => (
+                <View class="flex-row items-center gap-3 min-h-[60px] md:min-h-[52px] py-2 border-b border-border">
+                  <View class="flex-1 min-w-0 gap-0.5">
+                    <Text
+                      style={{ numberOfLines: 1 }}
+                      class="text-[15px] font-medium text-foreground"
+                    >
+                      {entry().name}
+                    </Text>
+                    <Text class="text-[13px] text-muted-foreground tabular-nums">
+                      {`${entry().operation} · ${entry().amount} ${entry().unit}`}
+                    </Text>
+                  </View>
+                  {entry().transaction ? (
+                    <Action
+                      label="Undo"
+                      accessibilityLabel={`Undo ${entry().name}`}
+                      icon="undo"
+                      quiet
+                      disabled={op.busy()}
+                      onPress={() =>
+                        void op.run(async () => {
+                          await p.api.post(`/api/stock/transactions/${entry().transaction}/undo`);
+                          if (op.alive()) history.set(history().filter((r) => r.id !== entry().id));
+                        }, "Booking undone.")
+                      }
+                    />
+                  ) : null}
+                </View>
+              )}
+            </Each>
+          </View>
+        </View>
       </View>
     </View>
   );

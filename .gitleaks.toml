@@ -2,13 +2,15 @@
 useDefault = true
 
 [[allowlists]]
-description = "SHA-256 checksums in pinned source manifests"
+description = "SHA-256 checksums in pinned source manifests and API contract reports"
 targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
 paths = [
   '''^backend/src/grocy/_vendor/[^/]+/ORIGIN\.json$''',
   '''^contracts/baseline\.yaml$''',
+  '''^contracts/api-parity-status\.json$''',
+  '''^contracts/api-release-gates\.json$''',
 ]
 regexes = ['''^[a-f0-9]{64}$''']
 
