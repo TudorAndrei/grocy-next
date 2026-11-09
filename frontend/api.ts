@@ -46,10 +46,12 @@ export class Api {
       if ((e as Error)?.name === "TimeoutError")
         throw new Error(
           `${this.base} didn't respond within 20 seconds. Check the server and try again.`,
+          { cause: e },
         );
       // Browsers report a stopped server and a blocked origin (CORS) the same way.
       throw new Error(
         `Can't reach ${this.base}. Check that the server is running at this address and allows requests from this page.`,
+        { cause: e },
       );
     }
     const text = await response.text();
@@ -68,16 +70,12 @@ export class Api {
           : typeof detail === "string"
             ? detail
             : Array.isArray(detail)
-              ? detail
-                  .map((d: Row) => `${d.loc?.join(".")}: ${d.msg}`)
-                  .join("; ")
+              ? detail.map((d: Row) => `${d.loc?.join(".")}: ${d.msg}`).join("; ")
               : `Request failed (${response.status}).`,
       );
     }
     if (text && data === null)
-      throw new Error(
-        "The server returned an unexpected response. Check the server URL.",
-      );
+      throw new Error("The server returned an unexpected response. Check the server URL.");
     return data as T;
   }
   objects(entity: string) {
@@ -99,15 +97,9 @@ export function message(error: unknown): string {
 }
 export function positive(value: string, allowZero = false): number {
   const amount = Number(value);
-  if (
-    !value.trim() ||
-    !Number.isFinite(amount) ||
-    (allowZero ? amount < 0 : amount <= 0)
-  )
+  if (!value.trim() || !Number.isFinite(amount) || (allowZero ? amount < 0 : amount <= 0))
     throw new Error(
-      allowZero
-        ? "Enter a quantity of zero or more."
-        : "Enter a quantity greater than zero.",
+      allowZero ? "Enter a quantity of zero or more." : "Enter a quantity greater than zero.",
     );
   return amount;
 }

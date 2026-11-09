@@ -38,12 +38,7 @@ const same = (a: unknown, b: unknown) =>
 export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
   const state = remote(async (s) => {
     const [proposals, products] = await Promise.all([
-      p.api.request<Proposal[]>(
-        "/api/v2/nutrition/proposals",
-        "GET",
-        undefined,
-        s,
-      ),
+      p.api.request<Proposal[]>("/api/v2/nutrition/proposals", "GET", undefined, s),
       p.api.request<Row[]>("/api/objects/products", "GET", undefined, s),
     ]);
     const current: Map<number, Record | null> = new Map();
@@ -75,16 +70,11 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
     p.onReviewed?.();
   });
   const product = (id: number) =>
-    state.data()?.products.find((i) => Number(i.id) === id)?.name ??
-    `Product ${id}`;
+    state.data()?.products.find((i) => Number(i.id) === id)?.name ?? `Product ${id}`;
   return (
     <View class="gap-4 max-w-[720px]">
       <Feedback error={op.error()} success={op.success()} />
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       {!state.loading() && !state.error() && !state.data()?.proposals.length ? (
         <Empty
           plain
@@ -102,15 +92,13 @@ export function Nutrition(p: { api: Api; onReviewed?: () => void }) {
             busy={op.busy()}
             onApprove={() =>
               void op.run(
-                () =>
-                  p.api.post(`/api/v2/nutrition/proposals/${r().id}/approve`),
+                () => p.api.post(`/api/v2/nutrition/proposals/${r().id}/approve`),
                 "Nutrition approved.",
               )
             }
             onReject={() =>
               void op.run(
-                () =>
-                  p.api.post(`/api/v2/nutrition/proposals/${r().id}/reject`),
+                () => p.api.post(`/api/v2/nutrition/proposals/${r().id}/reject`),
                 "Proposal rejected.",
               )
             }
@@ -133,8 +121,7 @@ function ProposalCard(p: {
   const payload = () => p.proposal.payload;
   const proposed = () => payload().nutrients as Row;
   const was = () => (p.current?.nutrients ?? {}) as Row;
-  const rows = () =>
-    nutrients.filter(([key]) => proposed()[key] != null || was()[key] != null);
+  const rows = () => nutrients.filter(([key]) => proposed()[key] != null || was()[key] != null);
   const sameBasis = () =>
     !p.current ||
     (p.current.basis_unit === payload().basis.unit &&
@@ -143,9 +130,7 @@ function ProposalCard(p: {
   return (
     <Surface class="p-0">
       <View class="px-4 pt-4 pb-3 md:px-5 gap-1">
-        <Text class="text-[15px] font-semibold text-foreground">
-          {p.product}
-        </Text>
+        <Text class="text-[15px] font-semibold text-foreground">{p.product}</Text>
         <Text class="text-[13px] text-muted-foreground tabular-nums">
           {[
             sources[payload().source?.type ?? ""] ?? payload().source?.type,
@@ -155,19 +140,13 @@ function ProposalCard(p: {
             .filter(Boolean)
             .join(" · ")}
         </Text>
-        {note() ? (
-          <Text class="text-[13px] leading-5 text-ink-soft">{note()}</Text>
-        ) : null}
+        {note() ? <Text class="text-[13px] leading-5 text-ink-soft">{note()}</Text> : null}
       </View>
       <View class="mx-4 md:mx-5">
         <View class="flex-row items-center gap-3 py-2 border-b border-border">
           <Text class="flex-1 text-[13px] text-muted-foreground">Nutrient</Text>
-          <Text class="w-24 text-right text-[13px] text-muted-foreground">
-            Current
-          </Text>
-          <Text class="w-24 text-right text-[13px] text-muted-foreground">
-            Proposed
-          </Text>
+          <Text class="w-24 text-right text-[13px] text-muted-foreground">Current</Text>
+          <Text class="w-24 text-right text-[13px] text-muted-foreground">Proposed</Text>
         </View>
         <Each of={rows()}>
           {(n) => (
@@ -206,12 +185,7 @@ function ProposalCard(p: {
           </View>
         ) : null}
         <View class="flex-row justify-end gap-2">
-          <Action
-            label="Reject"
-            quiet
-            disabled={p.busy}
-            onPress={p.onReject}
-          />
+          <Action label="Reject" quiet disabled={p.busy} onPress={p.onReject} />
           <Action
             label="Approve"
             icon="check"
@@ -248,24 +222,14 @@ export function NutritionHistory(p: { api: Api; productId: number }) {
   const op = operations(state.refresh);
   const record = () => state.data()?.record ?? null;
   const values = () =>
-    nutrients.filter(
-      ([key]) => (record()?.nutrients as Row | undefined)?.[key] != null,
-    );
+    nutrients.filter(([key]) => (record()?.nutrients as Row | undefined)?.[key] != null);
   return (
     <View class="gap-3">
       <Subheading
         title="Nutrition"
-        detail={
-          record()
-            ? basis(record()!.basis_quantity, record()!.basis_unit)
-            : undefined
-        }
+        detail={record() ? basis(record()!.basis_quantity, record()!.basis_unit) : undefined}
       />
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       <Feedback error={op.error()} success={op.success()} />
       {record() ? (
         <View class="border-t border-border">
@@ -281,39 +245,25 @@ export function NutritionHistory(p: { api: Api; productId: number }) {
           </Each>
         </View>
       ) : !state.loading() && !state.error() ? (
-        <Note>
-          No nutrition recorded yet. Approved proposals from Review appear
-          here.
-        </Note>
+        <Note>No nutrition recorded yet. Approved proposals from Review appear here.</Note>
       ) : null}
       {state.data()?.revisions.length ? (
         <View class="gap-1 pt-2">
           <Text class="text-[13px] text-muted-foreground">Revisions</Text>
           <View class="border-t border-border">
-            <Each
-              of={(state.data()?.revisions ?? [])
-                .slice()
-                .sort((a, b) => b.revision - a.revision)}
-            >
+            <Each of={(state.data()?.revisions ?? []).toSorted((a, b) => b.revision - a.revision)}>
               {(r) => (
                 <View class="flex-row items-center gap-3 min-h-11 py-1.5 border-b border-border">
                   <View class="flex-1 min-w-0">
                     <Text class="text-sm tabular-nums text-foreground">
                       {`Revision ${r().revision}`}
                     </Text>
-                    <Text
-                      style={{ numberOfLines: 1 }}
-                      class="text-[13px] text-muted-foreground"
-                    >
-                      {[r().origin, r().change_summary]
-                        .filter(Boolean)
-                        .join(" · ")}
+                    <Text style={{ numberOfLines: 1 }} class="text-[13px] text-muted-foreground">
+                      {[r().origin, r().change_summary].filter(Boolean).join(" · ")}
                     </Text>
                   </View>
                   {r().revision === record()?.revision ? (
-                    <Text class="px-2.5 text-[13px] text-muted-foreground">
-                      Current
-                    </Text>
+                    <Text class="px-2.5 text-[13px] text-muted-foreground">Current</Text>
                   ) : (
                     <Action
                       label="Restore"

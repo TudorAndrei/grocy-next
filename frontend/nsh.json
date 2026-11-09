@@ -3,5 +3,8 @@
   "id": "dev.grocynext.client",
   "version": "0.1.0",
   "build": 1,
-  "theme": "theme.json"
+  "theme": "theme.json",
+  "statusBar": {
+    "foreground": "dark"
+  }
 }

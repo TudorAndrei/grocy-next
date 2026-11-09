@@ -31,16 +31,9 @@ export function remote<T>(load: (signal: AbortSignal) => Promise<T>) {
   void refresh();
   return { data, error, loading, refresh };
 }
-export function LoadState(p: {
-  loading: boolean;
-  error: string;
-  retry: () => void;
-}) {
+export function LoadState(p: { loading: boolean; error: string; retry: () => void }) {
   return (
-    <View
-      class="gap-3"
-      style={{ display: p.loading || p.error ? "flex" : "none" }}
-    >
+    <View class="gap-3" style={{ display: p.loading || p.error ? "flex" : "none" }}>
       {p.loading ? (
         <View class="gap-2">
           <View class="h-3 w-40 rounded bg-secondary" />
@@ -102,9 +95,7 @@ export function Feedback(p: { error: string; success: string }) {
       />
       <View class="flex-1 min-w-0">
         {p.error ? <Note error>{p.error}</Note> : null}
-        {p.success && !p.error ? (
-          <Text class="text-sm text-foreground">{p.success}</Text>
-        ) : null}
+        {p.success && !p.error ? <Text class="text-sm text-foreground">{p.success}</Text> : null}
       </View>
     </View>
   );

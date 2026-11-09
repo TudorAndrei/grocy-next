@@ -4,10 +4,18 @@ The primary web client uses [Native Shell 0.4.0](https://nsh.dev/docs/web/), TSX
 and the NSH DOM/Wasm renderer. It has no React, npm runtime dependencies, or Vite.
 The Python API remains an independent service.
 
+The household overview, barcode workflows, batch processing and in-store shopping
+take behavioral inspiration from [Grocy Android](https://github.com/patzly/grocy-android).
+This is an independent NSH implementation; no Android source code or assets are copied.
+
 Install the [NSH 0.4.0 distribution](https://nsh.dev/docs/installation/) and put `nsh`
 on your PATH. Keep the distribution's runtime directory beside its bin directory.
 
+Install the development-only lint and format tools from the repository root
+using Node.js 20.19+ or 22.12+ (mise pins Node 24):
+
 ```sh
+npm ci
 nsh --version
 nsh check frontend
 nsh test frontend
@@ -39,18 +47,30 @@ The NSH Linux release used by this Dockerfile requires an x86_64 build machine.
 ## Workflows
 
 The client follows the task-first [design review](../docs/claude-client-design-review.md)
-and [design specification](DESIGN.md). Desktop has a navigation rail; phones have four
-bottom destinations. Editors open in side sheets with fixed submit controls.
+and [design specification](DESIGN.md). Desktop has a 224px navigation rail; phones
+have four bottom destinations, with Overview, Batch and Settings in the header.
+Editors open in side sheets with fixed submit controls.
 
+- **Overview:** live stock and due-date counts, shopping-list and recipe counts,
+  links to household work, and Purchase, Consume, Open and Inventory shortcuts.
 - **Stock:** compact rows, relative due dates, urgency grouping, all-product search
-  (including out-of-stock products), one-tap use and transaction undo. Product sheets
-  contain opening, counts, moves, stock entries, shopping, editing and nutrition history.
+  (including out-of-stock products), status/location/group filters, name/due/quantity
+  sorting, one-tap use and transaction undo. Barcode entry opens a product or its
+  purchase, consume, open or inventory editor. Product sheets contain opening,
+  counts, moves, stock entries, shopping, editing and nutrition history.
 - **Add purchase:** use an existing product or create one inline with its unit and
   location. Date shortcuts and a calendar replace typed dates. Leave the date blank
   for the product default; Add another supports unpacking several purchases.
+- **Batch:** purchase, consume, open or count products one at a time using product
+  selection or barcode lookup. Each confirmed booking saves immediately. Session
+  history offers undo when the server returns a transaction; failed bookings retain
+  the draft. Purchase supports dates and locations; consumption supports waste.
 - **Shopping:** list-first checkboxes, checked items last, add-below-minimum, and one
-  Put away action. Batch operations report individual failures and retain failed rows.
-  Undo restores stock only; deleted shopping items are not recreated.
+  Put away action. Create, rename and delete lists; edit quantities and notes or
+  remove individual items, with confirmation for deletion. Search matches products
+  and notes. In-store mode enlarges checklist targets and reports collected items.
+  Batch operations report individual failures and retain failed rows. Undo restores
+  stock only; deleted shopping items are not recreated.
 - **Meals:** previous/next week navigation, recipe search, meal scheduling, ingredient
   review, cooking confirmation and shopping for missing ingredients.
 - **Chores:** one due-ordered list for tasks, recurring chores and batteries, with
@@ -61,13 +81,38 @@ bottom destinations. Editors open in side sheets with fixed submit controls.
   and confirmed deletion remain available here; freezer flags use a checkbox and
   recurring chore periods use named choices.
 
-This is the first NSH client, not full UI parity with every Grocy API operation.
+This client does not provide full Grocy Android or Grocy API screen parity.
+Barcode input supports manual entry and connected keyboard-style scanners; it does
+not access a camera. Shopping requires an active server connection: there is no
+offline cache or queued synchronization. Dark/dynamic themes and
+OpenFoodFacts/OpenBeautyFacts lookup are not implemented.
+
 Administrative access/key management, file/photo uploads, rich-text editing,
-custom fields/entities, barcode camera scanning, stock journals/reports, advanced
+custom fields/entities, stock journals/reports, advanced
 recurrence and printing are available through the API but have no dedicated screens
 here. HTML descriptions are shown as plain text; they are never inserted as HTML.
 
 ## Verification
+
+Run these from the repository root:
+
+```sh
+npm run lint          # Oxlint: correctness and suspicious-code checks
+npm run lint:fix      # apply safe fixes
+npm run format        # Oxfmt: format frontend sources and tool configuration
+npm run format:check  # read-only formatting check
+mise run web:check    # lint, formatting check, and NSH type checking
+mise run web:test     # NSH behavior tests
+mise run web:build    # all frontend checks, then the production web package
+```
+
+Oxlint is pinned to 1.92.0 and Oxfmt to 0.77.0 in the root package lockfile. They
+are development tools only. The linter understands NSH's `Each` global and does
+not apply React rules to NSH components. Both tools exclude `frontend/generated`,
+`.nsh`, and `dist`; generated API declarations retain their generator's format.
+The hk hooks run lint before formatting on matching frontend files. `mise run
+check` includes frontend checks, and `mise run fix` includes safe frontend fixes
+and formatting alongside the Python tools.
 
 `nsh test frontend` covers connection errors, credential lifetime, zero-stock search,
 quick-use retry/undo, inline product creation, batch purchase failure recovery,
@@ -104,3 +149,32 @@ routes parse bodies manually, and many responses are generic dictionaries. They
 cannot yet replace every `Row` or provide fully typed request methods. The pinned
 Grocy specification also has references that its runtime fills in; use the
 server's `/api/openapi/specification` for that resolved compatibility document.
+
+## Android development on a USB phone
+
+NSH 0.4.0's packaged Android app rejects plain HTTP by default. The development
+packager adds a network security policy that permits HTTP only for `127.0.0.1`,
+`localhost`, and `::1`. Other server addresses still require HTTPS. The standard
+NSH release package is unchanged.
+
+With Android SDK platform 35, build tools, a JDK, Python, and NSH on your PATH:
+
+```sh
+python scripts/package-android-dev.py
+adb -s PHONE_SERIAL install -r 'frontend/.nsh/android/Grocy Next.apk'
+adb -s PHONE_SERIAL reverse tcp:8000 tcp:8000
+```
+
+Start the Python API separately, then connect in the app using
+`http://127.0.0.1:8000` and the seeded development key. USB reverse forwarding
+makes the phone's loopback port reach the computer's API. Reapply it after
+reconnecting the phone; it requires the USB connection and a running API.
+For a remote installation, enter your HTTPS Grocy URL and its API key instead.
+
+The script uses a development signing key under `frontend/.nsh/android/`; retain
+that key to update the installed app without losing data. `--out` changes the
+output directory; `--keystore` can reuse an existing Android debug key (alias
+`androiddebugkey`, password `android`). It builds arm64, matching the connected
+OnePlus. This is a development build, not a store-signed release. The custom
+manifest targets the pinned NSH 0.4.0 activity and must be reviewed when updating
+NSH; the script refuses apps with resource assets that would need merging.

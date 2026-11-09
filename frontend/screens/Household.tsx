@@ -76,13 +76,23 @@ function Kind(p: { kind: string }) {
   return (
     <View class="flex-row items-center gap-1.5 shrink-0">
       <Icon name={kinds[p.kind].icon} size={15} />
-      <Text class="text-[13px] text-muted-foreground">
-        {kinds[p.kind].label}
-      </Text>
+      <Text class="text-[13px] text-muted-foreground">{kinds[p.kind].label}</Text>
     </View>
   );
 }
 
+const group = (r: Row) =>
+  Number(r.done)
+    ? "Completed"
+    : (dueDays(r.date) ?? 999) < 0
+      ? "Overdue"
+      : dueDays(r.date) === 0
+        ? "Today"
+        : (dueDays(r.date) ?? 999) <= 7
+          ? "This week"
+          : dueDays(r.date) == null
+            ? "No date"
+            : "Later";
 export function Household(p: { api: Api }) {
   const completed = signal(false),
     adding = signal(false),
@@ -114,54 +124,33 @@ export function Household(p: { api: Api }) {
         id: r.chore_id,
         kind: "chores",
         date: r.next_estimated_execution_time,
-        place:
-          users.find((u) => u.id === r.next_execution_assigned_to_user_id)
-            ?.display_name ?? "",
+        place: users.find((u) => u.id === r.next_execution_assigned_to_user_id)?.display_name ?? "",
       })),
       ...batteries.rows.map((r: Row) => ({
         ...r,
         kind: "batteries",
-        date:
-          Number(r.charge_interval_days) > 0
-            ? r.next_estimated_charge_time
-            : null,
+        date: Number(r.charge_interval_days) > 0 ? r.next_estimated_charge_time : null,
         place: r.used_in ?? "",
       })),
     ] as Row[];
   });
   const op = operations(state.refresh);
-  const group = (r: Row) =>
-    Number(r.done)
-      ? "Completed"
-      : (dueDays(r.date) ?? 999) < 0
-        ? "Overdue"
-        : dueDays(r.date) === 0
-          ? "Today"
-          : (dueDays(r.date) ?? 999) <= 7
-            ? "This week"
-            : dueDays(r.date) == null
-              ? "No date"
-              : "Later";
   const rows = (g: string) =>
     (state.data() ?? [])
       .filter((r) => group(r) === g)
-      .sort(
+      .toSorted(
         (a, b) =>
-          (dueDays(a.date) ?? 999) - (dueDays(b.date) ?? 999) ||
-          a.name.localeCompare(b.name),
+          (dueDays(a.date) ?? 999) - (dueDays(b.date) ?? 999) || a.name.localeCompare(b.name),
       );
   const visible = () =>
-    [...groups, ...(completed() ? ["Completed"] : [])].filter(
-      (g) => rows(g).length,
-    );
+    [...groups, ...(completed() ? ["Completed"] : [])].filter((g) => rows(g).length);
   const detail = () => {
     if (!state.data()) return "";
     const overdue = rows("Overdue").length,
       today = rows("Today").length;
-    const parts = [
-      overdue ? `${overdue} overdue` : "",
-      today ? `${today} due today` : "",
-    ].filter(Boolean);
+    const parts = [overdue ? `${overdue} overdue` : "", today ? `${today} due today` : ""].filter(
+      Boolean,
+    );
     return parts.length ? parts.join(" · ") : "Nothing due today";
   };
   const complete = (r: Row) => {
@@ -214,9 +203,7 @@ export function Household(p: { api: Api }) {
       {undo() ? (
         <View class="flex-row items-center gap-2 rounded-lg bg-secondary pl-3 pr-1 py-1 min-h-11">
           <Icon name="check" size={15} tint="foreground" />
-          <Text class="flex-1 min-w-0 text-sm text-foreground">
-            {op.success() || "Recorded."}
-          </Text>
+          <Text class="flex-1 min-w-0 text-sm text-foreground">{op.success() || "Recorded."}</Text>
           <Action
             label="Undo last completion"
             icon="undo"
@@ -235,15 +222,9 @@ export function Household(p: { api: Api }) {
         <View>
           <View class="hidden md:flex flex-row items-center gap-4 h-9 border-b border-border">
             <View class="w-9 -ml-[9px] -mr-[5px] shrink-0" />
-            <Text class="flex-1 min-w-0 text-[13px] font-medium text-muted-foreground">
-              Name
-            </Text>
-            <Text class="w-28 text-[13px] font-medium text-muted-foreground">
-              Type
-            </Text>
-            <Text class="w-40 text-[13px] font-medium text-muted-foreground">
-              Due
-            </Text>
+            <Text class="flex-1 min-w-0 text-[13px] font-medium text-muted-foreground">Name</Text>
+            <Text class="w-28 text-[13px] font-medium text-muted-foreground">Type</Text>
+            <Text class="w-40 text-[13px] font-medium text-muted-foreground">Due</Text>
             <Text class="w-44 text-[13px] font-medium text-muted-foreground">
               Assignee or place
             </Text>
@@ -261,9 +242,7 @@ export function Household(p: { api: Api }) {
                         <Complete
                           name={r().name}
                           done={!!Number(r().done)}
-                          filled={
-                            !!Number(r().done) || pending() === key(r())
-                          }
+                          filled={!!Number(r().done) || pending() === key(r())}
                           disabled={op.busy()}
                           onPress={() => complete(r())}
                         />
@@ -275,13 +254,9 @@ export function Household(p: { api: Api }) {
                           </Text>
                           <View class="md:hidden flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
                             <Kind kind={r().kind} />
-                            {r().date && !Number(r().done) ? (
-                              <Due value={r().date} />
-                            ) : null}
+                            {r().date && !Number(r().done) ? <Due value={r().date} /> : null}
                             {r().place ? (
-                              <Text class="text-[13px] text-muted-foreground">
-                                {r().place}
-                              </Text>
+                              <Text class="text-[13px] text-muted-foreground">{r().place}</Text>
                             ) : null}
                           </View>
                         </View>
@@ -290,15 +265,11 @@ export function Household(p: { api: Api }) {
                         </View>
                         <View class="hidden md:flex w-40">
                           {Number(r().done) ? (
-                            <Text class="text-[13px] text-muted-foreground">
-                              Completed
-                            </Text>
+                            <Text class="text-[13px] text-muted-foreground">Completed</Text>
                           ) : r().date ? (
                             <Due value={r().date} />
                           ) : (
-                            <Text class="text-[13px] text-muted-foreground">
-                              No date
-                            </Text>
+                            <Text class="text-[13px] text-muted-foreground">No date</Text>
                           )}
                         </View>
                         <View class="hidden md:flex w-44">
@@ -359,28 +330,12 @@ export function Household(p: { api: Api }) {
           </View>
         }
       >
-        <Field
-          label="Task name"
-          value={name()}
-          onChange={(v) => name.set(v)}
-          autoFocus
-        />
+        <Field label="Task name" value={name()} onChange={(v) => name.set(v)} autoFocus />
         <View class="gap-2">
-          <DateField
-            label="Due date"
-            optional
-            value={date()}
-            onChange={(v) => date.set(v)}
-          />
+          <DateField label="Due date" optional value={date()} onChange={(v) => date.set(v)} />
           <View class="flex-row flex-wrap gap-1.5">
-            <Action
-              label="Today"
-              onPress={() => date.set(dateISO())}
-            />
-            <Action
-              label="Tomorrow"
-              onPress={() => date.set(addDays(dateISO(), 1))}
-            />
+            <Action label="Today" onPress={() => date.set(dateISO())} />
+            <Action label="Tomorrow" onPress={() => date.set(addDays(dateISO(), 1))} />
             <Action label="No date" onPress={() => date.set("")} />
           </View>
         </View>

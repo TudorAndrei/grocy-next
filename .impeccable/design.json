@@ -8,7 +8,6 @@
         "role": "neutral",
         "displayName": "Paper Ground",
         "canonical": "#fafaf9",
-        "dark": "#0e0f10",
         "oklch": "oklch(98.5% 0.001 106)",
         "tonalRamp": [
           "#0b0b0b",
@@ -25,7 +24,6 @@
         "role": "neutral",
         "displayName": "Ink",
         "canonical": "#0c0d0e",
-        "dark": "#ecedec",
         "oklch": "oklch(15.8% 0.003 248)",
         "tonalRamp": [
           "#0a0b0c",
@@ -42,7 +40,6 @@
         "role": "neutral",
         "displayName": "White Surface",
         "canonical": "#ffffff",
-        "dark": "#161719",
         "oklch": "oklch(100.0% 0.000 90)",
         "tonalRamp": [
           "#0b0b0b",
@@ -59,7 +56,6 @@
         "role": "neutral",
         "displayName": "White Surface (popover)",
         "canonical": "#ffffff",
-        "dark": "#1b1c1f",
         "oklch": "oklch(100.0% 0.000 90)",
         "tonalRamp": [
           "#0b0b0b",
@@ -76,7 +72,6 @@
         "role": "neutral",
         "displayName": "Rail Grey",
         "canonical": "#f6f6f4",
-        "dark": "#121315",
         "oklch": "oklch(97.3% 0.003 106)",
         "tonalRamp": [
           "#0b0b0a",
@@ -93,7 +88,6 @@
         "role": "neutral",
         "displayName": "Track Grey",
         "canonical": "#f1f1ef",
-        "dark": "#202225",
         "oklch": "oklch(95.8% 0.003 106)",
         "tonalRamp": [
           "#0b0b0a",
@@ -110,7 +104,6 @@
         "role": "neutral",
         "displayName": "Track Grey (hover)",
         "canonical": "#f1f1ef",
-        "dark": "#222428",
         "oklch": "oklch(95.8% 0.003 106)",
         "tonalRamp": [
           "#0b0b0a",
@@ -127,7 +120,6 @@
         "role": "neutral",
         "displayName": "Track Grey (selected)",
         "canonical": "#f1f1ef",
-        "dark": "#222428",
         "oklch": "oklch(95.8% 0.003 106)",
         "tonalRamp": [
           "#0b0b0a",
@@ -144,7 +136,6 @@
         "role": "neutral",
         "displayName": "Hairline",
         "canonical": "#e6e6e3",
-        "dark": "#26282b",
         "oklch": "oklch(92.4% 0.004 106)",
         "tonalRamp": [
           "#0b0b09",
@@ -161,7 +152,6 @@
         "role": "neutral",
         "displayName": "Control Line",
         "canonical": "#d6d6d2",
-        "dark": "#35373b",
         "oklch": "oklch(87.5% 0.005 107)",
         "tonalRamp": [
           "#0b0b09",
@@ -178,7 +168,6 @@
         "role": "neutral",
         "displayName": "Soft Ink",
         "canonical": "#3b3e42",
-        "dark": "#c9cbcc",
         "oklch": "oklch(36.2% 0.008 256)",
         "tonalRamp": [
           "#090b0f",
@@ -195,7 +184,6 @@
         "role": "neutral",
         "displayName": "Muted",
         "canonical": "#62666a",
-        "dark": "#9b9ea2",
         "oklch": "oklch(50.8% 0.008 248)",
         "tonalRamp": [
           "#090b0e",
@@ -212,7 +200,6 @@
         "role": "neutral",
         "displayName": "Faint",
         "canonical": "#a3a6a9",
-        "dark": "#5d6064",
         "oklch": "oklch(72.4% 0.006 248)",
         "tonalRamp": [
           "#090b0d",
@@ -229,7 +216,6 @@
         "role": "primary",
         "displayName": "Saffron",
         "canonical": "#e8a100",
-        "dark": "#f0b43a",
         "oklch": "oklch(75.9% 0.159 77)",
         "tonalRamp": [
           "#130900",
@@ -246,7 +232,6 @@
         "role": "primary",
         "displayName": "Saffron Ink",
         "canonical": "#1a1300",
-        "dark": "#1a1300",
         "oklch": "oklch(19.0% 0.039 92)",
         "tonalRamp": [
           "#100b00",
@@ -263,7 +248,6 @@
         "role": "primary",
         "displayName": "Saffron (focus ring)",
         "canonical": "#e8a100",
-        "dark": "#f0b43a",
         "oklch": "oklch(75.9% 0.159 77)",
         "tonalRamp": [
           "#130900",
@@ -280,7 +264,6 @@
         "role": "primary",
         "displayName": "Saffron Wash",
         "canonical": "#fdf3d6",
-        "dark": "#33280c",
         "oklch": "oklch(96.4% 0.039 91)",
         "tonalRamp": [
           "#100a00",
@@ -297,7 +280,6 @@
         "role": "state",
         "displayName": "Due Amber",
         "canonical": "#9a5800",
-        "dark": "#f0b43a",
         "oklch": "oklch(52.5% 0.120 63)",
         "tonalRamp": [
           "#150700",
@@ -314,7 +296,6 @@
         "role": "state",
         "displayName": "Due Mark",
         "canonical": "#e8a100",
-        "dark": "#f0b43a",
         "oklch": "oklch(75.9% 0.159 77)",
         "tonalRamp": [
           "#130900",
@@ -331,7 +312,6 @@
         "role": "state",
         "displayName": "Overdue Red",
         "canonical": "#c8321f",
-        "dark": "#ff6a58",
         "oklch": "oklch(54.9% 0.189 31)",
         "tonalRamp": [
           "#1e0100",
@@ -348,7 +328,6 @@
         "role": "state",
         "displayName": "Red Wash",
         "canonical": "#fcebe8",
-        "dark": "#331713",
         "oklch": "oklch(95.3% 0.019 30)",
         "tonalRamp": [
           "#120807",
@@ -594,7 +573,7 @@
       }
     ],
     "dos": [
-      "Do take every colour from the theme tokens (`bg-card`, `text-due`, `token(\"x\")`) so light and dark stay paired.",
+      "Do take every colour from the theme tokens (`bg-card`, `text-due`, `token(\"x\")`) so every colour stays tied to the palette.",
       "Do keep saffron to selection, the one primary action per view and the focus ring.",
       "Do colour a date by its meaning: `destructive` when overdue, `due` within five days, muted or Soft Ink after.",
       "Do use tabular numerals for every amount, date and count, and keep the unit beside the quantity.",

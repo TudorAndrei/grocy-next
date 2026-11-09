@@ -9,6 +9,8 @@ import { Shopping } from "./screens/Shopping";
 import { Meals } from "./screens/Cooking";
 import { Household } from "./screens/Household";
 import { Catalog } from "./screens/Catalog";
+import { Batch } from "./screens/Batch";
+import { Overview } from "./screens/Overview";
 function App() {
   const client = signal<Api | null>(null),
     server = signal("http://127.0.0.1:8000"),
@@ -40,7 +42,7 @@ function App() {
     }
   }
   return (
-    <View class="flex-1 bg-background font-sans">
+    <View class="flex-1 bg-background font-sans pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {client() ? (
         <Workspace
           api={client()!}
@@ -61,7 +63,8 @@ function App() {
             <View class="gap-2">
               <Heading title="Connect your household" />
               <Note>
-                Your key stays in memory until you disconnect or reload.
+                Your pantry, shopping lists, and household routines, together. Connect to your Grocy
+                server to get started.
               </Note>
             </View>
             <View class="gap-4">
@@ -78,6 +81,7 @@ function App() {
                 onChange={(v) => key.set(v)}
                 onSubmit={() => void connect()}
               />
+              <Note>Your key stays in memory until you disconnect or reload.</Note>
               {error() ? <Note error>{error()}</Note> : null}
               <Action
                 label={connecting() ? "Connecting…" : "Connect"}
@@ -88,8 +92,8 @@ function App() {
             </View>
             <View class="gap-3 pt-6 border-t border-border">
               <Note>
-                On another device, use your server’s network address or the web
-                origin that proxies the API. Localhost always means this device.
+                On another device, use your server’s network address or the web origin that proxies
+                the API. Localhost always means this device.
               </Note>
               <View class="self-start">
                 <Action
@@ -108,8 +112,15 @@ function App() {
     </View>
   );
 }
+/** Due today or earlier. */
+const due = (d: unknown) => {
+  const n = dueDays(d ? String(d) : null);
+  return n != null && n <= 0;
+};
+const rows = (r: Row) => (r.rows ?? []) as Row[];
 function Workspace(p: { api: Api; onDisconnect: () => void }) {
-  const page = signal("Stock");
+  const page = signal("Stock"),
+    batchMode = signal("Purchase");
   const pages: { name: string; icon: IconName }[] = [
     { name: "Stock", icon: "package" },
     { name: "Shopping", icon: "cart" },
@@ -129,27 +140,15 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
       p.api.request<Row>("/api/v2/batteries/overview", "GET", undefined, s),
     ]);
     const list = lists[0]
-      ? await p.api.request<Row>(
-          `/api/v2/shopping-lists/${lists[0].id}`,
-          "GET",
-          undefined,
-          s,
-        )
+      ? await p.api.request<Row>(`/api/v2/shopping-lists/${lists[0].id}`, "GET", undefined, s)
       : { items: [] };
-    const due = (d: unknown) => {
-      const n = dueDays(d ? String(d) : null);
-      return n != null && n <= 0;
-    };
-    const rows = (r: Row) => (r.rows ?? []) as Row[];
     return {
       Shopping: (list.items as Row[]).filter((r) => !r.done).length,
       Chores:
         rows(tasks).filter((r) => !Number(r.done) && due(r.due_date)).length +
         rows(chores).filter((r) => due(r.next_estimated_execution_time)).length +
         rows(batteries).filter(
-          (r) =>
-            Number(r.charge_interval_days) > 0 &&
-            due(r.next_estimated_charge_time),
+          (r) => Number(r.charge_interval_days) > 0 && due(r.next_estimated_charge_time),
         ).length,
     } as Record<string, number>;
   });
@@ -166,11 +165,15 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
       <View class="hidden md:flex md:flex-col w-[232px] shrink-0 bg-rail border-r border-border px-3 pt-5 pb-4 gap-6">
         <View class="flex-row items-center gap-2.5 px-2.5">
           <Mark />
-          <Text class="text-[15px] font-semibold tracking-tight text-foreground">
-            Grocy Next
-          </Text>
+          <Text class="text-[15px] font-semibold tracking-tight text-foreground">Grocy Next</Text>
         </View>
         <View class="gap-0.5">
+          <Nav
+            label="Overview"
+            icon="house"
+            selected={page() === "Overview"}
+            onPress={() => page.set("Overview")}
+          />
           <Each of={pages}>
             {(item) => (
               <Nav
@@ -183,8 +186,22 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
             )}
           </Each>
         </View>
+        <View class="gap-1 pt-4 border-t border-border">
+          <Nav
+            label="Batch"
+            icon="scan"
+            selected={page() === "Batch"}
+            onPress={() => page.set("Batch")}
+          />
+          <Text class="px-2.5 text-xs text-muted-foreground">
+            Purchase, consume, open, or count several products.
+          </Text>
+        </View>
         <View class="flex-1" />
         <View class="gap-0.5">
+          <Text style={{ numberOfLines: 1 }} class="px-2.5 pb-2 text-xs text-muted-foreground">
+            {p.api.base}
+          </Text>
           <Nav
             label="Review"
             icon="inbox"
@@ -202,14 +219,23 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
         </View>
       </View>
       <View class="flex-1 min-w-0 min-h-0">
-        <View class="md:hidden flex-row items-center justify-between gap-2 pl-4 pr-2 pt-[env(safe-area-inset-top)] min-h-14 border-b border-border bg-background">
-          <View class="flex-row items-center gap-2.5">
+        <View class="md:hidden flex-row items-center justify-between gap-2 pl-2 pr-2 min-h-14 border-b border-border bg-background">
+          <Button
+            accessibilityLabel="Overview"
+            selected={page() === "Overview"}
+            onPress={() => page.set("Overview")}
+            class={`min-h-11 px-2 flex-row items-center gap-2.5 rounded-lg ${page() === "Overview" ? "bg-selected" : ""} focus:outline-2 focus:outline-ring`}
+          >
             <Mark />
-            <Text class="text-[15px] font-semibold tracking-tight text-foreground">
-              Grocy Next
-            </Text>
-          </View>
+            <Text class="text-[15px] font-semibold tracking-tight text-foreground">Grocy Next</Text>
+          </Button>
           <View class="flex-row items-center">
+            <IconButton
+              label="Batch"
+              icon="scan"
+              selected={page() === "Batch"}
+              onPress={() => page.set("Batch")}
+            />
             <IconButton
               label={pending() ? `Review, ${pending()} pending` : "Review"}
               icon="inbox"
@@ -226,9 +252,20 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
           </View>
         </View>
         <Each of={[page()]}>
-          {(current) => (
+          {() => (
             <Scroll class="flex-1">
               <View class="w-full max-w-[1120px] self-center px-4 pt-5 pb-8 md:px-10 md:pt-8 md:pb-12 gap-6">
+                {page() === "Overview" ? (
+                  <Overview
+                    api={p.api}
+                    navigate={(name) => page.set(name)}
+                    batch={(name) => {
+                      batchMode.set(name);
+                      page.set("Batch");
+                    }}
+                  />
+                ) : null}
+                {page() === "Batch" ? <Batch api={p.api} initialMode={batchMode()} /> : null}
                 {page() === "Stock" ? <Stock api={p.api} /> : null}
                 {page() === "Shopping" ? <Shopping api={p.api} /> : null}
                 {page() === "Meals" ? <Meals api={p.api} /> : null}
@@ -242,15 +279,9 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
                           detail={pending() ? `${pending()} pending` : undefined}
                         />
                       </View>
-                      <Note>
-                        Changes proposed by assistants wait here until you
-                        approve them.
-                      </Note>
+                      <Note>Changes proposed by assistants wait here until you approve them.</Note>
                     </View>
-                    <Nutrition
-                      api={p.api}
-                      onReviewed={() => void proposals.refresh()}
-                    />
+                    <Nutrition api={p.api} onReviewed={() => void proposals.refresh()} />
                   </View>
                 ) : null}
                 {page() === "Settings" ? (
@@ -258,11 +289,7 @@ function Workspace(p: { api: Api; onDisconnect: () => void }) {
                     <View class="gap-1">
                       <View class="flex-row justify-between items-center gap-3 min-h-11">
                         <Heading title="Settings" />
-                        <Action
-                          label="Disconnect"
-                          icon="log-out"
-                          onPress={p.onDisconnect}
-                        />
+                        <Action label="Disconnect" icon="log-out" onPress={p.onDisconnect} />
                       </View>
                       <Note>Connected to {p.api.base}</Note>
                     </View>
@@ -315,20 +342,14 @@ function Nav(p: {
       onPress={p.onPress}
       class={`min-h-9 px-2.5 flex-row items-center gap-2.5 rounded-lg ${p.selected ? "bg-card border border-border shadow-xs" : "border border-transparent hover:bg-accent"} focus:outline-2 focus:outline-offset-2 focus:outline-ring`}
     >
-      <Icon
-        name={p.icon}
-        size={16}
-        tint={p.selected ? "foreground" : "muted-foreground"}
-      />
+      <Icon name={p.icon} size={16} tint={p.selected ? "foreground" : "muted-foreground"} />
       <Text
         class={`flex-1 text-sm ${p.selected ? "font-medium text-foreground" : "text-ink-soft"}`}
       >
         {p.label}
       </Text>
       {p.count ? <Count value={p.count} strong={p.strong} /> : null}
-      {p.selected && !p.count ? (
-        <View class="w-1.5 h-1.5 rounded-full bg-primary" />
-      ) : null}
+      {p.selected && !p.count ? <View class="w-1.5 h-1.5 rounded-full bg-primary" /> : null}
     </Button>
   );
 }
@@ -371,11 +392,7 @@ function Tab(p: {
       <View
         class={`absolute top-0 h-0.5 w-8 rounded-full ${p.selected ? "bg-primary" : "bg-transparent"}`}
       />
-      <Icon
-        name={p.icon}
-        size={20}
-        tint={p.selected ? "foreground" : "muted-foreground"}
-      />
+      <Icon name={p.icon} size={20} tint={p.selected ? "foreground" : "muted-foreground"} />
       <Text
         class={`text-[11px] ${p.selected ? "font-medium text-foreground" : "text-muted-foreground"}`}
       >

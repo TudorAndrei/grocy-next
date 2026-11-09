@@ -31,34 +31,6 @@
       "saffron-soft": "#fdf3d6",
       "selected": "#f1f1ef",
       "rail": "#f6f6f4"
-    },
-    "dark": {
-      "background": "#0e0f10",
-      "foreground": "#ecedec",
-      "card": "#161719",
-      "card-foreground": "#ecedec",
-      "popover": "#1b1c1f",
-      "popover-foreground": "#ecedec",
-      "primary": "#f0b43a",
-      "primary-foreground": "#1a1300",
-      "secondary": "#202225",
-      "secondary-foreground": "#ecedec",
-      "muted": "#1c1d20",
-      "muted-foreground": "#9b9ea2",
-      "accent": "#222428",
-      "accent-foreground": "#ecedec",
-      "destructive": "#ff6a58",
-      "border": "#26282b",
-      "input": "#35373b",
-      "ring": "#f0b43a",
-      "ink-soft": "#c9cbcc",
-      "faint": "#5d6064",
-      "due": "#f0b43a",
-      "due-mark": "#f0b43a",
-      "danger-soft": "#331713",
-      "saffron-soft": "#33280c",
-      "selected": "#222428",
-      "rail": "#121315"
     }
   }
 }

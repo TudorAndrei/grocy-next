@@ -195,7 +195,7 @@ Density is that of a working list, not a dashboard. Lists sit directly on the pa
 
 ## Colors
 
-A near-monochrome warm-neutral scale with one saffron accent and two meaning-only state colours; every colour has a dark-theme counterpart in `frontend/theme.json`.
+A near-monochrome warm-neutral scale with one saffron accent and two meaning-only state colours, defined in `frontend/theme.json`. The app ships this light palette only: there is no dark or dynamic theme, so the system status bar keeps dark icons (`statusBar.foreground` in `nsh.json`).
 
 ### Primary
 
@@ -257,13 +257,17 @@ A near-monochrome warm-neutral scale with one saffron accent and two meaning-onl
 
 ## Layout
 
-- **Desktop shell:** a 232px rail (`rail` ground, 1px right hairline, 12px side padding, 20px top) holds the mark and wordmark, the four primary destinations (Stock, Shopping, Meals, Chores), a flexible gap, then Review and Settings at the foot. The work area centres a 1120px column inside 40px gutters with 32px top and 48px bottom padding.
-- **Phone shell:** a 56px top bar on the ground with the mark, wordmark, Review (with pending count) and Settings as 44px icon buttons; four equal bottom tabs (56px, 20px icon over an 11px label) with a 2px by 32px saffron indicator on the active tab. Shopping and Chores carry a 16px ink badge with paper text on the icon's corner, placed after the label in reading order ("Shopping 2"). Content uses 16px gutters, 20px top and 32px bottom padding. Both bars respect safe-area insets.
+- **Desktop shell:** a 232px rail (`rail` ground, 1px right hairline, 12px side padding, 20px top) holds the mark and wordmark, the four primary destinations (Stock, Shopping, Meals, Chores), a flexible gap, then Review and Settings at the foot. The work area centres a 1120px column inside 40px gutters with 32px top and 48px bottom padding. Overview (house icon) sits above Stock; Batch (scan icon) sits below the four destinations behind a hairline, with one muted line explaining it; the connected server address is a muted line above Review and Settings.
+- **Phone shell:** a 56px top bar on the ground with the mark, wordmark, Review (with pending count) and Settings as 44px icon buttons; four equal bottom tabs (56px, 20px icon over an 11px label) with a 2px by 32px saffron indicator on the active tab. Shopping and Chores carry a 16px ink badge with paper text on the icon's corner, placed after the label in reading order ("Shopping 2"). Content uses 16px gutters, 20px top and 32px bottom padding. Both bars respect safe-area insets. The mark and wordmark form the Overview button; Batch joins Review and Settings as a 44px icon button. The root view respects the top and side safe-area insets.
 - **Screen order:** heading row (title + count on the left, search and the primary action on the right; on phones search drops to its own full-width row), then the screen's grouped object (the ruler on Stock), then a segmented filter with counts, then the list.
 - **Rows:** 52px minimum on desktop, 60-64px on phones, with a hairline bottom. Desktop Stock is a column table: name (flex 2), location (flex 1), amount (132px, right-aligned), best-before date (112px), relative days (112px), action (68px), under a 34px header row of 13px muted labels with a `input` underline. Phones fold location and due text into a second meta line.
 - **Sheets:** product details and editors open in a right-hand sheet, 440px on desktop and full-width on phones, with a hairline-separated header, 20px padded scrolling body and a pinned footer for the submit action.
 - **Rhythm:** 4px base; 2px inside tracks, 6-8px within a control, 12px between related lines, 20-24px between sections, 32px between list groups. Narrow reading columns cap at 720px (Review) and 400px (Connect).
+- **Overview and Batch:** shortcuts around the four primary tasks, with workflows drawn from [Grocy Android](https://github.com/patzly/grocy-android). Overview is hairline sections with factual counts and direct booking shortcuts; Purchase is its only saffron action, and it has no decorative charts. Batch is one booking form with explicit Purchase, Consume, Open and Inventory modes as a segmented control, followed by a session list that exposes transaction undo.
+- **In-store mode:** rows are at least 96px tall and the whole row is the check target, with a 28px box, larger labels and a single textual collected count ("1 of 3 collected"). List management stays outside in-store mode.
 - **Breakpoint:** one switch at `md`; below it the rail is hidden, targets grow to 44px and the ruler shows 14 days instead of 30.
+
+Barcode entry accepts typed input or a keyboard-style scanner, and always shows the product for review before a stock booking. Shopping checks sync online and revert on failure; nothing implies offline support.
 
 ## Elevation & Depth
 
@@ -351,7 +355,7 @@ The signature element, on a white surface at the top of Stock.
 
 ### Do
 
-- **Do** take every colour from the theme tokens (`bg-card`, `text-due`, `token("x")`) so light and dark stay paired.
+- **Do** take every colour from the theme tokens (`bg-card`, `text-due`, `token("x")`) so every colour stays tied to the palette.
 - **Do** keep saffron to selection, the one primary action per view and the focus ring.
 - **Do** colour a date by its meaning: `destructive` when overdue, `due` within five days, muted or Soft Ink after.
 - **Do** use tabular numerals for every amount, date and count, and keep the unit beside the quantity.

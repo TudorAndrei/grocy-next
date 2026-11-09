@@ -47,12 +47,7 @@ function count(n: number, one: string, many = one + "s") {
 }
 
 /** A quiet square icon button; the label is for assistive tech. */
-function IconButton(p: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
+function IconButton(p: { icon: IconName; label: string; onPress: () => void; disabled?: boolean }) {
   return (
     <Button
       accessibilityLabel={p.label}
@@ -65,6 +60,13 @@ function IconButton(p: {
   );
 }
 
+const title = (entry: Row) =>
+  entry.title || entry.product_details?.product?.name || plain(entry.note_html) || "Meal";
+const products = (r: Row) =>
+  String(r.product_names ?? "")
+    .split(",")
+    .filter(Boolean)
+    .join(", ");
 export function Meals(p: { api: Api }) {
   const start = signal(monday(dateISO())),
     tab = signal("Week"),
@@ -80,12 +82,7 @@ export function Meals(p: { api: Api }) {
     meal = signal<Row | null>(null);
   const state = remote(async (s) => {
     const [calendar, recipes] = await Promise.all([
-      p.api.request<Row>(
-        `/api/v2/meal-plan/calendar?start=${start()}`,
-        "GET",
-        undefined,
-        s,
-      ),
+      p.api.request<Row>(`/api/v2/meal-plan/calendar?start=${start()}`, "GET", undefined, s),
       p.api.request<Row[]>("/api/v2/recipes/overview", "GET", undefined, s),
     ]);
     return { calendar, recipes };
@@ -108,11 +105,7 @@ export function Meals(p: { api: Api }) {
         detail.set(value);
         meal.set(entry);
         cookServings.set(
-          String(
-            entry?.entry?.recipe_servings ??
-              value.cards?.[0]?.desired_servings ??
-              1,
-          ),
+          String(entry?.entry?.recipe_servings ?? value.cards?.[0]?.desired_servings ?? 1),
         );
         confirm.set(false);
         detailOpen.set(true);
@@ -122,11 +115,8 @@ export function Meals(p: { api: Api }) {
   const recipes = () =>
     state
       .data()
-      ?.recipes.filter((r) =>
-        r.name.toLowerCase().includes(query().toLowerCase()),
-      )
-      .slice()
-      .sort(
+      ?.recipes.filter((r) => r.name.toLowerCase().includes(query().toLowerCase()))
+      .toSorted(
         (a, b) =>
           Number(a.missing_products_count) - Number(b.missing_products_count) ||
           a.name.localeCompare(b.name),
@@ -134,13 +124,9 @@ export function Meals(p: { api: Api }) {
   const events = (value: string): Row[] =>
     state.data()?.calendar.events.filter((r: Row) => r.start === value) ?? [];
   const unitName = (id: unknown, amount: number) => {
-    const u = (state.data()?.calendar.units ?? []).find(
-      (r: Row) => String(r.id) === String(id),
-    );
+    const u = (state.data()?.calendar.units ?? []).find((r: Row) => String(r.id) === String(id));
     if (!u) return "";
-    return String(
-      (amount === 1 ? u.name : u.name_plural || u.name) ?? "",
-    ).toLowerCase();
+    return String((amount === 1 ? u.name : u.name_plural || u.name) ?? "").toLowerCase();
   };
   const sectionName = (entry: Row) =>
     String(
@@ -150,27 +136,15 @@ export function Meals(p: { api: Api }) {
     );
   const week = () => Array.from({ length: 7 }, (_, i) => addDays(start(), i));
   // Only show a section column when this week actually uses named sections.
-  const hasSections = () =>
-    week().some((d) => events(d).some((e) => sectionName(e) !== ""));
-  const title = (entry: Row) =>
-    entry.title ||
-    entry.product_details?.product?.name ||
-    plain(entry.note_html) ||
-    "Meal";
+  const hasSections = () => week().some((d) => events(d).some((e) => sectionName(e) !== ""));
   const amount = (entry: Row) => {
-    if (entry.entry?.recipe_id)
-      return count(Number(entry.entry.recipe_servings) || 1, "serving");
+    if (entry.entry?.recipe_id) return count(Number(entry.entry.recipe_servings) || 1, "serving");
     if (entry.product_details) {
       const n = Number(entry.entry?.product_amount) || 0;
       return `${Number(n.toFixed(3))} ${unitName(entry.entry?.product_qu_id, n)}`.trim();
     }
     return "Note";
   };
-  const products = (r: Row) =>
-    String(r.product_names ?? "")
-      .split(",")
-      .filter(Boolean)
-      .join(", ");
   const thisWeek = () => start() === monday(dateISO());
   const recipeTotal = () => state.data()?.recipes.length ?? 0;
 
@@ -182,9 +156,7 @@ export function Meals(p: { api: Api }) {
       <View class="flex-1 min-w-0 md:flex-row md:items-center gap-0.5 md:gap-4">
         {hasSections() ? (
           <View class="hidden md:flex md:w-24 shrink-0">
-            <Text class="text-[13px] text-muted-foreground">
-              {sectionName(e.entry)}
-            </Text>
+            <Text class="text-[13px] text-muted-foreground">{sectionName(e.entry)}</Text>
           </View>
         ) : null}
         <View class="flex-row items-center gap-2 md:flex-1 min-w-0">
@@ -224,8 +196,7 @@ export function Meals(p: { api: Api }) {
           disabled={op.busy()}
           onPress={() =>
             void op.run(
-              () =>
-                p.api.request(`/api/objects/meal_plan/${e.entry.id}`, "DELETE"),
+              () => p.api.request(`/api/objects/meal_plan/${e.entry.id}`, "DELETE"),
               "Meal removed.",
             )
           }
@@ -236,7 +207,7 @@ export function Meals(p: { api: Api }) {
 
   function Day(d: { value: string }) {
     const today = () => d.value === dateISO();
-    const add_ = () => (
+    const addAction = () => (
       <Action
         label="Add"
         icon="plus"
@@ -250,9 +221,7 @@ export function Meals(p: { api: Api }) {
       <View class="border-b border-border py-1.5 md:py-1 md:flex-row md:items-start md:gap-4">
         <View class="flex-row items-center justify-between min-h-11 md:w-44 md:shrink-0">
           <View class="flex-row items-center gap-2 min-w-0">
-            <View
-              class={`w-1.5 h-1.5 rounded-full ${today() ? "bg-primary" : "bg-transparent"}`}
-            />
+            <View class={`w-1.5 h-1.5 rounded-full ${today() ? "bg-primary" : "bg-transparent"}`} />
             <Text
               class={`text-[15px] ${today() ? "font-semibold text-foreground" : d.value < dateISO() ? "text-muted-foreground" : "font-medium text-ink-soft"}`}
             >
@@ -264,7 +233,7 @@ export function Meals(p: { api: Api }) {
               {dayMonth(d.value)}
             </Text>
           </View>
-          <View class="md:hidden">{add_()}</View>
+          <View class="md:hidden">{addAction()}</View>
         </View>
         <View class="flex-1 min-w-0 pl-3.5 md:pl-0">
           {events(d.value).length === 0 ? (
@@ -277,7 +246,7 @@ export function Meals(p: { api: Api }) {
             </Each>
           )}
         </View>
-        <View class="hidden md:flex h-11 justify-center">{add_()}</View>
+        <View class="hidden md:flex h-11 justify-center">{addAction()}</View>
       </View>
     );
   }
@@ -287,12 +256,8 @@ export function Meals(p: { api: Api }) {
       <View>
         <View class="hidden md:flex flex-row items-center gap-4 py-2 px-2 -mx-2 border-b border-border">
           <Text class="flex-1 text-[13px] text-muted-foreground">Name</Text>
-          <Text class="w-24 text-right text-[13px] text-muted-foreground">
-            Servings
-          </Text>
-          <Text class="w-32 text-right text-[13px] text-muted-foreground">
-            Stock
-          </Text>
+          <Text class="w-24 text-right text-[13px] text-muted-foreground">Servings</Text>
+          <Text class="w-32 text-right text-[13px] text-muted-foreground">Stock</Text>
         </View>
         {recipes().length === 0 && !state.loading() ? (
           recipeTotal() === 0 ? (
@@ -301,10 +266,7 @@ export function Meals(p: { api: Api }) {
               detail="Recipes you add in Settings appear here, sorted by what you can cook now."
             />
           ) : (
-            <Empty
-              title={`No recipes match “${query()}”`}
-              detail="Try a shorter name."
-            >
+            <Empty title={`No recipes match “${query()}”`} detail="Try a shorter name.">
               <Action label="Clear search" quiet onPress={() => query.set("")} />
             </Empty>
           )
@@ -316,20 +278,14 @@ export function Meals(p: { api: Api }) {
               class={`flex-row items-center gap-4 min-h-16 md:min-h-[52px] py-2 md:px-2 md:-mx-2 rounded-md border-b border-border hover:bg-accent ${focusRing}`}
             >
               <View class="flex-1 min-w-0 gap-0.5">
-                <Text
-                  style={{ numberOfLines: 1 }}
-                  class="text-[15px] font-medium text-foreground"
-                >
+                <Text style={{ numberOfLines: 1 }} class="text-[15px] font-medium text-foreground">
                   {r().name}
                 </Text>
                 <Text
                   style={{ numberOfLines: 1 }}
                   class="md:hidden text-[13px] text-muted-foreground"
                 >
-                  {[
-                    count(Number(r().desired_servings) || 1, "serving"),
-                    products(r()),
-                  ]
+                  {[count(Number(r().desired_servings) || 1, "serving"), products(r())]
                     .filter(Boolean)
                     .join(" · ")}
                 </Text>
@@ -351,9 +307,7 @@ export function Meals(p: { api: Api }) {
                     {`${r().missing_products_count} missing`}
                   </Text>
                 ) : (
-                  <Text class="text-[13px] text-muted-foreground">
-                    Ready to cook
-                  </Text>
+                  <Text class="text-[13px] text-muted-foreground">Ready to cook</Text>
                 )}
               </View>
             </Button>
@@ -367,8 +321,7 @@ export function Meals(p: { api: Api }) {
     const items = (): Row[] => c.card.ingredients ?? [];
     const missing = () => items().filter((i) => !i.fulfilled).length;
     const scaled = (i: Row) =>
-      (Number(i.amount) * (Number(cookServings()) || 1)) /
-      (Number(c.card.desired_servings) || 1);
+      (Number(i.amount) * (Number(cookServings()) || 1)) / (Number(c.card.desired_servings) || 1);
     return (
       <View class="gap-6">
         <View class="gap-1">
@@ -381,9 +334,7 @@ export function Meals(p: { api: Api }) {
               {(i) => (
                 <View class="flex-row items-center gap-3 min-h-14 py-2 border-b border-border">
                   <View class="flex-1 min-w-0 gap-0.5">
-                    <Text class="text-[15px] text-foreground">
-                      {i().product_name}
-                    </Text>
+                    <Text class="text-[15px] text-foreground">{i().product_name}</Text>
                     <Text
                       class={`text-[13px] ${i().fulfilled ? "text-muted-foreground" : "text-destructive"}`}
                     >
@@ -431,11 +382,7 @@ export function Meals(p: { api: Api }) {
         />
       </View>
       <View class="flex-row flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <Tabs
-          items={["Week", "Recipes"]}
-          value={tab()}
-          onChange={(v) => tab.set(v)}
-        />
+        <Tabs items={["Week", "Recipes"]} value={tab()} onChange={(v) => tab.set(v)} />
         {tab() === "Week" ? (
           <View class="flex-row items-center gap-1">
             <IconButton
@@ -458,11 +405,7 @@ export function Meals(p: { api: Api }) {
           </View>
         ) : (
           <View class="w-full md:w-72 flex-row">
-            <Search
-              label="Search recipes"
-              value={query()}
-              onChange={(v) => query.set(v)}
-            />
+            <Search label="Search recipes" value={query()} onChange={(v) => query.set(v)} />
           </View>
         )}
       </View>
@@ -511,11 +454,7 @@ export function Meals(p: { api: Api }) {
           </View>
         }
       >
-        <DateField
-          label="Meal date"
-          value={day()}
-          onChange={(v) => day.set(v)}
-        />
+        <DateField label="Meal date" value={day()} onChange={(v) => day.set(v)} />
         <Choice
           label="Recipe"
           value={recipe()}
@@ -526,19 +465,11 @@ export function Meals(p: { api: Api }) {
           onChange={(v) => {
             recipe.set(v);
             servings.set(
-              String(
-                state.data()?.recipes.find((r) => String(r.id) === v)
-                  ?.desired_servings ?? 1,
-              ),
+              String(state.data()?.recipes.find((r) => String(r.id) === v)?.desired_servings ?? 1),
             );
           }}
         />
-        <Field
-          label="Servings"
-          numeric
-          value={servings()}
-          onChange={(v) => servings.set(v)}
-        />
+        <Field label="Servings" numeric value={servings()} onChange={(v) => servings.set(v)} />
         {(state.data()?.recipes.length ?? 1) === 0 ? (
           <Note>No recipes yet. Add one in Settings, then plan it here.</Note>
         ) : null}
@@ -571,9 +502,7 @@ export function Meals(p: { api: Api }) {
                     .run(
                       () =>
                         meal()
-                          ? p.api.post(
-                              `/api/v2/meal-plan/${meal()!.id}/consume`,
-                            )
+                          ? p.api.post(`/api/v2/meal-plan/${meal()!.id}/consume`)
                           : p.api.post(
                               `/api/v2/recipes/${detail()!.recipe_id}/consume?servings=${positive(cookServings())}`,
                             ),
@@ -606,8 +535,7 @@ export function Meals(p: { api: Api }) {
           <View class="flex-row gap-2.5 rounded-lg bg-saffron-soft px-3 py-2.5">
             <Icon name="alert" size={15} tint="foreground" />
             <Text class="flex-1 min-w-0 text-sm leading-5 text-foreground">
-              Cooking will deduct these ingredients from stock. Check the
-              amounts, then confirm.
+              Cooking will deduct these ingredients from stock. Check the amounts, then confirm.
             </Text>
           </View>
         ) : null}
@@ -626,9 +554,7 @@ export function Meals(p: { api: Api }) {
             {`Planned for ${at(meal()!.start).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })} · ${count(Number(cookServings()) || 1, "serving")}`}
           </Note>
         )}
-        <Each of={(detail()?.cards ?? []) as Row[]}>
-          {(card) => <Ingredients card={card()} />}
-        </Each>
+        <Each of={(detail()?.cards ?? []) as Row[]}>{(card) => <Ingredients card={card()} />}</Each>
       </Panel>
     </View>
   );

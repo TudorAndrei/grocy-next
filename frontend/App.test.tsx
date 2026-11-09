@@ -50,8 +50,7 @@ test("one-tap use can fail, retry and undo", async () => {
         },
       }),
       [`POST ${server}/api/stock/products/1/consume`]: () => {
-        if (++attempt === 1)
-          return { status: 400, body: { error_message: "Not enough stock" } };
+        if (++attempt === 1) return { status: 400, body: { error_message: "Not enough stock" } };
         amount = 2;
         return { body: [{ transaction_id: "tx-1" }] };
       },
@@ -118,9 +117,7 @@ test("shopping is list-first and a batch preserves failed purchases", async () =
       [`PUT ${server}/api/objects/shopping_list/*`]: (req) => {
         const id = Number(req.url.split("/").pop());
         items = items.map((r) =>
-          r.id === id
-            ? { ...r, done: Boolean(JSON.parse(req.body ?? "{}").done) }
-            : r,
+          r.id === id ? { ...r, done: Boolean(JSON.parse(req.body ?? "{}").done) } : r,
         );
         return { status: 204 };
       },
@@ -149,17 +146,13 @@ test("shopping is list-first and a batch preserves failed purchases", async () =
   await app.press("Whole Milk");
   await app.waitUntil(() => app.enabled("Put away 2 items"));
   await app.press("Put away 2 items");
-  await app.waitFor(
-    "1 item put away. 1 failed — Whole Milk: Product unavailable",
-  );
+  await app.waitFor("1 item put away. 1 failed — Whole Milk: Product unavailable");
   expect(app.texts()).toContain("Whole Milk");
   expect(app.texts()).not.toContain("Oats");
   expect(app.texts()).toContain("Undo stock changes");
 });
 test("settings edits retain full text and require confirmation before deletion", async () => {
-  let locations = [
-    { id: 1, name: "Pantry", description: "Dry goods", is_freezer: 0 },
-  ];
+  let locations = [{ id: 1, name: "Pantry", description: "Dry goods", is_freezer: 0 }];
   const app = await open("./App.tsx", {
     network: {
       ...network,
@@ -219,9 +212,7 @@ test("planning and cooking a meal updates the week and prevents duplicate cookin
       }),
       [`POST ${server}/api/objects/meal_plan`]: (req) => {
         const draft = JSON.parse(req.body ?? "{}");
-        events = [
-          { id: 1, title: "Soup", start: date, entry: { ...draft, done: 0 } },
-        ];
+        events = [{ id: 1, title: "Soup", start: date, entry: { ...draft, done: 0 } }];
         return { body: { created_object_id: "1" } };
       },
       [`GET ${server}/api/v2/recipes/1/view`]: {
@@ -231,9 +222,7 @@ test("planning and cooking a meal updates the week and prevents duplicate cookin
             {
               name: "Soup",
               desired_servings: 2,
-              ingredients: [
-                { product_name: "Oats", amount: 1, fulfilled: true },
-              ],
+              ingredients: [{ product_name: "Oats", amount: 1, fulfilled: true }],
               preparation_html: "Simmer.",
             },
           ],
@@ -271,9 +260,7 @@ test("household work shares one list and task completion has undo", async () => 
       ...network,
       [`GET ${server}/api/v2/tasks/overview*`]: () => ({
         body: {
-          rows: done
-            ? []
-            : [{ id: 1, name: "Water plants", done: 0, due_date: null }],
+          rows: done ? [] : [{ id: 1, name: "Water plants", done: 0, due_date: null }],
         },
       }),
       [`GET ${server}/api/v2/chores/overview`]: {

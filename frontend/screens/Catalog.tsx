@@ -28,24 +28,24 @@ type Definition = {
     initial?: string;
   }[];
 };
-const text = (
-  key: string,
-  label: string,
-  required = false,
-  initial?: string,
-) => ({ key, label, required, initial });
+const text = (key: string, label: string, required = false, initial?: string) => ({
+  key,
+  label,
+  required,
+  initial,
+});
 const number = (key: string, label: string, initial?: string) => ({
   key,
   label,
   number: true,
   initial,
 });
-const relation = (
-  key: string,
-  label: string,
-  entity: string,
-  required = false,
-) => ({ key, label, relation: entity, required });
+const relation = (key: string, label: string, entity: string, required = false) => ({
+  key,
+  label,
+  relation: entity,
+  required,
+});
 const definitions: Record<string, Definition> = {
   products: {
     title: "Products",
@@ -73,10 +73,7 @@ const definitions: Record<string, Definition> = {
   quantity_units: {
     title: "Quantity units",
     one: "quantity unit",
-    fields: [
-      text("name", "Singular name", true),
-      text("name_plural", "Plural name", true),
-    ],
+    fields: [text("name", "Singular name", true), text("name_plural", "Plural name", true)],
   },
   quantity_unit_conversions: {
     title: "Unit conversions",
@@ -91,18 +88,12 @@ const definitions: Record<string, Definition> = {
   product_groups: {
     title: "Product groups",
     one: "product group",
-    fields: [
-      text("name", "Group name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Group name", true), text("description", "Description")],
   },
   shopping_locations: {
     title: "Stores",
     one: "store",
-    fields: [
-      text("name", "Store name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Store name", true), text("description", "Description")],
   },
   product_barcodes: {
     title: "Barcodes",
@@ -164,10 +155,7 @@ const definitions: Record<string, Definition> = {
   task_categories: {
     title: "Task categories",
     one: "task category",
-    fields: [
-      text("name", "Category name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Category name", true), text("description", "Description")],
   },
   chores: {
     title: "Chores",
@@ -193,10 +181,7 @@ const definitions: Record<string, Definition> = {
   equipment: {
     title: "Equipment",
     one: "equipment",
-    fields: [
-      text("name", "Equipment name", true),
-      text("description", "Description"),
-    ],
+    fields: [text("name", "Equipment name", true), text("description", "Description")],
   },
 };
 /** Record types grouped the way the household thinks about them. */
@@ -224,10 +209,10 @@ const groups: { title: string; entities: string[] }[] = [
 ];
 const focusRing = "focus:outline-2 focus:outline-offset-2 focus:outline-ring";
 
+const wide = () => windowSize().width >= 768;
 export function Catalog(p: { api: Api }) {
   const entity = signal("products"),
     picking = signal(false);
-  const wide = () => windowSize().width >= 768;
   return (
     <View class="gap-5 md:flex-row md:items-start md:gap-10">
       {wide() ? (
@@ -248,10 +233,7 @@ export function Catalog(p: { api: Api }) {
             <Text class="flex-1 text-[15px] font-medium text-foreground">
               {definitions[entity()].title}
             </Text>
-            <Icon
-              name={picking() ? "chevron-down" : "chevron-right"}
-              size={15}
-            />
+            <Icon name={picking() ? "chevron-down" : "chevron-right"} size={15} />
           </Button>
           {picking() ? (
             <View class="rounded-lg border border-border bg-card py-2">
@@ -268,9 +250,7 @@ export function Catalog(p: { api: Api }) {
         </View>
       )}
       <View class="flex-1 min-w-0">
-        <Each of={[entity()]}>
-          {(e) => <Records api={p.api} entity={e()} />}
-        </Each>
+        <Each of={[entity()]}>{(e) => <Records api={p.api} entity={e()} />}</Each>
       </View>
     </View>
   );
@@ -287,9 +267,7 @@ function TypeList(p: {
       <Each of={groups}>
         {(g) => (
           <View class="gap-0.5 px-1 md:px-0">
-            <Text class="px-2.5 pb-1 text-[13px] text-muted-foreground">
-              {g().title}
-            </Text>
+            <Text class="px-2.5 pb-1 text-[13px] text-muted-foreground">{g().title}</Text>
             <Each of={g().entities}>
               {(e) => (
                 <Button
@@ -341,24 +319,12 @@ function Records(p: { api: Api; entity: string }) {
   );
   const options = remote(async (s) => {
     const tables = [
-      ...new Set(
-        definition.fields
-          .map((f) => f.relation)
-          .filter((v): v is string => Boolean(v)),
-      ),
+      ...new Set(definition.fields.map((f) => f.relation).filter((v): v is string => Boolean(v))),
     ];
     const entries = await Promise.all(
       tables.map(
         async (name) =>
-          [
-            name,
-            await p.api.request<Row[]>(
-              `/api/objects/${name}`,
-              "GET",
-              undefined,
-              s,
-            ),
-          ] as const,
+          [name, await p.api.request<Row[]>(`/api/objects/${name}`, "GET", undefined, s)] as const,
       ),
     );
     return Object.fromEntries(entries);
@@ -404,9 +370,7 @@ function Records(p: { api: Api; entity: string }) {
   const related = (table: string, value: unknown) =>
     value == null || value === ""
       ? ""
-      : (options
-          .data()
-          ?.[table]?.find((r) => String(r.id) === String(value))?.name ?? "");
+      : (options.data()?.[table]?.find((r) => String(r.id) === String(value))?.name ?? "");
   const title = (r: Row): string => {
     if (p.entity === "quantity_unit_conversions") {
       const from = related("quantity_units", r.from_qu_id),
@@ -432,17 +396,11 @@ function Records(p: { api: Api; entity: string }) {
         related("quantity_units", r.qu_id_stock),
         related("product_groups", r.product_group_id),
       );
-    if (p.entity === "locations" && Number(r.is_freezer) === 1)
-      parts.push("Freezer");
-    if (p.entity === "quantity_units" && r.name_plural)
-      parts.push(`Plural ${r.name_plural}`);
+    if (p.entity === "locations" && Number(r.is_freezer) === 1) parts.push("Freezer");
+    if (p.entity === "quantity_units" && r.name_plural) parts.push(`Plural ${r.name_plural}`);
     if (p.entity === "quantity_unit_conversions")
-      parts.push(
-        `× ${r.factor}`,
-        related("products", r.product_id) || "All products",
-      );
-    if (p.entity === "product_barcodes")
-      parts.push(related("products", r.product_id));
+      parts.push(`× ${r.factor}`, related("products", r.product_id) || "All products");
+    if (p.entity === "product_barcodes") parts.push(related("products", r.product_id));
     if (p.entity === "recipes_pos")
       parts.push(
         [r.amount, related("quantity_units", r.qu_id)].filter(Boolean).join(" "),
@@ -459,10 +417,7 @@ function Records(p: { api: Api; entity: string }) {
   };
   const visible = () =>
     (state.data() ?? []).filter((r) =>
-      [title(r), meta(r)]
-        .join(" ")
-        .toLowerCase()
-        .includes(query().trim().toLowerCase()),
+      [title(r), meta(r)].join(" ").toLowerCase().includes(query().trim().toLowerCase()),
     );
   const loaded = () => !state.loading() && !state.error();
   return (
@@ -479,20 +434,13 @@ function Records(p: { api: Api; entity: string }) {
             value={query()}
             onChange={(v) => query.set(v)}
           />
-          <Action
-            label={`Add ${definition.one}`}
-            icon="plus"
-            primary
-            onPress={() => edit()}
-          />
+          <Action label={`Add ${definition.one}`} icon="plus" primary onPress={() => edit()} />
         </View>
       </View>
       <Feedback error={op.error()} success={op.success()} />
       <Panel
         open={editing()}
-        title={
-          id() == null ? `New ${definition.one}` : `Edit ${definition.one}`
-        }
+        title={id() == null ? `New ${definition.one}` : `Edit ${definition.one}`}
         onClose={() => editing.set(false)}
         busy={op.busy()}
         footer={
@@ -501,19 +449,13 @@ function Records(p: { api: Api; entity: string }) {
             <Action
               label="Save record"
               primary
-              disabled={
-                op.busy() || options.loading() || Boolean(options.error())
-              }
+              disabled={op.busy() || options.loading() || Boolean(options.error())}
               onPress={() => void save()}
             />
           </View>
         }
       >
-        <LoadState
-          loading={options.loading()}
-          error={options.error()}
-          retry={options.refresh}
-        />
+        <LoadState loading={options.loading()} error={options.error()} retry={options.refresh} />
         <Each of={definition.fields}>
           {(f) => (
             <View>
@@ -521,9 +463,7 @@ function Records(p: { api: Api; entity: string }) {
                 <Toggle
                   label="Freezer"
                   checked={draft()[f().key] === "1"}
-                  onChange={(v) =>
-                    draft.set({ ...draft(), [f().key]: v ? "1" : "0" })
-                  }
+                  onChange={(v) => draft.set({ ...draft(), [f().key]: v ? "1" : "0" })}
                 />
               ) : f().key === "due_date" ? (
                 <DateField
@@ -570,11 +510,7 @@ function Records(p: { api: Api; entity: string }) {
           )}
         </Each>
       </Panel>
-      <LoadState
-        loading={state.loading()}
-        error={state.error()}
-        retry={state.refresh}
-      />
+      <LoadState loading={state.loading()} error={state.error()} retry={state.refresh} />
       {loaded() && !state.data()?.length ? (
         <Empty
           title={`No ${definition.title.toLowerCase()} yet`}
@@ -633,11 +569,7 @@ function Records(p: { api: Api; entity: string }) {
                     </Text>
                   </View>
                   <View class="flex-row gap-2 justify-end">
-                    <Action
-                      label="Keep record"
-                      quiet
-                      onPress={() => deleting.set(null)}
-                    />
+                    <Action label="Keep record" quiet onPress={() => deleting.set(null)} />
                     <Action
                       label="Confirm delete"
                       danger
@@ -645,10 +577,7 @@ function Records(p: { api: Api; entity: string }) {
                       disabled={op.busy()}
                       onPress={() =>
                         void op.run(async () => {
-                          await p.api.request(
-                            `/api/objects/${p.entity}/${r().id}`,
-                            "DELETE",
-                          );
+                          await p.api.request(`/api/objects/${p.entity}/${r().id}`, "DELETE");
                           deleting.set(null);
                         }, "Record deleted.")
                       }

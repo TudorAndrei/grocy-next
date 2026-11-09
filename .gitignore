@@ -38,4 +38,6 @@ data/
 
 # Native Shell generated output
 .nsh/
+
+# JavaScript dependencies and tool caches (including nested workspaces)
 node_modules/

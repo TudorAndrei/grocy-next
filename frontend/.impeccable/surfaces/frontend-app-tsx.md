@@ -2,7 +2,16 @@
 version: 1
 slug: "frontend-app-tsx"
 primary_target: "frontend/App.tsx"
-related_targets: ["frontend/screens/Stock.tsx","frontend/screens/Shopping.tsx","frontend/screens/Cooking.tsx","frontend/screens/Household.tsx","frontend/screens/Catalog.tsx","frontend/screens/Nutrition.tsx","frontend/ui.tsx"]
+related_targets:
+  [
+    "frontend/screens/Stock.tsx",
+    "frontend/screens/Shopping.tsx",
+    "frontend/screens/Cooking.tsx",
+    "frontend/screens/Household.tsx",
+    "frontend/screens/Catalog.tsx",
+    "frontend/screens/Nutrition.tsx",
+    "frontend/ui.tsx",
+  ]
 ---
 
 Scope: the whole Native Shell web client (shell, Stock, Shopping, Meals, Chores, Settings, Review). Mode: Operate.

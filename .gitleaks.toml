@@ -13,3 +13,19 @@ paths = [
   '''^contracts/api-release-gates\.json$''',
 ]
 regexes = ['''^[a-f0-9]{64}$''']
+
+[[allowlists]]
+description = "OpenAPI schema checksum in API parity evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^contracts/api-parity-status\.json$''']
+regexes = ['''^\s*"openapiSha256": "[a-f0-9]{64}",?\s*$''']
+
+[[allowlists]]
+description = "Container image SHA-256 identifier in release evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^contracts/api-release-gates\.json$''']
+regexes = ['''^\s*"apiImageId": "(?:sha256:)?[a-f0-9]{64}",?\s*$''']

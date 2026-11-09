@@ -45,22 +45,17 @@ function place(items: RulerItem[], span: number, width: number): Placed[] {
     const s = flip ? x - w : x,
       e = flip ? x : x + w;
     const free = (lane: number, strict: boolean) => {
-      if ((lanes[lane] ?? []).some((l) => s < l.e + GAP && e > l.s - GAP))
-        return false;
+      if ((lanes[lane] ?? []).some((l) => s < l.e + GAP && e > l.s - GAP)) return false;
       for (let below = lane + 1; below < lanes.length; below++)
         if (lanes[below].some((l) => x > l.s - 2 && x < l.e + 2)) return false;
       if (strict)
         for (let above = 0; above < lane; above++)
-          if (lanes[above].some((l) => l.x > s + 2 && l.x < e - 2))
-            return false;
+          if (lanes[above].some((l) => l.x > s + 2 && l.x < e - 2)) return false;
       return true;
     };
     let lane = -1;
-    for (let i = 0; i <= lanes.length && lane < 0; i++)
-      if (free(i, true)) lane = i;
-    if (lane < 0)
-      for (let i = 0; i <= lanes.length && lane < 0; i++)
-        if (free(i, false)) lane = i;
+    for (let i = 0; i <= lanes.length && lane < 0; i++) if (free(i, true)) lane = i;
+    if (lane < 0) for (let i = 0; i <= lanes.length && lane < 0; i++) if (free(i, false)) lane = i;
     if (lane < 0) lane = lanes.length;
     (lanes[lane] ??= []).push({ s, e, x });
     placed.push({ ...item, pct: (item.days / span) * 100, lane, flip });
@@ -73,6 +68,7 @@ function place(items: RulerItem[], span: number, width: number): Placed[] {
  * product hangs from its best-before day; overdue ones sit in a pale red zone
  * left of today, later ones collapse into a dashed zone at the right edge.
  */
+const tone = (days: number) => (days < 0 ? "destructive" : days <= 5 ? "due" : "foreground");
 export function Ruler(p: {
   items: RulerItem[];
   span: number;
@@ -84,21 +80,19 @@ export function Ruler(p: {
   const overdue = () =>
     p.items
       .filter((i) => i.days < 0)
-      .sort((a, b) => a.days - b.days || a.name.localeCompare(b.name));
+      .toSorted((a, b) => a.days - b.days || a.name.localeCompare(b.name));
   const inside = () =>
     p.items
       .filter((i) => i.days >= 0 && i.days <= p.span)
-      .sort((a, b) => a.days - b.days || a.name.localeCompare(b.name));
+      .toSorted((a, b) => a.days - b.days || a.name.localeCompare(b.name));
   const later = () =>
     p.items
       .filter((i) => i.days > p.span)
-      .sort((a, b) => a.days - b.days || a.name.localeCompare(b.name));
+      .toSorted((a, b) => a.days - b.days || a.name.localeCompare(b.name));
   const markers = () => place(inside(), p.span, width());
   const maxOverdue = () => (p.compact ? 2 : 3);
   const shownOverdue = () =>
-    overdue().length > maxOverdue()
-      ? overdue().slice(0, maxOverdue() - 1)
-      : overdue();
+    overdue().length > maxOverdue() ? overdue().slice(0, maxOverdue() - 1) : overdue();
   const pastWidth = () => (overdue().length ? (p.compact ? 72 : 96) : 24);
   const pastX = () => (p.compact ? 8 : 14);
   const lanes = () =>
@@ -107,18 +101,10 @@ export function Ruler(p: {
       markers().reduce((n, m) => Math.max(n, m.lane + 1), 0),
       Math.min(overdue().length, maxOverdue()),
     );
-  const area = () =>
-    Math.max(
-      lanes() * LANE + 16,
-      later().length ? (p.compact ? 52 : 92) : 44,
-    );
-  const weeks = () =>
-    Array.from({ length: Math.floor(p.span / 7) }, (_, i) => (i + 1) * 7);
+  const area = () => Math.max(lanes() * LANE + 16, later().length ? (p.compact ? 52 : 92) : 44);
+  const weeks = () => Array.from({ length: Math.floor(p.span / 7) }, (_, i) => (i + 1) * 7);
   const ticks = () => Array.from({ length: p.span + 1 }, (_, i) => i);
-  const tone = (days: number) =>
-    days < 0 ? "destructive" : days <= 5 ? "due" : "foreground";
-  const label = (item: RulerItem) =>
-    `${item.name}, best before ${relativeDays(item.days)}`;
+  const label = (item: RulerItem) => `${item.name}, best before ${relativeDays(item.days)}`;
   return (
     <View
       accessibilityLabel={`Best-before dates over the next ${p.span} days`}
@@ -132,17 +118,12 @@ export function Ruler(p: {
           </Text>
         </View>
         {p.compact ? null : (
-          <Text class="text-[13px] text-muted-foreground">
-            Select a product to open it
-          </Text>
+          <Text class="text-[13px] text-muted-foreground">Select a product to open it</Text>
         )}
       </View>
       <View class="relative flex-row" style={{ height: area() + AXIS }}>
         {/* the axis spans the whole track */}
-        <View
-          class="absolute left-0 right-0 h-px bg-input"
-          style={{ bottom: AXIS }}
-        />
+        <View class="absolute left-0 right-0 h-px bg-input" style={{ bottom: AXIS }} />
         {/* overdue zone, left of today */}
         <View class="relative" style={{ width: pastWidth() }}>
           {overdue().length ? (
@@ -208,15 +189,9 @@ export function Ruler(p: {
               />
             )}
           </Each>
-          <View
-            class="absolute left-0 top-0 w-px bg-foreground"
-            style={{ bottom: AXIS }}
-          />
+          <View class="absolute left-0 top-0 w-px bg-foreground" style={{ bottom: AXIS }} />
           <View class="absolute bottom-0 left-0 w-16 -translate-x-1/2 items-center">
-            <Text
-              style={{ numberOfLines: 1 }}
-              class="text-xs font-semibold text-foreground"
-            >
+            <Text style={{ numberOfLines: 1 }} class="text-xs font-semibold text-foreground">
               Today
             </Text>
           </View>
@@ -334,10 +309,7 @@ function Marker(p: {
       style={p.style}
     >
       <View class={`w-px h-2.5 ${tick}`} />
-      <Text
-        style={{ numberOfLines: 1 }}
-        class={`shrink min-w-0 text-[12.5px] font-medium ${text}`}
-      >
+      <Text style={{ numberOfLines: 1 }} class={`shrink min-w-0 text-[12.5px] font-medium ${text}`}>
         {p.name}
       </Text>
     </Button>

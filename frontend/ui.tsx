@@ -24,6 +24,8 @@ import iconTrash from "./assets/icons/trash-2.svg";
 import iconPencil from "./assets/icons/pencil.svg";
 import iconLogOut from "./assets/icons/log-out.svg";
 import iconAlert from "./assets/icons/circle-alert.svg";
+import iconHouse from "./assets/icons/house.svg";
+import iconScan from "./assets/icons/scan-barcode.svg";
 
 /*
  * Quiet Precision. Colours are theme tokens (frontend/theme.json), used as
@@ -78,6 +80,8 @@ const icons = {
   pencil: iconPencil,
   "log-out": iconLogOut,
   alert: iconAlert,
+  house: iconHouse,
+  scan: iconScan,
 };
 export type IconName = keyof typeof icons;
 
@@ -85,7 +89,13 @@ export type IconName = keyof typeof icons;
 export function Icon(p: {
   name: IconName;
   size?: number;
-  tint?: "foreground" | "muted-foreground" | "primary-foreground" | "background" | "destructive" | "due";
+  tint?:
+    | "foreground"
+    | "muted-foreground"
+    | "primary-foreground"
+    | "background"
+    | "destructive"
+    | "due";
 }) {
   const size = p.size ?? 16;
   return (
@@ -102,8 +112,7 @@ export function Icon(p: {
   );
 }
 
-const focusRing =
-  "focus:outline-2 focus:outline-offset-2 focus:outline-ring";
+const focusRing = "focus:outline-2 focus:outline-offset-2 focus:outline-ring";
 
 export function Action(p: {
   label: string;
@@ -129,7 +138,7 @@ export function Action(p: {
       : "text-foreground";
   return (
     <Button
-      accessibilityLabel={p.accessibilityLabel}
+      accessibilityLabel={p.accessibilityLabel ?? p.label}
       onPress={p.onPress}
       disabled={p.disabled}
       class={`${p.compact ? "min-h-9 px-2.5" : "min-h-11 md:min-h-9 px-3"} flex-row gap-1.5 rounded-lg justify-center items-center ${shape} ${focusRing} disabled:opacity-40`}
@@ -138,13 +147,7 @@ export function Action(p: {
         <Icon
           name={p.icon}
           size={15}
-          tint={
-            p.primary
-              ? "primary-foreground"
-              : p.danger
-                ? "destructive"
-                : "foreground"
-          }
+          tint={p.primary ? "primary-foreground" : p.danger ? "destructive" : "foreground"}
         />
       ) : null}
       <Text class={`text-sm font-medium ${text}`}>{p.label}</Text>
@@ -294,11 +297,7 @@ export function Heading(p: { title: string; detail?: string }) {
       >
         {p.title}
       </Text>
-      {p.detail ? (
-        <Text class="text-sm text-muted-foreground tabular-nums">
-          {p.detail}
-        </Text>
-      ) : null}
+      {p.detail ? <Text class="text-sm text-muted-foreground tabular-nums">{p.detail}</Text> : null}
     </View>
   );
 }
@@ -311,9 +310,7 @@ export function Subheading(p: { title: string; detail?: string }) {
         {p.title}
       </Text>
       {p.detail ? (
-        <Text class="text-[13px] text-muted-foreground tabular-nums">
-          {p.detail}
-        </Text>
+        <Text class="text-[13px] text-muted-foreground tabular-nums">{p.detail}</Text>
       ) : null}
     </View>
   );
@@ -321,19 +318,13 @@ export function Subheading(p: { title: string; detail?: string }) {
 
 /** A hairline-separated row. Lists sit directly on the page, never in cards. */
 export function Line(p: { children?: JSX.Element }) {
-  return (
-    <View class="py-3 border-b border-border gap-2">{p.children}</View>
-  );
+  return <View class="py-3 border-b border-border gap-2">{p.children}</View>;
 }
 
 /** A bordered surface for one grouped object (the ruler, a review diff). */
 export function Surface(p: { children?: JSX.Element; class?: string }) {
   return (
-    <View
-      class={`rounded-xl border border-border bg-card ${p.class ?? "p-4"}`}
-    >
-      {p.children}
-    </View>
+    <View class={`rounded-xl border border-border bg-card ${p.class ?? "p-4"}`}>{p.children}</View>
   );
 }
 
@@ -357,12 +348,14 @@ export function Empty(p: {
   plain?: boolean;
 }) {
   return (
-    <View class={p.plain ? "py-10 items-center gap-2" : "py-10 items-center gap-2 border-b border-border"}>
+    <View
+      class={
+        p.plain ? "py-10 items-center gap-2" : "py-10 items-center gap-2 border-b border-border"
+      }
+    >
       <Text class="text-[15px] font-medium text-foreground">{p.title}</Text>
       {p.detail ? (
-        <Text class="text-sm text-muted-foreground text-center max-w-sm">
-          {p.detail}
-        </Text>
+        <Text class="text-sm text-muted-foreground text-center max-w-sm">{p.detail}</Text>
       ) : null}
       {p.children}
     </View>
@@ -466,14 +459,9 @@ export function Toggle(p: {
       onChange={(e) => p.onChange(e.checked)}
       class={`flex-row items-center gap-3 min-h-11 rounded-md ${focusRing} disabled:opacity-40`}
       indicatorClass="w-[18px] h-[18px] items-center justify-center border border-input bg-card rounded-[5px] checked:bg-foreground checked:border-foreground"
-      indicator={
-        p.checked ? <Icon name="check" size={13} tint="background" /> : null
-      }
+      indicator={p.checked ? <Icon name="check" size={13} tint="background" /> : null}
     >
-      <Text
-        style={{ numberOfLines: 2 }}
-        class="flex-1 min-w-0 text-[15px] text-foreground"
-      >
+      <Text style={{ numberOfLines: 2 }} class="flex-1 min-w-0 text-[15px] text-foreground">
         {p.label}
       </Text>
     </Checkbox>
@@ -523,14 +511,11 @@ export function DateField(p: {
               : item.kind === "next"
                 ? "Next"
                 : item.kind === "weekday"
-                  ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-                      item.value
-                    ]
+                  ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][item.value]
                   : item.kind === "monthToggle" || item.kind === "month"
-                    ? new Date(item.year, item.value - 1, 1).toLocaleDateString(
-                        undefined,
-                        { month: "short" },
-                      )
+                    ? new Date(item.year, item.value - 1, 1).toLocaleDateString(undefined, {
+                        month: "short",
+                      })
                     : String(item.value)}
           </Text>
         )}
@@ -548,10 +533,10 @@ export function addDays(value: string, days: number): string {
   return dateISO(date);
 }
 export function shortDate(value: string): string {
-  return new Date(value.slice(0, 10) + "T12:00:00").toLocaleDateString(
-    undefined,
-    { day: "numeric", month: "short" },
-  );
+  return new Date(value.slice(0, 10) + "T12:00:00").toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
 }
 export function dueDays(value?: string | null): number | null {
   if (!value || value.slice(0, 4) >= "2888") return null;
@@ -585,11 +570,7 @@ export function Due(p: { value?: string | null }) {
   );
 }
 /** Underlined tabs for switching views inside a screen or sheet. */
-export function Tabs(p: {
-  items: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
+export function Tabs(p: { items: string[]; value: string; onChange: (v: string) => void }) {
   return (
     <Scroll horizontal scrollbar={false} class="grow-0">
       <View class="flex-row gap-5 border-b border-border">
@@ -601,8 +582,7 @@ export function Tabs(p: {
               class={`min-h-11 md:min-h-10 justify-center ${focusRing}`}
               style={{
                 borderBottomWidth: 2,
-                borderBottomColor:
-                  p.value === item() ? token("foreground") : "transparent",
+                borderBottomColor: p.value === item() ? token("foreground") : "transparent",
               }}
             >
               <Text

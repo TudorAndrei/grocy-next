@@ -47,6 +47,7 @@ export const network = {
       { id: 2, name: "Fridge" },
     ],
   },
+  [`GET ${server}/api/objects/product_groups`]: { body: [] },
   [`GET ${server}/api/objects/quantity_units`]: { body: units },
   [`GET ${server}/api/stock/products/*/entries`]: { body: [] },
   [`GET ${server}/api/v2/nutrition/proposals`]: { body: [] },
